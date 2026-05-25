@@ -1,0 +1,141 @@
+{
+  "name": "deepseek-chat-raw-cache-reasoning",
+  "description": "Extracts DeepSeek chat completion usage with prompt cache hit/miss fields and reasoning tokens.",
+  "input": {
+    "raw_response": {
+      "id": "deepseek-fixture",
+      "object": "chat.completion",
+      "created": 1718345013,
+      "model": "deepseek-v4-pro",
+      "system_fingerprint": "fp_fixture",
+      "choices": [],
+      "usage": {
+        "prompt_tokens": 120,
+        "prompt_cache_hit_tokens": 80,
+        "prompt_cache_miss_tokens": 40,
+        "completion_tokens": 36,
+        "total_tokens": 156,
+        "completion_tokens_details": {
+          "reasoning_tokens": 6
+        }
+      }
+    },
+    "extract": {
+      "provider": "deepseek",
+      "surface": "deepseek.chat_completions",
+      "model": "deepseek-v4-pro"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "deepseek:deepseek-v4-pro:chat:fixture",
+        "provider": "deepseek",
+        "surface": "deepseek.chat_completions",
+        "model": "deepseek-v4-pro",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.25",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "deepseek",
+      "surface": "deepseek.chat_completions",
+      "model": {
+        "requested": "deepseek-v4-pro",
+        "returned": "deepseek-v4-pro",
+        "billed": "deepseek-v4-pro",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "40",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.00004",
+          "price_card_id": "deepseek:deepseek-v4-pro:chat:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "80",
+          "unit": "token",
+          "unit_price": "0.00000025",
+          "cost": "0.00002",
+          "price_card_id": "deepseek:deepseek-v4-pro:chat:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "30",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.00006",
+          "price_card_id": "deepseek:deepseek-v4-pro:chat:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "6",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.000012",
+          "price_card_id": "deepseek:deepseek-v4-pro:chat:fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.000132",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

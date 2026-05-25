@@ -1,0 +1,134 @@
+{
+  "name": "gemini-generate-content-raw-reasoning-cache",
+  "description": "Extracts Gemini generateContent usageMetadata including cached prompt tokens and thinking tokens.",
+  "input": {
+    "raw_response": {
+      "modelVersion": "gemini-2.5-pro",
+      "responseId": "gemini-response-123",
+      "usageMetadata": {
+        "promptTokenCount": 1200,
+        "cachedContentTokenCount": 200,
+        "candidatesTokenCount": 300,
+        "thoughtsTokenCount": 50,
+        "totalTokenCount": 1550
+      }
+    },
+    "extract": {
+      "provider": "google",
+      "surface": "google.gemini.generate_content",
+      "model": "gemini-2.5-pro"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "google:gemini-2.5-pro:fixture",
+        "provider": "google",
+        "surface": "google.gemini.generate_content",
+        "model": "gemini-2.5-pro",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.25",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "3",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "3",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "google",
+      "surface": "google.gemini.generate_content",
+      "model": {
+        "requested": "gemini-2.5-pro",
+        "returned": "gemini-2.5-pro",
+        "billed": "gemini-2.5-pro",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.001",
+          "price_card_id": "google:gemini-2.5-pro:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "200",
+          "unit": "token",
+          "unit_price": "0.00000025",
+          "cost": "0.00005",
+          "price_card_id": "google:gemini-2.5-pro:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "300",
+          "unit": "token",
+          "unit_price": "0.000003",
+          "cost": "0.0009",
+          "price_card_id": "google:gemini-2.5-pro:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "50",
+          "unit": "token",
+          "unit_price": "0.000003",
+          "cost": "0.00015",
+          "price_card_id": "google:gemini-2.5-pro:fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0021",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

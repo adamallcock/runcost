@@ -1,0 +1,118 @@
+{
+  "name": "groq-chat-raw-cache",
+  "description": "Extracts Groq OpenAI-compatible chat completion usage with prompt cache details.",
+  "input": {
+    "raw_response": {
+      "id": "chatcmpl-groq-fixture",
+      "object": "chat.completion",
+      "model": "openai/gpt-oss-120b",
+      "usage": {
+        "prompt_tokens": 96,
+        "prompt_tokens_details": {
+          "cached_tokens": 64
+        },
+        "completion_tokens": 24,
+        "total_tokens": 120
+      }
+    },
+    "extract": {
+      "provider": "groq",
+      "surface": "groq.chat_completions",
+      "model": "openai/gpt-oss-120b"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "groq:openai/gpt-oss-120b:chat:fixture",
+        "provider": "groq",
+        "surface": "groq.chat_completions",
+        "model": "openai/gpt-oss-120b",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "3",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "groq",
+      "surface": "groq.chat_completions",
+      "model": {
+        "requested": "openai/gpt-oss-120b",
+        "returned": "openai/gpt-oss-120b",
+        "billed": "openai/gpt-oss-120b",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "32",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.000032",
+          "price_card_id": "groq:openai/gpt-oss-120b:chat:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "64",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.0000064",
+          "price_card_id": "groq:openai/gpt-oss-120b:chat:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "24",
+          "unit": "token",
+          "unit_price": "0.000003",
+          "cost": "0.000072",
+          "price_card_id": "groq:openai/gpt-oss-120b:chat:fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0001104",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

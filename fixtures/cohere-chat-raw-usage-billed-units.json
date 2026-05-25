@@ -1,0 +1,110 @@
+{
+  "name": "cohere-chat-raw-usage-billed-units",
+  "description": "Extracts Cohere v2 Chat usage from top-level billed units, pricing billed tokens rather than raw token totals.",
+  "input": {
+    "raw_response": {
+      "id": "cohere-usage-fixture",
+      "finish_reason": "COMPLETE",
+      "message": {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "A short answer."
+          }
+        ]
+      },
+      "usage": {
+        "billed_units": {
+          "input_tokens": 5,
+          "output_tokens": 418
+        },
+        "tokens": {
+          "input_tokens": 71,
+          "output_tokens": 418
+        }
+      }
+    },
+    "extract": {
+      "provider": "cohere",
+      "surface": "cohere.chat",
+      "model": "command-a-plus-05-2026"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "cohere:command-a-plus-05-2026:chat:fixture",
+        "provider": "cohere",
+        "surface": "cohere.chat",
+        "model": "command-a-plus-05-2026",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "cohere",
+      "surface": "cohere.chat",
+      "model": {
+        "requested": "command-a-plus-05-2026",
+        "returned": "command-a-plus-05-2026",
+        "billed": "command-a-plus-05-2026",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "5",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.000005",
+          "price_card_id": "cohere:command-a-plus-05-2026:chat:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "418",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.000836",
+          "price_card_id": "cohere:command-a-plus-05-2026:chat:fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.000841",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

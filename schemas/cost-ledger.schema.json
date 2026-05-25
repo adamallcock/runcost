@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runcost.dev/schemas/cost-ledger.schema.json",
+  "title": "CostLedger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "provider", "surface", "model", "currency", "components", "total", "warnings"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "0.1"
+    },
+    "provider": { "type": "string" },
+    "surface": { "type": "string" },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requested", "billed"],
+      "properties": {
+        "requested": { "type": "string" },
+        "returned": { "type": "string" },
+        "billed": { "type": "string" },
+        "alias_resolution": { "type": "string" }
+      }
+    },
+    "currency": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 3
+    },
+    "components": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/cost_component" }
+    },
+    "total": {
+      "type": "string",
+      "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+    },
+    "price_sources": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/source" },
+      "default": []
+    },
+    "applied_discounts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/applied_discount" },
+      "default": []
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/warning" }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "cost_component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "quantity", "unit", "unit_price", "cost"],
+      "properties": {
+        "name": { "type": "string" },
+        "quantity": {
+          "type": "string",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+        },
+        "unit": { "type": "string" },
+        "unit_price": {
+          "type": "string",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+        },
+        "cost": {
+          "type": "string",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+        },
+        "price_card_id": { "type": "string" },
+        "discount_eligible": { "type": "boolean" },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "applied_discount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy_id", "component", "amount"],
+      "properties": {
+        "policy_id": { "type": "string" },
+        "component": { "type": "string" },
+        "amount": {
+          "type": "string",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+        }
+      }
+    },
+    "warning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "unknown_provider",
+            "unknown_surface",
+            "unknown_model",
+            "alias_inferred",
+            "price_not_found",
+            "price_stale",
+            "price_source_disagreement",
+            "usage_field_ignored",
+            "inclusive_usage_ambiguous",
+            "component_unpriced",
+            "service_tier_unsupported",
+            "long_context_rule_missing",
+            "discount_not_applied",
+            "stream_usage_missing",
+            "historical_price_missing",
+            "tool_component_unpriced",
+            "provider_reported_cost_used",
+            "provider_reported_cost_mismatch"
+          ]
+        },
+        "message": { "type": "string" },
+        "path": { "type": "string" },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string" },
+        "retrieved_at": { "type": "string", "format": "date-time" },
+        "version": { "type": "string" }
+      }
+    }
+  }
+}

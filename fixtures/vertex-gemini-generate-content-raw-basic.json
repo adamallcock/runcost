@@ -1,0 +1,134 @@
+{
+  "name": "vertex-gemini-generate-content-raw-basic",
+  "description": "Extracts Vertex AI Gemini generateContent usageMetadata through the shared Gemini extractor path.",
+  "input": {
+    "raw_response": {
+      "modelVersion": "gemini-2.5-flash",
+      "responseId": "vertex-response-123",
+      "usageMetadata": {
+        "promptTokenCount": 80,
+        "cachedContentTokenCount": 20,
+        "candidatesTokenCount": 16,
+        "thoughtsTokenCount": 4,
+        "totalTokenCount": 100
+      }
+    },
+    "extract": {
+      "provider": "vertex",
+      "surface": "vertex.gemini.generate_content",
+      "model": "gemini-2.5-flash"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "vertex:gemini-2.5-flash:fixture",
+        "provider": "vertex",
+        "surface": "vertex.gemini.generate_content",
+        "model": "gemini-2.5-flash",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.5",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.125",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1.5",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1.5",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "vertex",
+      "surface": "vertex.gemini.generate_content",
+      "model": {
+        "requested": "gemini-2.5-flash",
+        "returned": "gemini-2.5-flash",
+        "billed": "gemini-2.5-flash",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "60",
+          "unit": "token",
+          "unit_price": "0.0000005",
+          "cost": "0.00003",
+          "price_card_id": "vertex:gemini-2.5-flash:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.000000125",
+          "cost": "0.0000025",
+          "price_card_id": "vertex:gemini-2.5-flash:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "16",
+          "unit": "token",
+          "unit_price": "0.0000015",
+          "cost": "0.000024",
+          "price_card_id": "vertex:gemini-2.5-flash:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "4",
+          "unit": "token",
+          "unit_price": "0.0000015",
+          "cost": "0.000006",
+          "price_card_id": "vertex:gemini-2.5-flash:fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0000625",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

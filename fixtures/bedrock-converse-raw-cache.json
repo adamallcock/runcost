@@ -1,0 +1,170 @@
+{
+  "name": "bedrock-converse-raw-cache",
+  "description": "Extracts AWS Bedrock Converse token usage including cache read and cache write details.",
+  "input": {
+    "raw_response": {
+      "output": {
+        "message": {
+          "role": "assistant",
+          "content": [
+            {
+              "text": "Hello from Bedrock."
+            }
+          ]
+        }
+      },
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": 1000,
+        "outputTokens": 250,
+        "totalTokens": 1250,
+        "cacheReadInputTokens": 100,
+        "cacheWriteInputTokens": 50,
+        "cacheDetails": [
+          {
+            "ttl": "1h",
+            "inputTokens": 20
+          },
+          {
+            "ttl": "5m",
+            "inputTokens": 30
+          }
+        ]
+      }
+    },
+    "extract": {
+      "provider": "bedrock",
+      "surface": "aws.bedrock.converse",
+      "model": "anthropic.claude-example"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "bedrock:anthropic.claude-example:fixture",
+        "provider": "bedrock",
+        "surface": "aws.bedrock.converse",
+        "model": "anthropic.claude-example",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_write_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_write_1h_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "5",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "bedrock",
+      "surface": "aws.bedrock.converse",
+      "model": {
+        "requested": "anthropic.claude-example",
+        "billed": "anthropic.claude-example",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "850",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.00085",
+          "price_card_id": "bedrock:anthropic.claude-example:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "30",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.00003",
+          "price_card_id": "bedrock:anthropic.claude-example:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_1h_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.00004",
+          "price_card_id": "bedrock:anthropic.claude-example:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.00001",
+          "price_card_id": "bedrock:anthropic.claude-example:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "250",
+          "unit": "token",
+          "unit_price": "0.000005",
+          "cost": "0.00125",
+          "price_card_id": "bedrock:anthropic.claude-example:fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.00218",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

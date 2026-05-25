@@ -1,0 +1,31 @@
+{
+  "name": "strict-unknown-model",
+  "description": "Strict mode raises instead of returning a ledger when the model is unknown.",
+  "input": {
+    "mode": "strict",
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-missing",
+        "returned": "gpt-missing",
+        "billed": "gpt-missing",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "10",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": []
+  },
+  "expected": {
+    "error": {
+      "code": "unknown_model"
+    }
+  }
+}

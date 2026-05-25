@@ -1,0 +1,176 @@
+{
+  "name": "vercel-ai-sdk-generate-text-total-usage",
+  "description": "Extracts Vercel AI SDK generateText totalUsage with cached input, cache write, and reasoning token details.",
+  "input": {
+    "raw_response": {
+      "text": "Done.",
+      "response": {
+        "id": "ai-sdk-response-123",
+        "modelId": "gpt-5-nano-2026-05-24"
+      },
+      "model": {
+        "provider": "openai",
+        "modelId": "gpt-5-nano"
+      },
+      "usage": {
+        "inputTokens": 40,
+        "outputTokens": 10,
+        "totalTokens": 50
+      },
+      "totalUsage": {
+        "inputTokens": 200,
+        "inputTokenDetails": {
+          "noCacheTokens": 120,
+          "cacheReadTokens": 60,
+          "cacheWriteTokens": 20
+        },
+        "outputTokens": 80,
+        "outputTokenDetails": {
+          "textTokens": 50,
+          "reasoningTokens": 30
+        },
+        "totalTokens": 280
+      }
+    },
+    "helper": "from_vercel_ai_sdk_result",
+    "extract": {
+      "adapter": "vercel_ai_sdk.generate_text",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": "gpt-5-nano"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-5-nano:vercel-fixture",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-5-nano",
+        "aliases": [
+          "gpt-5-nano-2026-05-24"
+        ],
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_write_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1.25",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-5-nano",
+        "returned": "gpt-5-nano-2026-05-24",
+        "billed": "gpt-5-nano",
+        "alias_resolution": "source_exact"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "120",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.00012",
+          "price_card_id": "openai:gpt-5-nano:vercel-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "60",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.000006",
+          "price_card_id": "openai:gpt-5-nano:vercel-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.00000125",
+          "cost": "0.000025",
+          "price_card_id": "openai:gpt-5-nano:vercel-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "50",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.0002",
+          "price_card_id": "openai:gpt-5-nano:vercel-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "30",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.00012",
+          "price_card_id": "openai:gpt-5-nano:vercel-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.000471",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

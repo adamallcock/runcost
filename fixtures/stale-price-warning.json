@@ -1,0 +1,91 @@
+{
+  "name": "stale-price-warning",
+  "description": "Warns when a selected price source is older than the configured stale threshold.",
+  "input": {
+    "options": {
+      "stale_after_days": 30
+    },
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-stale",
+        "billed": "gpt-stale",
+        "alias_resolution": "none"
+      },
+      "context": {
+        "priced_at": "2026-05-24T00:00:00Z"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-stale:old-source",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-stale",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-01-01T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-stale",
+        "billed": "gpt-stale",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.001",
+          "price_card_id": "openai:gpt-stale:old-source",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.001",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-01-01T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "price_stale",
+          "message": "Price source fixture is 143 days old; threshold is 30 days."
+        }
+      ]
+    }
+  }
+}

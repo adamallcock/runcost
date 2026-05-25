@@ -1,0 +1,107 @@
+{
+  "name": "service-mode-batch-selection",
+  "description": "Covers batch pricing as a service_tier-specific price card.",
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-service-mode",
+        "billed": "gpt-service-mode",
+        "alias_resolution": "none"
+      },
+      "context": {
+        "service_tier": "batch"
+      },
+      "components": [
+        {
+          "name": "output_text_tokens",
+          "quantity": "1000",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-service-mode:standard",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-service-mode",
+        "service_tier": "standard",
+        "components": [
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "10",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-service-mode:batch",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-service-mode",
+        "service_tier": "batch",
+        "components": [
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "5",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-service-mode",
+        "billed": "gpt-service-mode",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "output_text_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.000005",
+          "cost": "0.005",
+          "price_card_id": "openai:gpt-service-mode:batch",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.005",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

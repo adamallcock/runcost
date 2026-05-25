@@ -1,0 +1,120 @@
+{
+  "name": "mistral-chat-raw-cache",
+  "description": "Extracts Mistral chat completion usage with prompt cache details.",
+  "input": {
+    "raw_response": {
+      "id": "mistral-fixture",
+      "object": "chat.completion",
+      "created": 1773840064,
+      "model": "mistral-large-latest",
+      "usage": {
+        "prompt_tokens": 1013,
+        "total_tokens": 1043,
+        "completion_tokens": 30,
+        "prompt_tokens_details": {
+          "cached_tokens": 1008
+        }
+      },
+      "choices": []
+    },
+    "extract": {
+      "provider": "mistral",
+      "surface": "mistral.chat_completions",
+      "model": "mistral-large-latest"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "mistral:mistral-large-latest:chat:fixture",
+        "provider": "mistral",
+        "surface": "mistral.chat_completions",
+        "model": "mistral-large-latest",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "6",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "mistral",
+      "surface": "mistral.chat_completions",
+      "model": {
+        "requested": "mistral-large-latest",
+        "returned": "mistral-large-latest",
+        "billed": "mistral-large-latest",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "5",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.00001",
+          "price_card_id": "mistral:mistral-large-latest:chat:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "1008",
+          "unit": "token",
+          "unit_price": "0.0000002",
+          "cost": "0.0002016",
+          "price_card_id": "mistral:mistral-large-latest:chat:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "30",
+          "unit": "token",
+          "unit_price": "0.000006",
+          "cost": "0.00018",
+          "price_card_id": "mistral:mistral-large-latest:chat:fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0003916",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

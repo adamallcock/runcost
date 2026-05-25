@@ -1,0 +1,113 @@
+{
+  "name": "llamaindex-token-counter-events",
+  "description": "Extracts LlamaIndex TokenCountingHandler LLM token events into prompt and completion cost components.",
+  "input": {
+    "raw_response": {
+      "model": "gpt-5-nano-2026-05-24",
+      "prompt_llm_token_count": 100,
+      "completion_llm_token_count": 25,
+      "total_llm_token_count": 125,
+      "total_embedding_token_count": 8,
+      "llm_token_counts": [
+        {
+          "event_id": "llm-event-1",
+          "prompt_token_count": 60,
+          "completion_token_count": 10,
+          "total_token_count": 70
+        },
+        {
+          "event_id": "llm-event-2",
+          "prompt_token_count": 40,
+          "completion_token_count": 15,
+          "total_token_count": 55
+        }
+      ]
+    },
+    "helper": "from_llamaindex_token_counter",
+    "extract": {
+      "adapter": "llamaindex.token_counter",
+      "provider": "openai",
+      "surface": "openai.chat_completions",
+      "model": "gpt-5-nano"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-5-nano:llamaindex-fixture",
+        "provider": "openai",
+        "surface": "openai.chat_completions",
+        "model": "gpt-5-nano",
+        "aliases": [
+          "gpt-5-nano-2026-05-24"
+        ],
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.chat_completions",
+      "model": {
+        "requested": "gpt-5-nano",
+        "returned": "gpt-5-nano-2026-05-24",
+        "billed": "gpt-5-nano",
+        "alias_resolution": "source_exact"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.0001",
+          "price_card_id": "openai:gpt-5-nano:llamaindex-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "25",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.0001",
+          "price_card_id": "openai:gpt-5-nano:llamaindex-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0002",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

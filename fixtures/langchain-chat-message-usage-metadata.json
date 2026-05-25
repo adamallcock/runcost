@@ -1,0 +1,165 @@
+{
+  "name": "langchain-chat-message-usage-metadata",
+  "description": "Extracts LangChain AIMessage usage_metadata with cache read, cache creation, and reasoning details.",
+  "input": {
+    "raw_response": {
+      "content": "Sure.",
+      "response_metadata": {
+        "model_name": "gpt-5-nano-2026-05-24",
+        "finish_reason": "stop"
+      },
+      "usage_metadata": {
+        "input_tokens": 350,
+        "output_tokens": 240,
+        "total_tokens": 590,
+        "input_token_details": {
+          "cache_read": 100,
+          "cache_creation": 50
+        },
+        "output_token_details": {
+          "reasoning": 80
+        }
+      }
+    },
+    "helper": "from_langchain_message",
+    "extract": {
+      "adapter": "langchain.chat_message",
+      "provider": "openai",
+      "surface": "openai.chat_completions",
+      "model": "gpt-5-nano"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-5-nano:langchain-fixture",
+        "provider": "openai",
+        "surface": "openai.chat_completions",
+        "model": "gpt-5-nano",
+        "aliases": [
+          "gpt-5-nano-2026-05-24"
+        ],
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_write_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1.25",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.chat_completions",
+      "model": {
+        "requested": "gpt-5-nano",
+        "returned": "gpt-5-nano-2026-05-24",
+        "billed": "gpt-5-nano",
+        "alias_resolution": "source_exact"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "200",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.0002",
+          "price_card_id": "openai:gpt-5-nano:langchain-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.00001",
+          "price_card_id": "openai:gpt-5-nano:langchain-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "50",
+          "unit": "token",
+          "unit_price": "0.00000125",
+          "cost": "0.0000625",
+          "price_card_id": "openai:gpt-5-nano:langchain-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "160",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.00064",
+          "price_card_id": "openai:gpt-5-nano:langchain-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "80",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.00032",
+          "price_card_id": "openai:gpt-5-nano:langchain-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0012325",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

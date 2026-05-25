@@ -1,0 +1,135 @@
+{
+  "name": "service-tier-region-selection",
+  "description": "Selects the most specific price card for service tier and region.",
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-tiered",
+        "billed": "gpt-tiered",
+        "alias_resolution": "none"
+      },
+      "context": {
+        "service_tier": "flex",
+        "region": "us-east-1",
+        "priced_at": "2026-05-24T00:00:00Z"
+      },
+      "components": [
+        {
+          "name": "output_text_tokens",
+          "quantity": "100",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-tiered:standard:us-east-1",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-tiered",
+        "service_tier": "standard",
+        "region": "us-east-1",
+        "components": [
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "10",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-tiered:flex:eu-west-1",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-tiered",
+        "service_tier": "flex",
+        "region": "eu-west-1",
+        "components": [
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-tiered:flex:us-east-1",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-tiered",
+        "service_tier": "flex",
+        "region": "us-east-1",
+        "components": [
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "5",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-tiered",
+        "billed": "gpt-tiered",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "output_text_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.000005",
+          "cost": "0.0005",
+          "price_card_id": "openai:gpt-tiered:flex:us-east-1",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0005",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

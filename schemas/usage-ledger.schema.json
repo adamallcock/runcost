@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runcost.dev/schemas/usage-ledger.schema.json",
+  "title": "UsageLedger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "provider", "surface", "model", "components"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "0.1"
+    },
+    "provider": {
+      "type": "string",
+      "minLength": 1
+    },
+    "surface": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requested"],
+      "properties": {
+        "requested": { "type": "string", "minLength": 1 },
+        "returned": { "type": "string" },
+        "billed": { "type": "string" },
+        "alias_resolution": {
+          "type": "string",
+          "enum": ["none", "user_exact", "source_exact", "package_exact", "provider_heuristic", "unknown"]
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "service_tier": { "type": "string" },
+        "region": { "type": "string" },
+        "priced_at": { "type": "string", "format": "date-time" },
+        "request_id": { "type": "string" },
+        "trace_id": { "type": "string" }
+      }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/usage_component" }
+    },
+    "raw_usage": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "usage_component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "quantity", "unit"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "input_uncached_tokens",
+            "input_cache_read_tokens",
+            "input_cache_write_tokens",
+            "input_cache_write_1h_tokens",
+            "input_image_units",
+            "input_audio_tokens",
+            "input_image_tokens",
+            "input_video_tokens",
+            "output_text_tokens",
+            "output_reasoning_tokens",
+            "output_audio_tokens",
+            "output_image_tokens",
+            "output_video_tokens",
+            "embedding_tokens",
+            "request_units",
+            "web_search_units",
+            "file_search_units",
+            "code_interpreter_session_units",
+            "code_interpreter_call_units",
+            "computer_use_action_units",
+            "tool_call_units",
+            "tool_execution_seconds",
+            "rerank_search_units",
+            "image_generation_units",
+            "video_generation_units",
+            "audio_generation_units",
+            "transcription_seconds",
+            "endpoint_runtime_seconds",
+            "endpoint_instance_hours",
+            "custom_units"
+          ]
+        },
+        "quantity": {
+          "type": "string",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+        },
+        "unit": {
+          "type": "string",
+          "enum": ["token", "request", "call", "session", "search", "file", "image", "video", "audio", "second", "hour", "gb_day", "usd", "custom"]
+        },
+        "tool": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "provider": { "type": "string" },
+            "name": { "type": "string" },
+            "billing_source": {
+              "type": "string",
+              "enum": ["provider", "gateway", "user", "unknown"]
+            }
+          }
+        },
+        "source_path": {
+          "type": "string",
+          "description": "JSON path or human-readable path to the raw usage field."
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

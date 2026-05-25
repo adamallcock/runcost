@@ -1,0 +1,129 @@
+{
+  "name": "litellm-adapter-basic",
+  "description": "Build price cards from a LiteLLM-style model price map and price normalized usage.",
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-fixture",
+        "returned": "gpt-fixture",
+        "billed": "gpt-fixture",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "10",
+          "unit": "token"
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "2",
+          "unit": "token"
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "3",
+          "unit": "token"
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "4",
+          "unit": "token"
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "1",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_source": {
+      "type": "litellm",
+      "data": {
+        "updated_at": "2026-05-24",
+        "gpt-fixture": {
+          "litellm_provider": "openai",
+          "input_cost_per_token": "0.000001",
+          "cache_read_input_token_cost": "0.0000001",
+          "cache_creation_input_token_cost": "0.00000125",
+          "output_cost_per_token": "0.000004",
+          "output_cost_per_reasoning_token": "0.000004"
+        }
+      }
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-fixture",
+        "returned": "gpt-fixture",
+        "billed": "gpt-fixture",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "10",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.00001",
+          "price_card_id": "openai:gpt-fixture:litellm",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "2",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.0000002",
+          "price_card_id": "openai:gpt-fixture:litellm",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "3",
+          "unit": "token",
+          "unit_price": "0.00000125",
+          "cost": "0.00000375",
+          "price_card_id": "openai:gpt-fixture:litellm",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "4",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.000016",
+          "price_card_id": "openai:gpt-fixture:litellm",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "1",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.000004",
+          "price_card_id": "openai:gpt-fixture:litellm",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.00003395",
+      "price_sources": [
+        {
+          "name": "litellm",
+          "url": "https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

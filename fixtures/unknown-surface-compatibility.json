@@ -1,0 +1,43 @@
+{
+  "name": "unknown-surface-compatibility",
+  "description": "Compatibility mode returns an unknown_surface warning for unsupported raw response surfaces.",
+  "input": {
+    "extract": {
+      "provider": "custom",
+      "surface": "custom.unknown",
+      "model": "custom-model"
+    },
+    "raw_response": {
+      "model": "custom-model",
+      "usage": {
+        "input_tokens": 10,
+        "output_tokens": 5
+      }
+    },
+    "price_cards": []
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "custom",
+      "surface": "custom.unknown",
+      "model": {
+        "requested": "custom-model",
+        "returned": "custom-model",
+        "billed": "custom-model",
+        "alias_resolution": "unknown"
+      },
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "unknown_surface",
+          "message": "Unsupported surface: custom.unknown."
+        }
+      ]
+    }
+  }
+}

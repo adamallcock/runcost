@@ -1,0 +1,105 @@
+{
+  "name": "price-source-priority-user-override",
+  "description": "Uses configured source priority so a user override wins over a vendor source.",
+  "input": {
+    "options": {
+      "price_source_priority": ["user-overrides", "vendor-feed"]
+    },
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-priority",
+        "billed": "gpt-priority",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-priority:vendor",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-priority",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "vendor-feed",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-priority:user",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-priority",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.5",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "user-overrides",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-priority",
+        "billed": "gpt-priority",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.0000005",
+          "cost": "0.0005",
+          "price_card_id": "openai:gpt-priority:user",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0005",
+      "price_sources": [
+        {
+          "name": "user-overrides",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

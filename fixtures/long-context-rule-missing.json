@@ -1,0 +1,73 @@
+{
+  "name": "long-context-rule-missing",
+  "description": "Warns when a matching price card has conditional input pricing but no rule covers the usage token volume.",
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-long",
+        "billed": "gpt-long",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "250000",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-long:base-only",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-long",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            },
+            "conditions": {
+              "max_total_input_tokens": "199999"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-long",
+        "billed": "gpt-long",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "long_context_rule_missing",
+          "message": "No long-context pricing rule matched input_uncached_tokens at 250000 input tokens."
+        }
+      ]
+    }
+  }
+}

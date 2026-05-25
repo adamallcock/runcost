@@ -1,0 +1,98 @@
+{
+  "name": "openrouter-models-adapter-tiered",
+  "description": "Maps OpenRouter tiered pricing arrays into long-context price-component conditions.",
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openrouter",
+      "surface": "openrouter.chat_completions",
+      "model": {
+        "requested": "example/long-context",
+        "returned": "example/long-context",
+        "billed": "example/long-context",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "250000",
+          "unit": "token"
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "1000",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_source": {
+      "type": "openrouter-models",
+      "data": {
+        "updated_at": "2026-05-24",
+        "data": [
+          {
+            "id": "example/long-context",
+            "name": "Example Long Context",
+            "pricing": [
+              {
+                "prompt": "0.000001",
+                "completion": "0.000002",
+                "request": "0"
+              },
+              {
+                "prompt": "0.000003",
+                "completion": "0.000006",
+                "input_cache_read": "0.0000005",
+                "min_context": 200000
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openrouter",
+      "surface": "openrouter.chat_completions",
+      "model": {
+        "requested": "example/long-context",
+        "returned": "example/long-context",
+        "billed": "example/long-context",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "250000",
+          "unit": "token",
+          "unit_price": "0.000003",
+          "cost": "0.75",
+          "price_card_id": "openrouter:example/long-context:openrouter-models",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.000006",
+          "cost": "0.006",
+          "price_card_id": "openrouter:example/long-context:openrouter-models",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.756",
+      "price_sources": [
+        {
+          "name": "openrouter",
+          "url": "https://openrouter.ai/api/v1/models",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

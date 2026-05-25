@@ -1,0 +1,110 @@
+{
+  "name": "service-mode-provisioned-selection",
+  "description": "Covers provisioned endpoint hour pricing through service tier and non-token units.",
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "bedrock",
+      "surface": "aws.bedrock.converse",
+      "model": {
+        "requested": "anthropic.claude-example",
+        "billed": "anthropic.claude-example",
+        "alias_resolution": "none"
+      },
+      "context": {
+        "service_tier": "provisioned",
+        "region": "us-east-1"
+      },
+      "components": [
+        {
+          "name": "endpoint_instance_hours",
+          "quantity": "2.5",
+          "unit": "hour"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "bedrock:claude-example:on-demand",
+        "provider": "bedrock",
+        "surface": "aws.bedrock.converse",
+        "model": "anthropic.claude-example",
+        "service_tier": "standard",
+        "region": "us-east-1",
+        "components": [
+          {
+            "usage_component": "endpoint_instance_hours",
+            "unit": "hour",
+            "price": {
+              "amount": "0",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "bedrock:claude-example:provisioned:us-east-1",
+        "provider": "bedrock",
+        "surface": "aws.bedrock.converse",
+        "model": "anthropic.claude-example",
+        "service_tier": "provisioned",
+        "region": "us-east-1",
+        "components": [
+          {
+            "usage_component": "endpoint_instance_hours",
+            "unit": "hour",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "bedrock",
+      "surface": "aws.bedrock.converse",
+      "model": {
+        "requested": "anthropic.claude-example",
+        "billed": "anthropic.claude-example",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "endpoint_instance_hours",
+          "quantity": "2.5",
+          "unit": "hour",
+          "unit_price": "4",
+          "cost": "10",
+          "price_card_id": "bedrock:claude-example:provisioned:us-east-1",
+          "discount_eligible": true
+        }
+      ],
+      "total": "10",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

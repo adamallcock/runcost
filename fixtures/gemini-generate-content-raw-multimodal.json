@@ -1,0 +1,291 @@
+{
+  "name": "gemini-generate-content-raw-multimodal",
+  "description": "Extracts Gemini generateContent usageMetadata modality details for input, cached input, tool prompt, output, and thoughts tokens.",
+  "input": {
+    "raw_response": {
+      "modelVersion": "gemini-2.5-pro",
+      "responseId": "gemini-multimodal-response-123",
+      "usageMetadata": {
+        "promptTokenCount": 1100,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 100
+          },
+          {
+            "modality": "IMAGE",
+            "tokenCount": 600
+          },
+          {
+            "modality": "AUDIO",
+            "tokenCount": 200
+          },
+          {
+            "modality": "VIDEO",
+            "tokenCount": 200
+          }
+        ],
+        "cachedContentTokenCount": 50,
+        "cacheTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 50
+          }
+        ],
+        "toolUsePromptTokenCount": 25,
+        "toolUsePromptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 25
+          }
+        ],
+        "candidatesTokenCount": 150,
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 120
+          },
+          {
+            "modality": "IMAGE",
+            "tokenCount": 20
+          },
+          {
+            "modality": "AUDIO",
+            "tokenCount": 5
+          },
+          {
+            "modality": "VIDEO",
+            "tokenCount": 5
+          }
+        ],
+        "thoughtsTokenCount": 10,
+        "totalTokenCount": 1285
+      }
+    },
+    "extract": {
+      "provider": "google",
+      "surface": "google.gemini.generate_content",
+      "model": "gemini-2.5-pro"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "google:gemini-2.5-pro:multimodal-fixture",
+        "provider": "google",
+        "surface": "google.gemini.generate_content",
+        "model": "gemini-2.5-pro",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_image_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_audio_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "3",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_video_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "5",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "5",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_image_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "6",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_audio_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "7",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_video_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "8",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "google",
+      "surface": "google.gemini.generate_content",
+      "model": {
+        "requested": "gemini-2.5-pro",
+        "returned": "gemini-2.5-pro",
+        "billed": "gemini-2.5-pro",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "75",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.000075",
+          "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "50",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.000005",
+          "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_image_tokens",
+          "quantity": "600",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.0012",
+          "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_audio_tokens",
+          "quantity": "200",
+          "unit": "token",
+          "unit_price": "0.000003",
+          "cost": "0.0006",
+          "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_video_tokens",
+          "quantity": "200",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.0008",
+          "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "120",
+          "unit": "token",
+          "unit_price": "0.000005",
+          "cost": "0.0006",
+          "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "10",
+          "unit": "token",
+          "unit_price": "0.000005",
+          "cost": "0.00005",
+          "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_image_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.000006",
+          "cost": "0.00012",
+          "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_audio_tokens",
+          "quantity": "5",
+          "unit": "token",
+          "unit_price": "0.000007",
+          "cost": "0.000035",
+          "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_video_tokens",
+          "quantity": "5",
+          "unit": "token",
+          "unit_price": "0.000008",
+          "cost": "0.00004",
+          "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.003525",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

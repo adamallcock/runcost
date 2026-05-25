@@ -1,0 +1,103 @@
+{
+  "name": "provider-reported-cost-used",
+  "description": "Uses provider-reported cost as authoritative while preserving a reconciliation adjustment component.",
+  "input": {
+    "options": {
+      "provider_reported_cost": "0.009",
+      "provider_reported_cost_mode": "use"
+    },
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openrouter",
+      "surface": "openrouter.chat_completions",
+      "model": {
+        "requested": "openrouter/example",
+        "billed": "openrouter/example",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openrouter:example",
+        "provider": "openrouter",
+        "surface": "openrouter.chat_completions",
+        "model": "openrouter/example",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openrouter",
+      "surface": "openrouter.chat_completions",
+      "model": {
+        "requested": "openrouter/example",
+        "billed": "openrouter/example",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.001",
+          "price_card_id": "openrouter:example",
+          "discount_eligible": true
+        },
+        {
+          "name": "custom_units",
+          "quantity": "0.008",
+          "unit": "usd",
+          "unit_price": "1",
+          "cost": "0.008",
+          "price_card_id": "__provider_reported_cost__",
+          "discount_eligible": false,
+          "metadata": {
+            "reason": "provider_reported_cost_reconciliation",
+            "calculated_total": "0.001",
+            "provider_reported_cost": "0.009"
+          }
+        }
+      ],
+      "total": "0.009",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "provider_reported_cost_used",
+          "message": "Provider reported cost 0.009 used as authoritative total."
+        }
+      ]
+    }
+  }
+}

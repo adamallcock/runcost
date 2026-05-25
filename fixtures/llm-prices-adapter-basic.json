@@ -1,0 +1,103 @@
+{
+  "name": "llm-prices-adapter-basic",
+  "description": "Build price cards from Simon Willison llm-prices current schema and price normalized usage.",
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-fixture",
+        "returned": "gpt-fixture",
+        "billed": "gpt-fixture",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000000",
+          "unit": "token"
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "500000",
+          "unit": "token"
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "250000",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_source": {
+      "type": "llm-prices",
+      "data": {
+        "updated_at": "2026-05-24",
+        "prices": [
+          {
+            "id": "gpt-fixture",
+            "vendor": "openai",
+            "name": "GPT Fixture",
+            "input": 2.5,
+            "output": 10,
+            "input_cached": 0.25
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-fixture",
+        "returned": "gpt-fixture",
+        "billed": "gpt-fixture",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000000",
+          "unit": "token",
+          "unit_price": "0.0000025",
+          "cost": "2.5",
+          "price_card_id": "openai:gpt-fixture:llm-prices",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "500000",
+          "unit": "token",
+          "unit_price": "0.00000025",
+          "cost": "0.125",
+          "price_card_id": "openai:gpt-fixture:llm-prices",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "250000",
+          "unit": "token",
+          "unit_price": "0.00001",
+          "cost": "2.5",
+          "price_card_id": "openai:gpt-fixture:llm-prices",
+          "discount_eligible": true
+        }
+      ],
+      "total": "5.125",
+      "price_sources": [
+        {
+          "name": "llm-prices",
+          "url": "https://www.llm-prices.com/current-v1.json",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

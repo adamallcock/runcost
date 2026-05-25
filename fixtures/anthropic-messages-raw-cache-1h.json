@@ -1,0 +1,152 @@
+{
+  "name": "anthropic-messages-raw-cache-1h",
+  "description": "Raw Anthropic Messages response with separate 1-hour cache write tokens.",
+  "input": {
+    "extract": {
+      "provider": "anthropic",
+      "surface": "anthropic.messages"
+    },
+    "raw_response": {
+      "id": "msg_cache_1h_fixture",
+      "type": "message",
+      "model": "claude-sonnet-4.5",
+      "usage": {
+        "input_tokens": 100,
+        "cache_creation_input_tokens": 1000,
+        "cache_creation_input_tokens_1h": 400,
+        "cache_read_input_tokens": 2000,
+        "output_tokens": 50
+      }
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "anthropic:claude-sonnet-4.5:cache-1h-fixture",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "claude-sonnet-4.5",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000003",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "input_cache_write_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.00000375",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "input_cache_write_1h_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000006",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.0000003",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000015",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": {
+        "requested": "claude-sonnet-4.5",
+        "returned": "claude-sonnet-4.5",
+        "billed": "claude-sonnet-4.5",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.000003",
+          "cost": "0.0003",
+          "price_card_id": "anthropic:claude-sonnet-4.5:cache-1h-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "600",
+          "unit": "token",
+          "unit_price": "0.00000375",
+          "cost": "0.00225",
+          "price_card_id": "anthropic:claude-sonnet-4.5:cache-1h-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_1h_tokens",
+          "quantity": "400",
+          "unit": "token",
+          "unit_price": "0.000006",
+          "cost": "0.0024",
+          "price_card_id": "anthropic:claude-sonnet-4.5:cache-1h-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "2000",
+          "unit": "token",
+          "unit_price": "0.0000003",
+          "cost": "0.0006",
+          "price_card_id": "anthropic:claude-sonnet-4.5:cache-1h-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "50",
+          "unit": "token",
+          "unit_price": "0.000015",
+          "cost": "0.00075",
+          "price_card_id": "anthropic:claude-sonnet-4.5:cache-1h-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0063",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "name": "discount-policy-openai-basic",
+  "description": "Provider-level 4 percent discount applied to eligible OpenAI token components.",
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-fixture",
+        "returned": "gpt-fixture",
+        "billed": "gpt-fixture",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token"
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "50",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-fixture:discount-fixture",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-fixture",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.01",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.02",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ],
+    "discount_policies": [
+      {
+        "schema_version": "0.1",
+        "id": "openai-four-percent",
+        "match": {
+          "provider": "openai"
+        },
+        "adjustment": {
+          "type": "percentage_discount",
+          "value": "4"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-fixture",
+        "returned": "gpt-fixture",
+        "billed": "gpt-fixture",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.01",
+          "cost": "0.96",
+          "price_card_id": "openai:gpt-fixture:discount-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "50",
+          "unit": "token",
+          "unit_price": "0.02",
+          "cost": "0.96",
+          "price_card_id": "openai:gpt-fixture:discount-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "1.92",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [
+        {
+          "policy_id": "openai-four-percent",
+          "component": "input_uncached_tokens",
+          "amount": "0.04"
+        },
+        {
+          "policy_id": "openai-four-percent",
+          "component": "output_text_tokens",
+          "amount": "0.04"
+        }
+      ],
+      "warnings": []
+    }
+  }
+}

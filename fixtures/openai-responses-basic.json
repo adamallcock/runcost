@@ -1,0 +1,113 @@
+{
+  "name": "openai-responses-basic",
+  "description": "Basic OpenAI Responses-style normalized usage with input and output token pricing.",
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-5.4",
+        "returned": "gpt-5.4",
+        "billed": "gpt-5.4",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "36",
+          "unit": "token",
+          "source_path": "$.usage.input_tokens"
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "87",
+          "unit": "token",
+          "source_path": "$.usage.output_tokens"
+        }
+      ],
+      "raw_usage": {
+        "input_tokens": 36,
+        "output_tokens": 87,
+        "total_tokens": 123
+      }
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-5.4:standard:2026-05-24",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-5.4",
+        "service_tier": "standard",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.0000025",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000015",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-5.4",
+        "returned": "gpt-5.4",
+        "billed": "gpt-5.4",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "36",
+          "unit": "token",
+          "unit_price": "0.0000025",
+          "cost": "0.00009",
+          "price_card_id": "openai:gpt-5.4:standard:2026-05-24",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "87",
+          "unit": "token",
+          "unit_price": "0.000015",
+          "cost": "0.001305",
+          "price_card_id": "openai:gpt-5.4:standard:2026-05-24",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.001395",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

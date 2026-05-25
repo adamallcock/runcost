@@ -1,0 +1,95 @@
+{
+  "name": "long-context-threshold-selection",
+  "description": "Selects the long-context price component when total input tokens cross the configured threshold.",
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-long",
+        "billed": "gpt-long",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "250000",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-long:thresholds",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-long",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            },
+            "conditions": {
+              "max_total_input_tokens": "199999"
+            }
+          },
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            },
+            "conditions": {
+              "min_total_input_tokens": "200000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-long",
+        "billed": "gpt-long",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "250000",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.5",
+          "price_card_id": "openai:gpt-long:thresholds",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.5",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

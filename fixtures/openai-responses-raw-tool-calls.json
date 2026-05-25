@@ -1,0 +1,164 @@
+{
+  "name": "openai-responses-raw-tool-calls",
+  "description": "Raw OpenAI Responses response with hosted tool call output items.",
+  "input": {
+    "extract": {
+      "provider": "openai",
+      "surface": "openai.responses"
+    },
+    "raw_response": {
+      "id": "resp_tool_fixture",
+      "object": "response",
+      "model": "gpt-5.4",
+      "output": [
+        {
+          "type": "web_search_call",
+          "id": "ws_1"
+        },
+        {
+          "type": "file_search_call",
+          "id": "fs_1"
+        },
+        {
+          "type": "code_interpreter_call",
+          "id": "ci_1"
+        }
+      ],
+      "usage": {
+        "input_tokens": 10,
+        "output_tokens": 5,
+        "total_tokens": 15
+      }
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-5.4:tool-fixture",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-5.4",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.001",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.002",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "web_search_units",
+            "unit": "search",
+            "price": {
+              "amount": "0.01",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "file_search_units",
+            "unit": "call",
+            "price": {
+              "amount": "0.005",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "code_interpreter_call_units",
+            "unit": "call",
+            "price": {
+              "amount": "0.03",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-5.4",
+        "returned": "gpt-5.4",
+        "billed": "gpt-5.4",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "10",
+          "unit": "token",
+          "unit_price": "0.001",
+          "cost": "0.01",
+          "price_card_id": "openai:gpt-5.4:tool-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "5",
+          "unit": "token",
+          "unit_price": "0.002",
+          "cost": "0.01",
+          "price_card_id": "openai:gpt-5.4:tool-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "web_search_units",
+          "quantity": "1",
+          "unit": "search",
+          "unit_price": "0.01",
+          "cost": "0.01",
+          "price_card_id": "openai:gpt-5.4:tool-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "file_search_units",
+          "quantity": "1",
+          "unit": "call",
+          "unit_price": "0.005",
+          "cost": "0.005",
+          "price_card_id": "openai:gpt-5.4:tool-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "code_interpreter_call_units",
+          "quantity": "1",
+          "unit": "call",
+          "unit_price": "0.03",
+          "cost": "0.03",
+          "price_card_id": "openai:gpt-5.4:tool-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.065",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}
