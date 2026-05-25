@@ -1374,6 +1374,21 @@ function openRouterTierConditions(tiers, index) {
   return Object.keys(conditions).length > 0 ? { conditions } : {};
 }
 
+function thresholdTierConditions(tiers, index) {
+  const tier = tiers[index];
+  const conditions = {};
+  if (tier.threshold !== undefined && tier.threshold !== null && parseDecimal(tier.threshold).value > 0n) {
+    conditions.min_total_input_tokens = numberString(tier.threshold);
+  }
+  const nextTier = tiers.slice(index + 1).find((candidate) => (
+    candidate.threshold !== undefined && candidate.threshold !== null
+  ));
+  if (nextTier) {
+    conditions.max_total_input_tokens = subtractDecimal(nextTier.threshold, "1");
+  }
+  return Object.keys(conditions).length > 0 ? { conditions } : {};
+}
+
 export function priceCardsFromOpenRouterModels(data, options = {}) {
   const retrievedAt = options.retrievedAt || options.retrieved_at || `${data.updated_at || "1970-01-01"}T00:00:00Z`;
   const sourceUrl = options.sourceUrl || options.source_url || "https://openrouter.ai/api/v1/models";
@@ -1420,6 +1435,183 @@ export function priceCardsFromOpenRouterModels(data, options = {}) {
       card.effective = { to: model.expiration_date };
     }
     return [card];
+  });
+}
+
+function sourceInfo(data, defaultName, defaultUrl, options = {}) {
+  const source = data && typeof data.source === "object" && data.source !== null ? data.source : {};
+  const retrievedAt = options.retrievedAt || options.retrieved_at || source.retrieved_at || source.retrievedAt || data.retrieved_at || data.retrievedAt || `${data.updated_at || "1970-01-01"}T00:00:00Z`;
+  const info = {
+    name: options.sourceName || options.source_name || source.name || defaultName,
+    url: options.sourceUrl || options.source_url || source.url || defaultUrl,
+    retrieved_at: retrievedAt
+  };
+  if (source.version) info.version = source.version;
+  if (source.license) info.license = source.license;
+  return info;
+}
+
+function componentAmount(entry, keys) {
+  const prices = entry.prices && typeof entry.prices === "object" ? entry.prices : {};
+  const pricing = entry.pricing && typeof entry.pricing === "object" ? entry.pricing : {};
+  for (const key of keys) {
+    if (hasOwn(entry, key)) return entry[key];
+    if (hasOwn(prices, key)) return prices[key];
+    if (hasOwn(pricing, key)) return pricing[key];
+  }
+  return undefined;
+}
+
+function canonicalPriceCards(rawCards) {
+  return Array.isArray(rawCards) ? rawCards.filter((card) => card && typeof card === "object") : [];
+}
+
+export function priceCardsFromUserPricing(data, options = {}) {
+  if (Array.isArray(data)) {
+    return canonicalPriceCards(data);
+  }
+  if (!data || typeof data !== "object") {
+    return [];
+  }
+  if (data.price_cards) {
+    return canonicalPriceCards(data.price_cards);
+  }
+  if (data.priceCards) {
+    return canonicalPriceCards(data.priceCards);
+  }
+
+  const source = sourceInfo(data, "user-pricing", "file://user-pricing", options);
+  const providerDefault = data.provider || options.provider || "user";
+  const surfaceDefault = data.surface || options.surface;
+  const serviceTierDefault = data.service_tier || data.serviceTier;
+  const regionDefault = data.region;
+  const perDefault = numberString(data.per || "1000000");
+  return (data.models || []).flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    if (entry.components && entry.provider && (entry.model || entry.id)) {
+      return [{
+        ...entry,
+        schema_version: entry.schema_version || "0.1",
+        model: entry.model || entry.id,
+        source: entry.source || source
+      }];
+    }
+
+    const model = entry.model || entry.id;
+    if (!model) return [];
+    const provider = entry.provider || providerDefault;
+    const per = numberString(entry.per || perDefault);
+    const components = [];
+    addPriceComponent(components, "input_uncached_tokens", "token", componentAmount(entry, ["input", "input_uncached", "input_uncached_tokens"]), per);
+    addPriceComponent(components, "input_cache_read_tokens", "token", componentAmount(entry, ["cached_input", "input_cached", "cache_read", "input_cache_read"]), per);
+    addPriceComponent(components, "input_cache_write_tokens", "token", componentAmount(entry, ["cache_write", "input_cache_write"]), per);
+    addPriceComponent(components, "input_cache_write_1h_tokens", "token", componentAmount(entry, ["cache_write_1h", "input_cache_write_1h"]), per);
+    addPriceComponent(components, "output_text_tokens", "token", componentAmount(entry, ["output", "completion", "output_text"]), per);
+    addPriceComponent(components, "output_reasoning_tokens", "token", componentAmount(entry, ["reasoning", "thinking", "output_reasoning"]), per);
+    addPriceComponent(components, "request_units", "request", componentAmount(entry, ["request", "per_request"]), "1");
+    addPriceComponent(components, "web_search_units", "search", componentAmount(entry, ["web_search"]), "1");
+    if (components.length === 0) return [];
+
+    const card = {
+      schema_version: "0.1",
+      id: entry.price_card_id || entry.priceCardId || `${provider}:${model}:user-pricing`,
+      provider,
+      model,
+      aliases: entry.aliases || [],
+      components,
+      source
+    };
+    const surface = entry.surface || surfaceDefault;
+    if (surface) card.surface = surface;
+    const serviceTier = entry.service_tier || entry.serviceTier || serviceTierDefault;
+    if (serviceTier) card.service_tier = serviceTier;
+    const region = entry.region || regionDefault;
+    if (region) card.region = region;
+    if (entry.effective && typeof entry.effective === "object") card.effective = entry.effective;
+    return [card];
+  });
+}
+
+function heliconeEndpointItems(data) {
+  const endpoints = data.endpoints && typeof data.endpoints === "object" ? data.endpoints : data;
+  if (Array.isArray(endpoints)) {
+    return endpoints.filter((entry) => entry && typeof entry === "object");
+  }
+  if (endpoints && typeof endpoints === "object") {
+    return Object.values(endpoints).filter((entry) => entry && typeof entry === "object");
+  }
+  return [];
+}
+
+function heliconePricingTiers(pricing) {
+  const tiers = Array.isArray(pricing) ? pricing : [pricing];
+  return tiers
+    .filter((tier) => tier && typeof tier === "object")
+    .sort((left, right) => Number(left.threshold || 0) - Number(right.threshold || 0));
+}
+
+function heliconeAddModalityComponents(components, tier, modality, conditions) {
+  const pricing = tier[modality];
+  if (!pricing || typeof pricing !== "object") return;
+  const names = {
+    image: ["input_image_tokens", "output_image_tokens"],
+    audio: ["input_audio_tokens", "output_audio_tokens"],
+    video: ["input_video_tokens", "output_video_tokens"]
+  };
+  if (!names[modality]) return;
+  const [inputComponent, outputComponent] = names[modality];
+  addPriceComponent(components, inputComponent, "token", pricing.input, "1", conditions);
+  addPriceComponent(components, outputComponent, "token", pricing.output, "1", conditions);
+}
+
+export function priceCardsFromHelicone(data, options = {}) {
+  const source = sourceInfo(data, "helicone", "https://github.com/Helicone/helicone/tree/main/packages/cost", options);
+  return heliconeEndpointItems(data).flatMap((endpoint) => {
+    const model = endpoint.providerModelId;
+    const provider = endpoint.provider || options.provider;
+    if (!model || !provider) return [];
+    const tiers = heliconePricingTiers(endpoint.pricing);
+    const components = [];
+    tiers.forEach((tier, index) => {
+      const conditions = thresholdTierConditions(tiers, index);
+      const inputPrice = tier.input;
+      addPriceComponent(components, "input_uncached_tokens", "token", inputPrice, "1", conditions);
+      addPriceComponent(components, "output_text_tokens", "token", tier.output, "1", conditions);
+      const cacheMultipliers = tier.cacheMultipliers && typeof tier.cacheMultipliers === "object" ? tier.cacheMultipliers : {};
+      if (inputPrice !== undefined && inputPrice !== null) {
+        if (cacheMultipliers.cachedInput !== undefined && cacheMultipliers.cachedInput !== null) {
+          addPriceComponent(components, "input_cache_read_tokens", "token", multiplyDecimal(inputPrice, cacheMultipliers.cachedInput), "1", conditions);
+        }
+        if (cacheMultipliers.write5m !== undefined && cacheMultipliers.write5m !== null) {
+          addPriceComponent(components, "input_cache_write_tokens", "token", multiplyDecimal(inputPrice, cacheMultipliers.write5m), "1", conditions);
+        }
+        if (cacheMultipliers.write1h !== undefined && cacheMultipliers.write1h !== null) {
+          addPriceComponent(components, "input_cache_write_1h_tokens", "token", multiplyDecimal(inputPrice, cacheMultipliers.write1h), "1", conditions);
+        }
+      }
+      addPriceComponent(components, "output_reasoning_tokens", "token", tier.thinking, "1", conditions);
+      if (index === 0) {
+        addPriceComponent(components, "request_units", "request", tier.request, "1");
+        addPriceComponent(components, "web_search_units", "search", tier.web_search, "1");
+      }
+      ["image", "audio", "video"].forEach((modality) => heliconeAddModalityComponents(components, tier, modality, conditions));
+    });
+    if (components.length === 0) return [];
+    return [{
+      schema_version: "0.1",
+      id: `${provider}:${model}:helicone`,
+      provider,
+      model,
+      aliases: (endpoint.providerModelIdAliases || []).filter((alias) => alias && alias !== model),
+      components,
+      source,
+      metadata: {
+        author: endpoint.author,
+        context_length: endpoint.contextLength,
+        max_completion_tokens: endpoint.maxCompletionTokens,
+        ptb_enabled: endpoint.ptbEnabled
+      }
+    }];
   });
 }
 

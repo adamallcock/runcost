@@ -17,6 +17,8 @@ Source adapters convert external pricing catalogs into RunCost price cards. They
 | LiteLLM model prices JSON | `price_cards_from_litellm` / `priceCardsFromLiteLLM` / `PriceCardsFromLiteLLM` | Handles token, cached token, and reasoning token fields that map cleanly to RunCost components. |
 | OpenRouter models API | `price_cards_from_openrouter_models` / `priceCardsFromOpenRouterModels` / `PriceCardsFromOpenRouterModels` | Handles prompt, completion, cache, reasoning, request, image, web search, and tiered context fields covered by fixtures. |
 | Portkey pricing data | `price_cards_from_portkey` / `priceCardsFromPortkey` / `PriceCardsFromPortkey` | Handles token, cache, reasoning, and web-search price fields covered by fixtures. |
+| User compact pricing data | `price_cards_from_user_pricing` / `priceCardsFromUserPricing` / `PriceCardsFromUserPricing` | Handles compact JSON/YAML-shaped model records after callers parse them into objects. |
+| Helicone model-registry endpoint data | `price_cards_from_helicone` / `priceCardsFromHelicone` / `PriceCardsFromHelicone` | Handles endpoint pricing arrays, cache multipliers, reasoning, request, web-search, and image/audio/video token modality prices covered by fixtures. |
 
 ## Adapter Contract
 
@@ -36,6 +38,7 @@ Use source priority when combining user overrides with public catalogs.
 const priceCards = [
   ...priceCardsFromLlmPrices(llmPricesData),
   ...priceCardsFromLiteLLM(liteLlmData),
+  ...priceCardsFromUserPricing(userPricingData),
   ...userCards
 ];
 
@@ -43,7 +46,7 @@ const ledger = fromResponse(response, {
   provider: "openai",
   surface: "openai.responses",
   priceCards,
-  priceSourcePriority: ["user", "llm-prices", "litellm"]
+  priceSourcePriority: ["user-pricing", "llm-prices", "litellm"]
 });
 ```
 
@@ -53,8 +56,6 @@ If two sources match and disagree, RunCost can emit `price_source_disagreement` 
 
 High-value next adapters:
 
-- User JSON and YAML files with schema validation.
-- Helicone cost package snapshots.
 - Official provider page snapshots where license and terms permit.
 - Historical source bundles with effective dates.
 - A refresh cache format that records retrieval time, URL, checksum, and generated price-card count.
@@ -77,4 +78,5 @@ Recommended pipeline:
 - Not every field in external catalogs has a direct pricing meaning.
 - Some providers publish prices by marketing family, API surface, region, or tier rather than exact model ID.
 - Tool-call pricing is often spread across product docs instead of model catalogs.
+- User JSON/YAML support currently means parsed objects, not a file-reading YAML parser in the core package.
 - The current adapters are prototypes; source coverage must be expanded fixture by fixture.

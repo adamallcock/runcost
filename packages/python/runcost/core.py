@@ -1402,6 +1402,18 @@ def _openrouter_tier_conditions(tiers: List[Dict[str, Any]], index: int) -> Dict
     return {"conditions": conditions} if conditions else {}
 
 
+def _threshold_tier_conditions(tiers: List[Dict[str, Any]], index: int) -> Dict[str, Any]:
+    tier = tiers[index]
+    conditions: Dict[str, Any] = {}
+    threshold = tier.get("threshold")
+    if threshold is not None and _decimal(threshold) > 0:
+        conditions["min_total_input_tokens"] = _number_string(threshold)
+    next_threshold = next((candidate.get("threshold") for candidate in tiers[index + 1:] if candidate.get("threshold") is not None), None)
+    if next_threshold is not None:
+        conditions["max_total_input_tokens"] = _subtract(next_threshold, "1")
+    return {"conditions": conditions} if conditions else {}
+
+
 def price_cards_from_openrouter_models(data: Dict[str, Any], **options: Any) -> List[Dict[str, Any]]:
     retrieved_at = options.get("retrieved_at") or options.get("retrievedAt") or f"{data.get('updated_at', '1970-01-01')}T00:00:00Z"
     source_url = options.get("source_url") or options.get("sourceUrl") or "https://openrouter.ai/api/v1/models"
@@ -1451,6 +1463,202 @@ def price_cards_from_openrouter_models(data: Dict[str, Any], **options: Any) -> 
         }
         if effective:
             card["effective"] = effective
+        cards.append(card)
+    return cards
+
+
+def _source_info(data: Dict[str, Any], default_name: str, default_url: str, **options: Any) -> Dict[str, Any]:
+    source = data.get("source") if isinstance(data.get("source"), dict) else {}
+    retrieved_at = (
+        options.get("retrieved_at")
+        or options.get("retrievedAt")
+        or source.get("retrieved_at")
+        or source.get("retrievedAt")
+        or data.get("retrieved_at")
+        or data.get("retrievedAt")
+        or f"{data.get('updated_at', '1970-01-01')}T00:00:00Z"
+    )
+    source_info = {
+        "name": options.get("source_name") or options.get("sourceName") or source.get("name") or default_name,
+        "url": options.get("source_url") or options.get("sourceUrl") or source.get("url") or default_url,
+        "retrieved_at": retrieved_at,
+    }
+    if source.get("version"):
+        source_info["version"] = source["version"]
+    if source.get("license"):
+        source_info["license"] = source["license"]
+    return source_info
+
+
+def _component_amount(entry: Dict[str, Any], *keys: str) -> Any:
+    prices = entry.get("prices") if isinstance(entry.get("prices"), dict) else {}
+    pricing = entry.get("pricing") if isinstance(entry.get("pricing"), dict) else {}
+    for key in keys:
+        if key in entry:
+            return entry[key]
+        if key in prices:
+            return prices[key]
+        if key in pricing:
+            return pricing[key]
+    return None
+
+
+def _price_cards_from_canonical_cards(raw_cards: Any) -> List[Dict[str, Any]]:
+    if isinstance(raw_cards, list):
+        return [card for card in raw_cards if isinstance(card, dict)]
+    return []
+
+
+def price_cards_from_user_pricing(data: Any, **options: Any) -> List[Dict[str, Any]]:
+    if isinstance(data, list):
+        return _price_cards_from_canonical_cards(data)
+    if not isinstance(data, dict):
+        return []
+    for key in ("price_cards", "priceCards"):
+        if key in data:
+            return _price_cards_from_canonical_cards(data[key])
+
+    source = _source_info(data, "user-pricing", "file://user-pricing", **options)
+    provider_default = data.get("provider") or options.get("provider", "user")
+    surface_default = data.get("surface") or options.get("surface")
+    service_tier_default = data.get("service_tier") or data.get("serviceTier")
+    region_default = data.get("region")
+    per_default = _number_string(data.get("per", "1000000"))
+    cards: List[Dict[str, Any]] = []
+
+    for entry in data.get("models", []):
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("components") and entry.get("provider") and (entry.get("model") or entry.get("id")):
+            card = dict(entry)
+            card.setdefault("schema_version", "0.1")
+            card.setdefault("model", card.get("id"))
+            card.setdefault("source", source)
+            cards.append(card)
+            continue
+
+        model = entry.get("model") or entry.get("id")
+        if not model:
+            continue
+        provider = entry.get("provider") or provider_default
+        per = _number_string(entry.get("per", per_default))
+        components: List[Dict[str, Any]] = []
+        _add_price_component(components, "input_uncached_tokens", "token", _component_amount(entry, "input", "input_uncached", "input_uncached_tokens"), per)
+        _add_price_component(components, "input_cache_read_tokens", "token", _component_amount(entry, "cached_input", "input_cached", "cache_read", "input_cache_read"), per)
+        _add_price_component(components, "input_cache_write_tokens", "token", _component_amount(entry, "cache_write", "input_cache_write"), per)
+        _add_price_component(components, "input_cache_write_1h_tokens", "token", _component_amount(entry, "cache_write_1h", "input_cache_write_1h"), per)
+        _add_price_component(components, "output_text_tokens", "token", _component_amount(entry, "output", "completion", "output_text"), per)
+        _add_price_component(components, "output_reasoning_tokens", "token", _component_amount(entry, "reasoning", "thinking", "output_reasoning"), per)
+        _add_price_component(components, "request_units", "request", _component_amount(entry, "request", "per_request"), "1")
+        _add_price_component(components, "web_search_units", "search", _component_amount(entry, "web_search"), "1")
+        if not components:
+            continue
+
+        card = {
+            "schema_version": "0.1",
+            "id": entry.get("price_card_id") or entry.get("priceCardId") or f"{provider}:{model}:user-pricing",
+            "provider": provider,
+            "model": model,
+            "aliases": entry.get("aliases", []),
+            "components": components,
+            "source": source,
+        }
+        surface = entry.get("surface") or surface_default
+        if surface:
+            card["surface"] = surface
+        service_tier = entry.get("service_tier") or entry.get("serviceTier") or service_tier_default
+        if service_tier:
+            card["service_tier"] = service_tier
+        region = entry.get("region") or region_default
+        if region:
+            card["region"] = region
+        effective = entry.get("effective")
+        if isinstance(effective, dict):
+            card["effective"] = effective
+        cards.append(card)
+    return cards
+
+
+def _helicone_endpoint_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    endpoints = data.get("endpoints") if isinstance(data.get("endpoints"), dict) else data
+    if isinstance(endpoints, dict):
+        return [entry for entry in endpoints.values() if isinstance(entry, dict)]
+    if isinstance(endpoints, list):
+        return [entry for entry in endpoints if isinstance(entry, dict)]
+    return []
+
+
+def _helicone_pricing_tiers(pricing: Any) -> List[Dict[str, Any]]:
+    tiers = pricing if isinstance(pricing, list) else [pricing]
+    return sorted([tier for tier in tiers if isinstance(tier, dict)], key=lambda tier: _decimal(tier.get("threshold", 0)))
+
+
+def _helicone_add_modality_components(components: List[Dict[str, Any]], tier: Dict[str, Any], modality: str, conditions: Dict[str, Any]) -> None:
+    pricing = tier.get(modality)
+    if not isinstance(pricing, dict):
+        return
+    component_names = {
+        "image": ("input_image_tokens", "output_image_tokens"),
+        "audio": ("input_audio_tokens", "output_audio_tokens"),
+        "video": ("input_video_tokens", "output_video_tokens"),
+    }
+    if modality not in component_names:
+        return
+    input_component, output_component = component_names[modality]
+    _add_price_component(components, input_component, "token", pricing.get("input"), "1", **conditions)
+    _add_price_component(components, output_component, "token", pricing.get("output"), "1", **conditions)
+
+
+def price_cards_from_helicone(data: Dict[str, Any], **options: Any) -> List[Dict[str, Any]]:
+    source = _source_info(data, "helicone", "https://github.com/Helicone/helicone/tree/main/packages/cost", **options)
+    cards: List[Dict[str, Any]] = []
+    for endpoint in _helicone_endpoint_items(data):
+        model = endpoint.get("providerModelId")
+        provider = endpoint.get("provider") or options.get("provider")
+        if not model or not provider:
+            continue
+        tiers = _helicone_pricing_tiers(endpoint.get("pricing"))
+        components: List[Dict[str, Any]] = []
+        for index, tier in enumerate(tiers):
+            conditions = _threshold_tier_conditions(tiers, index)
+            input_price = tier.get("input")
+            _add_price_component(components, "input_uncached_tokens", "token", input_price, "1", **conditions)
+            _add_price_component(components, "output_text_tokens", "token", tier.get("output"), "1", **conditions)
+            cache_multipliers = tier.get("cacheMultipliers") if isinstance(tier.get("cacheMultipliers"), dict) else {}
+            if input_price is not None:
+                if cache_multipliers.get("cachedInput") is not None:
+                    _add_price_component(components, "input_cache_read_tokens", "token", _multiply_divide(input_price, cache_multipliers["cachedInput"], "1"), "1", **conditions)
+                if cache_multipliers.get("write5m") is not None:
+                    _add_price_component(components, "input_cache_write_tokens", "token", _multiply_divide(input_price, cache_multipliers["write5m"], "1"), "1", **conditions)
+                if cache_multipliers.get("write1h") is not None:
+                    _add_price_component(components, "input_cache_write_1h_tokens", "token", _multiply_divide(input_price, cache_multipliers["write1h"], "1"), "1", **conditions)
+            _add_price_component(components, "output_reasoning_tokens", "token", tier.get("thinking"), "1", **conditions)
+            if index == 0:
+                _add_price_component(components, "request_units", "request", tier.get("request"), "1")
+                _add_price_component(components, "web_search_units", "search", tier.get("web_search"), "1")
+            for modality in ("image", "audio", "video"):
+                _helicone_add_modality_components(components, tier, modality, conditions)
+        if not components:
+            continue
+        aliases = []
+        for alias in endpoint.get("providerModelIdAliases", []) or []:
+            if alias and alias != model:
+                aliases.append(alias)
+        card = {
+            "schema_version": "0.1",
+            "id": f"{provider}:{model}:helicone",
+            "provider": provider,
+            "model": model,
+            "aliases": aliases,
+            "components": components,
+            "source": source,
+            "metadata": {
+                "author": endpoint.get("author"),
+                "context_length": endpoint.get("contextLength"),
+                "max_completion_tokens": endpoint.get("maxCompletionTokens"),
+                "ptb_enabled": endpoint.get("ptbEnabled"),
+            },
+        }
         cards.append(card)
     return cards
 

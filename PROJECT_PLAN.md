@@ -53,7 +53,7 @@ Current prototype capabilities:
 - Exact alias resolution through price-card aliases.
 - Component-aware discount policies.
 - Simon Willison `llm-prices` adapter.
-- LiteLLM and Portkey adapter prototypes.
+- LiteLLM, Portkey, OpenRouter models, user compact pricing, and Helicone model-registry adapter prototypes.
 - Strict mode and compatibility mode.
 - Effective-date price-card selection.
 - Service-tier and region price-card matching.
@@ -318,6 +318,8 @@ Progress criteria:
 - `llm-prices` historical dates are preserved.
 - LiteLLM service tier and cache fields map into canonical components.
 - OpenRouter string prices map correctly.
+- User compact pricing data maps into canonical price cards.
+- Helicone endpoint/deployment pricing maps cache multipliers, reasoning, request, web-search, and modality token fields.
 
 Exit gate:
 
@@ -1249,13 +1251,15 @@ Tasks:
 13. Done: add generated-artifact drift checks.
 14. Done: add CI workflow.
 15. Done: add OpenRouter `/api/v1/models` source adapter prototype with tiered pricing fixtures.
+16. Done: add user compact pricing source adapter prototype.
+17. Done: add Helicone model-registry source adapter prototype.
 
 Sprint exit criteria:
 
 - `npm test` validates schemas and runs all language conformance tests.
 - At least 16 fixtures pass across Python, JavaScript, and Go.
 - Strict mode and compatibility mode behavior is documented and tested.
-- Three real upstream price-source adapters beyond `llm-prices` exist in prototype form.
+- Four real upstream price-source adapters beyond `llm-prices` exist in prototype form, plus a user compact pricing adapter.
 - The plan for code generation, schema validation, and package release synchronization is documented and actionable.
 
 ## 13. Definition of Done

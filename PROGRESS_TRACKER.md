@@ -13,7 +13,7 @@ Complete `PROJECT_PLAN.md` end to end, moving from prototype foundation toward p
 Evidence collected on 2026-05-25:
 
 - `npm test` passes.
-- Python and JavaScript fixture runner checks 50 shared fixtures, with fixture metadata allowing language-scoped framework ergonomics fixtures.
+- Python and JavaScript fixture runner checks 52 shared fixtures, with fixture metadata allowing language-scoped framework ergonomics fixtures.
 - Fixture metadata and checked-in coverage report pass through `python3 scripts/check_fixture_coverage.py`.
 - Go package passes `go test ./packages/go/...`.
 - Python compile check passes for package, scripts, and Python example.
@@ -58,7 +58,7 @@ Status: complete for this pass.
 | Add Go public API docs and typed examples | Done | Go doc comments in `ledger.go`; `packages/go/ledger/example_test.go`; Go tests pass | Examples cover `CalculateCost` and `FromResponse`. |
 | Add public API parity matrix | Done | `docs/API_PARITY_MATRIX.md`; hygiene check validates public API names | Tracks Python, JS/TS, and Go support by capability. |
 | Add debug trace fixture shape | Done | `schemas/debug-trace.schema.json`, `debug-trace-explain-decisions.json`; `npm test` passes | Optional `debug_trace` / `debugTrace` explains price-card, component, alias, discount, and warning decisions. |
-| Add fixture metadata fields | Done | `schemas/fixture.schema.json`; all 50 fixtures include `metadata` | Metadata covers requirement IDs, provider, surface, scenario, tags, and expected languages. |
+| Add fixture metadata fields | Done | `schemas/fixture.schema.json`; all 52 fixtures include `metadata` | Metadata covers requirement IDs, provider, surface, scenario, tags, and expected languages. |
 | Add fixture coverage report | Done | `docs/2026-05-25-fixture-coverage.md`; `scripts/check_fixture_coverage.py`; `npm test` passes | Reports scenarios, provider surfaces, components, warning codes, source adapters, framework adapters, requirements, tags, and expected languages. |
 | Add generated-artifact drift checks | Done | `scripts/check_project_hygiene.py`; `npm test` runs it | Starts as required-artifact, package metadata, parity, fixture floor, and CI command checks. |
 | Add CI workflow | Done | `.github/workflows/ci.yml`; hygiene check passes | CI runs conformance tests, examples, and Python compile checks. |
@@ -71,7 +71,7 @@ Status: complete for this pass.
 | Milestone 1: Contract Hardening | In progress | Schemas exist; fixture runner validates schemas including debug traces and fixture metadata; warning fixtures exist; debug trace fixture exists; coverage report and hygiene checks exist. |
 | Milestone 1.5: Polyglot Toolchain Foundation | Complete for current prototype scope | Decision record, type artifacts, parity matrix, Go examples, hygiene checks, and CI workflow exist. |
 | Milestone 2: Core Calculator Correctness | In progress | Decimal-safe calculator, aliases, strict mode, compatibility warnings, effective dates, service tier/region matching, stale price warnings, provider-reported mismatch/use modes, source priority, source disagreement warnings, debug traces, long-context thresholds, batch/priority/provisioned service-mode fixture coverage, and component-total invariant checks exist. |
-| Milestone 3: Source Adapter Layer | In progress | `llm-prices`, LiteLLM, Portkey, and OpenRouter models prototype adapters exist. |
+| Milestone 3: Source Adapter Layer | In progress | `llm-prices`, LiteLLM, Portkey, OpenRouter models, user compact pricing, and Helicone prototype adapters exist. |
 | Milestone 4: Provider Extractors V0 | In progress | OpenAI, Anthropic, OpenRouter, Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Google Gemini/Vertex, and AWS Bedrock extractors exist; cache, reasoning, billed-unit, and basic raw response cases covered for the supported surfaces. |
 | Milestone 5: Tool Call and Feature Pricing | In progress | Generic and raw OpenAI tool-call fixtures exist; Gemini/Vertex multimodal token detail fixture exists; provider-specific tool pricing coverage still sparse. |
 | Milestone 6: Framework Adapters | In progress | LangChain AIMessage, Vercel AI SDK generateText, LlamaIndex TokenCountingHandler helpers, Python LangChain callback/context manager, and JavaScript Vercel `wrapGenerate` middleware exist with fixtures; remaining frameworks still need documented adapter paths. |
@@ -386,6 +386,21 @@ Status: complete for this pass.
   - `npm run example:js` and `npm run example:py` both ran and returned total `0.000228`.
   - `jq` parsed schemas, fixtures, and package JSON files.
   - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
+- Verified Helicone cost package source shape against live primary sources:
+  - `packages/cost/README.md` describes the model registry, endpoint configs, PTB/BYOK split, and legacy cost table fields.
+  - `packages/cost/models/types.ts` defines `ModelPricing` with threshold, input, output, cache multipliers, thinking, request, modality, and web-search fields.
+  - `packages/cost/models/calculate-cost.ts` applies cache multipliers, thinking cost fallback, modality costs, web-search cost, request cost, and provider-specific threshold selection.
+- Added source adapter fixtures:
+  - `user-pricing-adapter-compact.json`
+  - `helicone-adapter-basic.json`
+- Implemented source adapters across Python, JavaScript/TypeScript, and Go:
+  - `price_cards_from_user_pricing`, `priceCardsFromUserPricing`, `PriceCardsFromUserPricing`
+  - `price_cards_from_helicone`, `priceCardsFromHelicone`, `PriceCardsFromHelicone`
+- Updated fixture runners, TypeScript declarations, Python exports, Go API comments, package hygiene checks, API reference, source-adapter docs, supported-surface docs, README, project plan, and this tracker for the new adapters.
+- Verification after source adapter slice:
+  - `python3 scripts/check_fixtures.py` passed with 52 fixtures across declared Python and JavaScript fixture coverage.
+  - `python3 scripts/check_fixture_coverage.py --write-report` passed and regenerated coverage for 52 fixtures.
+  - `go test ./packages/go/...` passed.
 
 ## Gap Audit 2026-05-25
 
@@ -401,8 +416,8 @@ Naming update:
 
 Audit evidence:
 
-- `python3 scripts/check_fixtures.py` passed with 50 fixtures across declared Python and JavaScript fixture coverage.
-- `python3 scripts/check_fixture_coverage.py` passed with metadata on all 50 fixtures and a current checked-in coverage report.
+- `python3 scripts/check_fixtures.py` passed with 52 fixtures across declared Python and JavaScript fixture coverage.
+- `python3 scripts/check_fixture_coverage.py` passed with metadata on all 52 fixtures and a current checked-in coverage report.
 - `npm test` passed: fixture checks, Go tests, and project hygiene checks green.
 - `npm run check:packages` passed: clean Python, npm, and Go install smoke checks green.
 - Current package surfaces inspected:
@@ -435,7 +450,7 @@ What is implemented and well covered:
 - Discounts with component include/exclude policy.
 - Effective-date selection, service tier, region, batch, priority, provisioned, long-context conditions, stale-source warnings, provider-reported cost compare/use modes, price-source priority, and price-source disagreement warnings.
 - Optional debug traces for price-card candidates, component matches, model alias resolution, discount applications, and warnings.
-- Source adapters for `llm-prices`, LiteLLM, Portkey, and OpenRouter models.
+- Source adapters for `llm-prices`, LiteLLM, Portkey, OpenRouter models, user compact pricing, and Helicone model-registry data.
 - Provider extractors for OpenAI Responses, OpenAI Chat Completions, Anthropic Messages, OpenRouter chat completions, Groq, xAI chat, Mistral, DeepSeek, Azure OpenAI chat, Hugging Face Inference Providers chat, Cohere Chat, Gemini/Vertex generateContent, and Bedrock Converse.
 - Framework metadata helpers for LangChain AIMessage, Vercel AI SDK generateText result objects, LlamaIndex TokenCountingHandler data, Python LangChain callback/context-manager usage, and JavaScript Vercel `wrapGenerate` middleware.
 - Docs for project plan, product requirements, architecture, market validation, live evaluation protocol, parity matrix, provider extractor notes, framework adapter notes, and polyglot tooling decision.
@@ -445,7 +460,7 @@ Partially implemented:
 - Contract hardening: schema validation, fixture metadata, debug trace fixtures, and fixture coverage reporting exist. Remaining gaps are fixture generator helpers and stronger Go-side schema validation/component-total invariant checks.
 - Polyglot maintainability: parity matrix and hygiene checks exist, but generated type/docs workflows are not real yet. TypeScript and Python types are manual. Go uses object maps.
 - Go conformance: Go runs every fixture and checks expected subsets, but schema validation for generated Go outputs and component-total invariant checks are weaker than Python/JavaScript.
-- Source adapters: core adapters exist for four sources, but Helicone, provider official pricing snapshots, models.dev enrichment, user JSON/YAML loading, offline cache format, explicit refresh command, and source capability warnings are missing.
+- Source adapters: core adapters exist for six sources, including user compact pricing and Helicone model-registry data. Provider official pricing snapshots, models.dev enrichment, full file-reading YAML loaders, offline cache format, explicit refresh command, and source capability warnings are still missing.
 - Historical pricing: effective dates and `llm-prices` date fields exist, but `llm-prices` historical feed semantics are not fixture-proven end to end.
 - Provider extractors: broad base coverage exists, but many surfaces are thin. xAI Responses, OpenAI Conversations, Bedrock non-Converse paths, provider-specific tool fields, streaming variants, embeddings, rerank, image/audio/video generation, and transcription paths are not covered.
 - Tool pricing: generic tool components, OpenAI raw tool calls, OpenRouter image/request/search source pricing, and custom units exist. Provider-specific tool pricing remains sparse.
@@ -468,7 +483,7 @@ Highest-risk gaps before private alpha:
 1. Package publish readiness across Python, JavaScript/TypeScript, and Go.
 2. Public docs for contribution, security/privacy, release notes, changelog, and deeper framework integration recipes.
 3. Streaming and multi-call aggregation support, including final-usage-missing warnings.
-4. Source adapter completeness: Helicone, user JSON/YAML, official snapshots, refresh/cache workflow, and historical feed semantics.
+4. Source adapter completeness: official snapshots, full file-reading YAML loaders, refresh/cache workflow, and historical feed semantics.
 5. Hardened typed models and generated artifact workflow, especially for Go structs and generated docs.
 6. Broader framework integration ergonomics beyond the initial LangChain/Vercel helpers.
 7. Deeper debug traces for extractor and framework adapter internals.
@@ -476,10 +491,10 @@ Highest-risk gaps before private alpha:
 
 Recommended next sprint:
 
-1. Source adapter slice: add user JSON/YAML loader and Helicone compatibility fixture before more provider breadth.
-2. Publish readiness slice: decide license metadata, add changelog/release notes, and prepare PyPI/npm workflows plus Go tag policy.
-3. Streaming and aggregation slice: add final-usage-missing warnings and multi-call/session rollups.
-4. Broader framework slice: add documented partial adapter paths for Semantic Kernel, Haystack, AutoGen/AG2, LangSmith, LiteLLM proxy metadata, and OpenRouter SDK paths.
+1. Publish readiness slice: decide license metadata, add changelog/release notes, and prepare PyPI/npm workflows plus Go tag policy.
+2. Streaming and aggregation slice: add final-usage-missing warnings and multi-call/session rollups.
+3. Broader framework slice: add documented partial adapter paths for Semantic Kernel, Haystack, AutoGen/AG2, LangSmith, LiteLLM proxy metadata, and OpenRouter SDK paths.
+4. Source adapter hardening slice: add official snapshots, full file-reading YAML loaders, refresh/cache workflow, and historical feed semantics.
 5. Generated artifact slice: add fixture generator helpers and schema-derived type/doc checks.
 
 ## Next Best Actions

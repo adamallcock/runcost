@@ -80,6 +80,10 @@ func resolvePriceCards(t *testing.T, input Object) []any {
 		return PriceCardsFromOpenRouterModels(asObject(source["data"]))
 	case "portkey":
 		return PriceCardsFromPortkey(asObject(source["data"]))
+	case "user-pricing":
+		return PriceCardsFromUserPricing(asObject(source["data"]))
+	case "helicone":
+		return PriceCardsFromHelicone(asObject(source["data"]))
 	default:
 		t.Fatalf("unsupported price source: %s", asString(source["type"]))
 	}

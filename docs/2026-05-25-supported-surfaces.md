@@ -48,6 +48,8 @@ For mechanical coverage counts, see [Fixture Coverage](2026-05-25-fixture-covera
 | LiteLLM model price JSON | Prototype adapter |
 | OpenRouter models API | Prototype adapter |
 | Portkey pricing data | Prototype adapter |
+| User compact pricing data | Prototype adapter |
+| Helicone model-registry endpoint data | Prototype adapter |
 
 ## Notes
 

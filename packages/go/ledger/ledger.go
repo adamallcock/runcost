@@ -1793,6 +1793,24 @@ func openRouterTierConditions(tiers []Object, index int) Object {
 	return Object{"conditions": conditions}
 }
 
+func thresholdTierConditions(tiers []Object, index int) Object {
+	tier := tiers[index]
+	conditions := Object{}
+	if tier["threshold"] != nil && rat(tier["threshold"]).Sign() > 0 {
+		conditions["min_total_input_tokens"] = numberString(tier["threshold"])
+	}
+	for _, candidate := range tiers[index+1:] {
+		if candidate["threshold"] != nil {
+			conditions["max_total_input_tokens"] = subtract(candidate["threshold"], "1")
+			break
+		}
+	}
+	if len(conditions) == 0 {
+		return Object{}
+	}
+	return Object{"conditions": conditions}
+}
+
 // PriceCardsFromOpenRouterModels maps OpenRouter /api/v1/models data into
 // canonical price cards.
 func PriceCardsFromOpenRouterModels(data Object) []any {
@@ -1853,6 +1871,309 @@ func PriceCardsFromOpenRouterModels(data Object) []any {
 			card["effective"] = Object{"to": expirationDate}
 		}
 		cards = append(cards, card)
+	}
+	return cards
+}
+
+func sourceInfo(data Object, defaultName string, defaultURL string) Object {
+	source := Object{}
+	if rawSource, ok := data["source"].(map[string]any); ok {
+		source = rawSource
+	}
+	retrievedAt := asString(source["retrieved_at"])
+	if retrievedAt == "" {
+		retrievedAt = asString(source["retrievedAt"])
+	}
+	if retrievedAt == "" {
+		retrievedAt = asString(data["retrieved_at"])
+	}
+	if retrievedAt == "" {
+		retrievedAt = asString(data["retrievedAt"])
+	}
+	if retrievedAt == "" {
+		updatedAt := asString(data["updated_at"])
+		if updatedAt == "" {
+			updatedAt = "1970-01-01"
+		}
+		retrievedAt = updatedAt + "T00:00:00Z"
+	}
+	name := asString(source["name"])
+	if name == "" {
+		name = defaultName
+	}
+	url := asString(source["url"])
+	if url == "" {
+		url = defaultURL
+	}
+	info := Object{"name": name, "url": url, "retrieved_at": retrievedAt}
+	if version := asString(source["version"]); version != "" {
+		info["version"] = version
+	}
+	if license := asString(source["license"]); license != "" {
+		info["license"] = license
+	}
+	return info
+}
+
+func componentAmount(entry Object, keys ...string) any {
+	prices := Object{}
+	if rawPrices, ok := entry["prices"].(map[string]any); ok {
+		prices = rawPrices
+	}
+	pricing := Object{}
+	if rawPricing, ok := entry["pricing"].(map[string]any); ok {
+		pricing = rawPricing
+	}
+	for _, key := range keys {
+		if value, ok := entry[key]; ok {
+			return value
+		}
+		if value, ok := prices[key]; ok {
+			return value
+		}
+		if value, ok := pricing[key]; ok {
+			return value
+		}
+	}
+	return nil
+}
+
+// PriceCardsFromUserPricing maps user-owned compact pricing data into
+// canonical price cards. Already-canonical price_cards are returned unchanged.
+func PriceCardsFromUserPricing(data Object) []any {
+	if rawCards, ok := data["price_cards"].([]any); ok {
+		return rawCards
+	}
+	if rawCards, ok := data["priceCards"].([]any); ok {
+		return rawCards
+	}
+	source := sourceInfo(data, "user-pricing", "file://user-pricing")
+	providerDefault := asString(data["provider"])
+	if providerDefault == "" {
+		providerDefault = "user"
+	}
+	surfaceDefault := asString(data["surface"])
+	serviceTierDefault := asString(data["service_tier"])
+	if serviceTierDefault == "" {
+		serviceTierDefault = asString(data["serviceTier"])
+	}
+	regionDefault := asString(data["region"])
+	perDefault := numberString(data["per"])
+	if perDefault == "0" {
+		perDefault = "1000000"
+	}
+	cards := []any{}
+	for _, rawEntry := range asSlice(data["models"]) {
+		entry := asObject(rawEntry)
+		if _, ok := entry["components"].([]any); ok && asString(entry["provider"]) != "" && (asString(entry["model"]) != "" || asString(entry["id"]) != "") {
+			card := Object{}
+			for key, value := range entry {
+				card[key] = value
+			}
+			if card["schema_version"] == nil {
+				card["schema_version"] = "0.1"
+			}
+			if asString(card["model"]) == "" {
+				card["model"] = asString(card["id"])
+			}
+			if card["source"] == nil {
+				card["source"] = source
+			}
+			cards = append(cards, card)
+			continue
+		}
+
+		model := asString(entry["model"])
+		if model == "" {
+			model = asString(entry["id"])
+		}
+		if model == "" {
+			continue
+		}
+		provider := asString(entry["provider"])
+		if provider == "" {
+			provider = providerDefault
+		}
+		per := numberString(entry["per"])
+		if per == "0" {
+			per = perDefault
+		}
+		components := []any{}
+		addPriceComponent(&components, "input_uncached_tokens", "token", componentAmount(entry, "input", "input_uncached", "input_uncached_tokens"), per, nil)
+		addPriceComponent(&components, "input_cache_read_tokens", "token", componentAmount(entry, "cached_input", "input_cached", "cache_read", "input_cache_read"), per, nil)
+		addPriceComponent(&components, "input_cache_write_tokens", "token", componentAmount(entry, "cache_write", "input_cache_write"), per, nil)
+		addPriceComponent(&components, "input_cache_write_1h_tokens", "token", componentAmount(entry, "cache_write_1h", "input_cache_write_1h"), per, nil)
+		addPriceComponent(&components, "output_text_tokens", "token", componentAmount(entry, "output", "completion", "output_text"), per, nil)
+		addPriceComponent(&components, "output_reasoning_tokens", "token", componentAmount(entry, "reasoning", "thinking", "output_reasoning"), per, nil)
+		addPriceComponent(&components, "request_units", "request", componentAmount(entry, "request", "per_request"), "1", nil)
+		addPriceComponent(&components, "web_search_units", "search", componentAmount(entry, "web_search"), "1", nil)
+		if len(components) == 0 {
+			continue
+		}
+		cardID := asString(entry["price_card_id"])
+		if cardID == "" {
+			cardID = asString(entry["priceCardId"])
+		}
+		if cardID == "" {
+			cardID = fmt.Sprintf("%s:%s:user-pricing", provider, model)
+		}
+		card := Object{
+			"schema_version": "0.1",
+			"id":             cardID,
+			"provider":       provider,
+			"model":          model,
+			"aliases":        asSlice(entry["aliases"]),
+			"components":     components,
+			"source":         source,
+		}
+		surface := asString(entry["surface"])
+		if surface == "" {
+			surface = surfaceDefault
+		}
+		if surface != "" {
+			card["surface"] = surface
+		}
+		serviceTier := asString(entry["service_tier"])
+		if serviceTier == "" {
+			serviceTier = asString(entry["serviceTier"])
+		}
+		if serviceTier == "" {
+			serviceTier = serviceTierDefault
+		}
+		if serviceTier != "" {
+			card["service_tier"] = serviceTier
+		}
+		region := asString(entry["region"])
+		if region == "" {
+			region = regionDefault
+		}
+		if region != "" {
+			card["region"] = region
+		}
+		if effective, ok := entry["effective"].(map[string]any); ok {
+			card["effective"] = effective
+		}
+		cards = append(cards, card)
+	}
+	return cards
+}
+
+func heliconeEndpointItems(data Object) []Object {
+	endpoints := data
+	if rawEndpoints, ok := data["endpoints"].(map[string]any); ok {
+		endpoints = rawEndpoints
+	}
+	items := []Object{}
+	for _, rawEntry := range endpoints {
+		if entry, ok := rawEntry.(map[string]any); ok {
+			items = append(items, entry)
+		}
+	}
+	return items
+}
+
+func heliconePricingTiers(pricing any) []Object {
+	tiers := []Object{}
+	switch typed := pricing.(type) {
+	case []any:
+		for _, rawTier := range typed {
+			if tier, ok := rawTier.(map[string]any); ok {
+				tiers = append(tiers, tier)
+			}
+		}
+	case map[string]any:
+		tiers = append(tiers, typed)
+	}
+	sort.SliceStable(tiers, func(i, j int) bool {
+		return rat(tiers[i]["threshold"]).Cmp(rat(tiers[j]["threshold"])) < 0
+	})
+	return tiers
+}
+
+func heliconeAddModalityComponents(components *[]any, tier Object, modality string, conditions Object) {
+	pricing, ok := tier[modality].(map[string]any)
+	if !ok {
+		return
+	}
+	names := map[string][2]string{
+		"image": {"input_image_tokens", "output_image_tokens"},
+		"audio": {"input_audio_tokens", "output_audio_tokens"},
+		"video": {"input_video_tokens", "output_video_tokens"},
+	}
+	componentNames, ok := names[modality]
+	if !ok {
+		return
+	}
+	addPriceComponent(components, componentNames[0], "token", pricing["input"], "1", conditions)
+	addPriceComponent(components, componentNames[1], "token", pricing["output"], "1", conditions)
+}
+
+// PriceCardsFromHelicone maps Helicone model-registry endpoint configs into
+// canonical price cards.
+func PriceCardsFromHelicone(data Object) []any {
+	source := sourceInfo(data, "helicone", "https://github.com/Helicone/helicone/tree/main/packages/cost")
+	cards := []any{}
+	for _, endpoint := range heliconeEndpointItems(data) {
+		model := asString(endpoint["providerModelId"])
+		provider := asString(endpoint["provider"])
+		if model == "" || provider == "" {
+			continue
+		}
+		tiers := heliconePricingTiers(endpoint["pricing"])
+		components := []any{}
+		for index, tier := range tiers {
+			conditions := thresholdTierConditions(tiers, index)
+			inputPrice := tier["input"]
+			addPriceComponent(&components, "input_uncached_tokens", "token", inputPrice, "1", conditions)
+			addPriceComponent(&components, "output_text_tokens", "token", tier["output"], "1", conditions)
+			cacheMultipliers := Object{}
+			if rawCacheMultipliers, ok := tier["cacheMultipliers"].(map[string]any); ok {
+				cacheMultipliers = rawCacheMultipliers
+			}
+			if inputPrice != nil {
+				if cacheMultipliers["cachedInput"] != nil {
+					addPriceComponent(&components, "input_cache_read_tokens", "token", multiplyDivide(inputPrice, cacheMultipliers["cachedInput"], "1"), "1", conditions)
+				}
+				if cacheMultipliers["write5m"] != nil {
+					addPriceComponent(&components, "input_cache_write_tokens", "token", multiplyDivide(inputPrice, cacheMultipliers["write5m"], "1"), "1", conditions)
+				}
+				if cacheMultipliers["write1h"] != nil {
+					addPriceComponent(&components, "input_cache_write_1h_tokens", "token", multiplyDivide(inputPrice, cacheMultipliers["write1h"], "1"), "1", conditions)
+				}
+			}
+			addPriceComponent(&components, "output_reasoning_tokens", "token", tier["thinking"], "1", conditions)
+			if index == 0 {
+				addPriceComponent(&components, "request_units", "request", tier["request"], "1", nil)
+				addPriceComponent(&components, "web_search_units", "search", tier["web_search"], "1", nil)
+			}
+			for _, modality := range []string{"image", "audio", "video"} {
+				heliconeAddModalityComponents(&components, tier, modality, conditions)
+			}
+		}
+		if len(components) == 0 {
+			continue
+		}
+		aliases := []any{}
+		for _, rawAlias := range asSlice(endpoint["providerModelIdAliases"]) {
+			if alias := asString(rawAlias); alias != "" && alias != model {
+				aliases = append(aliases, alias)
+			}
+		}
+		cards = append(cards, Object{
+			"schema_version": "0.1",
+			"id":             fmt.Sprintf("%s:%s:helicone", provider, model),
+			"provider":       provider,
+			"model":          model,
+			"aliases":        aliases,
+			"components":     components,
+			"source":         source,
+			"metadata": Object{
+				"author":                endpoint["author"],
+				"context_length":        endpoint["contextLength"],
+				"max_completion_tokens": endpoint["maxCompletionTokens"],
+				"ptb_enabled":           endpoint["ptbEnabled"],
+			},
+		})
 	}
 	return cards
 }

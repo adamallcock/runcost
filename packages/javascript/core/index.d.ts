@@ -349,8 +349,13 @@ export interface RunCostVercelMiddleware {
 
 export interface SourceAdapterOptions {
   retrievedAt?: string;
+  retrieved_at?: string;
   sourceUrl?: string;
+  source_url?: string;
+  sourceName?: string;
+  source_name?: string;
   provider?: string;
+  surface?: string;
 }
 
 export function calculateCost(options: CalculateCostOptions): CostLedger;
@@ -370,6 +375,8 @@ export function priceCardsFromLlmPrices(data: Record<string, unknown>, options?:
 export function priceCardsFromLiteLLM(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromOpenRouterModels(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromPortkey(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
+export function priceCardsFromUserPricing(data: Record<string, unknown> | PriceCard[], options?: SourceAdapterOptions): PriceCard[];
+export function priceCardsFromHelicone(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function fromResponse(response: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromLangChainMessage(message: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromVercelAISDKResult(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;

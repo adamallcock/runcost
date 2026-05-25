@@ -22,10 +22,12 @@ from runcost import (  # noqa: E402
     from_llamaindex_token_counter,
     from_response,
     from_vercel_ai_sdk_result,
+    price_cards_from_helicone,
     price_cards_from_litellm,
     price_cards_from_llm_prices,
     price_cards_from_openrouter_models,
     price_cards_from_portkey,
+    price_cards_from_user_pricing,
     track_langchain_costs,
 )
 
@@ -178,6 +180,10 @@ def resolve_python_price_cards(fixture):
         return price_cards_from_openrouter_models(source["data"])
     if source["type"] == "portkey":
         return price_cards_from_portkey(source["data"])
+    if source["type"] == "user-pricing":
+        return price_cards_from_user_pricing(source["data"])
+    if source["type"] == "helicone":
+        return price_cards_from_helicone(source["data"])
     raise AssertionError(f"Unsupported price source: {source['type']}")
 
 
@@ -266,6 +272,14 @@ def run_javascript_fixture(path: Path):
       if (!priceCards && input.price_source.type === "openrouter-models") {{
         const module = await import({json.dumps(JAVASCRIPT_CORE.as_uri())});
         priceCards = module.priceCardsFromOpenRouterModels(input.price_source.data);
+      }}
+      if (!priceCards && input.price_source.type === "user-pricing") {{
+        const module = await import({json.dumps(JAVASCRIPT_CORE.as_uri())});
+        priceCards = module.priceCardsFromUserPricing(input.price_source.data);
+      }}
+      if (!priceCards && input.price_source.type === "helicone") {{
+        const module = await import({json.dumps(JAVASCRIPT_CORE.as_uri())});
+        priceCards = module.priceCardsFromHelicone(input.price_source.data);
       }}
       const responseOptions = {{
             ...input.extract,

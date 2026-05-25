@@ -25,7 +25,7 @@ def check_python_install(workdir: Path) -> None:
         [
             str(python),
             "-c",
-            "from runcost import calculate_cost, from_response, track_langchain_costs; print(calculate_cost, from_response, track_langchain_costs)",
+            "from runcost import calculate_cost, from_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_user_pricing; print(calculate_cost, from_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_user_pricing)",
         ],
         workdir,
     )
@@ -50,7 +50,7 @@ def check_javascript_install(workdir: Path) -> None:
             "node",
             "--input-type=module",
             "-e",
-            'import { calculateCost, fromResponse, createRunCostVercelMiddleware } from "runcost"; console.log(typeof calculateCost, typeof fromResponse, typeof createRunCostVercelMiddleware);',
+            'import { calculateCost, fromResponse, createRunCostVercelMiddleware, priceCardsFromHelicone, priceCardsFromUserPricing } from "runcost"; console.log(typeof calculateCost, typeof fromResponse, typeof createRunCostVercelMiddleware, typeof priceCardsFromHelicone, typeof priceCardsFromUserPricing);',
         ],
         project_dir,
     )

@@ -75,6 +75,8 @@ The framework helpers route through the same cost calculator after extracting ca
 | LiteLLM model price JSON | `price_cards_from_litellm` | `priceCardsFromLiteLLM` | `PriceCardsFromLiteLLM` |
 | OpenRouter models API | `price_cards_from_openrouter_models` | `priceCardsFromOpenRouterModels` | `PriceCardsFromOpenRouterModels` |
 | Portkey pricing data | `price_cards_from_portkey` | `priceCardsFromPortkey` | `PriceCardsFromPortkey` |
+| User compact pricing data | `price_cards_from_user_pricing` | `priceCardsFromUserPricing` | `PriceCardsFromUserPricing` |
+| Helicone model-registry data | `price_cards_from_helicone` | `priceCardsFromHelicone` | `PriceCardsFromHelicone` |
 
 Adapters return canonical `PriceCard` objects. Users can merge these with their own custom cards and then use `priceSourcePriority` to make overrides deterministic.
 
