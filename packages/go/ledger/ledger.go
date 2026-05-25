@@ -327,6 +327,40 @@ func longContextRuleMissingWarning(usageLedger Object, candidates []Object, comp
 	}, true
 }
 
+func sourceCapabilityWarning(matchingCards []Object, component Object) (Object, bool) {
+	componentName := asString(component["name"])
+	for _, card := range matchingCards {
+		metadata := asObject(card["metadata"])
+		capabilities := asObject(metadata["source_capabilities"])
+		if len(capabilities) == 0 {
+			continue
+		}
+		unsupported := asSlice(capabilities["unsupported_components"])
+		if unsupported == nil {
+			unsupported = asSlice(capabilities["unsupportedComponents"])
+		}
+		for _, rawUnsupported := range unsupported {
+			if asString(rawUnsupported) == componentName {
+				source := asObject(card["source"])
+				sourceName := asString(source["name"])
+				if sourceName == "" {
+					sourceName = asString(card["id"])
+				}
+				return Object{
+					"code":    "source_capability_unsupported",
+					"message": fmt.Sprintf("Price source %s explicitly does not price %s.", sourceName, componentName),
+					"metadata": Object{
+						"component":     componentName,
+						"price_card_id": card["id"],
+						"source":        asString(source["name"]),
+					},
+				}, true
+			}
+		}
+	}
+	return nil, false
+}
+
 func hasPriceCardForUsage(usageLedger Object, priceCards []any) bool {
 	for _, rawCard := range priceCards {
 		card := asObject(rawCard)
@@ -756,7 +790,9 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 			}
 		}
 		if len(matches) == 0 {
-			if warning, ok := longContextRuleMissingWarning(usageLedger, candidates, component); ok {
+			if warning, ok := sourceCapabilityWarning(candidateCards, component); ok {
+				warnings = append(warnings, warning)
+			} else if warning, ok := longContextRuleMissingWarning(usageLedger, candidates, component); ok {
 				warnings = append(warnings, warning)
 			} else {
 				code := "component_unpriced"
@@ -2772,11 +2808,14 @@ func PriceCardsFromOfficialSnapshot(data Object) []any {
 			"aliases":        asSlice(row["aliases"]),
 			"components":     components,
 			"source":         source,
-			"metadata": Object{"official_snapshot": Object{
-				"source_label": sourceLabel,
-				"notes":        row["notes"],
-				"capabilities": row["capabilities"],
-			}},
+			"metadata": Object{
+				"official_snapshot": Object{
+					"source_label": sourceLabel,
+					"notes":        row["notes"],
+					"capabilities": row["capabilities"],
+				},
+				"source_capabilities": asObject(row["capabilities"]),
+			},
 		}
 		surface := asString(row["surface"])
 		if surface == "" {

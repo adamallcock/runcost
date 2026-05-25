@@ -348,6 +348,7 @@ Progress criteria:
 - Helicone endpoint/deployment pricing maps cache multipliers, reasoning, request, web-search, and modality token fields.
 - Source-cache envelopes preserve URL, retrieval time, checksum, generated time, and generated price-card count.
 - The explicit refresh command can write source-cache envelopes from live URLs or local reviewed snapshots without changing normal offline calculation behavior.
+- Source capability warnings distinguish explicit source limitations from generic unpriced components.
 
 Exit gate:
 

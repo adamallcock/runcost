@@ -13,20 +13,20 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 66
+- Fixtures: 67
 - Providers: 15
 - Provider surfaces: 16
 - Usage components covered: 20
-- Warning/error codes covered: 10
+- Warning/error codes covered: 11
 - Requirement IDs covered: 17
 
 ## Expected Languages
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 64 |
-| `javascript` | 65 |
-| `python` | 65 |
+| `go` | 65 |
+| `javascript` | 66 |
+| `python` | 66 |
 
 ## Scenarios
 
@@ -45,7 +45,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `source_adapter` | 12 |
 | `source_priority` | 2 |
 | `strict_error` | 1 |
-| `warning` | 3 |
+| `warning` | 4 |
 
 ## Provider Surfaces
 
@@ -63,7 +63,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `huggingface` | `huggingface.chat_completions` | 1 |
 | `mistral` | `mistral.chat_completions` | 1 |
 | `openai` | `openai.chat_completions` | 8 |
-| `openai` | `openai.responses` | 33 |
+| `openai` | `openai.responses` | 34 |
 | `openrouter` | `openrouter.chat_completions` | 5 |
 | `vertex` | `vertex.gemini.generate_content` | 1 |
 | `xai` | `xai.chat_completions` | 1 |
@@ -83,15 +83,15 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `input_cache_write_tokens` | 12 |
 | `input_image_tokens` | 2 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 59 |
+| `input_uncached_tokens` | 60 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 2 |
 | `output_image_tokens` | 2 |
 | `output_reasoning_tokens` | 24 |
-| `output_text_tokens` | 49 |
+| `output_text_tokens` | 50 |
 | `output_video_tokens` | 1 |
 | `request_units` | 3 |
-| `web_search_units` | 7 |
+| `web_search_units` | 8 |
 
 ## Warning And Error Codes
 
@@ -104,6 +104,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `provider_reported_cost_mismatch` | 2 |
 | `provider_reported_cost_used` | 1 |
 | `service_tier_unsupported` | 1 |
+| `source_capability_unsupported` | 1 |
 | `stream_usage_missing` | 1 |
 | `unknown_model` | 2 |
 | `unknown_surface` | 1 |
@@ -117,7 +118,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `litellm` | 1 |
 | `llm-prices` | 2 |
 | `models-dev` | 1 |
-| `official-snapshot` | 1 |
+| `official-snapshot` | 2 |
 | `openrouter-models` | 2 |
 | `portkey` | 1 |
 | `source-cache` | 1 |
@@ -145,7 +146,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-CUSTOM-PRICING` | 1 |
 | `RC-DEBUG-TRACE` | 1 |
 | `RC-DISCOUNT-POLICY` | 1 |
-| `RC-FIXTURE-CONFORMANCE` | 66 |
+| `RC-FIXTURE-CONFORMANCE` | 67 |
 | `RC-FRAMEWORK-ADAPTER` | 7 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
 | `RC-LONG-CONTEXT` | 2 |
@@ -153,10 +154,10 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-RAW-EXTRACTOR` | 23 |
 | `RC-SERVICE-MODE` | 3 |
 | `RC-SERVICE-TIER` | 2 |
-| `RC-SOURCE-ADAPTER` | 12 |
+| `RC-SOURCE-ADAPTER` | 13 |
 | `RC-SOURCE-PRIORITY` | 2 |
 | `RC-STRICT-MODE` | 1 |
-| `RC-WARNING-MODE` | 4 |
+| `RC-WARNING-MODE` | 5 |
 
 ## Tags
 
@@ -182,15 +183,15 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:input_cache_write_tokens` | 12 |
 | `component:input_image_tokens` | 2 |
 | `component:input_image_units` | 1 |
-| `component:input_uncached_tokens` | 59 |
+| `component:input_uncached_tokens` | 60 |
 | `component:input_video_tokens` | 1 |
 | `component:output_audio_tokens` | 2 |
 | `component:output_image_tokens` | 2 |
 | `component:output_reasoning_tokens` | 24 |
-| `component:output_text_tokens` | 49 |
+| `component:output_text_tokens` | 50 |
 | `component:output_video_tokens` | 1 |
 | `component:request_units` | 3 |
-| `component:web_search_units` | 7 |
+| `component:web_search_units` | 8 |
 | `debug_trace` | 1 |
 | `discount` | 1 |
 | `effective_date` | 2 |
@@ -221,7 +222,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `source:litellm` | 1 |
 | `source:llm-prices` | 2 |
 | `source:models-dev` | 1 |
-| `source:official-snapshot` | 1 |
+| `source:official-snapshot` | 2 |
 | `source:openrouter-models` | 2 |
 | `source:portkey` | 1 |
 | `source:source-cache` | 1 |
@@ -240,6 +241,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `warning:provider_reported_cost_mismatch` | 2 |
 | `warning:provider_reported_cost_used` | 1 |
 | `warning:service_tier_unsupported` | 1 |
+| `warning:source_capability_unsupported` | 1 |
 | `warning:stream_usage_missing` | 1 |
 | `warning:unknown_model` | 2 |
 | `warning:unknown_surface` | 1 |

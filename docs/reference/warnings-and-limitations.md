@@ -36,6 +36,7 @@ Current warning codes:
 - `usage_field_ignored`
 - `inclusive_usage_ambiguous`
 - `component_unpriced`
+- `source_capability_unsupported`
 - `service_tier_unsupported`
 - `long_context_rule_missing`
 - `discount_not_applied`
@@ -54,6 +55,8 @@ Warnings include a message, and may include a `path` and `metadata`.
 `unknown_model`: usage was extracted, but no matching price card was available.
 
 `component_unpriced`: one or more usage components did not have a matching price component.
+
+`source_capability_unsupported`: a matching price source explicitly states that it does not price the usage component.
 
 `tool_component_unpriced`: a tool or feature unit was present but not priced.
 

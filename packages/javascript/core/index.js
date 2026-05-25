@@ -243,6 +243,30 @@ function longContextRuleMissingWarning(usageLedger, candidates, component) {
   };
 }
 
+function sourceCapabilityWarning(matchingCards, component) {
+  for (const card of matchingCards) {
+    const metadata = card.metadata && typeof card.metadata === "object" ? card.metadata : {};
+    const capabilities = metadata.source_capabilities && typeof metadata.source_capabilities === "object"
+      ? metadata.source_capabilities
+      : null;
+    if (!capabilities) continue;
+    const unsupported = capabilities.unsupported_components || capabilities.unsupportedComponents || [];
+    if (unsupported.includes(component.name)) {
+      const source = card.source && typeof card.source === "object" ? card.source : {};
+      return {
+        code: "source_capability_unsupported",
+        message: `Price source ${source.name || card.id || "unknown"} explicitly does not price ${component.name}.`,
+        metadata: {
+          component: component.name,
+          price_card_id: card.id,
+          source: source.name
+        }
+      };
+    }
+  }
+  return null;
+}
+
 function noMatchingCardWarning(usageLedger, priceCards) {
   const context = usageContext(usageLedger);
   const identityCards = priceCards.filter((card) => cardIdentityMatches(usageLedger, card));
@@ -520,8 +544,11 @@ export function calculateCost({
       return conditionsMatch(usageLedger, priceComponent);
     });
     if (matches.length === 0) {
+      const capabilityWarning = sourceCapabilityWarning(candidateCards, component);
       const longContextWarning = longContextRuleMissingWarning(usageLedger, candidates, component);
-      if (longContextWarning) {
+      if (capabilityWarning) {
+        warnings.push(capabilityWarning);
+      } else if (longContextWarning) {
         warnings.push(longContextWarning);
       } else {
         warnings.push({
@@ -2040,7 +2067,8 @@ export function priceCardsFromOfficialSnapshot(data, options = {}) {
           source_label: row.source_label || row.sourceLabel,
           notes: row.notes,
           capabilities: row.capabilities
-        }
+        },
+        source_capabilities: row.capabilities && typeof row.capabilities === "object" ? row.capabilities : {}
       }
     };
     const surface = row.surface || surfaceDefault;

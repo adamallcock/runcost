@@ -214,6 +214,31 @@ def _long_context_rule_missing_warning(
     }
 
 
+def _source_capability_warning(
+    matching_cards: List[Dict[str, Any]],
+    component: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    component_name = component["name"]
+    for card in matching_cards:
+        metadata = card.get("metadata") if isinstance(card.get("metadata"), dict) else {}
+        capabilities = metadata.get("source_capabilities")
+        if not isinstance(capabilities, dict):
+            continue
+        unsupported = capabilities.get("unsupported_components") or capabilities.get("unsupportedComponents") or []
+        if component_name in unsupported:
+            source = card.get("source") if isinstance(card.get("source"), dict) else {}
+            return {
+                "code": "source_capability_unsupported",
+                "message": f"Price source {source.get('name', card.get('id', 'unknown'))} explicitly does not price {component_name}.",
+                "metadata": {
+                    "component": component_name,
+                    "price_card_id": card.get("id"),
+                    "source": source.get("name"),
+                },
+            }
+    return None
+
+
 def _has_price_card_for_usage(
     usage_ledger: Dict[str, Any],
     price_cards: Iterable[Dict[str, Any]],
@@ -498,8 +523,11 @@ def calculate_cost(
             if _conditions_match(usage_ledger, match["price_component"])
         ]
         if not matches:
+            capability_warning = _source_capability_warning(matching_cards, component)
             long_context_warning = _long_context_rule_missing_warning(usage_ledger, candidates, component)
-            if long_context_warning:
+            if capability_warning:
+                warnings.append(capability_warning)
+            elif long_context_warning:
                 warnings.append(long_context_warning)
             else:
                 warnings.append(
@@ -2040,7 +2068,8 @@ def price_cards_from_official_snapshot(data: Any, **options: Any) -> List[Dict[s
                 "source_label": row.get("source_label") or row.get("sourceLabel"),
                 "notes": row.get("notes"),
                 "capabilities": row.get("capabilities"),
-            }
+            },
+            "source_capabilities": row.get("capabilities") if isinstance(row.get("capabilities"), dict) else {},
         }
         card["metadata"] = metadata
         cards.append(card)

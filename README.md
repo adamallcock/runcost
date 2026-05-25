@@ -93,6 +93,7 @@ The implementation is still pre-alpha. The current center of gravity is normaliz
 - Exact alias resolution through price-card aliases.
 - Component-aware discount policies.
 - Optional debug traces for price-card, component, alias, discount, and warning decisions.
+- Source capability warnings when a pricing source explicitly does not price a usage component.
 - Simon Willison `llm-prices` adapter for simple current/historical price feeds.
 - LiteLLM, Portkey, OpenRouter models, models.dev, reviewed official snapshots, source-cache, local JSON file, user compact pricing, and Helicone model-registry source adapter prototypes.
 - Explicit `npm run prices:refresh -- ...` command for writing source-cache envelopes from live or reviewed JSON snapshots.

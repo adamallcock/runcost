@@ -77,6 +77,7 @@ WarningCode = Literal[
     "usage_field_ignored",
     "inclusive_usage_ambiguous",
     "component_unpriced",
+    "source_capability_unsupported",
     "service_tier_unsupported",
     "long_context_rule_missing",
     "discount_not_applied",
