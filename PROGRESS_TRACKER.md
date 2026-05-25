@@ -26,9 +26,9 @@ The tracker separates roadmap state from active work state:
 
 ## Active Focus
 
-Current active lane: none selected after completing the Milestone 1 Go-side cost-ledger validation slice.
+Current active lane: none selected after completing the Milestone 1 v0.1 schema taxonomy lock.
 
-Why no active lane is selected: Go-side cost-ledger validation was completed and verified in the latest slice. The next implementation lane should be selected after re-inspecting whether the pending Markdown rename pass has landed.
+Why no active lane is selected: the taxonomy lock was completed and verified in the latest slice. The next implementation lane should be selected after re-inspecting whether the pending Markdown rename pass has landed.
 
 Doc rename coordination: another agent may rename Markdown files to match repository naming rules. Until that lands, avoid broad documentation churn and re-inspect paths before changing cross-document links.
 
@@ -52,6 +52,7 @@ Evidence collected on 2026-05-25:
   - `packages/javascript/core/`
   - `packages/go/ledger/`
 - Shared schemas exist in `schemas/`.
+- Locked v0.1 schema taxonomy exists in `schemas/taxonomy.json` and is checked by `python3 scripts/check_schema_taxonomy.py`.
 - Shared fixtures exist in `fixtures/`.
 - Project plan exists in `PROJECT_PLAN.md`.
 - Polyglot decision record exists in `docs/decisions/polyglot-toolchain-decision.md`.
@@ -96,6 +97,7 @@ Status: complete for this pass.
 | Normalize documentation layout | Done | `docs/guides/`, `docs/reference/`, `docs/notes/`, `docs/decisions/`, `docs/reports/`, `docs/process/`; hygiene and release scripts use new paths | Preserves content while moving dated/uppercase docs into categorized lowercase paths. |
 | Add AutoGen/AG2 fixture-backed framework adapter | Done | `ag2-usage-summary-actual.json`, `ag2-usage-summary-total.json`; Python/JS fixture runner, Go tests, package install checks, release checks, examples, JSON parse, ASCII scan, and diff whitespace checks pass | Adds selected usage summary extraction and one-call helpers across Python, JavaScript/TypeScript, and Go. |
 | Add fixture generator helpers | Done | `scripts/create_fixture.py`, `scripts/check_fixture_generator.py`, `npm run fixture:new`; generator smoke checks and targeted fixture checks pass | Adds schema-shaped fixture scaffolding and single-fixture validation to reduce future fixture duplication. |
+| Add v0.1 schema taxonomy lock | Done | `schemas/taxonomy.json`, `scripts/check_schema_taxonomy.py`; full validation passes | Locks component names, units, warning codes, alias resolution values, fixture scenarios, expected languages, and debug decision types. |
 
 ## Milestone Roadmap Status
 
@@ -104,7 +106,7 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 | Milestone | Roadmap state | Active now? | Evidence | Exit-gate remaining |
 |---|---|---:|---|---|
 | Milestone 0: Prototype Foundation | Complete for current scope | No | `npm test` passes; cores, examples, schemas, and broad shared fixtures exist. | Later type hardening moved into Milestones 1 and 1.5. |
-| Milestone 1: Contract Hardening | Partial | No | Schemas exist; fixture runner validates schemas including debug traces and fixture metadata; warning fixtures exist; coverage report and hygiene checks exist; fixture generator helpers now create runnable normalized-usage fixture skeletons; Go fixture tests validate generated cost-ledger structure and exact component totals. | Final v0.1 schema naming/taxonomy lock. |
+| Milestone 1: Contract Hardening | Complete for current scope | No | Schemas exist; fixture runner validates schemas including debug traces and fixture metadata; warning fixtures exist; coverage report and hygiene checks exist; fixture generator helpers now create runnable normalized-usage fixture skeletons; Go fixture tests validate generated cost-ledger structure and exact component totals; v0.1 taxonomy lock is checked by `scripts/check_schema_taxonomy.py`. | Future schema-derived type generation is tracked under Milestone 1.5. |
 | Milestone 1.5: Polyglot Toolchain Foundation | Complete for current scope | No | Decision record, manual type artifacts, parity matrix, Go examples, hygiene checks, and CI workflow exist. | Generated/schema-derived type workflow remains a later hardening item, not a current active lane. |
 | Milestone 2: Core Calculator Correctness | Partial | No | Decimal-safe calculator, aliases, strict/compatibility modes, effective dates, service tiers, stale prices, provider-reported cost modes, source priority, source disagreement, debug traces, long-context thresholds, batch/priority/provisioned fixtures, and cross-language component-total invariant checks exist. | More adversarial fixtures, typed warning payload maturity, and production-like review of byte-stable output ordering. |
 | Milestone 3: Source Adapter Layer | Partial | No | `llm-prices`, LiteLLM, Portkey, OpenRouter models, user compact pricing, and Helicone prototype adapters exist. | Official pricing snapshots, models.dev enrichment, file-based YAML/JSON loaders, offline cache format, explicit refresh command, source capability warnings, and historical feed semantics. |
@@ -690,6 +692,38 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
   - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
   - `git diff --check` passed.
 
+### 2026-05-25 Schema Taxonomy Lock Slice
+
+- Selected the remaining Milestone 1 taxonomy-lock gap as a low-conflict data/test slice while Markdown renames may happen separately.
+- Added `schemas/taxonomy.json` as the locked v0.1 taxonomy for:
+  - Usage and price component names.
+  - Units.
+  - Warning codes.
+  - Alias resolution values.
+  - Fixture scenarios.
+  - Expected languages.
+  - Debug decision types.
+- Tightened `schemas/price-card.schema.json` so `components[*].usage_component` uses the same component-name enum as `usage-ledger.schema.json`.
+- Added `scripts/check_schema_taxonomy.py` to fail when taxonomy and schema enums drift.
+- Wired taxonomy checks into `npm test`, `npm run check:taxonomy`, CI Python compilation, and project hygiene.
+- Verification after schema taxonomy lock slice:
+  - `python3 scripts/check_schema_taxonomy.py` passed.
+  - `python3 scripts/check_fixtures.py` passed with 61 fixtures across Python and JavaScript.
+  - `python3 scripts/check_project_hygiene.py` passed.
+  - `jq empty schemas/*.json package.json` passed.
+  - `npm test` passed: 61 fixtures, fixture generator checks, fixture coverage, taxonomy checks, Go tests, and hygiene checks green.
+  - `python3 -m py_compile` passed for package modules, scripts including the taxonomy checker, and examples.
+  - `npm run check:taxonomy` passed.
+  - `npm run check:coverage` passed.
+  - `npm run check:release` passed.
+  - `npm --silent run fixture:new -- --example normalized_usage | python3 -m json.tool >/dev/null` passed.
+  - `jq empty package.json packages/javascript/core/package.json schemas/*.json fixtures/*.json` passed.
+  - `go test ./packages/go/...` passed.
+  - `npm run check:packages` passed with clean Python, npm, and Go install smoke checks.
+  - `npm run example:js` and `npm run example:py` both ran and returned total `0.000228`.
+  - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
+  - `git diff --check` passed.
+
 ## Gap Audit 2026-05-25
 
 Purpose: step back from feature slices and record what is actually done, what is partial, what is a stub, and what still needs completion before private alpha, public beta, and V1.
@@ -731,6 +765,7 @@ Supported languages today:
 What is implemented and well covered:
 
 - Canonical schemas for usage ledgers, price cards, discount policies, and cost ledgers.
+- Locked v0.1 taxonomy for component names, units, warning codes, alias resolution values, fixture scenarios, expected languages, and debug decision types.
 - Shared fixture-first conformance across Python, JavaScript/TypeScript, and Go.
 - Fixture metadata and generated coverage reporting for requirements, provider surfaces, components, warnings, source adapters, framework adapters, tags, and expected languages.
 - Decimal-safe component cost calculation.
@@ -747,7 +782,7 @@ What is implemented and well covered:
 
 Partially implemented:
 
-- Contract hardening: schema validation, fixture metadata, debug trace fixtures, fixture coverage reporting, single-fixture validation, fixture generator helpers, and Go-side cost-ledger structure/component-total validation exist. Remaining gap is final v0.1 schema naming/taxonomy lock.
+- Contract hardening is complete for the current prototype scope: schema validation, fixture metadata, debug trace fixtures, fixture coverage reporting, single-fixture validation, fixture generator helpers, Go-side cost-ledger structure/component-total validation, and a machine-checked v0.1 taxonomy lock exist. Broader schema-derived type generation is tracked under Milestone 1.5.
 - Polyglot maintainability: parity matrix and hygiene checks exist, but generated type/docs workflows are not real yet. TypeScript and Python types are manual. Go uses object maps.
 - Go conformance: Go runs every fixture, validates generated cost-ledger structure, enforces exact component-total invariants, and checks expected subsets. Full JSON Schema validation and schema-derived structs remain future hardening work.
 - Source adapters: core adapters exist for six sources, including user compact pricing and Helicone model-registry data. Provider official pricing snapshots, models.dev enrichment, full file-reading YAML loaders, offline cache format, explicit refresh command, and source capability warnings are still missing.
@@ -780,7 +815,7 @@ Highest-risk gaps before private alpha:
 
 Recommended next sprint candidates:
 
-Only one candidate should become the active lane at a time. No implementation lane is currently selected after the Go-side cost-ledger validation slice; future feature work should re-inspect the Markdown rename pass before editing broad docs.
+Only one candidate should become the active lane at a time. No implementation lane is currently selected after the schema taxonomy lock slice; future feature work should re-inspect the Markdown rename pass before editing broad docs.
 
 1. Broader framework implementation slice: add fixtures and minimal adapters/examples for the next documented partial path, likely LangSmith export comparison or Semantic Kernel telemetry.
 2. Provider streaming expansion slice: add additional stream finalization fixtures for Vertex-specific SDK wrappers, Bedrock ConverseStream, Vercel AI SDK `streamText` finish parts, and any provider-specific tool streaming fields.

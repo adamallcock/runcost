@@ -206,6 +206,7 @@ Delivered in current prototype:
 - Fixture coverage reporting.
 - Fixture generator helpers through `scripts/create_fixture.py`, `scripts/check_fixture_generator.py`, and `npm run fixture:new`.
 - Go fixture-test validation for generated cost-ledger structure and exact component-total invariants.
+- Locked v0.1 taxonomy through `schemas/taxonomy.json`, synchronized with schema enums by `scripts/check_schema_taxonomy.py`.
 
 Progress criteria:
 
@@ -1286,6 +1287,7 @@ Tasks:
 19. Done: add selected provider streaming final-usage extraction fixtures.
 20. Done: add fixture generator helpers and single-fixture validation.
 21. Done: add Go-side cost-ledger structure and component-total invariant validation.
+22. Done: add v0.1 schema naming and component taxonomy lock.
 
 Sprint exit criteria:
 

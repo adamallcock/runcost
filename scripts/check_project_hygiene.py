@@ -29,6 +29,7 @@ REQUIRED_FILES = [
     "scripts/check_fixture_generator.py",
     "scripts/check_package_installs.py",
     "scripts/check_release_readiness.py",
+    "scripts/check_schema_taxonomy.py",
     "scripts/create_fixture.py",
     "LICENSE",
     "CHANGELOG.md",
@@ -38,6 +39,7 @@ REQUIRED_FILES = [
     "packages/python/runcost/types.py",
     "schemas/debug-trace.schema.json",
     "schemas/fixture.schema.json",
+    "schemas/taxonomy.json",
     "packages/go/ledger/example_test.go",
     ".github/workflows/ci.yml",
     ".github/workflows/release.yml",
@@ -153,6 +155,10 @@ def check_package_metadata() -> None:
         "check_fixture_generator.py" in scripts.get("test", ""),
         "root npm test must run fixture generator checks",
     )
+    assert_true(
+        "check_schema_taxonomy.py" in scripts.get("test", ""),
+        "root npm test must run schema taxonomy checks",
+    )
     assert_true("check_fixture_coverage.py" in scripts.get("test", ""), "root npm test must run fixture coverage checks")
     assert_true(
         "check_fixture_coverage.py" in scripts.get("check:coverage", ""),
@@ -170,6 +176,10 @@ def check_package_metadata() -> None:
     assert_true(
         "check_release_readiness.py" in scripts.get("check:release", ""),
         "root check:release must run release readiness checks",
+    )
+    assert_true(
+        "check_schema_taxonomy.py" in scripts.get("check:taxonomy", ""),
+        "root check:taxonomy must run schema taxonomy checks",
     )
     assert_true("create_fixture.py" in scripts.get("fixture:new", ""), "root fixture:new must run fixture generator")
 
@@ -310,6 +320,7 @@ def check_ci_workflow() -> None:
         "npm test",
         "check_fixture_coverage.py",
         "check_fixture_generator.py",
+        "check_schema_taxonomy.py",
         "npm run check:packages",
         "npm run check:release",
         "npm run example:js",

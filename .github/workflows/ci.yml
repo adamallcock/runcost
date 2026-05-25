@@ -54,5 +54,6 @@ jobs:
             scripts/check_project_hygiene.py \
             scripts/check_package_installs.py \
             scripts/check_release_readiness.py \
+            scripts/check_schema_taxonomy.py \
             scripts/create_fixture.py \
             examples/python_basic.py

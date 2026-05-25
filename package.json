@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "python3 scripts/check_fixtures.py && python3 scripts/check_fixture_generator.py && python3 scripts/check_fixture_coverage.py && go test ./packages/go/... && python3 scripts/check_project_hygiene.py",
+    "test": "python3 scripts/check_fixtures.py && python3 scripts/check_fixture_generator.py && python3 scripts/check_fixture_coverage.py && python3 scripts/check_schema_taxonomy.py && go test ./packages/go/... && python3 scripts/check_project_hygiene.py",
+    "check:taxonomy": "python3 scripts/check_schema_taxonomy.py",
     "fixture:new": "python3 scripts/create_fixture.py",
     "check:hygiene": "python3 scripts/check_project_hygiene.py",
     "check:coverage": "python3 scripts/check_fixture_coverage.py",
