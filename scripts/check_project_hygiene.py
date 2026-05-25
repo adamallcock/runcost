@@ -16,6 +16,7 @@ REQUIRED_FILES = [
     "docs/2026-05-25-fixture-coverage.md",
     "docs/2026-05-25-package-installation.md",
     "docs/2026-05-25-quickstart.md",
+    "docs/2026-05-25-release-process.md",
     "docs/2026-05-25-source-adapters.md",
     "docs/2026-05-25-supported-surfaces.md",
     "docs/2026-05-25-warnings-and-limitations.md",
@@ -25,12 +26,18 @@ REQUIRED_FILES = [
     "docs/FRAMEWORK_ADAPTER_NOTES.md",
     "scripts/check_fixture_coverage.py",
     "scripts/check_package_installs.py",
+    "scripts/check_release_readiness.py",
+    "LICENSE",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
     "packages/javascript/core/index.d.ts",
     "packages/python/runcost/types.py",
     "schemas/debug-trace.schema.json",
     "schemas/fixture.schema.json",
     "packages/go/ledger/example_test.go",
     ".github/workflows/ci.yml",
+    ".github/workflows/release.yml",
 ]
 
 PUBLIC_API_NAMES = [
@@ -135,6 +142,10 @@ def check_package_metadata() -> None:
         "check_package_installs.py" in scripts.get("check:packages", ""),
         "root check:packages must run clean package install checks",
     )
+    assert_true(
+        "check_release_readiness.py" in scripts.get("check:release", ""),
+        "root check:release must run release readiness checks",
+    )
 
     js_package_path = ROOT / "packages/javascript/core/package.json"
     js_package = load_json(js_package_path)
@@ -144,6 +155,7 @@ def check_package_metadata() -> None:
     assert_true(exports.get("types") == "./index.d.ts", "JavaScript package exports must expose index.d.ts")
     assert_true(not js_package.get("private", False), "JavaScript package must be publishable")
     assert_true("files" in js_package, "JavaScript package must define a publish file allowlist")
+    assert_true(js_package.get("license") == "MIT", "JavaScript package must declare MIT license")
 
 
 def check_public_api_artifacts() -> None:
@@ -254,6 +266,7 @@ def check_ci_workflow() -> None:
         "npm test",
         "check_fixture_coverage.py",
         "npm run check:packages",
+        "npm run check:release",
         "npm run example:js",
         "npm run example:py",
         "python3 -m py_compile",

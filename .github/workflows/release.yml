@@ -1,0 +1,106 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semantic version to verify, for example 0.1.0"
+        required: true
+        type: string
+      publish:
+        description: "Publish to PyPI and npm after verification"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify release readiness
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: |
+          npm test
+          npm run check:coverage
+          npm run check:packages
+          npm run check:release
+          npm run example:js
+          npm run example:py
+
+      - name: Build Python package
+        run: |
+          python3 -m pip install --upgrade build
+          python3 -m build
+
+      - name: Pack npm package
+        run: |
+          mkdir -p dist/npm
+          npm pack ./packages/javascript/core --pack-destination dist/npm
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: runcost-release-artifacts
+          path: |
+            dist/*.tar.gz
+            dist/*.whl
+            dist/npm/*.tgz
+
+  publish:
+    if: ${{ inputs.publish }}
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Build Python package
+        run: |
+          python3 -m pip install --upgrade build
+          python3 -m build
+
+      - name: Publish Python package
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+
+      - name: Publish npm package
+        working-directory: packages/javascript/core
+        run: npm publish --provenance --access public

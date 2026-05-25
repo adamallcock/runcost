@@ -72,6 +72,7 @@ Current prototype capabilities:
 - Go public API comments and examples.
 - CI and project hygiene checks.
 - Shared fixture conformance across Python, JavaScript, and Go.
+- MIT license metadata, contribution guide, security policy, changelog, release process, and guarded release workflow.
 
 Current verification command:
 
@@ -502,6 +503,9 @@ DX features:
 - Migration guide from hand-written formulas.
 - CLI for fixture checks and price-source conversion.
 - Examples for direct provider response, framework callback, custom prices, and discounts.
+- License, changelog, contribution guide, and security policy.
+- Guarded release workflow for Python, JavaScript/TypeScript, and Go tag-based releases.
+- Release readiness checks for versions, docs, metadata, and workflow guardrails.
 
 Progress criteria:
 
@@ -509,6 +513,8 @@ Progress criteria:
 - Public APIs are small and documented.
 - Core packages have no provider SDK dependencies.
 - Optional packages keep framework dependencies isolated.
+- Release readiness checks pass without publishing.
+- Manual release workflow can build artifacts and requires explicit publish opt-in.
 
 Exit gate:
 

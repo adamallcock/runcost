@@ -35,6 +35,7 @@ Run the current checks:
 npm test
 npm run check:coverage
 npm run check:packages
+npm run check:release
 npm run example:js
 npm run example:py
 ```
@@ -50,6 +51,10 @@ npm run example:py
 - Custom pricing and discounts: `docs/2026-05-25-custom-pricing-and-discounts.md`
 - Source adapters: `docs/2026-05-25-source-adapters.md`
 - Warnings and limitations: `docs/2026-05-25-warnings-and-limitations.md`
+- Release process: `docs/2026-05-25-release-process.md`
+- Contributing: `CONTRIBUTING.md`
+- Security policy: `SECURITY.md`
+- Changelog: `CHANGELOG.md`
 
 ## Project State
 
@@ -69,7 +74,7 @@ npm run example:py
   - JavaScript: `packages/javascript/core/`
   - Go: `packages/go/ledger/`
 
-The implementation is still pre-alpha. The current center of gravity is normalized usage plus price cards in, componentized cost ledger out. Registry publishing, streaming aggregation, and broader tool-call pricing are still ahead.
+The implementation is still pre-alpha. The current center of gravity is normalized usage plus price cards in, componentized cost ledger out. Release-readiness scaffolding exists, but first registry publication, streaming aggregation, and broader tool-call pricing are still ahead.
 
 ## Prototype Capabilities
 

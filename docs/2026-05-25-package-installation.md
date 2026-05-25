@@ -7,7 +7,7 @@ status: draft
 
 # RunCost Package Installation
 
-RunCost is currently validated as a source-installable pre-alpha package. Registry publishing is intentionally not marked done until packaging metadata, release automation, provenance, and version policy are complete.
+RunCost is currently validated as a source-installable pre-alpha package. Registry publishing is intentionally not marked done until the first release is cut through the guarded release workflow.
 
 ## Current Support Matrix
 
@@ -68,9 +68,10 @@ That command creates temporary projects for Python, npm, and Go and verifies tha
 
 ## Release Readiness Checklist
 
-- Decide package license and add license metadata.
-- Add registry publish workflows for PyPI and npm.
-- Add Go module tag policy.
+- MIT license and package license metadata are present.
+- Guarded registry publish workflow exists for PyPI and npm.
+- Go module tag policy is documented in `docs/2026-05-25-release-process.md`.
+- `npm run check:release` verifies release docs, package version sync, license metadata, changelog presence, and release workflow guardrails.
 - Decide whether the npm package remains in `packages/javascript/core` or moves to a publish-oriented root package.
-- Add provenance and changelog automation.
+- Add changelog automation.
 - Add package README files if registry pages should differ from the monorepo README.
