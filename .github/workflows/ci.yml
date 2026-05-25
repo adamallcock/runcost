@@ -46,6 +46,7 @@ jobs:
             packages/python/runcost/types.py \
             packages/python/runcost/__init__.py \
             scripts/check_fixtures.py \
+            scripts/check_fixture_coverage.py \
             scripts/check_project_hygiene.py \
             scripts/check_package_installs.py \
             examples/python_basic.py

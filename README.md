@@ -33,6 +33,7 @@ Run the current checks:
 
 ```bash
 npm test
+npm run check:coverage
 npm run check:packages
 npm run example:js
 npm run example:py
@@ -44,6 +45,7 @@ npm run example:py
 - Installation: `docs/2026-05-25-package-installation.md`
 - API reference: `docs/2026-05-25-api-reference.md`
 - Debug trace: `docs/2026-05-25-debug-trace.md`
+- Fixture coverage: `docs/2026-05-25-fixture-coverage.md`
 - Supported surfaces: `docs/2026-05-25-supported-surfaces.md`
 - Custom pricing and discounts: `docs/2026-05-25-custom-pricing-and-discounts.md`
 - Source adapters: `docs/2026-05-25-source-adapters.md`

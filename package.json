@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "python3 scripts/check_fixtures.py && go test ./packages/go/... && python3 scripts/check_project_hygiene.py",
+    "test": "python3 scripts/check_fixtures.py && python3 scripts/check_fixture_coverage.py && go test ./packages/go/... && python3 scripts/check_project_hygiene.py",
     "check:hygiene": "python3 scripts/check_project_hygiene.py",
+    "check:coverage": "python3 scripts/check_fixture_coverage.py",
     "check:packages": "python3 scripts/check_package_installs.py",
     "example:js": "node examples/javascript_basic.mjs",
     "example:py": "python3 examples/python_basic.py"

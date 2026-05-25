@@ -98,6 +98,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Package-level API docs | Partial | Partial | Partial | README, package examples, alpha docs, debug trace docs |
 | Public example for basic cost calculation | Yes | Yes | Yes | Python and JS examples; Go example test |
 | Schema validation in conformance tests | Yes | Yes | Partial | Python runner validates schemas for Python/JS outputs; Go checks behavior through fixtures |
+| Fixture metadata and coverage report | Yes | Yes | Yes | `schemas/fixture.schema.json`, fixture metadata, `scripts/check_fixture_coverage.py`, `docs/2026-05-25-fixture-coverage.md` |
 | Generated artifact drift check | Yes | Yes | Yes | `scripts/check_project_hygiene.py` |
 
 ## Framework Adapters

@@ -1,6 +1,26 @@
 {
   "name": "stale-price-warning",
   "description": "Warns when a selected price source is older than the configured stale threshold.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-WARNING-MODE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "warning",
+    "tags": [
+      "component:input_uncached_tokens",
+      "stale_price",
+      "warning",
+      "warning:price_stale"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "options": {
       "stale_after_days": 30

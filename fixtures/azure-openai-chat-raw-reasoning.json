@@ -1,6 +1,27 @@
 {
   "name": "azure-openai-chat-raw-reasoning",
   "description": "Extracts Azure OpenAI chat completion usage with completion reasoning details.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "azure",
+    "surface": "azure.openai.chat_completions",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_text_tokens",
+      "raw_provider_response",
+      "reasoning"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "raw_response": {
       "id": "chatcmpl-azure-fixture",

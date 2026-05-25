@@ -1,10 +1,31 @@
 {
   "name": "debug-trace-explain-decisions",
   "description": "Emits a debug trace for source priority, alias resolution, component pricing, and discounts.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-DEBUG-TRACE",
+      "RC-FIXTURE-CONFORMANCE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "debug_trace",
+    "tags": [
+      "component:input_uncached_tokens",
+      "debug_trace"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "options": {
       "debug_trace": true,
-      "price_source_priority": ["user-overrides", "vendor-feed"]
+      "price_source_priority": [
+        "user-overrides",
+        "vendor-feed"
+      ]
     },
     "usage_ledger": {
       "schema_version": "0.1",
@@ -30,7 +51,9 @@
         "provider": "openai",
         "surface": "openai.responses",
         "model": "gpt-trace",
-        "aliases": ["gpt-trace-2026"],
+        "aliases": [
+          "gpt-trace-2026"
+        ],
         "components": [
           {
             "usage_component": "input_uncached_tokens",
@@ -53,7 +76,9 @@
         "provider": "openai",
         "surface": "openai.responses",
         "model": "gpt-trace",
-        "aliases": ["gpt-trace-2026"],
+        "aliases": [
+          "gpt-trace-2026"
+        ],
         "components": [
           {
             "usage_component": "input_uncached_tokens",
@@ -77,7 +102,9 @@
         "id": "trace-discount",
         "match": {
           "provider": "openai",
-          "components": ["input_uncached_tokens"]
+          "components": [
+            "input_uncached_tokens"
+          ]
         },
         "adjustment": {
           "type": "percentage_discount",
@@ -129,13 +156,22 @@
           {
             "type": "price_card_candidates",
             "model": "gpt-trace-2026",
-            "candidate_price_card_ids": ["openai:gpt-trace:user", "openai:gpt-trace:vendor"],
-            "source_priority": ["user-overrides", "vendor-feed"]
+            "candidate_price_card_ids": [
+              "openai:gpt-trace:user",
+              "openai:gpt-trace:vendor"
+            ],
+            "source_priority": [
+              "user-overrides",
+              "vendor-feed"
+            ]
           },
           {
             "type": "price_component_match",
             "component": "input_uncached_tokens",
-            "candidate_price_card_ids": ["openai:gpt-trace:user", "openai:gpt-trace:vendor"],
+            "candidate_price_card_ids": [
+              "openai:gpt-trace:user",
+              "openai:gpt-trace:vendor"
+            ],
             "selected_price_card_id": "openai:gpt-trace:user",
             "selected_source": "user-overrides"
           },

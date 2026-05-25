@@ -1,6 +1,24 @@
 {
   "name": "service-mode-priority-selection",
   "description": "Covers priority pricing as a service_tier-specific price card.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SERVICE-MODE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "service_mode",
+    "tags": [
+      "component:input_uncached_tokens",
+      "service_mode"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "usage_ledger": {
       "schema_version": "0.1",

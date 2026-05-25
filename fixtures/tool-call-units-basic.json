@@ -1,6 +1,27 @@
 {
   "name": "tool-call-units-basic",
   "description": "Generic hosted tool-call pricing with web search, code interpreter session, and pass-through custom tool cost.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-CALC-CORE",
+      "RC-FIXTURE-CONFORMANCE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "normalized_usage",
+    "tags": [
+      "component:code_interpreter_session_units",
+      "component:custom_units",
+      "component:web_search_units",
+      "normalized_usage",
+      "tool_pricing"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "usage_ledger": {
       "schema_version": "0.1",

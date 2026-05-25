@@ -1,6 +1,25 @@
 {
   "name": "provider-reported-cost-mismatch",
   "description": "Warns when provider-reported cost differs from calculated ledger total.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-PROVIDER-REPORTED-COST"
+    ],
+    "provider": "openrouter",
+    "surface": "openrouter.chat_completions",
+    "scenario": "provider_reported",
+    "tags": [
+      "component:input_uncached_tokens",
+      "provider_reported",
+      "warning:provider_reported_cost_mismatch"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "options": {
       "provider_reported_cost": "0.009",

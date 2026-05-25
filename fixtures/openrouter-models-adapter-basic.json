@@ -1,6 +1,31 @@
 {
   "name": "openrouter-models-adapter-basic",
   "description": "Maps OpenRouter /api/v1/models pricing into canonical price cards for token, cache, reasoning, image-input, request, and web-search units.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SOURCE-ADAPTER"
+    ],
+    "provider": "openrouter",
+    "surface": "openrouter.chat_completions",
+    "scenario": "source_adapter",
+    "tags": [
+      "component:input_cache_read_tokens",
+      "component:input_image_units",
+      "component:input_uncached_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_text_tokens",
+      "component:request_units",
+      "component:web_search_units",
+      "source:openrouter-models",
+      "source_adapter"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "usage_ledger": {
       "schema_version": "0.1",

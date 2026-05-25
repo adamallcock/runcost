@@ -1,6 +1,25 @@
 {
   "name": "price-source-disagreement-warning",
   "description": "Warns when matching price sources disagree and no source priority is configured.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SOURCE-PRIORITY"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "source_priority",
+    "tags": [
+      "component:output_text_tokens",
+      "source_priority",
+      "warning:price_source_disagreement"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "usage_ledger": {
       "schema_version": "0.1",

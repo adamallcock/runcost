@@ -1,6 +1,24 @@
 {
   "name": "service-mode-provisioned-selection",
   "description": "Covers provisioned endpoint hour pricing through service tier and non-token units.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SERVICE-MODE"
+    ],
+    "provider": "bedrock",
+    "surface": "aws.bedrock.converse",
+    "scenario": "service_mode",
+    "tags": [
+      "component:endpoint_instance_hours",
+      "service_mode"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "usage_ledger": {
       "schema_version": "0.1",

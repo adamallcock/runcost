@@ -1,6 +1,24 @@
 {
   "name": "service-tier-region-selection",
   "description": "Selects the most specific price card for service tier and region.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SERVICE-TIER"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "service_tier",
+    "tags": [
+      "component:output_text_tokens",
+      "service_tier"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "usage_ledger": {
       "schema_version": "0.1",

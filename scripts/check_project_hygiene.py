@@ -13,6 +13,7 @@ REQUIRED_FILES = [
     "docs/2026-05-25-api-reference.md",
     "docs/2026-05-25-custom-pricing-and-discounts.md",
     "docs/2026-05-25-debug-trace.md",
+    "docs/2026-05-25-fixture-coverage.md",
     "docs/2026-05-25-package-installation.md",
     "docs/2026-05-25-quickstart.md",
     "docs/2026-05-25-source-adapters.md",
@@ -22,10 +23,12 @@ REQUIRED_FILES = [
     "docs/API_PARITY_MATRIX.md",
     "docs/PROVIDER_EXTRACTOR_NOTES.md",
     "docs/FRAMEWORK_ADAPTER_NOTES.md",
+    "scripts/check_fixture_coverage.py",
     "scripts/check_package_installs.py",
     "packages/javascript/core/index.d.ts",
     "packages/python/runcost/types.py",
     "schemas/debug-trace.schema.json",
+    "schemas/fixture.schema.json",
     "packages/go/ledger/example_test.go",
     ".github/workflows/ci.yml",
 ]
@@ -109,6 +112,11 @@ def check_package_metadata() -> None:
     root_package = load_json(ROOT / "package.json")
     scripts = root_package.get("scripts", {})
     assert_true("check_fixtures.py" in scripts.get("test", ""), "root npm test must run fixture checks")
+    assert_true("check_fixture_coverage.py" in scripts.get("test", ""), "root npm test must run fixture coverage checks")
+    assert_true(
+        "check_fixture_coverage.py" in scripts.get("check:coverage", ""),
+        "root check:coverage must run fixture coverage checks",
+    )
     assert_true("go test ./packages/go/..." in scripts.get("test", ""), "root npm test must run Go tests")
     assert_true(
         "check_project_hygiene.py" in scripts.get("test", ""),
@@ -210,12 +218,23 @@ def check_public_api_artifacts() -> None:
 def check_fixture_floor() -> None:
     fixtures = sorted((ROOT / "fixtures").glob("*.json"))
     assert_true(len(fixtures) >= 48, f"expected at least 48 fixtures, found {len(fixtures)}")
+    for path in fixtures:
+        fixture = load_json(path)
+        metadata = fixture.get("metadata")
+        assert_true(isinstance(metadata, dict), f"{path.name} must include metadata")
+        for key in ["requirement_ids", "provider", "surface", "scenario", "tags", "expected_languages"]:
+            assert_true(key in metadata, f"{path.name} metadata missing {key}")
+        assert_true(
+            metadata.get("expected_languages") == ["python", "javascript", "go"],
+            f"{path.name} must declare python/javascript/go expected languages",
+        )
 
 
 def check_ci_workflow() -> None:
     workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     for command in [
         "npm test",
+        "check_fixture_coverage.py",
         "npm run check:packages",
         "npm run example:js",
         "npm run example:py",

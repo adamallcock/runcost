@@ -1,6 +1,29 @@
 {
   "name": "openai-responses-raw-tool-calls",
   "description": "Raw OpenAI Responses response with hosted tool call output items.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:code_interpreter_call_units",
+      "component:file_search_units",
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "component:web_search_units",
+      "raw_provider_response",
+      "tool_pricing"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "extract": {
       "provider": "openai",

@@ -1,6 +1,25 @@
 {
   "name": "cohere-chat-raw-usage-billed-units",
   "description": "Extracts Cohere v2 Chat usage from top-level billed units, pricing billed tokens rather than raw token totals.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "cohere",
+    "surface": "cohere.chat",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "raw_provider_response"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "raw_response": {
       "id": "cohere-usage-fixture",

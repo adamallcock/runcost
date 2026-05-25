@@ -39,6 +39,7 @@ SCHEMA_PATHS = {
     "discount_policy": ROOT / "schemas" / "discount-policy.schema.json",
     "cost_ledger": ROOT / "schemas" / "cost-ledger.schema.json",
     "debug_trace": ROOT / "schemas" / "debug-trace.schema.json",
+    "fixture": ROOT / "schemas" / "fixture.schema.json",
 }
 SCHEMAS = {name: load_json(path) for name, path in SCHEMA_PATHS.items()}
 
@@ -291,6 +292,7 @@ def run_javascript_fixture(path: Path):
 def main() -> int:
     for path in FIXTURES:
         fixture = load_json(path)
+        validate_schema(fixture, SCHEMAS["fixture"], path=f"{path.name}:fixture")
         if "error" in fixture["expected"]:
             expected_code = fixture["expected"]["error"]["code"]
             for label, runner in (("python", lambda: run_python_fixture(fixture)), ("javascript", lambda: run_javascript_fixture(path))):

@@ -14,6 +14,7 @@ Evidence collected on 2026-05-25:
 
 - `npm test` passes.
 - Python and JavaScript fixture runner checks 48 shared fixtures.
+- Fixture metadata and checked-in coverage report pass through `python3 scripts/check_fixture_coverage.py`.
 - Go package passes `go test ./packages/go/...`.
 - Python compile check passes for package, scripts, and Python example.
 - JavaScript and Python examples run.
@@ -30,7 +31,7 @@ Evidence collected on 2026-05-25:
 - Project plan exists in `PROJECT_PLAN.md`.
 - Polyglot decision record exists in `docs/POLYGLOT_TOOLCHAIN_DECISION.md`.
 - Public API parity matrix exists in `docs/API_PARITY_MATRIX.md`.
-- Public quickstart, installation, API reference, debug-trace, supported-surface, custom pricing, source adapter, and warning docs exist under `docs/`.
+- Public quickstart, installation, API reference, debug-trace, fixture-coverage, supported-surface, custom pricing, source adapter, and warning docs exist under `docs/`.
 - CI workflow exists in `.github/workflows/ci.yml`.
 
 ## Current Sprint
@@ -57,6 +58,8 @@ Status: complete for this pass.
 | Add Go public API docs and typed examples | Done | Go doc comments in `ledger.go`; `packages/go/ledger/example_test.go`; Go tests pass | Examples cover `CalculateCost` and `FromResponse`. |
 | Add public API parity matrix | Done | `docs/API_PARITY_MATRIX.md`; hygiene check validates public API names | Tracks Python, JS/TS, and Go support by capability. |
 | Add debug trace fixture shape | Done | `schemas/debug-trace.schema.json`, `debug-trace-explain-decisions.json`; `npm test` passes | Optional `debug_trace` / `debugTrace` explains price-card, component, alias, discount, and warning decisions. |
+| Add fixture metadata fields | Done | `schemas/fixture.schema.json`; all 48 fixtures include `metadata` | Metadata covers requirement IDs, provider, surface, scenario, tags, and expected languages. |
+| Add fixture coverage report | Done | `docs/2026-05-25-fixture-coverage.md`; `scripts/check_fixture_coverage.py`; `npm test` passes | Reports scenarios, provider surfaces, components, warning codes, source adapters, framework adapters, requirements, tags, and expected languages. |
 | Add generated-artifact drift checks | Done | `scripts/check_project_hygiene.py`; `npm test` runs it | Starts as required-artifact, package metadata, parity, fixture floor, and CI command checks. |
 | Add CI workflow | Done | `.github/workflows/ci.yml`; hygiene check passes | CI runs conformance tests, examples, and Python compile checks. |
 
@@ -65,7 +68,7 @@ Status: complete for this pass.
 | Milestone | Status | Evidence |
 |---|---|---|
 | Milestone 0: Prototype Foundation | Complete for current prototype scope | `npm test` passes; cores, examples, schemas, and 16 fixtures exist. |
-| Milestone 1: Contract Hardening | In progress | Schemas exist; fixture runner validates schemas including debug traces; warning fixtures exist; debug trace fixture exists; hygiene checks exist. |
+| Milestone 1: Contract Hardening | In progress | Schemas exist; fixture runner validates schemas including debug traces and fixture metadata; warning fixtures exist; debug trace fixture exists; coverage report and hygiene checks exist. |
 | Milestone 1.5: Polyglot Toolchain Foundation | Complete for current prototype scope | Decision record, type artifacts, parity matrix, Go examples, hygiene checks, and CI workflow exist. |
 | Milestone 2: Core Calculator Correctness | In progress | Decimal-safe calculator, aliases, strict mode, compatibility warnings, effective dates, service tier/region matching, stale price warnings, provider-reported mismatch/use modes, source priority, source disagreement warnings, debug traces, long-context thresholds, batch/priority/provisioned service-mode fixture coverage, and component-total invariant checks exist. |
 | Milestone 3: Source Adapter Layer | In progress | `llm-prices`, LiteLLM, Portkey, and OpenRouter models prototype adapters exist. |
@@ -345,6 +348,23 @@ Status: complete for this pass.
   - `npm run example:js` and `npm run example:py` both ran and returned total `0.000228`.
   - `jq` parsed schemas, fixtures, and package JSON files.
   - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
+- Added fixture metadata and coverage slice:
+  - Added `schemas/fixture.schema.json` for the shared `ProviderResponseFixture` contract.
+  - Backfilled metadata into all 48 fixtures: requirement IDs, provider, surface, scenario, tags, and expected languages.
+  - Added `scripts/check_fixture_coverage.py` with metadata validation, generated coverage reporting, and stale-report detection.
+  - Added generated coverage report `docs/2026-05-25-fixture-coverage.md`.
+  - Wired fixture coverage checks into `npm test`, added `npm run check:coverage`, and updated CI compile coverage.
+  - Updated README, supported-surfaces doc, API parity matrix, project hygiene checks, and this tracker.
+- Verification after fixture metadata and coverage slice:
+  - `python3 scripts/check_fixture_coverage.py --write-metadata --write-report` passed for 48 fixtures.
+  - `python3 scripts/check_fixture_coverage.py` passed for 48 fixtures.
+  - `npm test` passed: 48 fixtures checked across Python and JavaScript, fixture coverage checks passed, Go tests green, hygiene checks green.
+  - `npm run check:coverage` passed.
+  - `npm run check:packages` passed: fresh Python venv import, npm tarball import, and fresh Go module import all green.
+  - `python3 -m py_compile packages/python/runcost/core.py packages/python/runcost/types.py packages/python/runcost/__init__.py scripts/check_fixtures.py scripts/check_fixture_coverage.py scripts/check_project_hygiene.py scripts/check_package_installs.py examples/python_basic.py` passed.
+  - `npm run example:js` and `npm run example:py` both ran and returned total `0.000228`.
+  - `jq` parsed schemas, fixtures, and package JSON files.
+  - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
 
 ## Gap Audit 2026-05-25
 
@@ -361,6 +381,7 @@ Naming update:
 Audit evidence:
 
 - `python3 scripts/check_fixtures.py` passed with 48 fixtures across Python and JavaScript.
+- `python3 scripts/check_fixture_coverage.py` passed with metadata on all 48 fixtures and a current checked-in coverage report.
 - `npm test` passed: fixture checks, Go tests, and project hygiene checks green.
 - `npm run check:packages` passed: clean Python, npm, and Go install smoke checks green.
 - Current package surfaces inspected:
@@ -386,6 +407,7 @@ What is implemented and well covered:
 
 - Canonical schemas for usage ledgers, price cards, discount policies, and cost ledgers.
 - Shared fixture-first conformance across Python, JavaScript/TypeScript, and Go.
+- Fixture metadata and generated coverage reporting for requirements, provider surfaces, components, warnings, source adapters, framework adapters, tags, and expected languages.
 - Decimal-safe component cost calculation.
 - Strict and compatibility modes.
 - Alias resolution through price-card aliases.
@@ -399,7 +421,7 @@ What is implemented and well covered:
 
 Partially implemented:
 
-- Contract hardening: schema validation exists, but fixture metadata fields such as requirement IDs, provider/surface/scenario tags, expected-language coverage, and fixture coverage reports are not implemented.
+- Contract hardening: schema validation, fixture metadata, debug trace fixtures, and fixture coverage reporting exist. Remaining gaps are fixture generator helpers and stronger Go-side schema validation/component-total invariant checks.
 - Polyglot maintainability: parity matrix and hygiene checks exist, but generated type/docs workflows are not real yet. TypeScript and Python types are manual. Go uses object maps.
 - Go conformance: Go runs every fixture and checks expected subsets, but schema validation for generated Go outputs and component-total invariant checks are weaker than Python/JavaScript.
 - Source adapters: core adapters exist for four sources, but Helicone, provider official pricing snapshots, models.dev enrichment, user JSON/YAML loading, offline cache format, explicit refresh command, and source capability warnings are missing.
@@ -416,7 +438,7 @@ Stubs or placeholders:
 - `DebugTrace` now has a schema, fixture, docs, and opt-in output across Python, JavaScript/TypeScript, and Go, but traces are still focused on calculator decisions rather than full extractor/framework middleware internals.
 - Warning codes such as `stream_usage_missing` exist in schemas/types but no streaming implementation or fixture currently emits them.
 - Public API type surfaces are manually maintained placeholders for generated/schema-derived models.
-- `scripts/check_project_hygiene.py` is a useful guard but still mostly checks presence, API-name strings, fixture floor, package metadata, and CI commands. It is not yet a full drift detector.
+- `scripts/check_project_hygiene.py` is a useful guard but still mostly checks presence, API-name strings, fixture floor, fixture metadata presence, package metadata, and CI commands. It is not yet a full drift detector.
 - README now provides alpha package onboarding and links to public docs, but does not yet represent a production-ready package.
 - Go APIs are explicitly prototype map-backed `Object` functions.
 
@@ -424,20 +446,20 @@ Highest-risk gaps before private alpha:
 
 1. Package publish readiness across Python, JavaScript/TypeScript, and Go.
 2. Public docs for contribution, security/privacy, release notes, changelog, and deeper framework integration recipes.
-3. Fixture metadata and coverage reporting so support claims can be audited mechanically.
-4. Real framework integration ergonomics: callbacks/middleware/context managers, not only metadata-object helpers.
-5. Streaming and multi-call aggregation support, including final-usage-missing warnings.
-6. Source adapter completeness: Helicone, user JSON/YAML, official snapshots, refresh/cache workflow, and historical feed semantics.
-7. Hardened typed models and generated artifact workflow, especially for Go structs and generated docs.
-8. Deeper debug traces for extractor and framework adapter internals.
+3. Real framework integration ergonomics: callbacks/middleware/context managers, not only metadata-object helpers.
+4. Streaming and multi-call aggregation support, including final-usage-missing warnings.
+5. Source adapter completeness: Helicone, user JSON/YAML, official snapshots, refresh/cache workflow, and historical feed semantics.
+6. Hardened typed models and generated artifact workflow, especially for Go structs and generated docs.
+7. Deeper debug traces for extractor and framework adapter internals.
+8. Fixture generator helpers and stronger generated artifact drift detection.
 
 Recommended next sprint:
 
-1. Fixture coverage slice: add fixture metadata, coverage report, and hygiene checks for warning codes, components, providers, adapters, and expected-language coverage.
-2. Framework ergonomics slice: add real LangChain callback/context-manager and Vercel AI SDK middleware examples or helpers.
-3. Source adapter slice: add user JSON/YAML loader and Helicone compatibility fixture before more provider breadth.
-4. Publish readiness slice: decide license metadata, add changelog/release notes, and prepare PyPI/npm workflows plus Go tag policy.
-5. Streaming and aggregation slice: add final-usage-missing warnings and multi-call/session rollups.
+1. Framework ergonomics slice: add real LangChain callback/context-manager and Vercel AI SDK middleware examples or helpers.
+2. Source adapter slice: add user JSON/YAML loader and Helicone compatibility fixture before more provider breadth.
+3. Publish readiness slice: decide license metadata, add changelog/release notes, and prepare PyPI/npm workflows plus Go tag policy.
+4. Streaming and aggregation slice: add final-usage-missing warnings and multi-call/session rollups.
+5. Generated artifact slice: add fixture generator helpers and schema-derived type/doc checks.
 
 ## Next Best Actions
 
