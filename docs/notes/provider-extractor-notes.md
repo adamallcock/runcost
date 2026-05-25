@@ -8,7 +8,7 @@ status: draft
 # RunCost Provider Extractor Notes
 
 Status: v0.x prototype
-Date: 2026-05-24
+Date: 2026-05-25
 
 This document records raw provider usage fields that the current extractors depend on. It is not a pricing source; it is a mapping note for usage normalization.
 
@@ -31,6 +31,23 @@ Mapping:
 - `usage.input_tokens_details.cached_tokens` -> `input_cache_read_tokens`.
 - `usage.output_tokens` minus reasoning tokens -> `output_text_tokens`.
 - `usage.output_tokens_details.reasoning_tokens` -> `output_reasoning_tokens`.
+
+## xAI Responses
+
+Surface:
+
+- `xai.responses`
+
+Source references:
+
+- xAI text generation docs state that Responses is the preferred API for xAI models and show the OpenAI-compatible Responses path through `client.responses.create(...)` with `base_url` set to `https://api.x.ai/v1`: https://docs.x.ai/developers/model-capabilities/text/generate-text
+- xAI prompt caching docs describe cached-token usage and pricing for Grok models: https://docs.x.ai/developers/advanced-api-usage/prompt-caching/usage-and-pricing
+
+Mapping:
+
+- Uses the same usage fields as OpenAI Responses for fixture-backed extraction.
+- `surface: "xai.responses"` defaults the canonical provider to `xai` even when callers omit `provider`.
+- Provider-specific tool, multimodal, and future Responses-only fields still need separate fixtures before being treated as supported.
 
 ## Anthropic Messages
 

@@ -241,6 +241,7 @@ def run_python_fixture(fixture):
                 "ag2.usage_summary",
             } or input_data["extract"].get("surface") in {
                 "openai.responses",
+                "xai.responses",
                 "openai.chat_completions",
                 "anthropic.messages",
                 "openrouter.chat_completions",

@@ -13,9 +13,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 68
+- Fixtures: 69
 - Providers: 15
-- Provider surfaces: 16
+- Provider surfaces: 17
 - Usage components covered: 20
 - Warning/error codes covered: 11
 - Requirement IDs covered: 17
@@ -24,9 +24,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 66 |
-| `javascript` | 67 |
-| `python` | 67 |
+| `go` | 67 |
+| `javascript` | 68 |
+| `python` | 68 |
 
 ## Scenarios
 
@@ -39,7 +39,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `long_context` | 2 |
 | `normalized_usage` | 3 |
 | `provider_reported` | 2 |
-| `raw_provider_response` | 23 |
+| `raw_provider_response` | 24 |
 | `service_mode` | 3 |
 | `service_tier` | 2 |
 | `source_adapter` | 13 |
@@ -67,6 +67,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `openrouter` | `openrouter.chat_completions` | 5 |
 | `vertex` | `vertex.gemini.generate_content` | 1 |
 | `xai` | `xai.chat_completions` | 1 |
+| `xai` | `xai.responses` | 1 |
 
 ## Usage Components
 
@@ -78,17 +79,17 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `endpoint_instance_hours` | 1 |
 | `file_search_units` | 1 |
 | `input_audio_tokens` | 2 |
-| `input_cache_read_tokens` | 29 |
+| `input_cache_read_tokens` | 30 |
 | `input_cache_write_1h_tokens` | 2 |
 | `input_cache_write_tokens` | 12 |
 | `input_image_tokens` | 2 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 61 |
+| `input_uncached_tokens` | 62 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 2 |
 | `output_image_tokens` | 2 |
-| `output_reasoning_tokens` | 24 |
-| `output_text_tokens` | 51 |
+| `output_reasoning_tokens` | 25 |
+| `output_text_tokens` | 52 |
 | `output_video_tokens` | 1 |
 | `request_units` | 3 |
 | `web_search_units` | 8 |
@@ -147,12 +148,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-CUSTOM-PRICING` | 1 |
 | `RC-DEBUG-TRACE` | 1 |
 | `RC-DISCOUNT-POLICY` | 1 |
-| `RC-FIXTURE-CONFORMANCE` | 68 |
+| `RC-FIXTURE-CONFORMANCE` | 69 |
 | `RC-FRAMEWORK-ADAPTER` | 7 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
 | `RC-LONG-CONTEXT` | 2 |
 | `RC-PROVIDER-REPORTED-COST` | 5 |
-| `RC-RAW-EXTRACTOR` | 23 |
+| `RC-RAW-EXTRACTOR` | 24 |
 | `RC-SERVICE-MODE` | 3 |
 | `RC-SERVICE-TIER` | 2 |
 | `RC-SOURCE-ADAPTER` | 14 |
@@ -172,24 +173,24 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `adapter:vercel_ai_sdk.generate_text` | 2 |
 | `aggregation` | 2 |
 | `alias` | 1 |
-| `cache` | 13 |
+| `cache` | 14 |
 | `component:code_interpreter_call_units` | 1 |
 | `component:code_interpreter_session_units` | 1 |
 | `component:custom_units` | 2 |
 | `component:endpoint_instance_hours` | 1 |
 | `component:file_search_units` | 1 |
 | `component:input_audio_tokens` | 2 |
-| `component:input_cache_read_tokens` | 29 |
+| `component:input_cache_read_tokens` | 30 |
 | `component:input_cache_write_1h_tokens` | 2 |
 | `component:input_cache_write_tokens` | 12 |
 | `component:input_image_tokens` | 2 |
 | `component:input_image_units` | 1 |
-| `component:input_uncached_tokens` | 61 |
+| `component:input_uncached_tokens` | 62 |
 | `component:input_video_tokens` | 1 |
 | `component:output_audio_tokens` | 2 |
 | `component:output_image_tokens` | 2 |
-| `component:output_reasoning_tokens` | 24 |
-| `component:output_text_tokens` | 51 |
+| `component:output_reasoning_tokens` | 25 |
+| `component:output_text_tokens` | 52 |
 | `component:output_video_tokens` | 1 |
 | `component:request_units` | 3 |
 | `component:web_search_units` | 8 |
@@ -214,8 +215,8 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `multimodal` | 1 |
 | `normalized_usage` | 3 |
 | `provider_reported` | 4 |
-| `raw_provider_response` | 23 |
-| `reasoning` | 8 |
+| `raw_provider_response` | 24 |
+| `reasoning` | 9 |
 | `service_mode` | 3 |
 | `service_tier` | 2 |
 | `source:file` | 1 |

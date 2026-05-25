@@ -837,6 +837,8 @@ def _openai_responses_payload(response: Dict[str, Any]) -> Dict[str, Any]:
 def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     response = _openai_responses_payload(response)
     usage = response.get("usage", {})
+    surface = options.get("surface", "openai.responses")
+    provider = options.get("provider") or ("xai" if surface == "xai.responses" else "openai")
     cached_input = usage.get("input_tokens_details", {}).get("cached_tokens", 0)
     reasoning = usage.get("output_tokens_details", {}).get("reasoning_tokens", 0)
     input_tokens = usage.get("input_tokens", 0)
@@ -851,8 +853,8 @@ def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> 
             tool_components.append(_positive_component("code_interpreter_call_units", 1, "call", "$.output[*].type"))
 
     return _base_usage_ledger(
-        provider=options.get("provider", "openai"),
-        surface=options.get("surface", "openai.responses"),
+        provider=provider,
+        surface=surface,
         requested_model=options.get("model", response.get("model")),
         returned_model=response.get("model"),
         raw_usage=usage,
@@ -1463,7 +1465,7 @@ def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, 
         return extract_ag2_usage_summary_usage(response, **options)
 
     surface = options.get("surface")
-    if surface == "openai.responses":
+    if surface in {"openai.responses", "xai.responses"}:
         return extract_openai_responses_usage(response, **options)
     if surface == "openai.chat_completions":
         return extract_openai_chat_completions_usage(response, **options)

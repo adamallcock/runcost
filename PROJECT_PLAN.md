@@ -385,7 +385,7 @@ Delivered in current prototype:
 - Anthropic Messages.
 - OpenRouter Chat Completions.
 - Groq OpenAI-compatible Chat Completions.
-- xAI Chat Completions.
+- xAI Chat Completions and Responses.
 - Mistral Chat Completions.
 - DeepSeek Chat Completions.
 - Azure OpenAI Chat Completions.
@@ -397,7 +397,8 @@ Delivered in current prototype:
 
 Current mapping notes:
 
-- `docs/notes/provider-extractor-notes.md` records the official source references and raw usage field mappings for OpenAI-compatible chat providers, Cohere, Gemini, and Bedrock.
+- `docs/notes/provider-extractor-notes.md` records the official source references and raw usage field mappings for OpenAI Responses, xAI Responses, OpenAI-compatible chat providers, Cohere, Gemini, and Bedrock.
+- xAI Responses is currently mapped through the OpenAI-compatible Responses usage envelope, with provider defaulting to `xai` for `surface: "xai.responses"`.
 - Gemini/Vertex `promptTokensDetails`, `cacheTokensDetails`, `toolUsePromptTokensDetails`, and `candidatesTokensDetails` are now mapped into modality-aware image, audio, video, text, cache-read, and thinking components in the shared conformance suite.
 - OpenRouter `/api/v1/models` pricing is now mapped into canonical price cards for prompt, completion, cache read/write, internal reasoning, request, image-input, and web-search prices.
 

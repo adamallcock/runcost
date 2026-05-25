@@ -65,7 +65,8 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | AWS Bedrock Converse | Yes | Yes | Yes | `extract_bedrock_converse_usage`, `extractBedrockConverseUsage`; `bedrock-converse-raw-cache.json` |
 | Azure OpenAI | Yes | Yes | Yes | `azure-openai-chat-raw-reasoning.json` |
 | Groq | Yes | Yes | Yes | `groq-chat-raw-cache.json` |
-| xAI / Grok | Yes | Yes | Yes | `xai-chat-raw-cache-reasoning.json` |
+| xAI / Grok Chat Completions | Yes | Yes | Yes | `xai-chat-raw-cache-reasoning.json` |
+| xAI / Grok Responses | Yes | Yes | Yes | `xai-responses-raw-cache-reasoning.json` |
 | Cohere | Yes | Yes | Yes | `extract_cohere_chat_usage`, `extractCohereChatUsage`; `cohere-chat-raw-usage-billed-units.json`, `cohere-chat-raw-meta-billed-units.json` |
 | Mistral | Yes | Yes | Yes | `mistral-chat-raw-cache.json` |
 | Hugging Face Inference Providers | Yes | Yes | Yes | `huggingface-chat-raw-basic.json` |

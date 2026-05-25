@@ -23,6 +23,7 @@ For mechanical coverage counts, see [Fixture Coverage](../reports/fixture-covera
 | OpenRouter | Chat Completions | Fixture-backed |
 | Groq | Chat Completions through OpenAI-compatible usage | Fixture-backed |
 | xAI | Chat Completions through OpenAI-compatible usage | Fixture-backed |
+| xAI | Responses through OpenAI-compatible usage | Fixture-backed |
 | Mistral | Chat Completions through OpenAI-compatible usage | Fixture-backed |
 | DeepSeek | Chat Completions through OpenAI-compatible usage plus cache hit and miss fields | Fixture-backed |
 | Azure OpenAI | Chat Completions through OpenAI-compatible usage | Fixture-backed |

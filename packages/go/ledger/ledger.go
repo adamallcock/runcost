@@ -1234,7 +1234,7 @@ func ExtractUsageLedger(response Object, options Object) Object {
 
 	surface := asString(options["surface"])
 	switch surface {
-	case "openai.responses":
+	case "openai.responses", "xai.responses":
 		return extractOpenAIResponsesUsage(response, options)
 	case "openai.chat_completions":
 		return extractOpenAIChatCompletionsUsage(response, options)
@@ -1324,8 +1324,16 @@ func extractOpenAIResponsesUsage(response Object, options Object) Object {
 		}
 	}
 	provider := asString(options["provider"])
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.responses"
+	}
 	if provider == "" {
-		provider = "openai"
+		if surface == "xai.responses" {
+			provider = "xai"
+		} else {
+			provider = "openai"
+		}
 	}
 	requestedModel := asString(options["model"])
 	if requestedModel == "" {
@@ -1339,7 +1347,7 @@ func extractOpenAIResponsesUsage(response Object, options Object) Object {
 		positiveComponent("output_reasoning_tokens", reasoning, "token", "$.usage.output_tokens_details.reasoning_tokens"),
 	}
 	components = append(components, toolComponents...)
-	return baseUsageLedger(provider, "openai.responses", requestedModel, asString(response["model"]), compactComponents(components), usage)
+	return baseUsageLedger(provider, surface, requestedModel, asString(response["model"]), compactComponents(components), usage)
 }
 
 func extractOpenAICompatibleChatCompletionsUsage(response Object, options Object) Object {
@@ -3277,6 +3285,7 @@ func FromResponse(response Object, options Object, priceCards []any, discountPol
 	}
 	surface := asString(options["surface"])
 	if surface != "openai.responses" &&
+		surface != "xai.responses" &&
 		surface != "anthropic.messages" &&
 		surface != "google.gemini.generate_content" &&
 		surface != "vertex.gemini.generate_content" &&

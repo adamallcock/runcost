@@ -860,6 +860,8 @@ function openAIResponsesPayload(response) {
 export function extractOpenAIResponsesUsage(response, options = {}) {
   response = openAIResponsesPayload(response);
   const usage = response.usage || {};
+  const surface = options.surface || "openai.responses";
+  const provider = options.provider || (surface === "xai.responses" ? "xai" : "openai");
   const cachedInput = usage.input_tokens_details?.cached_tokens || 0;
   const reasoning = usage.output_tokens_details?.reasoning_tokens || 0;
   const input = usage.input_tokens || 0;
@@ -877,8 +879,8 @@ export function extractOpenAIResponsesUsage(response, options = {}) {
   }
 
   return baseUsageLedger({
-    provider: options.provider || "openai",
-    surface: options.surface || "openai.responses",
+    provider,
+    surface,
     requestedModel: options.model || response.model,
     returnedModel: response.model,
     rawUsage: usage,
@@ -1531,7 +1533,7 @@ export function extractUsageLedger(response, options = {}) {
   }
 
   const surface = options.surface;
-  if (surface === "openai.responses") {
+  if (surface === "openai.responses" || surface === "xai.responses") {
     return extractOpenAIResponsesUsage(response, options);
   }
   if (surface === "openai.chat_completions") {
