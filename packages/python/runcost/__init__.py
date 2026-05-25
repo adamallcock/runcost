@@ -1,4 +1,5 @@
 from .core import (
+    aggregate_cost_ledgers,
     calculate_cost,
     extract_anthropic_messages_usage,
     extract_bedrock_converse_usage,
@@ -73,6 +74,7 @@ __all__ = [
     "UsageLedger",
     "UsageModel",
     "UsageTool",
+    "aggregate_cost_ledgers",
     "calculate_cost",
     "extract_anthropic_messages_usage",
     "extract_bedrock_converse_usage",

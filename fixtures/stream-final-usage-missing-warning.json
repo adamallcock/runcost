@@ -1,0 +1,68 @@
+{
+  "name": "stream-final-usage-missing-warning",
+  "description": "Returns an explicit warning when a streaming run expected final usage but no final usage ledger was observed.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-AGGREGATION",
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-WARNING-MODE"
+    ],
+    "provider": "aggregate",
+    "surface": "aggregate.cost_ledgers",
+    "scenario": "aggregation",
+    "tags": [
+      "aggregation",
+      "streaming",
+      "warning:stream_usage_missing"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "cost_ledgers": [],
+    "options": {
+      "provider": "aggregate",
+      "surface": "aggregate.cost_ledgers",
+      "model": "streaming-run",
+      "expected_ledger_count": 1,
+      "stream_final_usage_expected": true,
+      "stream_final_usage_present": false
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "aggregate",
+      "surface": "aggregate.cost_ledgers",
+      "model": {
+        "requested": "streaming-run",
+        "returned": "streaming-run",
+        "billed": "streaming-run",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "stream_usage_missing",
+          "message": "Final streaming usage was expected but not observed; aggregate total may be incomplete.",
+          "metadata": {
+            "actual_ledger_count": 0,
+            "expected_ledger_count": 1
+          }
+        }
+      ],
+      "metadata": {
+        "ledger_count": 0,
+        "expected_ledger_count": 1,
+        "aggregation": "cost_ledgers"
+      }
+    }
+  }
+}

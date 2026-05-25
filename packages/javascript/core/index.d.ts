@@ -284,6 +284,21 @@ export interface CostLedger {
   metadata?: Record<string, unknown>;
 }
 
+export interface AggregateCostLedgersOptions {
+  costLedgers?: CostLedger[];
+  cost_ledgers?: CostLedger[];
+  provider?: string;
+  surface?: string;
+  model?: string;
+  mode?: CalculationMode;
+  expectedLedgerCount?: number;
+  expected_ledger_count?: number;
+  streamFinalUsageExpected?: boolean;
+  stream_final_usage_expected?: boolean;
+  streamFinalUsagePresent?: boolean;
+  stream_final_usage_present?: boolean;
+}
+
 export interface CalculateCostOptions {
   usageLedger: UsageLedger;
   priceCards: PriceCard[];
@@ -359,6 +374,7 @@ export interface SourceAdapterOptions {
 }
 
 export function calculateCost(options: CalculateCostOptions): CostLedger;
+export function aggregateCostLedgers(options: AggregateCostLedgersOptions): CostLedger;
 export function extractUsageLedger(response: Record<string, unknown>, options: ExtractOptions): UsageLedger;
 export function extractOpenAIResponsesUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractOpenAIChatCompletionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;

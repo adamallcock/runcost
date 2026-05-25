@@ -11,6 +11,7 @@ REQUIRED_FILES = [
     "PROJECT_PLAN.md",
     "PROGRESS_TRACKER.md",
     "docs/2026-05-25-api-reference.md",
+    "docs/2026-05-25-aggregation-and-streaming.md",
     "docs/2026-05-25-custom-pricing-and-discounts.md",
     "docs/2026-05-25-debug-trace.md",
     "docs/2026-05-25-fixture-coverage.md",
@@ -48,6 +49,9 @@ PUBLIC_API_NAMES = [
     "from_response",
     "fromResponse",
     "FromResponse",
+    "aggregate_cost_ledgers",
+    "aggregateCostLedgers",
+    "AggregateCostLedgers",
     "from_langchain_message",
     "fromLangChainMessage",
     "FromLangChainMessage",
@@ -171,6 +175,7 @@ def check_public_api_artifacts() -> None:
 
     for exported in [
         "calculateCost",
+        "aggregateCostLedgers",
         "fromResponse",
         "fromLangChainMessage",
         "createRunCostVercelMiddleware",
@@ -201,6 +206,7 @@ def check_public_api_artifacts() -> None:
         "CostLedger",
         "DebugTrace",
         "calculate_cost",
+        "aggregate_cost_ledgers",
         "from_response",
         "from_langchain_message",
         "track_langchain_costs",
@@ -224,6 +230,7 @@ def check_public_api_artifacts() -> None:
         "CalculateCost",
         "CalculateCostWithMode",
         "CalculateCostWithOptions",
+        "AggregateCostLedgers",
         "ExtractUsageLedger",
         "PriceCardsFromLlmPrices",
         "PriceCardsFromLiteLLM",
@@ -247,7 +254,7 @@ def check_public_api_artifacts() -> None:
 
 def check_fixture_floor() -> None:
     fixtures = sorted((ROOT / "fixtures").glob("*.json"))
-    assert_true(len(fixtures) >= 52, f"expected at least 52 fixtures, found {len(fixtures)}")
+    assert_true(len(fixtures) >= 54, f"expected at least 54 fixtures, found {len(fixtures)}")
     for path in fixtures:
         fixture = load_json(path)
         metadata = fixture.get("metadata")

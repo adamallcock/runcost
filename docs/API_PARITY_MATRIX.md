@@ -19,6 +19,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Calculate cost from normalized usage and price cards | Yes | Yes | Yes | `calculate_cost`, `calculateCost`, `CalculateCost`; shared fixtures |
 | Calculate cost with advanced options | Yes | Yes | Yes | `calculate_cost` keyword options, `calculateCost` options object, `CalculateCostWithOptions`; stale/provider-reported fixtures |
 | Extract usage and calculate from raw response | Yes | Yes | Yes | `from_response`, `fromResponse`, `FromResponse`; raw response fixtures |
+| Aggregate already-calculated cost ledgers | Yes | Yes | Yes | `aggregate_cost_ledgers`, `aggregateCostLedgers`, `AggregateCostLedgers`; `cost-ledger-aggregation-basic.json`, `stream-final-usage-missing-warning.json` |
 | Calculate with discount policies | Yes | Yes | Yes | `discount-policy-openai-basic.json` |
 | Strict mode | Yes | Yes | Yes | `strict-unknown-model.json` |
 | Compatibility mode with warnings | Yes | Yes | Yes | unknown model, unpriced component, unknown surface fixtures |
@@ -32,6 +33,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Provider-reported cost authoritative use mode | Yes | Yes | Yes | `provider-reported-cost-used.json` |
 | Price source priority for user overrides | Yes | Yes | Yes | `price-source-priority-user-override.json` |
 | Price source disagreement warning | Yes | Yes | Yes | `price-source-disagreement-warning.json` |
+| Streaming final-usage missing warning | Yes | Yes | Yes | `stream_usage_missing`; `stream-final-usage-missing-warning.json` |
 | Debug trace / explain mode | Yes | Yes | Yes | `debug-trace-explain-decisions.json`; optional `debug_trace` / `debugTrace` output |
 | Long-context threshold price component selection | Yes | Yes | Yes | `long-context-threshold-selection.json` |
 | Missing long-context rule warning | Yes | Yes | Yes | `long-context-rule-missing.json` |
@@ -40,6 +42,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Provisioned endpoint-hour pricing through service tier and region | Yes | Yes | Yes | `service-mode-provisioned-selection.json` |
 | Component-total invariant in conformance tests | Yes | Yes | Partial | Python fixture runner validates Python/JS ledgers; Go fixture test validates expected subsets |
 | Componentized cost ledger output | Yes | Yes | Yes | all cost fixtures |
+| Multi-call/session ledger aggregation | Yes | Yes | Yes | Aggregates totals, matching components, price sources, discounts, and warnings from existing ledgers |
 
 ## Raw Response Extractors
 

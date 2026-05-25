@@ -40,6 +40,13 @@ For mechanical coverage counts, see [Fixture Coverage](2026-05-25-fixture-covera
 | Vercel AI SDK | `wrapGenerate` middleware helper | Fixture-backed for JavaScript |
 | LlamaIndex | TokenCountingHandler output | Fixture-backed |
 
+## Aggregation
+
+| Surface | Object | Status |
+|---|---|---|
+| Aggregate | Already-calculated `CostLedger` objects | Fixture-backed |
+| Aggregate | Missing final streaming usage warning | Fixture-backed |
+
 ## Price Sources
 
 | Source | Status |

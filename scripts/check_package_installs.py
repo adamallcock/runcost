@@ -25,7 +25,7 @@ def check_python_install(workdir: Path) -> None:
         [
             str(python),
             "-c",
-            "from runcost import calculate_cost, from_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_user_pricing; print(calculate_cost, from_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_user_pricing)",
+            "from runcost import aggregate_cost_ledgers, calculate_cost, from_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_user_pricing; print(aggregate_cost_ledgers, calculate_cost, from_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_user_pricing)",
         ],
         workdir,
     )
@@ -50,7 +50,7 @@ def check_javascript_install(workdir: Path) -> None:
             "node",
             "--input-type=module",
             "-e",
-            'import { calculateCost, fromResponse, createRunCostVercelMiddleware, priceCardsFromHelicone, priceCardsFromUserPricing } from "runcost"; console.log(typeof calculateCost, typeof fromResponse, typeof createRunCostVercelMiddleware, typeof priceCardsFromHelicone, typeof priceCardsFromUserPricing);',
+            'import { aggregateCostLedgers, calculateCost, fromResponse, createRunCostVercelMiddleware, priceCardsFromHelicone, priceCardsFromUserPricing } from "runcost"; console.log(typeof aggregateCostLedgers, typeof calculateCost, typeof fromResponse, typeof createRunCostVercelMiddleware, typeof priceCardsFromHelicone, typeof priceCardsFromUserPricing);',
         ],
         project_dir,
     )
@@ -72,6 +72,13 @@ func TestImport(t *testing.T) {
     value := ledger.Object{"ok": true}
     if value["ok"] != true {
         t.Fatalf("unexpected import check value: %#v", value)
+    }
+    result := ledger.AggregateCostLedgers([]any{}, ledger.Object{
+        "stream_final_usage_expected": true,
+        "stream_final_usage_present": false,
+    })
+    if result["total"] != "0" {
+        t.Fatalf("unexpected aggregate total: %#v", result["total"])
     }
 }
 """,

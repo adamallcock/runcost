@@ -13,25 +13,26 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 52
-- Providers: 14
-- Provider surfaces: 15
+- Fixtures: 54
+- Providers: 15
+- Provider surfaces: 16
 - Usage components covered: 20
-- Warning/error codes covered: 9
-- Requirement IDs covered: 16
+- Warning/error codes covered: 10
+- Requirement IDs covered: 17
 
 ## Expected Languages
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 50 |
-| `javascript` | 51 |
-| `python` | 51 |
+| `go` | 52 |
+| `javascript` | 53 |
+| `python` | 53 |
 
 ## Scenarios
 
 | Scenario | Fixtures |
 |---|---:|
+| `aggregation` | 2 |
 | `debug_trace` | 1 |
 | `discount` | 1 |
 | `framework_adapter` | 5 |
@@ -50,6 +51,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Provider | Surface | Fixtures |
 |---|---|---:|
+| `aggregate` | `aggregate.cost_ledgers` | 2 |
 | `anthropic` | `anthropic.messages` | 2 |
 | `azure` | `azure.openai.chat_completions` | 1 |
 | `bedrock` | `aws.bedrock.converse` | 2 |
@@ -81,12 +83,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `input_cache_write_tokens` | 9 |
 | `input_image_tokens` | 2 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 46 |
+| `input_uncached_tokens` | 47 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 1 |
 | `output_image_tokens` | 2 |
 | `output_reasoning_tokens` | 18 |
-| `output_text_tokens` | 36 |
+| `output_text_tokens` | 37 |
 | `output_video_tokens` | 1 |
 | `request_units` | 3 |
 | `web_search_units` | 6 |
@@ -102,6 +104,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `provider_reported_cost_mismatch` | 1 |
 | `provider_reported_cost_used` | 1 |
 | `service_tier_unsupported` | 1 |
+| `stream_usage_missing` | 1 |
 | `unknown_model` | 2 |
 | `unknown_surface` | 1 |
 
@@ -130,11 +133,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Requirement | Fixtures |
 |---|---:|
+| `RC-AGGREGATION` | 2 |
 | `RC-CALC-CORE` | 3 |
 | `RC-CUSTOM-PRICING` | 1 |
 | `RC-DEBUG-TRACE` | 1 |
 | `RC-DISCOUNT-POLICY` | 1 |
-| `RC-FIXTURE-CONFORMANCE` | 52 |
+| `RC-FIXTURE-CONFORMANCE` | 54 |
 | `RC-FRAMEWORK-ADAPTER` | 3 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
 | `RC-LONG-CONTEXT` | 2 |
@@ -145,7 +149,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-SOURCE-ADAPTER` | 7 |
 | `RC-SOURCE-PRIORITY` | 2 |
 | `RC-STRICT-MODE` | 1 |
-| `RC-WARNING-MODE` | 3 |
+| `RC-WARNING-MODE` | 4 |
 
 ## Tags
 
@@ -154,6 +158,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `adapter:langchain.chat_message` | 2 |
 | `adapter:llamaindex.token_counter` | 1 |
 | `adapter:vercel_ai_sdk.generate_text` | 2 |
+| `aggregation` | 2 |
 | `alias` | 1 |
 | `cache` | 10 |
 | `component:code_interpreter_call_units` | 1 |
@@ -167,12 +172,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:input_cache_write_tokens` | 9 |
 | `component:input_image_tokens` | 2 |
 | `component:input_image_units` | 1 |
-| `component:input_uncached_tokens` | 46 |
+| `component:input_uncached_tokens` | 47 |
 | `component:input_video_tokens` | 1 |
 | `component:output_audio_tokens` | 1 |
 | `component:output_image_tokens` | 2 |
 | `component:output_reasoning_tokens` | 18 |
-| `component:output_text_tokens` | 36 |
+| `component:output_text_tokens` | 37 |
 | `component:output_video_tokens` | 1 |
 | `component:request_units` | 3 |
 | `component:web_search_units` | 6 |
@@ -202,6 +207,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `source_adapter` | 7 |
 | `source_priority` | 2 |
 | `stale_price` | 1 |
+| `streaming` | 1 |
 | `strict_error` | 1 |
 | `tool_pricing` | 2 |
 | `warning` | 3 |
@@ -212,5 +218,6 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `warning:provider_reported_cost_mismatch` | 1 |
 | `warning:provider_reported_cost_used` | 1 |
 | `warning:service_tier_unsupported` | 1 |
+| `warning:stream_usage_missing` | 1 |
 | `warning:unknown_model` | 2 |
 | `warning:unknown_surface` | 1 |

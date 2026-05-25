@@ -886,6 +886,184 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 	return result
 }
 
+func sourceKey(source Object) string {
+	return strings.Join([]string{
+		asString(source["name"]),
+		asString(source["url"]),
+		asString(source["retrieved_at"]),
+		asString(source["version"]),
+	}, "|")
+}
+
+func componentKey(component Object) string {
+	discountEligible := "true"
+	if value, ok := component["discount_eligible"].(bool); ok {
+		discountEligible = strconv.FormatBool(value)
+	}
+	return strings.Join([]string{
+		asString(component["name"]),
+		asString(component["unit"]),
+		asString(component["unit_price"]),
+		asString(component["price_card_id"]),
+		discountEligible,
+	}, "|")
+}
+
+func optionalBool(value any) (bool, bool) {
+	if value == nil {
+		return false, false
+	}
+	typed, ok := value.(bool)
+	return typed, ok
+}
+
+func streamUsageMissingWarning(expectedLedgerCount any, actualLedgerCount int) Object {
+	metadata := Object{"actual_ledger_count": actualLedgerCount}
+	if expectedLedgerCount != nil {
+		metadata["expected_ledger_count"] = expectedLedgerCount
+	}
+	return Object{
+		"code":     "stream_usage_missing",
+		"message":  "Final streaming usage was expected but not observed; aggregate total may be incomplete.",
+		"metadata": metadata,
+	}
+}
+
+// AggregateCostLedgers merges already-calculated cost ledgers into a single
+// session or multi-call ledger.
+func AggregateCostLedgers(costLedgers []any, options Object) Object {
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "aggregate"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "aggregate.cost_ledgers"
+	}
+	model := asString(options["model"])
+	if model == "" {
+		model = "multiple"
+	}
+	mode := asString(options["mode"])
+	if mode == "" {
+		mode = "compatibility"
+	}
+
+	componentsByKey := map[string]Object{}
+	componentKeys := []string{}
+	sourcesByKey := map[string]Object{}
+	sourceKeys := []string{}
+	appliedDiscounts := []any{}
+	warnings := []any{}
+	total := "0"
+
+	for ledgerIndex, rawLedger := range costLedgers {
+		ledger := asObject(rawLedger)
+		total = add(total, ledger["total"])
+		for _, rawComponent := range asSlice(ledger["components"]) {
+			component := asObject(rawComponent)
+			key := componentKey(component)
+			if _, ok := componentsByKey[key]; !ok {
+				merged := Object{
+					"name":       asString(component["name"]),
+					"quantity":   "0",
+					"unit":       asString(component["unit"]),
+					"unit_price": asString(component["unit_price"]),
+					"cost":       "0",
+					"metadata":   Object{"source_ledger_indexes": []any{}},
+				}
+				if component["price_card_id"] != nil {
+					merged["price_card_id"] = component["price_card_id"]
+				}
+				if component["discount_eligible"] != nil {
+					merged["discount_eligible"] = component["discount_eligible"]
+				}
+				componentsByKey[key] = merged
+				componentKeys = append(componentKeys, key)
+			}
+			merged := componentsByKey[key]
+			merged["quantity"] = add(merged["quantity"], component["quantity"])
+			merged["cost"] = add(merged["cost"], component["cost"])
+			metadata := asObject(merged["metadata"])
+			metadata["source_ledger_indexes"] = append(asSlice(metadata["source_ledger_indexes"]), ledgerIndex)
+		}
+		for _, rawSource := range asSlice(ledger["price_sources"]) {
+			source := asObject(rawSource)
+			key := sourceKey(source)
+			if _, ok := sourcesByKey[key]; !ok {
+				sourcesByKey[key] = source
+				sourceKeys = append(sourceKeys, key)
+			}
+		}
+		appliedDiscounts = append(appliedDiscounts, asSlice(ledger["applied_discounts"])...)
+		warnings = append(warnings, asSlice(ledger["warnings"])...)
+	}
+
+	expectedCount := options["expected_ledger_count"]
+	if expectedCount == nil {
+		expectedCount = options["expectedLedgerCount"]
+	}
+	finalExpected, _ := optionalBool(options["stream_final_usage_expected"])
+	if value, ok := optionalBool(options["streamFinalUsageExpected"]); ok {
+		finalExpected = value
+	}
+	finalPresent := true
+	if value, ok := optionalBool(options["stream_final_usage_present"]); ok {
+		finalPresent = value
+	}
+	if value, ok := optionalBool(options["streamFinalUsagePresent"]); ok {
+		finalPresent = value
+	}
+	missingStreamUsageWarned := false
+	if finalExpected && !finalPresent {
+		warnings = append(warnings, streamUsageMissingWarning(expectedCount, len(costLedgers)))
+		missingStreamUsageWarned = true
+	}
+	if !missingStreamUsageWarned && expectedCount != nil {
+		if parsedExpectedCount, ok := optionalInt(expectedCount); ok && len(costLedgers) < parsedExpectedCount {
+			warnings = append(warnings, streamUsageMissingWarning(expectedCount, len(costLedgers)))
+		}
+	}
+
+	components := []any{}
+	for _, key := range componentKeys {
+		components = append(components, componentsByKey[key])
+	}
+	priceSources := []any{}
+	for _, key := range sourceKeys {
+		priceSources = append(priceSources, sourcesByKey[key])
+	}
+	metadata := Object{
+		"ledger_count": len(costLedgers),
+		"aggregation":  "cost_ledgers",
+	}
+	if expectedCount != nil {
+		metadata["expected_ledger_count"] = expectedCount
+	}
+	result := Object{
+		"schema_version": "0.1",
+		"provider":       provider,
+		"surface":        surface,
+		"model": Object{
+			"requested":        model,
+			"returned":         model,
+			"billed":           model,
+			"alias_resolution": "none",
+		},
+		"currency":          "USD",
+		"components":        components,
+		"total":             total,
+		"price_sources":     priceSources,
+		"applied_discounts": appliedDiscounts,
+		"warnings":          warnings,
+		"metadata":          metadata,
+	}
+	if mode == "strict" && len(warnings) > 0 {
+		panic(fmt.Sprintf("strict mode cost aggregation failed: %s", asString(asObject(warnings[0])["code"])))
+	}
+	return result
+}
+
 func getNumber(object Object, keys ...string) any {
 	var current any = object
 	for _, key := range keys {

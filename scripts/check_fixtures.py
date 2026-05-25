@@ -16,6 +16,7 @@ FIXTURES = sorted((ROOT / "fixtures").glob("*.json"))
 sys.path.insert(0, str(PYTHON_PACKAGE))
 
 from runcost import (  # noqa: E402
+    aggregate_cost_ledgers,
     calculate_cost,
     extract_usage_ledger,
     from_langchain_message,
@@ -151,6 +152,14 @@ def assert_subset(actual, expected, path=""):
         return
 
     if isinstance(expected, list):
+        if all(isinstance(item, dict) for item in expected):
+            if not isinstance(actual, list):
+                raise AssertionError(f"{path}: expected array, got {type(actual).__name__}")
+            if len(actual) != len(expected):
+                raise AssertionError(f"{path}: expected {len(expected)} items, got {len(actual)}")
+            for index, expected_item in enumerate(expected):
+                assert_subset(actual[index], expected_item, f"{path}[{index}]")
+            return
         if actual != expected:
             raise AssertionError(f"{path}: expected {expected!r}, got {actual!r}")
         return
@@ -168,6 +177,8 @@ def assert_total_matches_components(cost_ledger, path):
 
 def resolve_python_price_cards(fixture):
     input_data = fixture["input"]
+    if "cost_ledgers" in input_data:
+        return []
     if "price_cards" in input_data:
         return input_data["price_cards"]
 
@@ -189,6 +200,13 @@ def resolve_python_price_cards(fixture):
 
 def run_python_fixture(fixture):
     input_data = fixture["input"]
+    if "cost_ledgers" in input_data:
+        return aggregate_cost_ledgers(
+            input_data["cost_ledgers"],
+            mode=input_data.get("mode", "compatibility"),
+            **input_data.get("options", {}),
+        )
+
     price_cards = resolve_python_price_cards(fixture)
     validate_price_cards(price_cards, f"{fixture['name']}.price_cards")
     validate_discount_policies(input_data.get("discount_policies", []), f"{fixture['name']}.discount_policies")
@@ -254,32 +272,33 @@ def run_python_fixture(fixture):
 
 def run_javascript_fixture(path: Path):
     script = f"""
-      import {{ calculateCost }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
+      import {{ aggregateCostLedgers, calculateCost }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
       import {{ fromResponse, fromLangChainMessage, fromVercelAISDKResult, fromLlamaIndexTokenCounter, createRunCostVercelMiddleware, priceCardsFromLlmPrices }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
       import fs from "node:fs";
       const fixture = JSON.parse(fs.readFileSync({json.dumps(str(path))}, "utf8"));
       const input = fixture.input;
       let priceCards = input.price_cards;
-      if (!priceCards && input.price_source.type === "llm-prices") priceCards = priceCardsFromLlmPrices(input.price_source.data);
-      if (!priceCards && input.price_source.type === "litellm") {{
+      const priceSource = input.price_source || null;
+      if (!priceCards && priceSource && priceSource.type === "llm-prices") priceCards = priceCardsFromLlmPrices(priceSource.data);
+      if (!priceCards && priceSource && priceSource.type === "litellm") {{
         const module = await import({json.dumps(JAVASCRIPT_CORE.as_uri())});
-        priceCards = module.priceCardsFromLiteLLM(input.price_source.data);
+        priceCards = module.priceCardsFromLiteLLM(priceSource.data);
       }}
-      if (!priceCards && input.price_source.type === "portkey") {{
+      if (!priceCards && priceSource && priceSource.type === "portkey") {{
         const module = await import({json.dumps(JAVASCRIPT_CORE.as_uri())});
-        priceCards = module.priceCardsFromPortkey(input.price_source.data);
+        priceCards = module.priceCardsFromPortkey(priceSource.data);
       }}
-      if (!priceCards && input.price_source.type === "openrouter-models") {{
+      if (!priceCards && priceSource && priceSource.type === "openrouter-models") {{
         const module = await import({json.dumps(JAVASCRIPT_CORE.as_uri())});
-        priceCards = module.priceCardsFromOpenRouterModels(input.price_source.data);
+        priceCards = module.priceCardsFromOpenRouterModels(priceSource.data);
       }}
-      if (!priceCards && input.price_source.type === "user-pricing") {{
+      if (!priceCards && priceSource && priceSource.type === "user-pricing") {{
         const module = await import({json.dumps(JAVASCRIPT_CORE.as_uri())});
-        priceCards = module.priceCardsFromUserPricing(input.price_source.data);
+        priceCards = module.priceCardsFromUserPricing(priceSource.data);
       }}
-      if (!priceCards && input.price_source.type === "helicone") {{
+      if (!priceCards && priceSource && priceSource.type === "helicone") {{
         const module = await import({json.dumps(JAVASCRIPT_CORE.as_uri())});
-        priceCards = module.priceCardsFromHelicone(input.price_source.data);
+        priceCards = module.priceCardsFromHelicone(priceSource.data);
       }}
       const responseOptions = {{
             ...input.extract,
@@ -288,7 +307,13 @@ def run_javascript_fixture(path: Path):
             discountPolicies: input.discount_policies || [],
             mode: input.mode || "compatibility"
           }};
-      const result = input.raw_response
+      const result = input.cost_ledgers
+        ? aggregateCostLedgers({{
+            costLedgers: input.cost_ledgers,
+            mode: input.mode || "compatibility",
+            ...(input.options || {{}})
+          }})
+        : input.raw_response
         ? input.helper === "from_langchain_message"
           ? fromLangChainMessage(input.raw_response, responseOptions)
           : input.helper === "from_vercel_ai_sdk_result"

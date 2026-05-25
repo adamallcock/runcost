@@ -27,6 +27,15 @@ func decodeFile(t *testing.T, path string) Object {
 	return decoded
 }
 
+func allObjects(values []any) bool {
+	for _, value := range values {
+		if _, ok := value.(map[string]any); !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func assertSubset(t *testing.T, actual any, expected any, path string) {
 	t.Helper()
 	switch expectedTyped := expected.(type) {
@@ -43,6 +52,19 @@ func assertSubset(t *testing.T, actual any, expected any, path string) {
 			assertSubset(t, actualValue, expectedValue, path+"."+key)
 		}
 	case []any:
+		if allObjects(expectedTyped) {
+			actualTyped, ok := actual.([]any)
+			if !ok {
+				t.Fatalf("%s: expected array, got %T", path, actual)
+			}
+			if len(actualTyped) != len(expectedTyped) {
+				t.Fatalf("%s: expected %d items, got %d", path, len(expectedTyped), len(actualTyped))
+			}
+			for index, expectedValue := range expectedTyped {
+				assertSubset(t, actualTyped[index], expectedValue, fmt.Sprintf("%s[%d]", path, index))
+			}
+			return
+		}
 		if !reflect.DeepEqual(actual, expected) {
 			t.Fatalf("%s: expected %#v, got %#v", path, expected, actual)
 		}
@@ -93,6 +115,15 @@ func resolvePriceCards(t *testing.T, input Object) []any {
 func runFixture(t *testing.T, fixture Object) Object {
 	t.Helper()
 	input := asObject(fixture["input"])
+	if value, ok := input["cost_ledgers"]; ok {
+		options := asObject(input["options"])
+		mode := asString(input["mode"])
+		if mode == "" {
+			mode = "compatibility"
+		}
+		options["mode"] = mode
+		return AggregateCostLedgers(asSlice(value), options)
+	}
 	priceCards := resolvePriceCards(t, input)
 	discountPolicies := asSlice(input["discount_policies"])
 	mode := asString(input["mode"])

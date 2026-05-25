@@ -50,6 +50,7 @@ npm run example:py
 - Supported surfaces: `docs/2026-05-25-supported-surfaces.md`
 - Custom pricing and discounts: `docs/2026-05-25-custom-pricing-and-discounts.md`
 - Source adapters: `docs/2026-05-25-source-adapters.md`
+- Aggregation and streaming: `docs/2026-05-25-aggregation-and-streaming.md`
 - Warnings and limitations: `docs/2026-05-25-warnings-and-limitations.md`
 - Release process: `docs/2026-05-25-release-process.md`
 - Contributing: `CONTRIBUTING.md`
@@ -74,7 +75,7 @@ npm run example:py
   - JavaScript: `packages/javascript/core/`
   - Go: `packages/go/ledger/`
 
-The implementation is still pre-alpha. The current center of gravity is normalized usage plus price cards in, componentized cost ledger out. Release-readiness scaffolding exists, but first registry publication, streaming aggregation, and broader tool-call pricing are still ahead.
+The implementation is still pre-alpha. The current center of gravity is normalized usage plus price cards in, componentized cost ledger out. Release-readiness scaffolding exists, but first registry publication, provider-specific streaming parsers, and broader tool-call pricing are still ahead.
 
 ## Prototype Capabilities
 
@@ -86,6 +87,7 @@ The implementation is still pre-alpha. The current center of gravity is normaliz
 - Shared OpenAI-compatible chat extraction for Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face Inference Providers, and OpenRouter.
 - One-call framework helpers for LangChain AIMessage, Vercel AI SDK generateText, and LlamaIndex TokenCountingHandler outputs.
 - Framework-native helpers for Python LangChain callback/context-manager usage and JavaScript Vercel AI SDK `wrapGenerate` middleware.
+- Multi-call/session aggregation for already-calculated cost ledgers, including missing final streaming usage warnings.
 - Exact alias resolution through price-card aliases.
 - Component-aware discount policies.
 - Optional debug traces for price-card, component, alias, discount, and warning decisions.

@@ -16,6 +16,7 @@ This document describes the public API shape that currently exists across Python
 | Calculate from canonical usage | `calculate_cost(...)` | `calculateCost(options)` | `CalculateCost(options)` |
 | Calculate with explicit Go mode | N/A | N/A | `CalculateCostWithMode(options, mode)` |
 | Calculate with Go options | N/A | N/A | `CalculateCostWithOptions(options)` |
+| Aggregate existing ledgers | `aggregate_cost_ledgers(...)` | `aggregateCostLedgers(options)` | `AggregateCostLedgers(costLedgers, options)` |
 
 Inputs:
 
@@ -32,6 +33,23 @@ Inputs:
 Output:
 
 - `CostLedger` with `components`, `total`, `price_sources`, `applied_discounts`, `warnings`, and optional `debug_trace`.
+
+## Aggregation
+
+Aggregation starts from already-calculated `CostLedger` objects and returns one combined ledger for a session, agent run, batch, or streaming wrapper.
+
+Inputs:
+
+- `cost_ledgers` / `costLedgers`: ledgers to merge.
+- `provider`, `surface`, `model`: labels for the aggregate ledger. Defaults are `aggregate`, `aggregate.cost_ledgers`, and `multiple`.
+- `expected_ledger_count` / `expectedLedgerCount`: optional count expected by the caller.
+- `stream_final_usage_expected` / `streamFinalUsageExpected`: set when a streaming API should emit final usage.
+- `stream_final_usage_present` / `streamFinalUsagePresent`: set false when that final usage was not observed.
+- `mode`: `compatibility` or `strict`.
+
+Output:
+
+- `CostLedger` with summed totals, matching component groups, de-duplicated price sources, copied discounts, copied warnings, aggregate metadata, and `stream_usage_missing` when expected stream usage is absent.
 
 ## Raw Provider Extraction
 

@@ -655,6 +655,133 @@ export function calculateCost({
   return result;
 }
 
+function sourceKey(source) {
+  return [
+    source.name || "",
+    source.url || "",
+    source.retrieved_at || "",
+    source.version || ""
+  ].join("|");
+}
+
+function componentKey(component) {
+  return [
+    component.name || "",
+    component.unit || "",
+    component.unit_price || "",
+    component.price_card_id || "",
+    String(component.discount_eligible ?? true)
+  ].join("|");
+}
+
+function streamUsageMissingWarning(expectedLedgerCount, actualLedgerCount) {
+  const metadata = { actual_ledger_count: actualLedgerCount };
+  if (expectedLedgerCount !== undefined && expectedLedgerCount !== null) {
+    metadata.expected_ledger_count = expectedLedgerCount;
+  }
+  return {
+    code: "stream_usage_missing",
+    message: "Final streaming usage was expected but not observed; aggregate total may be incomplete.",
+    metadata
+  };
+}
+
+export function aggregateCostLedgers({
+  costLedgers,
+  cost_ledgers,
+  provider = "aggregate",
+  surface = "aggregate.cost_ledgers",
+  model = "multiple",
+  mode = "compatibility",
+  expectedLedgerCount,
+  expected_ledger_count,
+  streamFinalUsageExpected,
+  stream_final_usage_expected,
+  streamFinalUsagePresent,
+  stream_final_usage_present
+}) {
+  const ledgers = costLedgers || cost_ledgers || [];
+  const componentsByKey = new Map();
+  const sourceByKey = new Map();
+  const appliedDiscounts = [];
+  const warnings = [];
+  let total = "0";
+
+  ledgers.forEach((ledger, ledgerIndex) => {
+    total = addDecimal(total, ledger.total || "0");
+    for (const component of ledger.components || []) {
+      const key = componentKey(component);
+      if (!componentsByKey.has(key)) {
+        const merged = {
+          name: component.name,
+          quantity: "0",
+          unit: component.unit,
+          unit_price: component.unit_price,
+          cost: "0",
+          metadata: { source_ledger_indexes: [] }
+        };
+        if (component.price_card_id !== undefined) merged.price_card_id = component.price_card_id;
+        if (component.discount_eligible !== undefined) merged.discount_eligible = component.discount_eligible;
+        componentsByKey.set(key, merged);
+      }
+      const merged = componentsByKey.get(key);
+      merged.quantity = addDecimal(merged.quantity, component.quantity || "0");
+      merged.cost = addDecimal(merged.cost, component.cost || "0");
+      merged.metadata.source_ledger_indexes.push(ledgerIndex);
+    }
+    for (const source of ledger.price_sources || []) {
+      if (!sourceByKey.has(sourceKey(source))) {
+        sourceByKey.set(sourceKey(source), source);
+      }
+    }
+    appliedDiscounts.push(...(ledger.applied_discounts || []));
+    warnings.push(...(ledger.warnings || []));
+  });
+
+  const expectedCount = expectedLedgerCount ?? expected_ledger_count;
+  const finalExpected = streamFinalUsageExpected ?? stream_final_usage_expected ?? false;
+  const finalPresent = streamFinalUsagePresent ?? stream_final_usage_present ?? true;
+  let missingStreamUsageWarned = false;
+  if (finalExpected && !finalPresent) {
+    warnings.push(streamUsageMissingWarning(expectedCount, ledgers.length));
+    missingStreamUsageWarned = true;
+  }
+  if (!missingStreamUsageWarned && expectedCount !== undefined && expectedCount !== null && ledgers.length < Number(expectedCount)) {
+    warnings.push(streamUsageMissingWarning(expectedCount, ledgers.length));
+  }
+
+  const metadata = {
+    ledger_count: ledgers.length,
+    aggregation: "cost_ledgers"
+  };
+  if (expectedCount !== undefined && expectedCount !== null) {
+    metadata.expected_ledger_count = expectedCount;
+  }
+
+  const result = {
+    schema_version: "0.1",
+    provider,
+    surface,
+    model: {
+      requested: model,
+      returned: model,
+      billed: model,
+      alias_resolution: "none"
+    },
+    currency: "USD",
+    components: [...componentsByKey.values()],
+    total,
+    price_sources: [...sourceByKey.values()],
+    applied_discounts: appliedDiscounts,
+    warnings,
+    metadata
+  };
+  if (mode === "strict" && warnings.length > 0) {
+    throw new Error(`strict mode cost aggregation failed: ${warnings[0].code}`);
+  }
+  return result;
+}
+
 function numberString(value) {
   return String(value ?? 0);
 }

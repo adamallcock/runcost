@@ -638,6 +638,122 @@ def calculate_cost(
     return result
 
 
+def _source_key(source: Dict[str, Any]) -> str:
+    return "|".join(
+        [
+            str(source.get("name", "")),
+            str(source.get("url", "")),
+            str(source.get("retrieved_at", "")),
+            str(source.get("version", "")),
+        ]
+    )
+
+
+def _component_key(component: Dict[str, Any]) -> str:
+    return "|".join(
+        [
+            component.get("name", ""),
+            component.get("unit", ""),
+            component.get("unit_price", ""),
+            component.get("price_card_id", ""),
+            str(component.get("discount_eligible", True)),
+        ]
+    )
+
+
+def _stream_usage_missing_warning(expected_count: Any = None, actual_count: int = 0) -> Dict[str, Any]:
+    metadata = {"actual_ledger_count": actual_count}
+    if expected_count is not None:
+        metadata["expected_ledger_count"] = expected_count
+    return {
+        "code": "stream_usage_missing",
+        "message": "Final streaming usage was expected but not observed; aggregate total may be incomplete.",
+        "metadata": metadata,
+    }
+
+
+def aggregate_cost_ledgers(
+    cost_ledgers: Iterable[Dict[str, Any]],
+    *,
+    provider: str = "aggregate",
+    surface: str = "aggregate.cost_ledgers",
+    model: str = "multiple",
+    mode: str = "compatibility",
+    expected_ledger_count: Optional[int] = None,
+    stream_final_usage_expected: bool = False,
+    stream_final_usage_present: bool = True,
+) -> Dict[str, Any]:
+    ledgers = list(cost_ledgers)
+    components_by_key: Dict[str, Dict[str, Any]] = {}
+    price_sources_by_key: Dict[str, Dict[str, Any]] = {}
+    applied_discounts: List[Dict[str, Any]] = []
+    warnings: List[Dict[str, Any]] = []
+    total = "0"
+
+    for ledger_index, ledger in enumerate(ledgers):
+        total = _add(total, ledger.get("total", "0"))
+        for component in ledger.get("components", []):
+            key = _component_key(component)
+            if key not in components_by_key:
+                merged = {
+                    "name": component["name"],
+                    "quantity": "0",
+                    "unit": component["unit"],
+                    "unit_price": component["unit_price"],
+                    "cost": "0",
+                }
+                if component.get("price_card_id") is not None:
+                    merged["price_card_id"] = component["price_card_id"]
+                if component.get("discount_eligible") is not None:
+                    merged["discount_eligible"] = component["discount_eligible"]
+                merged["metadata"] = {"source_ledger_indexes": []}
+                components_by_key[key] = merged
+            merged = components_by_key[key]
+            merged["quantity"] = _add(merged["quantity"], component.get("quantity", "0"))
+            merged["cost"] = _add(merged["cost"], component.get("cost", "0"))
+            merged["metadata"]["source_ledger_indexes"].append(ledger_index)
+        for source in ledger.get("price_sources", []):
+            price_sources_by_key.setdefault(_source_key(source), source)
+        applied_discounts.extend(ledger.get("applied_discounts", []))
+        warnings.extend(ledger.get("warnings", []))
+
+    missing_stream_usage_warned = False
+    if stream_final_usage_expected and not stream_final_usage_present:
+        warnings.append(_stream_usage_missing_warning(expected_ledger_count, len(ledgers)))
+        missing_stream_usage_warned = True
+    if not missing_stream_usage_warned and expected_ledger_count is not None and len(ledgers) < int(expected_ledger_count):
+        warnings.append(_stream_usage_missing_warning(expected_ledger_count, len(ledgers)))
+
+    metadata = {
+        "ledger_count": len(ledgers),
+        "aggregation": "cost_ledgers",
+    }
+    if expected_ledger_count is not None:
+        metadata["expected_ledger_count"] = expected_ledger_count
+
+    result = {
+        "schema_version": "0.1",
+        "provider": provider,
+        "surface": surface,
+        "model": {
+            "requested": model,
+            "returned": model,
+            "billed": model,
+            "alias_resolution": "none",
+        },
+        "currency": "USD",
+        "components": list(components_by_key.values()),
+        "total": total,
+        "price_sources": list(price_sources_by_key.values()),
+        "applied_discounts": applied_discounts,
+        "warnings": warnings,
+        "metadata": metadata,
+    }
+    if mode == "strict" and warnings:
+        raise ValueError(f"strict mode cost aggregation failed: {warnings[0]['code']}")
+    return result
+
+
 def _number_string(value: Any) -> str:
     return str(value if value is not None else 0)
 

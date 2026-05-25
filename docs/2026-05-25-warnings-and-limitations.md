@@ -63,13 +63,15 @@ Warnings include a message, and may include a `path` and `metadata`.
 
 `provider_reported_cost_mismatch`: RunCost's computed total differs from a provider-reported total.
 
+`stream_usage_missing`: aggregation expected final streaming usage, or a specific number of call ledgers, but did not observe enough cost ledgers. The aggregate total may be incomplete.
+
 ## Current Limitations
 
 - Registry publishing is not complete.
 - Go types are still map-backed prototype types.
 - Source adapters are prototypes, not a comprehensive provider price database.
-- Streaming aggregation is not implemented as a first-class API.
-- Multi-call session aggregation is not implemented as a first-class API.
+- Aggregation is first-class only for already-calculated cost ledgers; provider-specific streaming event parsers are still pending.
+- Streaming support currently warns on missing final usage but does not reconstruct provider stream chunks.
 - Debug trace exists for core calculator decisions, but provider extractor and framework middleware traces are still shallow.
 - Official price-page monitoring and pull-request automation are not implemented.
 - Tool-call pricing coverage exists only for selected fixtures and provider shapes.

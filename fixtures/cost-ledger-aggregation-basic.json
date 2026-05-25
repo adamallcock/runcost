@@ -1,0 +1,161 @@
+{
+  "name": "cost-ledger-aggregation-basic",
+  "description": "Aggregates multiple already-calculated cost ledgers into a single session ledger.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-AGGREGATION",
+      "RC-FIXTURE-CONFORMANCE"
+    ],
+    "provider": "aggregate",
+    "surface": "aggregate.cost_ledgers",
+    "scenario": "aggregation",
+    "tags": [
+      "aggregation",
+      "component:input_uncached_tokens",
+      "component:output_text_tokens"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "cost_ledgers": [
+      {
+        "schema_version": "0.1",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": {
+          "requested": "gpt-example",
+          "returned": "gpt-example",
+          "billed": "gpt-example",
+          "alias_resolution": "none"
+        },
+        "currency": "USD",
+        "components": [
+          {
+            "name": "input_uncached_tokens",
+            "quantity": "100",
+            "unit": "token",
+            "unit_price": "0.000001",
+            "cost": "0.0001",
+            "price_card_id": "openai:gpt-example:fixture",
+            "discount_eligible": true
+          },
+          {
+            "name": "output_text_tokens",
+            "quantity": "20",
+            "unit": "token",
+            "unit_price": "0.000004",
+            "cost": "0.00008",
+            "price_card_id": "openai:gpt-example:fixture",
+            "discount_eligible": true
+          }
+        ],
+        "total": "0.00018",
+        "price_sources": [
+          {
+            "name": "fixture",
+            "retrieved_at": "2026-05-25T00:00:00Z"
+          }
+        ],
+        "applied_discounts": [],
+        "warnings": []
+      },
+      {
+        "schema_version": "0.1",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": {
+          "requested": "gpt-example",
+          "returned": "gpt-example",
+          "billed": "gpt-example",
+          "alias_resolution": "none"
+        },
+        "currency": "USD",
+        "components": [
+          {
+            "name": "input_uncached_tokens",
+            "quantity": "50",
+            "unit": "token",
+            "unit_price": "0.000001",
+            "cost": "0.00005",
+            "price_card_id": "openai:gpt-example:fixture",
+            "discount_eligible": true
+          },
+          {
+            "name": "output_text_tokens",
+            "quantity": "10",
+            "unit": "token",
+            "unit_price": "0.000004",
+            "cost": "0.00004",
+            "price_card_id": "openai:gpt-example:fixture",
+            "discount_eligible": true
+          }
+        ],
+        "total": "0.00009",
+        "price_sources": [
+          {
+            "name": "fixture",
+            "retrieved_at": "2026-05-25T00:00:00Z"
+          }
+        ],
+        "applied_discounts": [],
+        "warnings": []
+      }
+    ],
+    "options": {
+      "provider": "aggregate",
+      "surface": "aggregate.cost_ledgers",
+      "model": "agent-session"
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "aggregate",
+      "surface": "aggregate.cost_ledgers",
+      "model": {
+        "requested": "agent-session",
+        "returned": "agent-session",
+        "billed": "agent-session",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "150",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.00015",
+          "price_card_id": "openai:gpt-example:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "30",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.00012",
+          "price_card_id": "openai:gpt-example:fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.00027",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": [],
+      "metadata": {
+        "ledger_count": 2,
+        "aggregation": "cost_ledgers"
+      }
+    }
+  }
+}

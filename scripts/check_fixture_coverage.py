@@ -14,6 +14,7 @@ FIXTURE_PATHS = sorted(FIXTURE_DIR.glob("*.json"))
 
 EXPECTED_LANGUAGES = ["python", "javascript", "go"]
 ALLOWED_SCENARIOS = {
+    "aggregation",
     "debug_trace",
     "discount",
     "framework_adapter",
@@ -29,6 +30,7 @@ ALLOWED_SCENARIOS = {
     "warning",
 }
 SCENARIO_REQUIREMENTS = {
+    "aggregation": "RC-AGGREGATION",
     "debug_trace": "RC-DEBUG-TRACE",
     "discount": "RC-DISCOUNT-POLICY",
     "framework_adapter": "RC-FRAMEWORK-ADAPTER",
@@ -96,6 +98,8 @@ def infer_scenario(fixture: dict[str, Any]) -> str:
         return "provider_reported"
     if name.startswith("price-source"):
         return "source_priority"
+    if "cost_ledgers" in input_data:
+        return "aggregation"
     if "price_source" in input_data:
         return "source_adapter"
     if input_data.get("helper") or input_data.get("extract", {}).get("adapter"):

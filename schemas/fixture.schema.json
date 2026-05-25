@@ -38,6 +38,7 @@
         "scenario": {
           "type": "string",
           "enum": [
+            "aggregation",
             "debug_trace",
             "discount",
             "framework_adapter",
