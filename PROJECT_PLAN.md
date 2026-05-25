@@ -572,6 +572,12 @@ Goal:
 
 Use real applications to validate correctness and ergonomics.
 
+Current status:
+
+- Not implemented yet. Existing checks validate fixtures, local package installs,
+  release artifacts, and synthetic examples, but they do not make live SDK/API
+  calls or exercise a real application integration.
+
 Alpha scenarios:
 
 - OpenAI Responses app.
@@ -580,6 +586,19 @@ Alpha scenarios:
 - LangChain agent run.
 - Multi-provider router with custom discounts.
 - OpenRouter usage and provider-reported cost comparison.
+
+Required alpha smoke harness:
+
+- Must be optional and API-key-gated so normal CI never requires secrets.
+- Must not print prompts, API keys, full provider responses, account IDs, or
+  other sensitive payload data.
+- Must emit sanitized evidence: provider, surface, model, usage fields present,
+  RunCost ledger total, component names, warning codes, and fixture-candidate
+  JSON with private content removed.
+- Must treat every mismatch or unsupported field as a decision point: add a
+  fixture, add a warning, or document the limitation.
+- Must include a no-network mode using checked-in sample responses so the
+  smoke harness shape is still testable without credentials.
 
 Progress criteria:
 
@@ -591,6 +610,29 @@ Progress criteria:
 Exit gate:
 
 - API shape survives real usage without major conceptual rewrites.
+
+### Finalization Strategy
+
+RunCost should not be called "finalized" just because the fixture suite passes.
+The finalization path is:
+
+1. Finish the Milestone 8 alpha smoke harness and run it against at least one
+   real provider or framework workflow.
+2. Convert all smoke findings into fixtures, warnings, or documented
+   limitations.
+3. Run one invoice/dashboard comparison sample and document exact versus
+   estimated cases.
+4. Configure PyPI and npm trusted publishers outside the repo.
+5. Cut the first registry release with the guarded workflow, first with
+   publishing disabled and then with publishing enabled after artifact review.
+6. Use private-alpha feedback to choose the beta hardening lane: schema-derived
+   type generation and drift checks if language maintenance is the largest
+   risk, or provider/framework breadth if real integrations fail on coverage.
+
+For evaluation, the next concrete project checkpoint is not more source-adapter
+breadth. It is proving that an installed package can sit next to real SDK calls
+and produce a useful ledger without leaking private data or requiring app code
+rewrites.
 
 ### Milestone 9: Public Beta
 
@@ -1353,6 +1395,14 @@ For framework adapters, "done" means:
 - Minimal integration example exists.
 - Fixture or integration test captures expected metadata.
 - Streaming or aggregation behavior is covered where applicable.
+
+For alpha smoke readiness, "done" means:
+
+- The scenario can run from an installed package, not only from repo source.
+- Live runs are optional and gated by explicit environment variables.
+- Sanitized smoke output can be safely attached to an issue or converted into a fixture.
+- A no-network sample path proves the harness itself in CI.
+- Any provider/framework mismatch becomes a fixture, warning, or documented limitation before the scenario is marked supported.
 
 For polyglot readiness, "done" means:
 

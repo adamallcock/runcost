@@ -26,9 +26,9 @@ The tracker separates roadmap state from active work state:
 
 ## Active Focus
 
-Current active lane: Milestone 7 packaging and developer experience, focused on release hardening after Milestone 3 source adapter completion.
+Current active lane: Milestone 8 alpha quality and feedback, focused first on real-life smoke validation.
 
-Why this lane is active: Milestone 3 source adapter hardening is complete for the current prototype scope, and first real registry release readiness is now the highest-risk remaining gap before private alpha.
+Why this lane is active: Milestone 7 local release scaffolding is now strong enough to evaluate, but the project still lacks live SDK/API/application smoke tests. First registry publication and external trusted-publisher setup remain Milestone 7 dependencies, but they require registry configuration and are less useful until the alpha smoke harness proves the package shape against real integrations.
 
 Doc rename coordination: another agent may rename Markdown files to match repository naming rules. Until that lands, avoid broad documentation churn and re-inspect paths before changing cross-document links.
 
@@ -46,6 +46,7 @@ Evidence collected on 2026-05-25:
 - Clean package install checks pass for Python, JavaScript/TypeScript, and Go through `npm run check:packages`.
 - Release readiness checks pass through `npm run check:release`.
 - No-publish release dry-run checks pass through `npm run check:release-dry-run`.
+- Real-life live SDK/API smoke tests are not implemented yet; current examples and checks use synthetic responses, fixtures, local package installs, or local/live price-source refresh commands.
 - Project hygiene check passes.
 - JSON files parse through `jq`.
 - ASCII scan reports no non-ASCII text.
@@ -116,8 +117,8 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 | Milestone 4: Provider Extractors V0 | Partial | No | OpenAI, Anthropic, OpenRouter, Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Gemini/Vertex, and Bedrock Converse extractors exist for selected surfaces; selected final streaming usage cases are fixture-backed. | xAI Responses, OpenAI Conversations, Bedrock non-Converse paths, additional stream protocols, embeddings, rerank, generated media, transcription, and deeper provider-specific feature fields. |
 | Milestone 5: Tool Call and Feature Pricing | Partial | No | Generic and raw OpenAI tool-call fixtures exist; OpenRouter request/image/search source pricing and Gemini/Vertex multimodal token details exist. | Provider-specific tool pricing breadth for computer use, rerank, embeddings, image/audio/video generation, transcription, storage/session/GB-day forms, and direct pass-through costs. |
 | Milestone 6: Framework Adapters | Partial | No | LangChain AIMessage, Vercel AI SDK generateText, LlamaIndex TokenCountingHandler, Haystack metadata, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` middleware, and aggregation exist with fixtures. | Semantic Kernel, LangSmith export comparison, OpenRouter-compatible SDK wrappers, OpenAI Agents SDK, framework stream integrations, and concrete examples for remaining paths. |
-| Milestone 7: Packaging and Developer Experience | Partial | Yes | Package metadata, types, examples, CI, clean install checks, alpha docs, license metadata, changelog, contributing/security docs, registry README policy, release process, release readiness checks, guarded release workflow, and local no-publish release dry run exist. | First registry publication, external trusted publisher configuration, and real post-tag Go module verification. |
-| Milestone 8: Alpha Quality and Feedback | Not started | No | None. | Real application alpha runs, issue-to-fixture loop, invoice/dashboard comparison, and integration ergonomics validation. |
+| Milestone 7: Packaging and Developer Experience | Partial | No | Package metadata, types, examples, CI, clean install checks, alpha docs, license metadata, changelog, contributing/security docs, registry README policy, release process, release readiness checks, guarded release workflow, and local no-publish release dry run exist. | First registry publication, external trusted publisher configuration, and real post-tag Go module verification. |
+| Milestone 8: Alpha Quality and Feedback | Not started | Yes | No live SDK/API/application smoke harness exists yet. Current evidence is local fixtures, examples, clean package installs, and release dry runs. | Real application alpha runs, issue-to-fixture loop, invoice/dashboard comparison, and integration ergonomics validation. |
 | Milestone 9: Public Beta | Not started | No | None. | Stable v0.x schemas, package publishing pipeline, source-data update process, and public dependency caveats. |
 | Milestone 10: V1 | Not started | No | None. | Stable schemas/warning codes/package APIs, production-ready packages, strong provider/source coverage, historical-pricing path, and top framework integrations. |
 
@@ -948,6 +949,43 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 
 Purpose: step back from feature slices and record what is actually done, what is partial, what is a stub, and what still needs completion before private alpha, public beta, and V1.
 
+### Finalization Re-Evaluation 2026-05-25
+
+Question: do we have real-life smoke tests?
+
+Answer: not yet. The repo has strong local validation, but not a real SDK/API/application smoke harness.
+
+What exists today:
+
+- Fixture conformance: `npm test` runs 68 shared fixtures through Python and JavaScript, runs Go tests, checks fixture metadata coverage, source-refresh smoke behavior, schema taxonomy, fixture generator behavior, and project hygiene.
+- Package smoke tests: `npm run check:packages` installs Python from a temporary source copy, packs and installs the npm tarball into a clean npm project, and imports the Go package from a clean temporary module with a local replace directive.
+- Release artifact smoke tests: `npm run check:release-dry-run` builds Python wheel/source distribution, packs npm, confirms the npm tarball includes `README.md`, and verifies Go importability from a clean temporary module.
+- Examples: `examples/python_basic.py`, `examples/javascript_basic.mjs`, and Go example tests exercise synthetic provider responses and price cards.
+- Price-source refresh smoke tests: `python3 scripts/check_source_refresh.py` proves the refresh command shape without depending on network access.
+
+What does not exist yet:
+
+- No live OpenAI Responses, Anthropic Messages, OpenRouter, Gemini/Vertex, Bedrock, or framework SDK smoke script.
+- No optional API-key-gated alpha smoke harness that records provider response shape, RunCost ledger output, and regression fixture candidates.
+- No sample invoice/dashboard reconciliation run.
+- No real application integration evidence for Vercel streaming, LangChain agent runs, or multi-provider router usage.
+- No recurring live-source drift monitor that proposes fixture/source updates.
+
+Language support today:
+
+- Python: first-class prototype package. Public functions, manual `TypedDict` contracts, source install, package smoke checks, examples, and fixture conformance exist.
+- JavaScript/TypeScript: first-class prototype package. ESM runtime, manual TypeScript declarations, npm package README, tarball install checks, examples, and fixture conformance exist.
+- Go: first-class conformance participant for core/package behavior, but still a prototype map-backed API. Go has docs, examples, fixture tests, clean-module import checks, and source-adapter/helper functions, but not stable generated structs.
+- Future languages: not started. New language support should not begin until schema-derived artifacts and alpha smoke results stabilize Python, JavaScript/TypeScript, and Go.
+
+Finalization path:
+
+1. Build the Milestone 8 alpha smoke harness next. It should be optional and API-key-gated, never require secrets for normal CI, and emit sanitized outputs that can become fixtures. Minimum scenarios: OpenAI Responses with cached/reasoning/tool usage, Anthropic Messages with cache write/read, OpenRouter provider-reported cost comparison, Vercel AI SDK streaming final usage, LangChain callback/context manager, and one multi-call aggregation run.
+2. Convert every smoke discrepancy into a fixture, warning, or documented limitation. This is the quality loop that prevents live findings from staying as notes.
+3. Run one invoice/dashboard comparison sample. The goal is not universal invoice exactness; it is to document where RunCost is exact, estimated, or intentionally limited.
+4. Cut the first registry release after smoke harness confidence: configure PyPI/npm trusted publishers externally, tag `v0.1.0`, run the release workflow with publishing disabled, inspect artifacts, then publish.
+5. After private alpha feedback, choose the beta hardening lane: schema-derived types and generated drift checks, or provider/framework breadth, depending on actual alpha failures.
+
 Naming update:
 
 - Project/package name selected: `runcost`.
@@ -1035,19 +1073,20 @@ Highest-risk gaps before private alpha:
 
 Recommended next sprint candidates:
 
-Only one candidate should become the active lane at a time. Milestone 7 release hardening is currently active; future broad documentation work should still re-inspect the Markdown rename pass before changing cross-document links.
+Only one candidate should become the active lane at a time. Milestone 8 alpha smoke validation is currently active; future broad documentation work should still re-inspect the Markdown rename pass before changing cross-document links.
 
-1. Broader framework implementation slice: add fixtures and minimal adapters/examples for the next documented partial path, likely LangSmith export comparison or Semantic Kernel telemetry.
-2. Provider streaming expansion slice: add additional stream finalization fixtures for Vertex-specific SDK wrappers, Bedrock ConverseStream, Vercel AI SDK `streamText` finish parts, and any provider-specific tool streaming fields.
-3. Release hardening slice: configure trusted publishing outside the repo and verify the first real tag/package publication path.
+1. Alpha smoke harness slice: add an optional, API-key-gated smoke runner with a no-network sample mode and sanitized output for fixture conversion.
+2. Invoice/dashboard comparison slice: add one reviewed sample comparison and document exact, estimated, and unsupported fields.
+3. First registry publication slice: configure trusted publishing outside the repo, tag `v0.1.0`, run the release workflow with publishing disabled, inspect artifacts, then publish.
 4. Generated artifact slice: add schema-derived type/doc checks.
+5. Provider/framework breadth slice: expand fixture-backed coverage based on alpha smoke failures, not speculative completeness.
 
 ## Backlog: Next Best Actions
 
 These are ranked backlog items, not simultaneous active work.
 
-1. Add fixture-backed adapter coverage for LangSmith export comparison or Semantic Kernel telemetry.
-2. Add provider-specific fixtures for OpenAI-compatible tool, remaining multimodal providers, compound-routing, and service-tier fields beyond base token usage.
-3. Extend debug traces into source conflict reports, extractor internals, and framework middleware decisions.
-4. Add framework examples showing one- or two-line integration in Python and JavaScript for fixture-backed framework paths.
-5. Harden release automation with first registry publication and first-tag verification.
+1. Add the alpha smoke harness with no-network samples plus optional live OpenAI, Anthropic, OpenRouter, Vercel AI SDK, and LangChain scenarios.
+2. Convert smoke findings into fixtures, warnings, or documented limitations.
+3. Add one invoice/dashboard comparison sample and document exact versus estimated behavior.
+4. Harden release automation with first registry publication and first-tag verification.
+5. Add schema-derived type/doc checks once alpha smoke findings stop changing core contract shapes.
