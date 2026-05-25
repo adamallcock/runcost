@@ -15,6 +15,23 @@ Purpose: keep the implementation state explicit across context compaction and lo
 
 Complete `PROJECT_PLAN.md` end to end, moving from prototype foundation toward private alpha, public beta, and V1 while keeping the project polyglot, schema-first, fixture-first, and easy to maintain across Python, JavaScript/TypeScript, Go, and future languages.
 
+## Status Vocabulary
+
+The tracker separates roadmap state from active work state:
+
+- `Complete for current scope`: the milestone's current prototype or planning-pass exit criteria are satisfied, but later public-beta or V1 hardening may still exist elsewhere.
+- `Partial`: meaningful fixture-backed work exists, but the milestone exit gate in `PROJECT_PLAN.md` is not yet satisfied.
+- `Not started`: no implementation or validation work has begun for the milestone.
+- `Active now`: the only implementation lane currently being advanced. Other partial milestones are backlog, not parallel active work.
+
+## Active Focus
+
+Current active lane: tracker/status cleanup and roadmap alignment after the AutoGen/AG2 adapter slice.
+
+Why this is active: the previous milestone table used `In progress` for every incomplete roadmap milestone, which made the work appear more scattered than it is. This slice makes the tracker explicit before additional feature work resumes.
+
+Doc rename coordination: another agent may rename Markdown files to match repository naming rules. Until that lands, avoid broad documentation churn and re-inspect paths before changing cross-document links.
+
 ## Current Verified Baseline
 
 Evidence collected on 2026-05-25:
@@ -44,7 +61,7 @@ Evidence collected on 2026-05-25:
 - CI workflow exists in `.github/workflows/ci.yml`.
 - Guarded release workflow exists in `.github/workflows/release.yml`.
 
-## Current Sprint
+## Completed Sprint Snapshot
 
 Source: `PROJECT_PLAN.md`, section "Immediate Next Sprint".
 
@@ -79,22 +96,24 @@ Status: complete for this pass.
 | Normalize documentation layout | Done | `docs/guides/`, `docs/reference/`, `docs/notes/`, `docs/decisions/`, `docs/reports/`, `docs/process/`; hygiene and release scripts use new paths | Preserves content while moving dated/uppercase docs into categorized lowercase paths. |
 | Add AutoGen/AG2 fixture-backed framework adapter | Done | `ag2-usage-summary-actual.json`, `ag2-usage-summary-total.json`; Python/JS fixture runner, Go tests, package install checks, release checks, examples, JSON parse, ASCII scan, and diff whitespace checks pass | Adds selected usage summary extraction and one-call helpers across Python, JavaScript/TypeScript, and Go. |
 
-## Milestone Status
+## Milestone Roadmap Status
 
-| Milestone | Status | Evidence |
-|---|---|---|
-| Milestone 0: Prototype Foundation | Complete for current prototype scope | `npm test` passes; cores, examples, schemas, and 16 fixtures exist. |
-| Milestone 1: Contract Hardening | In progress | Schemas exist; fixture runner validates schemas including debug traces and fixture metadata; warning fixtures exist; debug trace fixture exists; coverage report and hygiene checks exist. |
-| Milestone 1.5: Polyglot Toolchain Foundation | Complete for current prototype scope | Decision record, type artifacts, parity matrix, Go examples, hygiene checks, and CI workflow exist. |
-| Milestone 2: Core Calculator Correctness | In progress | Decimal-safe calculator, aliases, strict mode, compatibility warnings, effective dates, service tier/region matching, stale price warnings, provider-reported mismatch/use modes, source priority, source disagreement warnings, debug traces, long-context thresholds, batch/priority/provisioned service-mode fixture coverage, and component-total invariant checks exist. |
-| Milestone 3: Source Adapter Layer | In progress | `llm-prices`, LiteLLM, Portkey, OpenRouter models, user compact pricing, and Helicone prototype adapters exist. |
-| Milestone 4: Provider Extractors V0 | In progress | OpenAI, Anthropic, OpenRouter, Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Google Gemini/Vertex, and AWS Bedrock extractors exist; cache, reasoning, billed-unit, basic raw response, and selected final streaming usage cases covered for supported surfaces. |
-| Milestone 5: Tool Call and Feature Pricing | In progress | Generic and raw OpenAI tool-call fixtures exist; Gemini/Vertex multimodal token detail fixture exists; provider-specific tool pricing coverage still sparse. |
-| Milestone 6: Framework Adapters | In progress | LangChain AIMessage, Vercel AI SDK generateText, LlamaIndex TokenCountingHandler, Haystack generator metadata, LiteLLM proxy response metadata, AutoGen/AG2 usage summary, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` middleware, and cross-language cost-ledger aggregation exist with fixtures; Semantic Kernel, LangSmith export comparison, and OpenRouter-compatible SDK paths have documented partial adapter paths; remaining frameworks still need fixtures, implementations, examples, and streaming parsers. |
-| Milestone 7: Packaging and Developer Experience | In progress | Package metadata, type surfaces, examples, CI, clean install smoke checks, public alpha docs, license metadata, changelog, contributing/security docs, release process, release readiness checks, and guarded release workflow exist; first registry publishing remains incomplete. |
-| Milestone 8: Alpha Quality and Feedback | Not started | None. |
-| Milestone 9: Public Beta | Not started | None. |
-| Milestone 10: V1 | Not started | None. |
+This table tracks roadmap completion, not simultaneous active work. At most one row should be marked `Yes` in `Active now?`.
+
+| Milestone | Roadmap state | Active now? | Evidence | Exit-gate remaining |
+|---|---|---:|---|---|
+| Milestone 0: Prototype Foundation | Complete for current scope | No | `npm test` passes; cores, examples, schemas, and broad shared fixtures exist. | Later type hardening moved into Milestones 1 and 1.5. |
+| Milestone 1: Contract Hardening | Partial | No | Schemas exist; fixture runner validates schemas including debug traces and fixture metadata; warning fixtures exist; coverage report and hygiene checks exist. | Fixture generator helpers, stronger Go-side schema validation, stronger Go component-total invariant checks, and final v0.1 schema naming/taxonomy lock. |
+| Milestone 1.5: Polyglot Toolchain Foundation | Complete for current scope | No | Decision record, manual type artifacts, parity matrix, Go examples, hygiene checks, and CI workflow exist. | Generated/schema-derived type workflow remains a later hardening item, not a current active lane. |
+| Milestone 2: Core Calculator Correctness | Partial | No | Decimal-safe calculator, aliases, strict/compatibility modes, effective dates, service tiers, stale prices, provider-reported cost modes, source priority, source disagreement, debug traces, long-context thresholds, batch/priority/provisioned fixtures, and Python/JS component-total invariant checks exist. | More adversarial fixtures, typed warning payload maturity, stronger Go invariant validation, and production-like review of byte-stable output ordering. |
+| Milestone 3: Source Adapter Layer | Partial | No | `llm-prices`, LiteLLM, Portkey, OpenRouter models, user compact pricing, and Helicone prototype adapters exist. | Official pricing snapshots, models.dev enrichment, file-based YAML/JSON loaders, offline cache format, explicit refresh command, source capability warnings, and historical feed semantics. |
+| Milestone 4: Provider Extractors V0 | Partial | No | OpenAI, Anthropic, OpenRouter, Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Gemini/Vertex, and Bedrock Converse extractors exist for selected surfaces; selected final streaming usage cases are fixture-backed. | xAI Responses, OpenAI Conversations, Bedrock non-Converse paths, additional stream protocols, embeddings, rerank, generated media, transcription, and deeper provider-specific feature fields. |
+| Milestone 5: Tool Call and Feature Pricing | Partial | No | Generic and raw OpenAI tool-call fixtures exist; OpenRouter request/image/search source pricing and Gemini/Vertex multimodal token details exist. | Provider-specific tool pricing breadth for computer use, rerank, embeddings, image/audio/video generation, transcription, storage/session/GB-day forms, and direct pass-through costs. |
+| Milestone 6: Framework Adapters | Partial | No | LangChain AIMessage, Vercel AI SDK generateText, LlamaIndex TokenCountingHandler, Haystack metadata, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` middleware, and aggregation exist with fixtures. | Semantic Kernel, LangSmith export comparison, OpenRouter-compatible SDK wrappers, OpenAI Agents SDK, framework stream integrations, and concrete examples for remaining paths. |
+| Milestone 7: Packaging and Developer Experience | Partial | No | Package metadata, types, examples, CI, clean install checks, alpha docs, license metadata, changelog, contributing/security docs, release process, release readiness checks, and guarded release workflow exist. | First registry publication, trusted publisher configuration, registry README decision, Go tag verification, and release dry run. |
+| Milestone 8: Alpha Quality and Feedback | Not started | No | None. | Real application alpha runs, issue-to-fixture loop, invoice/dashboard comparison, and integration ergonomics validation. |
+| Milestone 9: Public Beta | Not started | No | None. | Stable v0.x schemas, package publishing pipeline, source-data update process, and public dependency caveats. |
+| Milestone 10: V1 | Not started | No | None. | Stable schemas/warning codes/package APIs, production-ready packages, strong provider/source coverage, historical-pricing path, and top framework integrations. |
 
 ## Work Log
 
@@ -603,6 +622,19 @@ Status: complete for this pass.
   - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
   - `git diff --check` passed.
 
+### 2026-05-25 Tracker Status Taxonomy Cleanup
+
+- Paused feature expansion after user review feedback that the milestone table made too many roadmap lanes look actively in progress.
+- Added explicit status vocabulary separating roadmap state from active work state.
+- Added `Active Focus` with the current single active lane and a note to avoid broad docs churn while another agent may rename Markdown files.
+- Replaced the milestone table with `Roadmap state`, `Active now?`, evidence, and `Exit-gate remaining` columns.
+- Clarified that `Recommended Next Sprint Candidates` and `Backlog: Next Best Actions` are not concurrent active work.
+- Verification after tracker cleanup:
+  - `python3 scripts/check_project_hygiene.py` passed.
+  - `python3 scripts/check_fixture_coverage.py` passed with 61 fixtures.
+  - `git diff --check` passed.
+  - Tracker text scan showed no remaining milestone-table `In progress` status and no pending verification line after this update.
+
 ## Gap Audit 2026-05-25
 
 Purpose: step back from feature slices and record what is actually done, what is partial, what is a stub, and what still needs completion before private alpha, public beta, and V1.
@@ -691,7 +723,9 @@ Highest-risk gaps before private alpha:
 6. Deeper debug traces for extractor and framework adapter internals.
 7. Fixture generator helpers and stronger generated artifact drift detection.
 
-Recommended next sprint:
+Recommended next sprint candidates:
+
+Only one candidate should become the active lane at a time. The current active lane is tracker/status cleanup; feature work should resume after the Markdown rename pass is inspected.
 
 1. Broader framework implementation slice: add fixtures and minimal adapters/examples for the next documented partial path, likely LangSmith export comparison or Semantic Kernel telemetry.
 2. Provider streaming expansion slice: add additional stream finalization fixtures for Vertex-specific SDK wrappers, Bedrock ConverseStream, Vercel AI SDK `streamText` finish parts, and any provider-specific tool streaming fields.
@@ -699,7 +733,9 @@ Recommended next sprint:
 4. Source adapter hardening slice: add official snapshots, full file-reading YAML loaders, refresh/cache workflow, and historical feed semantics.
 5. Generated artifact slice: add fixture generator helpers and schema-derived type/doc checks.
 
-## Next Best Actions
+## Backlog: Next Best Actions
+
+These are ranked backlog items, not simultaneous active work.
 
 1. Add fixture-backed adapter coverage for LangSmith export comparison or Semantic Kernel telemetry.
 2. Add provider-specific fixtures for OpenAI-compatible tool, remaining multimodal providers, compound-routing, and service-tier fields beyond base token usage.
