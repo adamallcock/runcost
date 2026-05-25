@@ -104,7 +104,12 @@
       "warnings": [
         {
           "code": "component_unpriced",
-          "message": "No price found for output_reasoning_tokens (token)."
+          "message": "No price found for output_reasoning_tokens (token).",
+          "metadata": {
+            "component": "output_reasoning_tokens",
+            "unit": "token",
+            "model": "gpt-fixture"
+          }
         }
       ]
     }

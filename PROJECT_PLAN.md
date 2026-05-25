@@ -70,6 +70,7 @@ Current prototype capabilities:
 - Provider-reported cost authoritative use mode with explicit reconciliation adjustment.
 - Price-source priority for user overrides.
 - Price-source disagreement warnings.
+- Required warning metadata payloads with per-code keys enforced by taxonomy and fixtures.
 - Long-context threshold price component conditions.
 - Batch service-mode pricing through service tier matching.
 - Priority service-mode pricing through service tier matching.
@@ -154,7 +155,7 @@ The core output must explain input, cached input, output, reasoning, tool calls,
 
 ### Milestone 0: Prototype Foundation
 
-Status: Mostly complete.
+Status: Complete for current scope.
 
 Goal:
 
@@ -176,13 +177,15 @@ Exit criteria:
 - Go tests pass.
 - Fixture suite includes normalized usage, raw responses, alias, discounts, tool units, and price-source adapter cases.
 
-Remaining hardening:
+Hardening delivered:
 
-- Replace prototype dynamic typing with typed interfaces where useful.
-- Add schema validation to fixture runner.
-- Add CI.
+- Typed interfaces now exist where useful for the v0.x prototype.
+- Schema validation runs in the fixture runner.
+- CI exists and runs the shared verification battery.
 
 ### Milestone 1: Contract Hardening
+
+Status: Complete for current scope.
 
 Goal:
 
@@ -223,6 +226,8 @@ Exit gate:
 
 ### Milestone 1.5: Polyglot Toolchain Foundation
 
+Status: Complete for current scope.
+
 Goal:
 
 Make the multi-language maintenance model explicit before the codebase grows.
@@ -243,7 +248,8 @@ Candidate tooling:
 - JSON Schema 2020-12 as the current canonical data-contract format.
 - TypeSpec as a candidate higher-level schema/API authoring layer if JSON Schema becomes too repetitive.
 - Buf/Protocol Buffers as a candidate only if binary serialization, RPC contracts, or a strongly generated SDK ecosystem becomes important.
-- OpenAPI or Stainless-style generators only if the project adds a hosted API; they should not drive the local-library design.
+- OpenAPI, Stainless, Fern, Speakeasy, Kiota, or OpenAPI Generator only if the project adds a hosted API; they should not drive the local-library design.
+- jsii, Rust native bindings, Rust/WASM, UniFFI, or SWIG only as future spikes if handwritten language implementations create unacceptable drift and packaging remains user-friendly.
 - quicktype, datamodel-code-generator, json-schema-to-typescript, Pydantic/datamodel tools, and Go JSON Schema generators as type-generation candidates.
 - Ajv, Python `jsonschema`, and Go JSON Schema validators as validation candidates.
 
@@ -260,6 +266,8 @@ Exit gate:
 - The project can add a new fixture, schema field, warning code, or component type once and get deterministic work items or generated updates for every language.
 
 ### Milestone 2: Core Calculator Correctness
+
+Status: Complete for current scope.
 
 Goal:
 
@@ -292,9 +300,13 @@ Delivered in current prototype:
 - Price-source disagreement warnings when matching cards conflict and no priority is configured.
 - Long-context threshold component selection through `conditions.min_total_input_tokens` and `conditions.max_total_input_tokens`.
 - Long-context missing-rule warnings.
+- Typed warning metadata payloads enforced through `warning_metadata_required_keys` in `schemas/taxonomy.json`, cost-ledger schema validation, Python/JavaScript fixture checks, and Go fixture validation.
 - Batch, priority, and provisioned service-mode fixture coverage through service tier and region matching.
 - Component-total invariant checks for Python, JavaScript, and Go conformance results.
 - Canonical cost-ledger output ordering for components, price sources, applied discounts, and warnings, enforced by shared fixtures and Go validation.
+- Adversarial decimal arithmetic coverage for large token quantities and tiny per-token prices.
+- Typed warning metadata payloads with required keys locked in `schemas/taxonomy.json`, enforced in Python/JavaScript schema validation and Go fixture validation.
+- Adversarial decimal arithmetic fixture using large string quantities and tiny per-token prices to catch binary-float leakage.
 
 Progress criteria:
 
@@ -308,6 +320,8 @@ Exit gate:
 - Core is safe for production-like use with user-supplied price cards and normalized usage.
 
 ### Milestone 3: Source Adapter Layer
+
+Status: Complete for current scope.
 
 Goal:
 
@@ -358,6 +372,8 @@ Exit gate:
 
 ### Milestone 4: Provider Extractors V0
 
+Status: Complete for current scope.
+
 Goal:
 
 Support direct SDK/API responses for the first provider set.
@@ -402,6 +418,7 @@ Delivered in current prototype:
 Current mapping notes:
 
 - `docs/notes/provider-extractor-notes.md` records the official source references and raw usage field mappings for OpenAI Responses, OpenAI Embeddings, xAI Responses, OpenAI-compatible chat providers, Cohere, Gemini, Bedrock Converse, and Bedrock InvokeModel.
+- OpenAI Conversations are documented as state resources used with Responses, not standalone usage-bearing model responses. RunCost therefore prices the associated Responses calls and does not add an `openai.conversations` extractor in v0.x.
 - xAI Responses is currently mapped through the OpenAI-compatible Responses usage envelope, with provider defaulting to `xai` for `surface: "xai.responses"`.
 - Gemini/Vertex `promptTokensDetails`, `cacheTokensDetails`, `toolUsePromptTokensDetails`, and `candidatesTokensDetails` are now mapped into modality-aware image, audio, video, text, cache-read, and thinking components in the shared conformance suite.
 - OpenRouter `/api/v1/models` pricing is now mapped into canonical price cards for prompt, completion, cache read/write, internal reasoning, request, image-input, and web-search prices.
@@ -836,6 +853,7 @@ Tooling strategy:
 - Keep JSON Schema 2020-12 as the v0.x contract format unless a stronger candidate proves better.
 - Evaluate TypeSpec for authoring schemas once the first schema churn pain appears; it can emit JSON Schema and OpenAPI and may become the source authoring layer if useful.
 - Evaluate Buf/Protocol Buffers only for a future v1+ contract if the project needs binary compatibility, RPC service contracts, or generated SDKs across many more languages.
+- Evaluate jsii or Rust/WASM/native bindings only if shared fixtures show language drift is becoming more expensive than package-install complexity.
 - Use language-specific validators in tests rather than forcing runtime validation in core hot paths.
 - Prefer code generation for types and docs, not for the cost-calculation business rules until the rule model is mature.
 
@@ -1358,6 +1376,8 @@ Tasks:
 21. Done: add Go-side cost-ledger structure and component-total invariant validation.
 22. Done: add v0.1 schema naming and component taxonomy lock.
 23. Done: add byte-stable cost-ledger output ordering checks across Python, JavaScript/TypeScript, and Go.
+24. Done: add typed warning metadata payload enforcement across schemas, fixtures, Python, JavaScript/TypeScript, and Go.
+25. Done: add adversarial decimal arithmetic fixture coverage across Python, JavaScript/TypeScript, and Go.
 
 Sprint exit criteria:
 

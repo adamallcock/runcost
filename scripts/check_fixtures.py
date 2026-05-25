@@ -57,6 +57,7 @@ SCHEMA_PATHS = {
 SCHEMAS = {name: load_json(path) for name, path in SCHEMA_PATHS.items()}
 TAXONOMY = load_json(ROOT / "schemas" / "taxonomy.json")
 COMPONENT_ORDER = {name: index for index, name in enumerate(TAXONOMY["component_names"])}
+WARNING_METADATA_REQUIRED_KEYS = TAXONOMY["warning_metadata_required_keys"]
 
 
 def expected_languages(fixture):
@@ -236,6 +237,20 @@ def assert_cost_ledger_ordering(cost_ledger, path):
     assert_ordered(cost_ledger.get("price_sources", []), source_sort_key, f"{path}.price_sources")
     assert_ordered(cost_ledger.get("applied_discounts", []), discount_sort_key, f"{path}.applied_discounts")
     assert_ordered(cost_ledger.get("warnings", []), warning_sort_key, f"{path}.warnings")
+
+
+def assert_warning_metadata(cost_ledger, path):
+    for index, warning in enumerate(cost_ledger.get("warnings", [])):
+        warning_path = f"{path}.warnings[{index}]"
+        if "metadata" not in warning:
+            raise AssertionError(f"{warning_path}.metadata: missing required warning metadata")
+        metadata = warning["metadata"]
+        if not isinstance(metadata, dict):
+            raise AssertionError(f"{warning_path}.metadata: expected object, got {type(metadata).__name__}")
+        required_keys = WARNING_METADATA_REQUIRED_KEYS.get(warning.get("code"), [])
+        missing = sorted(key for key in required_keys if key not in metadata)
+        if missing:
+            raise AssertionError(f"{warning_path}.metadata: missing required keys {missing!r}")
 
 
 def resolve_python_price_cards(fixture):
@@ -473,6 +488,7 @@ def check_fixture_paths(paths: list[Path]) -> None:
 
         expected = fixture["expected"]["cost_ledger"]
         validate_schema(expected, SCHEMAS["cost_ledger"], path=f"{path.name}:expected")
+        assert_warning_metadata(expected, f"{path.name}:expected")
         assert_cost_ledger_ordering(expected, f"{path.name}:expected")
         if "debug_trace" in expected:
             validate_schema(expected["debug_trace"], SCHEMAS["debug_trace"], path=f"{path.name}:expected.debug_trace")
@@ -481,6 +497,7 @@ def check_fixture_paths(paths: list[Path]) -> None:
         if "python" in languages:
             python_result = run_python_fixture(fixture)
             validate_schema(python_result, SCHEMAS["cost_ledger"], path=f"{path.name}:python")
+            assert_warning_metadata(python_result, f"{path.name}:python")
             if "debug_trace" in python_result:
                 validate_schema(python_result["debug_trace"], SCHEMAS["debug_trace"], path=f"{path.name}:python.debug_trace")
             assert_total_matches_components(python_result, f"{path.name}:python")
@@ -490,6 +507,7 @@ def check_fixture_paths(paths: list[Path]) -> None:
         if "javascript" in languages:
             javascript_result = run_javascript_fixture(path)
             validate_schema(javascript_result, SCHEMAS["cost_ledger"], path=f"{path.name}:javascript")
+            assert_warning_metadata(javascript_result, f"{path.name}:javascript")
             if "debug_trace" in javascript_result:
                 validate_schema(javascript_result["debug_trace"], SCHEMAS["debug_trace"], path=f"{path.name}:javascript.debug_trace")
             assert_total_matches_components(javascript_result, f"{path.name}:javascript")

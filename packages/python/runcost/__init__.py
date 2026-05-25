@@ -62,6 +62,7 @@ from .types import (
     UsageLedger,
     UsageModel,
     UsageTool,
+    WarningMetadata,
 )
 
 __all__ = [
@@ -87,6 +88,7 @@ __all__ = [
     "UsageLedger",
     "UsageModel",
     "UsageTool",
+    "WarningMetadata",
     "aggregate_cost_ledgers",
     "calculate_cost",
     "extract_anthropic_messages_usage",

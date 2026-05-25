@@ -1,0 +1,124 @@
+{
+  "name": "decimal-arithmetic-adversarial",
+  "description": "Uses large token quantities and tiny per-token prices to prove decimal-safe arithmetic without binary float leakage.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-CALC-CORE",
+      "RC-FIXTURE-CONFORMANCE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "normalized_usage",
+    "tags": [
+      "decimal_precision",
+      "component:input_uncached_tokens",
+      "component:output_text_tokens"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-decimal",
+        "returned": "gpt-decimal",
+        "billed": "gpt-decimal",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "333333333333333",
+          "unit": "token"
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "200000000000001",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-decimal:fixture",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-decimal",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000000000003",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000000000005",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-decimal",
+        "returned": "gpt-decimal",
+        "billed": "gpt-decimal",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "333333333333333",
+          "unit": "token",
+          "unit_price": "0.000000000000000003",
+          "cost": "0.000999999999999999",
+          "price_card_id": "openai:gpt-decimal:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "200000000000001",
+          "unit": "token",
+          "unit_price": "0.000000000000000005",
+          "cost": "0.001000000000000005",
+          "price_card_id": "openai:gpt-decimal:fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.002000000000000004",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

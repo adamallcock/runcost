@@ -103,7 +103,14 @@
       "warnings": [
         {
           "code": "price_stale",
-          "message": "Price source fixture is 143 days old; threshold is 30 days."
+          "message": "Price source fixture is 143 days old; threshold is 30 days.",
+          "metadata": {
+            "source": "fixture",
+            "age_days": 143,
+            "threshold_days": 30,
+            "retrieved_at": "2026-01-01T00:00:00Z",
+            "priced_at": "2026-05-24"
+          }
         }
       ]
     }

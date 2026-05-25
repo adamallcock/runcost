@@ -235,17 +235,38 @@ def _find_price_components(
     ]
 
 
+def _warning_identity_metadata(usage_ledger: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "provider": usage_ledger.get("provider"),
+        "surface": usage_ledger.get("surface"),
+        "model": _billed_model(usage_ledger),
+    }
+
+
+def _unpriced_component_metadata(usage_ledger: Dict[str, Any], component: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "component": component.get("name"),
+        "unit": component.get("unit"),
+        "model": _billed_model(usage_ledger),
+    }
+
+
 def _long_context_rule_missing_warning(
     usage_ledger: Dict[str, Any],
     candidates: List[Dict[str, Any]],
     component: Dict[str, Any],
-) -> Optional[Dict[str, str]]:
+) -> Optional[Dict[str, Any]]:
     if not candidates or not any(match["price_component"].get("conditions") for match in candidates):
         return None
     total_input = _format_decimal(_total_input_tokens(usage_ledger))
     return {
         "code": "long_context_rule_missing",
         "message": f"No long-context pricing rule matched {component['name']} at {total_input} input tokens.",
+        "metadata": {
+            "component": component.get("name"),
+            "unit": component.get("unit"),
+            "total_input_tokens": total_input,
+        },
     }
 
 
@@ -284,7 +305,7 @@ def _has_price_card_for_usage(
 def _no_matching_card_warning(
     usage_ledger: Dict[str, Any],
     price_cards: Iterable[Dict[str, Any]],
-) -> Dict[str, str]:
+) -> Dict[str, Any]:
     context = _usage_context(usage_ledger)
     identity_cards = [card for card in price_cards if _card_identity_matches(usage_ledger, card)]
     service_tier = context.get("service_tier")
@@ -292,16 +313,25 @@ def _no_matching_card_warning(
         return {
             "code": "service_tier_unsupported",
             "message": f"No price card found for service tier {service_tier}.",
+            "metadata": {
+                "model": _billed_model(usage_ledger),
+                "service_tier": service_tier,
+            },
         }
     priced_at = _date_part(context.get("priced_at"))
     if priced_at and identity_cards and not any(_effective_matches(card, priced_at) for card in identity_cards):
         return {
             "code": "historical_price_missing",
             "message": f"No price card effective for {priced_at}.",
+            "metadata": {
+                "model": _billed_model(usage_ledger),
+                "priced_at": priced_at,
+            },
         }
     return {
         "code": "price_not_found",
         "message": f"No price card matched provider, surface, model, and context for {_billed_model(usage_ledger)}.",
+        "metadata": _warning_identity_metadata(usage_ledger),
     }
 
 
@@ -383,7 +413,7 @@ def _stale_price_warning(
     usage_ledger: Dict[str, Any],
     card: Dict[str, Any],
     stale_after_days: Optional[int],
-) -> Optional[Dict[str, str]]:
+) -> Optional[Dict[str, Any]]:
     threshold = _stale_after_days(usage_ledger, stale_after_days)
     if threshold is None:
         return None
@@ -398,6 +428,13 @@ def _stale_price_warning(
     return {
         "code": "price_stale",
         "message": f"Price source {source_name} is {age_days} days old; threshold is {threshold} days.",
+        "metadata": {
+            "source": source_name,
+            "age_days": age_days,
+            "threshold_days": threshold,
+            "retrieved_at": (card.get("source") or {}).get("retrieved_at"),
+            "priced_at": _date_part(_usage_context(usage_ledger).get("priced_at")),
+        },
     }
 
 
@@ -414,6 +451,10 @@ def _provider_reported_warning(
     return {
         "code": "provider_reported_cost_mismatch",
         "message": f"Provider reported cost {provider_total} differs from calculated total {total}.",
+        "metadata": {
+            "provider_reported_cost": provider_total,
+            "calculated_total": total,
+        },
     }
 
 
@@ -449,6 +490,10 @@ def _apply_provider_reported_cost_use(
         {
             "code": "provider_reported_cost_used",
             "message": f"Provider reported cost {provider_total} used as authoritative total.",
+            "metadata": {
+                "provider_reported_cost": provider_total,
+                "calculated_total": total,
+            },
         }
     )
     return provider_total
@@ -458,7 +503,7 @@ def _price_source_disagreement_warning(
     matches: List[Dict[str, Any]],
     component: Dict[str, Any],
     price_source_priority: Optional[Iterable[str]],
-) -> Optional[Dict[str, str]]:
+) -> Optional[Dict[str, Any]]:
     if price_source_priority or len(matches) < 2:
         return None
     unit_prices = set()
@@ -471,6 +516,11 @@ def _price_source_disagreement_warning(
     return {
         "code": "price_source_disagreement",
         "message": f"Multiple price sources disagree for {component['name']}; using {chosen}.",
+        "metadata": {
+            "component": component.get("name"),
+            "selected_price_card_id": chosen,
+            "candidate_price_card_ids": [match["card"]["id"] for match in matches],
+        },
     }
 
 
@@ -536,6 +586,7 @@ def calculate_cost(
                     {
                         "code": "unknown_model",
                         "message": f"No price card found for {resolved_billed_model}.",
+                        "metadata": _warning_identity_metadata(usage_ledger),
                     }
                 )
                 warned_unknown_model = True
@@ -571,6 +622,7 @@ def calculate_cost(
                         if "tool" in component["name"]
                         else "component_unpriced",
                         "message": f"No price found for {component['name']} ({component['unit']}).",
+                        "metadata": _unpriced_component_metadata(usage_ledger, component),
                     }
                 )
             if trace is not None:
@@ -1664,6 +1716,11 @@ def _unsupported_surface_ledger(response: Dict[str, Any], **options: Any) -> Dic
             {
                 "code": "unknown_surface",
                 "message": f"Unsupported surface: {surface}.",
+                "metadata": {
+                    "provider": provider,
+                    "surface": surface,
+                    "model": model,
+                },
             }
         ],
     }

@@ -19,6 +19,7 @@ For mechanical coverage counts, see [Fixture Coverage](../reports/fixture-covera
 | OpenAI | Responses streaming `response.completed` event | Fixture-backed |
 | OpenAI | Chat Completions | Fixture-backed |
 | OpenAI | Embeddings | Fixture-backed |
+| OpenAI | Conversations state resource | Documented non-cost-bearing surface; price associated Responses |
 | Anthropic | Messages | Fixture-backed |
 | Anthropic | Messages SSE event sequence | Fixture-backed |
 | OpenRouter | Chat Completions | Fixture-backed |
@@ -81,5 +82,6 @@ These paths are researched and documented in [Framework Adapter Notes](../notes/
 
 - Support means extraction and pricing behavior has at least one shared fixture across Python and JavaScript, with Go coverage through the conformance suite where applicable.
 - Support does not mean every model, region, service tier, tool, or historical price is present.
+- OpenAI Conversations are documented as state resources, not standalone usage-bearing model responses. Price Responses calls that attach to Conversations through the fixture-backed OpenAI Responses extractor.
 - Documented partial adapter paths are integration targets with source evidence; they still need adapters, fixtures, examples, and parity-matrix promotion before they become supported.
 - The next support expansion should prioritize provider-specific tool-call pricing, streaming usage, and clean framework middleware ergonomics.

@@ -13,7 +13,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 73
+- Fixtures: 74
 - Providers: 15
 - Provider surfaces: 19
 - Usage components covered: 21
@@ -24,9 +24,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 71 |
-| `javascript` | 72 |
-| `python` | 72 |
+| `go` | 72 |
+| `javascript` | 73 |
+| `python` | 73 |
 
 ## Scenarios
 
@@ -37,7 +37,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `discount` | 1 |
 | `framework_adapter` | 9 |
 | `long_context` | 2 |
-| `normalized_usage` | 5 |
+| `normalized_usage` | 6 |
 | `provider_reported` | 2 |
 | `raw_provider_response` | 26 |
 | `service_mode` | 3 |
@@ -65,7 +65,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `mistral` | `mistral.chat_completions` | 1 |
 | `openai` | `openai.chat_completions` | 8 |
 | `openai` | `openai.embeddings` | 1 |
-| `openai` | `openai.responses` | 37 |
+| `openai` | `openai.responses` | 38 |
 | `openrouter` | `openrouter.chat_completions` | 5 |
 | `vertex` | `vertex.gemini.generate_content` | 1 |
 | `xai` | `xai.chat_completions` | 1 |
@@ -87,12 +87,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `input_cache_write_tokens` | 13 |
 | `input_image_tokens` | 2 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 65 |
+| `input_uncached_tokens` | 66 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 2 |
 | `output_image_tokens` | 2 |
 | `output_reasoning_tokens` | 25 |
-| `output_text_tokens` | 54 |
+| `output_text_tokens` | 55 |
 | `output_video_tokens` | 1 |
 | `request_units` | 3 |
 | `web_search_units` | 8 |
@@ -147,11 +147,11 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | Requirement | Fixtures |
 |---|---:|
 | `RC-AGGREGATION` | 2 |
-| `RC-CALC-CORE` | 5 |
+| `RC-CALC-CORE` | 6 |
 | `RC-CUSTOM-PRICING` | 1 |
 | `RC-DEBUG-TRACE` | 1 |
 | `RC-DISCOUNT-POLICY` | 1 |
-| `RC-FIXTURE-CONFORMANCE` | 73 |
+| `RC-FIXTURE-CONFORMANCE` | 74 |
 | `RC-FRAMEWORK-ADAPTER` | 7 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
 | `RC-LONG-CONTEXT` | 2 |
@@ -190,16 +190,17 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:input_cache_write_tokens` | 13 |
 | `component:input_image_tokens` | 2 |
 | `component:input_image_units` | 1 |
-| `component:input_uncached_tokens` | 65 |
+| `component:input_uncached_tokens` | 66 |
 | `component:input_video_tokens` | 1 |
 | `component:output_audio_tokens` | 2 |
 | `component:output_image_tokens` | 2 |
 | `component:output_reasoning_tokens` | 25 |
-| `component:output_text_tokens` | 54 |
+| `component:output_text_tokens` | 55 |
 | `component:output_video_tokens` | 1 |
 | `component:request_units` | 3 |
 | `component:web_search_units` | 8 |
 | `debug_trace` | 1 |
+| `decimal_precision` | 1 |
 | `discount` | 1 |
 | `effective_date` | 2 |
 | `embeddings` | 1 |

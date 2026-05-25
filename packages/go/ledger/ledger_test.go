@@ -209,7 +209,22 @@ func warningOrderKey(warning Object) string {
 	}, "|")
 }
 
-func validateCostLedger(t *testing.T, ledger Object, path string) {
+func warningMetadataRequiredKeys(t *testing.T) map[string][]string {
+	t.Helper()
+	taxonomy := decodeFile(t, "../../../schemas/taxonomy.json")
+	rawKeys := requireObject(t, taxonomy["warning_metadata_required_keys"], "taxonomy.warning_metadata_required_keys")
+	result := map[string][]string{}
+	for code, rawValue := range rawKeys {
+		keys := []string{}
+		for index, rawKey := range requireSlice(t, rawValue, fmt.Sprintf("taxonomy.warning_metadata_required_keys.%s", code)) {
+			keys = append(keys, requireString(t, rawKey, fmt.Sprintf("taxonomy.warning_metadata_required_keys.%s[%d]", code, index)))
+		}
+		result[code] = keys
+	}
+	return result
+}
+
+func validateCostLedger(t *testing.T, ledger Object, path string, warningMetadataKeys map[string][]string) {
 	t.Helper()
 	assertAllowedKeys(t, ledger, map[string]bool{
 		"schema_version":    true,
@@ -304,11 +319,14 @@ func validateCostLedger(t *testing.T, ledger Object, path string) {
 		warningPath := fmt.Sprintf("%s.warnings[%d]", path, index)
 		warning := requireObject(t, value, warningPath)
 		assertAllowedKeys(t, warning, map[string]bool{"code": true, "message": true, "path": true, "metadata": true}, warningPath)
-		requireString(t, warning["code"], warningPath+".code")
+		code := requireString(t, warning["code"], warningPath+".code")
 		requireString(t, warning["message"], warningPath+".message")
 		requireOptionalString(t, warning["path"], warningPath+".path")
-		if metadata, ok := warning["metadata"]; ok {
-			requireObject(t, metadata, warningPath+".metadata")
+		metadata := requireObject(t, warning["metadata"], warningPath+".metadata")
+		for _, key := range warningMetadataKeys[code] {
+			if _, ok := metadata[key]; !ok {
+				t.Fatalf("%s.metadata.%s: missing required warning metadata", warningPath, key)
+			}
 		}
 	}
 	if debugTrace, ok := ledger["debug_trace"]; ok {
@@ -435,6 +453,7 @@ func TestFixtures(t *testing.T) {
 	if len(paths) == 0 {
 		t.Fatal("no fixtures found")
 	}
+	warningMetadataKeys := warningMetadataRequiredKeys(t)
 
 	for _, path := range paths {
 		t.Run(filepath.Base(path), func(t *testing.T) {
@@ -457,7 +476,7 @@ func TestFixtures(t *testing.T) {
 				return
 			}
 			result := runFixture(t, fixture)
-			validateCostLedger(t, result, filepath.Base(path)+":go")
+			validateCostLedger(t, result, filepath.Base(path)+":go", warningMetadataKeys)
 			expected := asObject(asObject(fixture["expected"])["cost_ledger"])
 			assertSubset(t, result, expected, filepath.Base(path))
 		})

@@ -85,7 +85,11 @@
       "warnings": [
         {
           "code": "service_tier_unsupported",
-          "message": "No price card found for service tier priority."
+          "message": "No price card found for service tier priority.",
+          "metadata": {
+            "model": "gpt-tiered",
+            "service_tier": "priority"
+          }
         }
       ]
     }

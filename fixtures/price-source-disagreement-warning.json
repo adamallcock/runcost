@@ -118,7 +118,15 @@
       "warnings": [
         {
           "code": "price_source_disagreement",
-          "message": "Multiple price sources disagree for output_text_tokens; using openai:gpt-conflict:source-a."
+          "message": "Multiple price sources disagree for output_text_tokens; using openai:gpt-conflict:source-a.",
+          "metadata": {
+            "component": "output_text_tokens",
+            "selected_price_card_id": "openai:gpt-conflict:source-a",
+            "candidate_price_card_ids": [
+              "openai:gpt-conflict:source-a",
+              "openai:gpt-conflict:source-b"
+            ]
+          }
         }
       ]
     }

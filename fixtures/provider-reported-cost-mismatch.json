@@ -100,7 +100,11 @@
       "warnings": [
         {
           "code": "provider_reported_cost_mismatch",
-          "message": "Provider reported cost 0.009 differs from calculated total 0.001."
+          "message": "Provider reported cost 0.009 differs from calculated total 0.001.",
+          "metadata": {
+            "provider_reported_cost": "0.009",
+            "calculated_total": "0.001"
+          }
         }
       ]
     }

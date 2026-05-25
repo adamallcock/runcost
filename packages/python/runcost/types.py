@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional, TypedDict
+from typing import Any, Dict, List, Literal, Optional, TypedDict, Union
 
 SchemaVersion = Literal["0.1"]
 DecimalString = str
@@ -232,11 +232,105 @@ class AppliedDiscount(TypedDict):
     amount: MoneyString
 
 
-class CostWarning(TypedDict, total=False):
+class WarningIdentityMetadata(TypedDict):
+    provider: str
+    surface: str
+    model: str
+
+
+class AliasInferredWarningMetadata(TypedDict):
+    requested_model: str
+    billed_model: str
+
+
+class PriceStaleWarningMetadata(TypedDict):
+    source: str
+    age_days: int
+    threshold_days: int
+    retrieved_at: str
+    priced_at: str
+
+
+class PriceSourceDisagreementWarningMetadata(TypedDict):
+    component: str
+    selected_price_card_id: str
+    candidate_price_card_ids: List[str]
+
+
+class UsageFieldWarningMetadata(TypedDict):
+    field: str
+
+
+class ComponentUnpricedWarningMetadata(TypedDict):
+    component: str
+    unit: str
+    model: str
+
+
+class SourceCapabilityUnsupportedWarningMetadata(TypedDict):
+    component: str
+    price_card_id: str
+    source: str
+
+
+class ServiceTierUnsupportedWarningMetadata(TypedDict):
+    model: str
+    service_tier: str
+
+
+class LongContextRuleMissingWarningMetadata(TypedDict):
+    component: str
+    unit: str
+    total_input_tokens: DecimalString
+
+
+class DiscountNotAppliedWarningMetadata(TypedDict):
+    policy_id: str
+
+
+class _StreamUsageMissingRequired(TypedDict):
+    actual_ledger_count: int
+
+
+class StreamUsageMissingWarningMetadata(_StreamUsageMissingRequired, total=False):
+    expected_ledger_count: int
+
+
+class HistoricalPriceMissingWarningMetadata(TypedDict):
+    model: str
+    priced_at: str
+
+
+class ProviderReportedCostWarningMetadata(TypedDict):
+    provider_reported_cost: MoneyString
+    calculated_total: MoneyString
+
+
+WarningMetadata = Union[
+    WarningIdentityMetadata,
+    AliasInferredWarningMetadata,
+    PriceStaleWarningMetadata,
+    PriceSourceDisagreementWarningMetadata,
+    UsageFieldWarningMetadata,
+    ComponentUnpricedWarningMetadata,
+    SourceCapabilityUnsupportedWarningMetadata,
+    ServiceTierUnsupportedWarningMetadata,
+    LongContextRuleMissingWarningMetadata,
+    DiscountNotAppliedWarningMetadata,
+    StreamUsageMissingWarningMetadata,
+    HistoricalPriceMissingWarningMetadata,
+    ProviderReportedCostWarningMetadata,
+]
+
+
+class _CostWarningRequired(TypedDict):
     code: WarningCode
     message: str
+    metadata: WarningMetadata
+
+
+class CostWarning(_CostWarningRequired, total=False):
     path: str
-    metadata: Dict[str, Any]
 
 
 DebugDecisionType = Literal[

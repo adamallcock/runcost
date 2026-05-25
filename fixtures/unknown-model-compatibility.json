@@ -60,7 +60,12 @@
       "warnings": [
         {
           "code": "unknown_model",
-          "message": "No price card found for gpt-missing."
+          "message": "No price card found for gpt-missing.",
+          "metadata": {
+            "provider": "openai",
+            "surface": "openai.responses",
+            "model": "gpt-missing"
+          }
         }
       ]
     }

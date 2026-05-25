@@ -358,6 +358,22 @@ func findPriceComponents(usageLedger Object, priceCards []Object, component Obje
 	return matches
 }
 
+func warningIdentityMetadata(usageLedger Object) Object {
+	return Object{
+		"provider": asString(usageLedger["provider"]),
+		"surface":  asString(usageLedger["surface"]),
+		"model":    billedModel(usageLedger),
+	}
+}
+
+func unpricedComponentMetadata(usageLedger Object, component Object) Object {
+	return Object{
+		"component": asString(component["name"]),
+		"unit":      asString(component["unit"]),
+		"model":     billedModel(usageLedger),
+	}
+}
+
 func longContextRuleMissingWarning(usageLedger Object, candidates []Object, component Object) (Object, bool) {
 	if len(candidates) == 0 {
 		return nil, false
@@ -372,9 +388,15 @@ func longContextRuleMissingWarning(usageLedger Object, candidates []Object, comp
 	if !hasConditions {
 		return nil, false
 	}
+	totalInput := decimal(totalInputTokens(usageLedger))
 	return Object{
 		"code":    "long_context_rule_missing",
-		"message": fmt.Sprintf("No long-context pricing rule matched %s at %s input tokens.", asString(component["name"]), decimal(totalInputTokens(usageLedger))),
+		"message": fmt.Sprintf("No long-context pricing rule matched %s at %s input tokens.", asString(component["name"]), totalInput),
+		"metadata": Object{
+			"component":          asString(component["name"]),
+			"unit":               asString(component["unit"]),
+			"total_input_tokens": totalInput,
+		},
 	}, true
 }
 
@@ -444,6 +466,10 @@ func noMatchingCardWarning(usageLedger Object, priceCards []any) Object {
 			return Object{
 				"code":    "service_tier_unsupported",
 				"message": fmt.Sprintf("No price card found for service tier %s.", serviceTier),
+				"metadata": Object{
+					"model":        billedModel(usageLedger),
+					"service_tier": serviceTier,
+				},
 			}
 		}
 	}
@@ -460,12 +486,17 @@ func noMatchingCardWarning(usageLedger Object, priceCards []any) Object {
 			return Object{
 				"code":    "historical_price_missing",
 				"message": fmt.Sprintf("No price card effective for %s.", pricedAt),
+				"metadata": Object{
+					"model":     billedModel(usageLedger),
+					"priced_at": pricedAt,
+				},
 			}
 		}
 	}
 	return Object{
-		"code":    "price_not_found",
-		"message": fmt.Sprintf("No price card matched provider, surface, model, and context for %s.", billedModel(usageLedger)),
+		"code":     "price_not_found",
+		"message":  fmt.Sprintf("No price card matched provider, surface, model, and context for %s.", billedModel(usageLedger)),
+		"metadata": warningIdentityMetadata(usageLedger),
 	}
 }
 
@@ -602,6 +633,13 @@ func stalePriceWarning(usageLedger Object, card Object, options Object) (Object,
 	return Object{
 		"code":    "price_stale",
 		"message": fmt.Sprintf("Price source %s is %d days old; threshold is %d days.", sourceName, ageDays, threshold),
+		"metadata": Object{
+			"source":         sourceName,
+			"age_days":       ageDays,
+			"threshold_days": threshold,
+			"retrieved_at":   asString(asObject(card["source"])["retrieved_at"]),
+			"priced_at":      datePart(usageContext(usageLedger)["priced_at"]),
+		},
 	}, true
 }
 
@@ -630,6 +668,10 @@ func providerReportedWarning(total string, options Object) (Object, bool) {
 	return Object{
 		"code":    "provider_reported_cost_mismatch",
 		"message": fmt.Sprintf("Provider reported cost %s differs from calculated total %s.", providerTotal, total),
+		"metadata": Object{
+			"provider_reported_cost": providerTotal,
+			"calculated_total":       total,
+		},
 	}, true
 }
 
@@ -669,6 +711,10 @@ func applyProviderReportedCostUse(total string, components []any, warnings []any
 	warnings = append(warnings, Object{
 		"code":    "provider_reported_cost_used",
 		"message": fmt.Sprintf("Provider reported cost %s used as authoritative total.", providerTotal),
+		"metadata": Object{
+			"provider_reported_cost": providerTotal,
+			"calculated_total":       total,
+		},
 	})
 	return providerTotal, components, warnings
 }
@@ -689,6 +735,11 @@ func priceSourceDisagreementWarning(matches []Object, component Object, options 
 	return Object{
 		"code":    "price_source_disagreement",
 		"message": fmt.Sprintf("Multiple price sources disagree for %s; using %s.", asString(component["name"]), chosen),
+		"metadata": Object{
+			"component":                asString(component["name"]),
+			"selected_price_card_id":   chosen,
+			"candidate_price_card_ids": matchPriceCardIDs(matches),
+		},
 	}, true
 }
 
@@ -815,8 +866,9 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		if !hasModelCard {
 			if !warnedUnknownModel {
 				warnings = append(warnings, Object{
-					"code":    "unknown_model",
-					"message": fmt.Sprintf("No price card found for %s.", resolvedBilledModel),
+					"code":     "unknown_model",
+					"message":  fmt.Sprintf("No price card found for %s.", resolvedBilledModel),
+					"metadata": warningIdentityMetadata(usageLedger),
 				})
 				warnedUnknownModel = true
 			}
@@ -851,8 +903,9 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 					code = "tool_component_unpriced"
 				}
 				warnings = append(warnings, Object{
-					"code":    code,
-					"message": fmt.Sprintf("No price found for %s (%s).", asString(component["name"]), asString(component["unit"])),
+					"code":     code,
+					"message":  fmt.Sprintf("No price found for %s (%s).", asString(component["name"]), asString(component["unit"])),
+					"metadata": unpricedComponentMetadata(usageLedger, component),
 				})
 			}
 			incrementTraceSummary(trace, "unpriced_components")
@@ -1442,6 +1495,11 @@ func unsupportedSurfaceLedger(response Object, options Object) Object {
 			Object{
 				"code":    "unknown_surface",
 				"message": fmt.Sprintf("Unsupported surface: %s.", surface),
+				"metadata": Object{
+					"provider": provider,
+					"surface":  surface,
+					"model":    model,
+				},
 			},
 		},
 	}

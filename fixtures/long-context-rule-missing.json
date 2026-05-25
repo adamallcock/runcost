@@ -84,7 +84,12 @@
       "warnings": [
         {
           "code": "long_context_rule_missing",
-          "message": "No long-context pricing rule matched input_uncached_tokens at 250000 input tokens."
+          "message": "No long-context pricing rule matched input_uncached_tokens at 250000 input tokens.",
+          "metadata": {
+            "component": "input_uncached_tokens",
+            "unit": "token",
+            "total_input_tokens": "250000"
+          }
         }
       ]
     }

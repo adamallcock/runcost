@@ -32,6 +32,26 @@ Mapping:
 - `usage.output_tokens` minus reasoning tokens -> `output_text_tokens`.
 - `usage.output_tokens_details.reasoning_tokens` -> `output_reasoning_tokens`.
 
+## OpenAI Conversations Decision
+
+Surface:
+
+- `openai.conversations`
+
+Source references:
+
+- OpenAI's conversation state guide describes the Conversations API as a way to persist conversation state and pass a conversation into later Responses API calls: https://developers.openai.com/api/docs/guides/conversation-state
+- OpenAI's Conversations reference describes conversation objects as state resources for storing and retrieving conversation state across Responses API calls: https://developers.openai.com/api/reference/resources/conversations/methods/create
+- OpenAI's Responses reference documents the `conversation` parameter on Responses and the Response object `usage` field for token usage: https://developers.openai.com/api/reference/resources/responses/methods/create
+
+Decision:
+
+- Do not add an `openai.conversations` cost extractor in v0.x.
+- Conversations are state containers and item stores, not standalone model inference responses with usage totals.
+- Costs for work that uses a Conversation are associated with the Responses API calls that attach to or read from that Conversation.
+- `openai.responses` remains the fixture-backed extraction surface for token usage, including Responses that include a `conversation` field.
+- If OpenAI later exposes standalone billable usage on Conversation operations, add a new fixture before promoting `openai.conversations` to fixture-backed support.
+
 ## xAI Responses
 
 Surface:

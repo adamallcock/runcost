@@ -30,7 +30,9 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Calculate with discount policies | Yes | Yes | Yes | `discount-policy-openai-basic.json` |
 | Strict mode | Yes | Yes | Yes | `strict-unknown-model.json` |
 | Compatibility mode with warnings | Yes | Yes | Yes | unknown model, unpriced component, unknown surface fixtures |
+| Typed warning metadata payloads | Yes | Yes | Yes | `warning_metadata_required_keys` in `schemas/taxonomy.json`; Python/JS fixture runner and Go fixture tests require per-code metadata keys |
 | Decimal-safe money arithmetic | Yes | Yes | Yes | Python `Decimal`, JS `BigInt` decimal helpers, Go `big.Rat` |
+| Adversarial decimal precision fixture | Yes | Yes | Yes | `decimal-arithmetic-adversarial.json` |
 | Alias resolution through price-card aliases | Yes | Yes | Yes | `openai-responses-raw-dated-alias.json` |
 | Effective-date price-card selection | Yes | Yes | Yes | `effective-date-selection.json` |
 | Service-tier and region price-card matching | Yes | Yes | Yes | `service-tier-region-selection.json` |
@@ -51,6 +53,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Provisioned endpoint-hour pricing through service tier and region | Yes | Yes | Yes | `service-mode-provisioned-selection.json` |
 | Component-total invariant in conformance tests | Yes | Yes | Yes | Python/JS fixture runner and Go fixture tests validate generated cost-ledger component totals |
 | Byte-stable cost-ledger output ordering | Yes | Yes | Yes | `byte-stable-component-ordering.json`; Python/JS fixture runner checks expected and actual ledgers; Go fixture validation checks components, sources, discounts, and warnings |
+| Required warning metadata payloads | Yes | Yes | Yes | `schemas/taxonomy.json` `warning_metadata_required_keys`; warning fixtures; Python/JS schema checks; Go fixture validation |
 | Componentized cost ledger output | Yes | Yes | Yes | all cost fixtures |
 | Multi-call/session ledger aggregation | Yes | Yes | Yes | Aggregates totals, matching components, price sources, discounts, and warnings from existing ledgers |
 
@@ -59,6 +62,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Surface | Python | JavaScript/TypeScript | Go | Evidence |
 |---|---:|---:|---:|---|
 | OpenAI Responses | Yes | Yes | Yes | `openai-responses-raw-cached-reasoning.json`, `openai-responses-raw-tool-calls.json`, `openai-responses-stream-completed-event.json` |
+| OpenAI Conversations | N/A | N/A | N/A | No standalone cost-bearing usage surface in current OpenAI docs; price associated Responses through `openai.responses` |
 | OpenAI Embeddings | Yes | Yes | Yes | `extract_openai_embeddings_usage`, `extractOpenAIEmbeddingsUsage`; `openai-embeddings-raw-basic.json` |
 | OpenAI Chat Completions | Yes | Yes | Yes | `openai-chat-raw-cached-reasoning.json` |
 | Shared OpenAI-compatible chat helper | Yes | Yes | Yes | `extract_openai_compatible_chat_completions_usage`, `extractOpenAICompatibleChatCompletionsUsage`; Go routes through `ExtractUsageLedger` |

@@ -46,7 +46,35 @@ Current warning codes:
 - `provider_reported_cost_used`
 - `provider_reported_cost_mismatch`
 
-Warnings include a message, and may include a `path` and `metadata`.
+Warnings include a stable code, a message, and typed metadata. They may include
+a `path` when a warning points to a specific provider or ledger field.
+
+Warning metadata is intentionally required so downstream billing, reconciliation,
+and alerting code can group warnings without parsing human-readable messages.
+The current metadata contract is locked in `schemas/taxonomy.json` under
+`warning_metadata_required_keys` and enforced by the shared fixture runner.
+
+| Warning code | Required metadata keys |
+|---|---|
+| `unknown_provider` | `provider`, `surface`, `model` |
+| `unknown_surface` | `provider`, `surface`, `model` |
+| `unknown_model` | `provider`, `surface`, `model` |
+| `alias_inferred` | `requested_model`, `billed_model` |
+| `price_not_found` | `provider`, `surface`, `model` |
+| `price_stale` | `source`, `age_days`, `threshold_days`, `retrieved_at` |
+| `price_source_disagreement` | `component`, `selected_price_card_id`, `candidate_price_card_ids` |
+| `usage_field_ignored` | `field` |
+| `inclusive_usage_ambiguous` | `field` |
+| `component_unpriced` | `component`, `unit`, `model` |
+| `source_capability_unsupported` | `component`, `price_card_id`, `source` |
+| `service_tier_unsupported` | `model`, `service_tier` |
+| `long_context_rule_missing` | `component`, `unit`, `total_input_tokens` |
+| `discount_not_applied` | `policy_id` |
+| `stream_usage_missing` | `actual_ledger_count` |
+| `historical_price_missing` | `model`, `priced_at` |
+| `tool_component_unpriced` | `component`, `unit`, `model` |
+| `provider_reported_cost_used` | `provider_reported_cost`, `calculated_total` |
+| `provider_reported_cost_mismatch` | `provider_reported_cost`, `calculated_total` |
 
 ## Common Causes
 

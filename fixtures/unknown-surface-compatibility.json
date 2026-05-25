@@ -53,7 +53,12 @@
       "warnings": [
         {
           "code": "unknown_surface",
-          "message": "Unsupported surface: custom.unknown."
+          "message": "Unsupported surface: custom.unknown.",
+          "metadata": {
+            "provider": "custom",
+            "surface": "custom.unknown",
+            "model": "custom-model"
+          }
         }
       ]
     }

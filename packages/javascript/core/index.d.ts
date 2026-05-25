@@ -224,12 +224,132 @@ export type WarningCode =
   | "provider_reported_cost_used"
   | "provider_reported_cost_mismatch";
 
-export interface CostWarning {
-  code: WarningCode;
+export interface WarningIdentityMetadata {
+  provider: string;
+  surface: string;
+  model: string;
+  [key: string]: unknown;
+}
+
+export interface AliasInferredWarningMetadata {
+  requested_model: string;
+  billed_model: string;
+  [key: string]: unknown;
+}
+
+export interface PriceStaleWarningMetadata {
+  source: string;
+  age_days: number;
+  threshold_days: number;
+  retrieved_at: string;
+  priced_at: string;
+  [key: string]: unknown;
+}
+
+export interface PriceSourceDisagreementWarningMetadata {
+  component: string;
+  selected_price_card_id: string;
+  candidate_price_card_ids: string[];
+  [key: string]: unknown;
+}
+
+export interface UsageFieldWarningMetadata {
+  field: string;
+  [key: string]: unknown;
+}
+
+export interface ComponentUnpricedWarningMetadata {
+  component: string;
+  unit: string;
+  model: string;
+  [key: string]: unknown;
+}
+
+export interface SourceCapabilityUnsupportedWarningMetadata {
+  component: string;
+  price_card_id: string;
+  source: string;
+  [key: string]: unknown;
+}
+
+export interface ServiceTierUnsupportedWarningMetadata {
+  model: string;
+  service_tier: string;
+  [key: string]: unknown;
+}
+
+export interface LongContextRuleMissingWarningMetadata {
+  component: string;
+  unit: string;
+  total_input_tokens: DecimalString;
+  [key: string]: unknown;
+}
+
+export interface DiscountNotAppliedWarningMetadata {
+  policy_id: string;
+  [key: string]: unknown;
+}
+
+export interface StreamUsageMissingWarningMetadata {
+  actual_ledger_count: number;
+  expected_ledger_count?: number;
+  [key: string]: unknown;
+}
+
+export interface HistoricalPriceMissingWarningMetadata {
+  model: string;
+  priced_at: string;
+  [key: string]: unknown;
+}
+
+export interface ProviderReportedCostWarningMetadata {
+  provider_reported_cost: MoneyString;
+  calculated_total: MoneyString;
+  [key: string]: unknown;
+}
+
+export type WarningMetadata =
+  | WarningIdentityMetadata
+  | AliasInferredWarningMetadata
+  | PriceStaleWarningMetadata
+  | PriceSourceDisagreementWarningMetadata
+  | UsageFieldWarningMetadata
+  | ComponentUnpricedWarningMetadata
+  | SourceCapabilityUnsupportedWarningMetadata
+  | ServiceTierUnsupportedWarningMetadata
+  | LongContextRuleMissingWarningMetadata
+  | DiscountNotAppliedWarningMetadata
+  | StreamUsageMissingWarningMetadata
+  | HistoricalPriceMissingWarningMetadata
+  | ProviderReportedCostWarningMetadata;
+
+interface BaseCostWarning<Code extends WarningCode, Metadata extends WarningMetadata> {
+  code: Code;
   message: string;
   path?: string;
-  metadata?: Record<string, unknown>;
+  metadata: Metadata;
 }
+
+export type CostWarning =
+  | BaseCostWarning<"unknown_provider", WarningIdentityMetadata>
+  | BaseCostWarning<"unknown_surface", WarningIdentityMetadata>
+  | BaseCostWarning<"unknown_model", WarningIdentityMetadata>
+  | BaseCostWarning<"price_not_found", WarningIdentityMetadata>
+  | BaseCostWarning<"alias_inferred", AliasInferredWarningMetadata>
+  | BaseCostWarning<"price_stale", PriceStaleWarningMetadata>
+  | BaseCostWarning<"price_source_disagreement", PriceSourceDisagreementWarningMetadata>
+  | BaseCostWarning<"usage_field_ignored", UsageFieldWarningMetadata>
+  | BaseCostWarning<"inclusive_usage_ambiguous", UsageFieldWarningMetadata>
+  | BaseCostWarning<"component_unpriced", ComponentUnpricedWarningMetadata>
+  | BaseCostWarning<"tool_component_unpriced", ComponentUnpricedWarningMetadata>
+  | BaseCostWarning<"source_capability_unsupported", SourceCapabilityUnsupportedWarningMetadata>
+  | BaseCostWarning<"service_tier_unsupported", ServiceTierUnsupportedWarningMetadata>
+  | BaseCostWarning<"long_context_rule_missing", LongContextRuleMissingWarningMetadata>
+  | BaseCostWarning<"discount_not_applied", DiscountNotAppliedWarningMetadata>
+  | BaseCostWarning<"stream_usage_missing", StreamUsageMissingWarningMetadata>
+  | BaseCostWarning<"historical_price_missing", HistoricalPriceMissingWarningMetadata>
+  | BaseCostWarning<"provider_reported_cost_used", ProviderReportedCostWarningMetadata>
+  | BaseCostWarning<"provider_reported_cost_mismatch", ProviderReportedCostWarningMetadata>;
 
 export type DebugDecisionType =
   | "price_card_candidates"

@@ -61,6 +61,25 @@ def main() -> int:
             raise AssertionError(f"taxonomy {key} must be a non-empty array")
         assert_unique(values, key)
 
+    warning_metadata_required_keys = taxonomy.get("warning_metadata_required_keys")
+    if not isinstance(warning_metadata_required_keys, dict):
+        raise AssertionError("taxonomy warning_metadata_required_keys must be an object")
+    expected_warning_codes = set(taxonomy["warning_codes"])
+    actual_warning_codes = set(warning_metadata_required_keys)
+    if actual_warning_codes != expected_warning_codes:
+        raise AssertionError(
+            "warning_metadata_required_keys must cover every warning code.\n"
+            f"missing: {sorted(expected_warning_codes - actual_warning_codes)}\n"
+            f"extra: {sorted(actual_warning_codes - expected_warning_codes)}"
+        )
+    for code, keys in warning_metadata_required_keys.items():
+        if not isinstance(keys, list):
+            raise AssertionError(f"warning_metadata_required_keys.{code} must be an array")
+        assert_unique(keys, f"warning_metadata_required_keys.{code}")
+        for key in keys:
+            if not isinstance(key, str) or not key:
+                raise AssertionError(f"warning_metadata_required_keys.{code} contains a non-empty string key")
+
     assert_equal(
         at(taxonomy, "component_names"),
         at(usage, "$defs.usage_component.properties.name.enum"),

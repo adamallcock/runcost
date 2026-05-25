@@ -115,7 +115,11 @@
       "warnings": [
         {
           "code": "provider_reported_cost_used",
-          "message": "Provider reported cost 0.009 used as authoritative total."
+          "message": "Provider reported cost 0.009 used as authoritative total.",
+          "metadata": {
+            "provider_reported_cost": "0.009",
+            "calculated_total": "0.001"
+          }
         }
       ]
     }

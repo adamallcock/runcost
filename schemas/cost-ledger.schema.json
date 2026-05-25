@@ -102,7 +102,7 @@
     "warning": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["code", "message"],
+      "required": ["code", "message", "metadata"],
       "properties": {
         "code": {
           "type": "string",

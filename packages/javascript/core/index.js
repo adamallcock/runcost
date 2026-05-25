@@ -349,14 +349,36 @@ function findPriceComponents(usageLedger, priceCards, component) {
   });
 }
 
+function warningIdentityMetadata(usageLedger) {
+  return {
+    provider: usageLedger.provider,
+    surface: usageLedger.surface,
+    model: billedModel(usageLedger)
+  };
+}
+
+function unpricedComponentMetadata(usageLedger, component) {
+  return {
+    component: component.name,
+    unit: component.unit,
+    model: billedModel(usageLedger)
+  };
+}
+
 function longContextRuleMissingWarning(usageLedger, candidates, component) {
   if (candidates.length === 0 || !candidates.some(({ priceComponent }) => priceComponent.conditions)) {
     return null;
   }
   const totalInput = totalInputTokens(usageLedger);
+  const totalInputFormatted = formatDecimal(totalInput.value, totalInput.scale);
   return {
     code: "long_context_rule_missing",
-    message: `No long-context pricing rule matched ${component.name} at ${formatDecimal(totalInput.value, totalInput.scale)} input tokens.`
+    message: `No long-context pricing rule matched ${component.name} at ${totalInputFormatted} input tokens.`,
+    metadata: {
+      component: component.name,
+      unit: component.unit,
+      total_input_tokens: totalInputFormatted
+    }
   };
 }
 
@@ -394,7 +416,11 @@ function noMatchingCardWarning(usageLedger, priceCards) {
   ) {
     return {
       code: "service_tier_unsupported",
-      message: `No price card found for service tier ${context.service_tier}.`
+      message: `No price card found for service tier ${context.service_tier}.`,
+      metadata: {
+        model: billedModel(usageLedger),
+        service_tier: context.service_tier
+      }
     };
   }
 
@@ -406,17 +432,19 @@ function noMatchingCardWarning(usageLedger, priceCards) {
   ) {
     return {
       code: "historical_price_missing",
-      message: `No price card effective for ${pricedAt}.`
+      message: `No price card effective for ${pricedAt}.`,
+      metadata: {
+        model: billedModel(usageLedger),
+        priced_at: pricedAt
+      }
     };
   }
 
-  const billedModel =
-    usageLedger.model.billed ||
-    usageLedger.model.returned ||
-    usageLedger.model.requested;
+  const model = billedModel(usageLedger);
   return {
     code: "price_not_found",
-    message: `No price card matched provider, surface, model, and context for ${billedModel}.`
+    message: `No price card matched provider, surface, model, and context for ${model}.`,
+    metadata: warningIdentityMetadata(usageLedger)
   };
 }
 
@@ -507,7 +535,14 @@ function stalePriceWarning(usageLedger, card, thresholdValue) {
   }
   return {
     code: "price_stale",
-    message: `Price source ${(card.source || {}).name || "unknown"} is ${ageDays} days old; threshold is ${threshold} days.`
+    message: `Price source ${(card.source || {}).name || "unknown"} is ${ageDays} days old; threshold is ${threshold} days.`,
+    metadata: {
+      source: (card.source || {}).name || "unknown",
+      age_days: ageDays,
+      threshold_days: threshold,
+      retrieved_at: (card.source || {}).retrieved_at,
+      priced_at: datePart(usageContext(usageLedger).priced_at)
+    }
   };
 }
 
@@ -521,7 +556,11 @@ function providerReportedWarning(total, providerReportedCost, providerReportedCo
   }
   return {
     code: "provider_reported_cost_mismatch",
-    message: `Provider reported cost ${providerTotal} differs from calculated total ${total}.`
+    message: `Provider reported cost ${providerTotal} differs from calculated total ${total}.`,
+    metadata: {
+      provider_reported_cost: providerTotal,
+      calculated_total: total
+    }
   };
 }
 
@@ -550,7 +589,11 @@ function applyProviderReportedCostUse(total, components, warnings, providerRepor
   }
   warnings.push({
     code: "provider_reported_cost_used",
-    message: `Provider reported cost ${providerTotal} used as authoritative total.`
+    message: `Provider reported cost ${providerTotal} used as authoritative total.`,
+    metadata: {
+      provider_reported_cost: providerTotal,
+      calculated_total: total
+    }
   });
   return providerTotal;
 }
@@ -567,7 +610,12 @@ function priceSourceDisagreementWarning(matches, component, priceSourcePriority)
   }
   return {
     code: "price_source_disagreement",
-    message: `Multiple price sources disagree for ${component.name}; using ${matches[0].card.id}.`
+    message: `Multiple price sources disagree for ${component.name}; using ${matches[0].card.id}.`,
+    metadata: {
+      component: component.name,
+      selected_price_card_id: matches[0].card.id,
+      candidate_price_card_ids: matches.map(({ card }) => card.id)
+    }
   };
 }
 
@@ -635,7 +683,8 @@ export function calculateCost({
       if (!warnedUnknownModel) {
         warnings.push({
           code: "unknown_model",
-          message: `No price card found for ${resolvedBilledModel}.`
+          message: `No price card found for ${resolvedBilledModel}.`,
+          metadata: warningIdentityMetadata(usageLedger)
         });
         warnedUnknownModel = true;
       }
@@ -670,7 +719,8 @@ export function calculateCost({
       } else {
         warnings.push({
           code: component.name.includes("tool") ? "tool_component_unpriced" : "component_unpriced",
-          message: `No price found for ${component.name} (${component.unit}).`
+          message: `No price found for ${component.name} (${component.unit}).`,
+          metadata: unpricedComponentMetadata(usageLedger, component)
         });
       }
       if (trace) {
@@ -1789,7 +1839,12 @@ function unsupportedSurfaceLedger(response, options = {}) {
     warnings: [
       {
         code: "unknown_surface",
-        message: `Unsupported surface: ${surface}.`
+        message: `Unsupported surface: ${surface}.`,
+        metadata: {
+          provider,
+          surface,
+          model
+        }
       }
     ]
   };

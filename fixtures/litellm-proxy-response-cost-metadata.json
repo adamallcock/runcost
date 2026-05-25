@@ -181,7 +181,11 @@
       "warnings": [
         {
           "code": "provider_reported_cost_mismatch",
-          "message": "Provider reported cost 0.00032 differs from calculated total 0.000323."
+          "message": "Provider reported cost 0.00032 differs from calculated total 0.000323.",
+          "metadata": {
+            "provider_reported_cost": "0.00032",
+            "calculated_total": "0.000323"
+          }
         }
       ]
     }
