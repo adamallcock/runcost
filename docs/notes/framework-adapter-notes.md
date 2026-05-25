@@ -1,4 +1,11 @@
-# Framework Adapter Notes
+---
+title: RunCost Framework Adapter Notes
+date: 2026-05-25
+type: note
+status: draft
+---
+
+# RunCost Framework Adapter Notes
 
 Status: v0.x prototype
 Date: 2026-05-24

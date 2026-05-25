@@ -19,7 +19,7 @@ REQUIRED_FILES = [
     "CHANGELOG.md",
     "CONTRIBUTING.md",
     "SECURITY.md",
-    "docs/2026-05-25-release-process.md",
+    "docs/process/release-process.md",
     ".github/workflows/release.yml",
 ]
 
@@ -86,7 +86,7 @@ def check_release_workflow() -> None:
 
 
 def check_release_docs() -> None:
-    release_doc = (ROOT / "docs/2026-05-25-release-process.md").read_text(encoding="utf-8")
+    release_doc = (ROOT / "docs/process/release-process.md").read_text(encoding="utf-8")
     for phrase in [
         "trusted publishing",
         "Go module",

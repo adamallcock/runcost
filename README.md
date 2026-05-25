@@ -42,17 +42,17 @@ npm run example:py
 
 ## Documentation
 
-- Quickstart: `docs/2026-05-25-quickstart.md`
-- Installation: `docs/2026-05-25-package-installation.md`
-- API reference: `docs/2026-05-25-api-reference.md`
-- Debug trace: `docs/2026-05-25-debug-trace.md`
-- Fixture coverage: `docs/2026-05-25-fixture-coverage.md`
-- Supported surfaces: `docs/2026-05-25-supported-surfaces.md`
-- Custom pricing and discounts: `docs/2026-05-25-custom-pricing-and-discounts.md`
-- Source adapters: `docs/2026-05-25-source-adapters.md`
-- Aggregation and streaming: `docs/2026-05-25-aggregation-and-streaming.md`
-- Warnings and limitations: `docs/2026-05-25-warnings-and-limitations.md`
-- Release process: `docs/2026-05-25-release-process.md`
+- Quickstart: `docs/guides/quickstart.md`
+- Installation: `docs/guides/package-installation.md`
+- API reference: `docs/reference/api-reference.md`
+- Debug trace: `docs/reference/debug-trace.md`
+- Fixture coverage: `docs/reports/fixture-coverage.md`
+- Supported surfaces: `docs/reference/supported-surfaces.md`
+- Custom pricing and discounts: `docs/reference/custom-pricing-and-discounts.md`
+- Source adapters: `docs/reference/source-adapters.md`
+- Aggregation and streaming: `docs/reference/aggregation-and-streaming.md`
+- Warnings and limitations: `docs/reference/warnings-and-limitations.md`
+- Release process: `docs/process/release-process.md`
 - Contributing: `CONTRIBUTING.md`
 - Security policy: `SECURITY.md`
 - Changelog: `CHANGELOG.md`
@@ -63,10 +63,10 @@ npm run example:py
 - Product requirements: `PRODUCT_REQUIREMENTS.md`
 - Architecture: `ARCHITECTURE.md`
 - Full project plan: `PROJECT_PLAN.md`
-- Polyglot toolchain decision: `docs/POLYGLOT_TOOLCHAIN_DECISION.md`
-- Public API parity matrix: `docs/API_PARITY_MATRIX.md`
-- Provider extractor notes: `docs/PROVIDER_EXTRACTOR_NOTES.md`
-- Framework adapter notes: `docs/FRAMEWORK_ADAPTER_NOTES.md`
+- Polyglot toolchain decision: `docs/decisions/polyglot-toolchain-decision.md`
+- Public API parity matrix: `docs/notes/api-parity-matrix.md`
+- Provider extractor notes: `docs/notes/provider-extractor-notes.md`
+- Framework adapter notes: `docs/notes/framework-adapter-notes.md`
 - Progress tracker: `PROGRESS_TRACKER.md`
 - Shared schemas: `schemas/`
 - Shared conformance fixtures: `fixtures/`

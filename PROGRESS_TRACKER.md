@@ -1,3 +1,10 @@
+---
+title: RunCost Progress Tracker
+date: 2026-05-25
+type: note
+status: draft
+---
+
 # RunCost Progress Tracker
 
 Last updated: 2026-05-25
@@ -30,8 +37,8 @@ Evidence collected on 2026-05-25:
 - Shared schemas exist in `schemas/`.
 - Shared fixtures exist in `fixtures/`.
 - Project plan exists in `PROJECT_PLAN.md`.
-- Polyglot decision record exists in `docs/POLYGLOT_TOOLCHAIN_DECISION.md`.
-- Public API parity matrix exists in `docs/API_PARITY_MATRIX.md`.
+- Polyglot decision record exists in `docs/decisions/polyglot-toolchain-decision.md`.
+- Public API parity matrix exists in `docs/notes/api-parity-matrix.md`.
 - Public quickstart, installation, API reference, aggregation/streaming, debug-trace, fixture-coverage, supported-surface, custom pricing, source adapter, warning, and release process docs exist under `docs/`.
 - Root `LICENSE`, `CHANGELOG.md`, `CONTRIBUTING.md`, and `SECURITY.md` exist.
 - CI workflow exists in `.github/workflows/ci.yml`.
@@ -55,20 +62,21 @@ Status: complete for this pass.
 | Add OpenRouter models source adapter prototype | Done | `openrouter-models-adapter-basic.json`, `openrouter-models-adapter-tiered.json`; Python/JS/Go tests pass | Maps prompt, completion, cache, reasoning, image-input, request, web-search, and tiered long-context price fields into price cards. |
 | Add OpenAI tool-call raw fixture | Done | `openai-responses-raw-tool-calls.json`; Python/JS/Go tests pass | Covers web search, file search, and code-interpreter call units from raw Responses output. |
 | Add Anthropic 1-hour cache-write fixture | Done | `anthropic-messages-raw-cache-1h.json`; Python/JS/Go tests pass | Proves `input_cache_write_1h_tokens` extraction. |
-| Add polyglot toolchain decision record | Done | `docs/POLYGLOT_TOOLCHAIN_DECISION.md`; hygiene check passes | Decides JSON Schema plus shared fixtures as v0.x source of truth, with typed artifacts now and generation later. |
+| Add polyglot toolchain decision record | Done | `docs/decisions/polyglot-toolchain-decision.md`; hygiene check passes | Decides JSON Schema plus shared fixtures as v0.x source of truth, with typed artifacts now and generation later. |
 | Add package-level TypeScript types or generated schema types | Done | `packages/javascript/core/index.d.ts`; JS package `types` and `exports.types` point to it | Manual schema-aligned declarations for v0.x prototype. |
 | Add Python type hints and minimal typed dictionaries or generated models | Done | `packages/python/runcost/types.py`; exported from package `__init__.py`; compile check passes | Manual `TypedDict` contracts for v0.x prototype. |
 | Add Go public API docs and typed examples | Done | Go doc comments in `ledger.go`; `packages/go/ledger/example_test.go`; Go tests pass | Examples cover `CalculateCost` and `FromResponse`. |
-| Add public API parity matrix | Done | `docs/API_PARITY_MATRIX.md`; hygiene check validates public API names | Tracks Python, JS/TS, and Go support by capability. |
+| Add public API parity matrix | Done | `docs/notes/api-parity-matrix.md`; hygiene check validates public API names | Tracks Python, JS/TS, and Go support by capability. |
 | Add debug trace fixture shape | Done | `schemas/debug-trace.schema.json`, `debug-trace-explain-decisions.json`; `npm test` passes | Optional `debug_trace` / `debugTrace` explains price-card, component, alias, discount, and warning decisions. |
 | Add fixture metadata fields | Done | `schemas/fixture.schema.json`; all 52 fixtures include `metadata` | Metadata covers requirement IDs, provider, surface, scenario, tags, and expected languages. |
-| Add fixture coverage report | Done | `docs/2026-05-25-fixture-coverage.md`; `scripts/check_fixture_coverage.py`; `npm test` passes | Reports scenarios, provider surfaces, components, warning codes, source adapters, framework adapters, requirements, tags, and expected languages. |
+| Add fixture coverage report | Done | `docs/reports/fixture-coverage.md`; `scripts/check_fixture_coverage.py`; `npm test` passes | Reports scenarios, provider surfaces, components, warning codes, source adapters, framework adapters, requirements, tags, and expected languages. |
 | Add generated-artifact drift checks | Done | `scripts/check_project_hygiene.py`; `npm test` runs it | Starts as required-artifact, package metadata, parity, fixture floor, and CI command checks. |
 | Add CI workflow | Done | `.github/workflows/ci.yml`; hygiene check passes | CI runs conformance tests, examples, and Python compile checks. |
 | Add cost-ledger aggregation primitive | Done | `cost-ledger-aggregation-basic.json`, `stream-final-usage-missing-warning.json`; Python/JS/Go tests pass | Aggregates already-calculated ledgers and emits `stream_usage_missing` when expected final stream usage is absent. |
 | Add provider streaming final-usage extraction | Done | `openai-responses-stream-completed-event.json`, `anthropic-messages-stream-events.json`, `gemini-generate-content-stream-chunks.json`; Python/JS/Go tests pass | Handles selected final-usage stream event envelopes without estimating arbitrary partial deltas. |
-| Add documented partial framework adapter paths | Done | `docs/FRAMEWORK_ADAPTER_NOTES.md`, `docs/2026-05-25-supported-surfaces.md`, `docs/API_PARITY_MATRIX.md`; hygiene check guards names | Covers Semantic Kernel, AutoGen/AG2, LangSmith export comparison, and OpenRouter-compatible SDK paths as researched but not fixture-backed targets; Haystack and LiteLLM were later promoted to fixture-backed adapters. |
+| Add documented partial framework adapter paths | Done | `docs/notes/framework-adapter-notes.md`, `docs/reference/supported-surfaces.md`, `docs/notes/api-parity-matrix.md`; hygiene check guards names | Covers Semantic Kernel, AutoGen/AG2, LangSmith export comparison, and OpenRouter-compatible SDK paths as researched but not fixture-backed targets; Haystack and LiteLLM were later promoted to fixture-backed adapters. |
 | Add Haystack and LiteLLM fixture-backed framework adapters | Done | `haystack-openai-chat-generator-meta.json`, `litellm-proxy-response-cost-metadata.json`; Python/JS fixture runner and Go tests pass | Adds one-call helpers and extractors across Python, JavaScript/TypeScript, and Go. |
+| Normalize documentation layout | Done | `docs/guides/`, `docs/reference/`, `docs/notes/`, `docs/decisions/`, `docs/reports/`, `docs/process/`; hygiene and release scripts use new paths | Preserves content while moving dated/uppercase docs into categorized lowercase paths. |
 
 ## Milestone Status
 
@@ -95,7 +103,7 @@ Status: complete for this pass.
 - Baseline verification before new work: `npm test` passed with 8 fixtures and Go tests green.
 - Added schema validation in the fixture runner, strict/compatibility modes, warning fixtures, LiteLLM and Portkey adapter fixtures, OpenAI raw tool-call fixture, and Anthropic 1-hour cache-write fixture.
 - Verification after expanded fixtures: `npm test` passes with 16 shared fixtures and Go tests green.
-- Added `docs/POLYGLOT_TOOLCHAIN_DECISION.md` and `docs/API_PARITY_MATRIX.md`.
+- Added `docs/decisions/polyglot-toolchain-decision.md` and `docs/notes/api-parity-matrix.md`.
 - Added TypeScript declarations in `packages/javascript/core/index.d.ts` and package metadata pointing at them.
 - Added Python `TypedDict` contracts in `packages/python/runcost/types.py` and exported them.
 - Added Go public API comments and examples in `packages/go/ledger/example_test.go`.
@@ -115,7 +123,7 @@ Status: complete for this pass.
   - `stale-price-warning.json`
   - `provider-reported-cost-mismatch.json`
 - Implemented effective-date selection, service-tier and region matching, unsupported service-tier warnings, stale price-source warnings, provider-reported cost mismatch warnings, and component-total invariant checks across the conformance runner.
-- Updated `docs/API_PARITY_MATRIX.md`, `PROJECT_PLAN.md`, and `scripts/check_project_hygiene.py` for the new correctness coverage.
+- Updated `docs/notes/api-parity-matrix.md`, `PROJECT_PLAN.md`, and `scripts/check_project_hygiene.py` for the new correctness coverage.
 - Verification after Milestone 2 slice:
   - `python3 scripts/check_fixtures.py` passed with 21 fixtures across Python and JavaScript.
   - `gofmt -w packages/go/ledger/ledger.go packages/go/ledger/ledger_test.go packages/go/ledger/example_test.go && go test ./packages/go/...` passed.
@@ -164,7 +172,7 @@ Status: complete for this pass.
   - OpenRouter chat completion usage exposes OpenAI-compatible `usage.prompt_tokens`, `usage.completion_tokens`, and `usage.total_tokens`.
   - Gemini generateContent usage metadata exposes prompt, candidate, total, and thinking token fields.
   - AWS Bedrock Converse usage exposes input, output, total, cache read, cache write, and cache details fields.
-- Added provider extractor mapping notes in `docs/PROVIDER_EXTRACTOR_NOTES.md`.
+- Added provider extractor mapping notes in `docs/notes/provider-extractor-notes.md`.
 - Added raw provider fixtures:
   - `gemini-generate-content-raw-reasoning-cache.json`
   - `bedrock-converse-raw-cache.json`
@@ -174,7 +182,7 @@ Status: complete for this pass.
   - `vertex.gemini.generate_content`
   - `aws.bedrock.converse`
   - `openrouter.chat_completions`
-- Updated `docs/API_PARITY_MATRIX.md`, `PROJECT_PLAN.md`, `README.md`, TypeScript declarations, Python exports, and hygiene checks for the new provider coverage.
+- Updated `docs/notes/api-parity-matrix.md`, `PROJECT_PLAN.md`, `README.md`, TypeScript declarations, Python exports, and hygiene checks for the new provider coverage.
 - Verification after provider extractor slice:
   - `python3 scripts/check_fixtures.py` passed with 32 fixtures across Python and JavaScript.
   - `gofmt -w packages/go/ledger/ledger.go packages/go/ledger/ledger_test.go packages/go/ledger/example_test.go && go test ./packages/go/...` passed.
@@ -198,7 +206,7 @@ Status: complete for this pass.
   - `deepseek-chat-raw-cache-reasoning.json`
   - `azure-openai-chat-raw-reasoning.json`
   - `huggingface-chat-raw-basic.json`
-- Updated `docs/PROVIDER_EXTRACTOR_NOTES.md`, `docs/API_PARITY_MATRIX.md`, `PROJECT_PLAN.md`, `README.md`, TypeScript declarations, Python exports, and hygiene checks for the new OpenAI-compatible provider coverage.
+- Updated `docs/notes/provider-extractor-notes.md`, `docs/notes/api-parity-matrix.md`, `PROJECT_PLAN.md`, `README.md`, TypeScript declarations, Python exports, and hygiene checks for the new OpenAI-compatible provider coverage.
 - Verification after OpenAI-compatible provider alias slice:
   - `python3 scripts/check_fixtures.py` passed with 38 fixtures across Python and JavaScript.
   - `python3 -m py_compile packages/python/runcost/core.py packages/python/runcost/types.py packages/python/runcost/__init__.py scripts/check_fixtures.py scripts/check_project_hygiene.py examples/python_basic.py` passed.
@@ -217,7 +225,7 @@ Status: complete for this pass.
   - `cohere-chat-raw-usage-billed-units.json`
   - `cohere-chat-raw-meta-billed-units.json`
 - Implemented Cohere Chat extractors across Python, JavaScript, and Go, using billed units for pricing and preserving raw token counts in raw usage.
-- Updated `docs/PROVIDER_EXTRACTOR_NOTES.md`, `docs/API_PARITY_MATRIX.md`, `PROJECT_PLAN.md`, `README.md`, TypeScript declarations, Python exports, Go comments, and hygiene checks for Cohere coverage.
+- Updated `docs/notes/provider-extractor-notes.md`, `docs/notes/api-parity-matrix.md`, `PROJECT_PLAN.md`, `README.md`, TypeScript declarations, Python exports, Go comments, and hygiene checks for Cohere coverage.
 - Verification after Cohere provider extractor slice:
   - `python3 scripts/check_fixtures.py` passed with 40 fixtures across Python and JavaScript.
   - `python3 -m py_compile packages/python/runcost/core.py packages/python/runcost/types.py packages/python/runcost/__init__.py scripts/check_fixtures.py scripts/check_project_hygiene.py examples/python_basic.py` passed.
@@ -230,7 +238,7 @@ Status: complete for this pass.
   - `git status --short` could not run because this directory is not a Git repository.
 - Verified Vertex AI Gemini `generateContent` usage metadata against the official Vertex AI REST `GenerateContentResponse` reference.
 - Added `vertex-gemini-generate-content-raw-basic.json` to prove the `vertex.gemini.generate_content` dispatch path with cache and reasoning fields through the shared Gemini extractor.
-- Updated `docs/PROVIDER_EXTRACTOR_NOTES.md`, `docs/API_PARITY_MATRIX.md`, `scripts/check_project_hygiene.py`, and this tracker for the Vertex fixture evidence.
+- Updated `docs/notes/provider-extractor-notes.md`, `docs/notes/api-parity-matrix.md`, `scripts/check_project_hygiene.py`, and this tracker for the Vertex fixture evidence.
 - Verification after Vertex fixture slice:
   - `python3 scripts/check_fixtures.py` passed with 41 fixtures across Python and JavaScript.
   - `python3 -m py_compile packages/python/runcost/core.py packages/python/runcost/types.py packages/python/runcost/__init__.py scripts/check_fixtures.py scripts/check_project_hygiene.py examples/python_basic.py` passed.
@@ -245,7 +253,7 @@ Status: complete for this pass.
   - LangChain AIMessage exposes provider-normalized `usage_metadata` with `input_tokens`, `output_tokens`, `total_tokens`, `input_token_details.cache_read`, `input_token_details.cache_creation`, and `output_token_details.reasoning`.
   - Vercel AI SDK `generateText` exposes final-step `usage`, aggregate `totalUsage`, cache read/write input details, text/reasoning output details, and response `modelId`.
   - LlamaIndex `TokenCountingHandler` exposes prompt/completion/total LLM counters, embedding counters, streaming-finalized counts, and per-event token count objects.
-- Added `docs/FRAMEWORK_ADAPTER_NOTES.md` for framework metadata mapping and limitations.
+- Added `docs/notes/framework-adapter-notes.md` for framework metadata mapping and limitations.
 - Added framework adapter extractors across Python, JavaScript, and Go for:
   - `langchain.chat_message`
   - `vercel_ai_sdk.generate_text`
@@ -254,7 +262,7 @@ Status: complete for this pass.
   - `langchain-chat-message-usage-metadata.json`
   - `vercel-ai-sdk-generate-text-total-usage.json`
   - `llamaindex-token-counter-events.json`
-- Updated `docs/API_PARITY_MATRIX.md`, `PROJECT_PLAN.md`, `README.md`, TypeScript declarations, Python exports, and hygiene checks for framework adapter coverage.
+- Updated `docs/notes/api-parity-matrix.md`, `PROJECT_PLAN.md`, `README.md`, TypeScript declarations, Python exports, and hygiene checks for framework adapter coverage.
 - Fixed Python `from_response` option pass-through so framework adapters can be selected with `adapter` while still pricing against the caller-supplied provider and surface.
 - Verification after framework adapter slice:
   - `python3 scripts/check_fixtures.py` passed with 44 fixtures across Python and JavaScript.
@@ -271,7 +279,7 @@ Status: complete for this pass.
   - `from_vercel_ai_sdk_result`, `fromVercelAISDKResult`, `FromVercelAISDKResult`
   - `from_llamaindex_token_counter`, `fromLlamaIndexTokenCounter`, `FromLlamaIndexTokenCounter`
 - Routed the existing LangChain, Vercel AI SDK, and LlamaIndex shared fixtures through those helpers in Python, JavaScript, and Go fixture runners.
-- Updated `docs/FRAMEWORK_ADAPTER_NOTES.md`, `docs/API_PARITY_MATRIX.md`, `PROJECT_PLAN.md`, `README.md`, TypeScript declarations, Python exports, Go API comments, and hygiene checks for helper coverage.
+- Updated `docs/notes/framework-adapter-notes.md`, `docs/notes/api-parity-matrix.md`, `PROJECT_PLAN.md`, `README.md`, TypeScript declarations, Python exports, Go API comments, and hygiene checks for helper coverage.
 - Verification after framework helper API slice:
   - `python3 scripts/check_fixtures.py` passed with 44 fixtures across Python and JavaScript.
   - `python3 -m py_compile packages/python/runcost/core.py packages/python/runcost/types.py packages/python/runcost/__init__.py scripts/check_fixtures.py scripts/check_project_hygiene.py examples/python_basic.py` passed.
@@ -290,7 +298,7 @@ Status: complete for this pass.
   - cache details -> subtract from uncached/media input and emit `input_cache_read_tokens`
   - candidate modality details -> `output_text_tokens`, `output_image_tokens`, `output_audio_tokens`, `output_video_tokens`
   - `thoughtsTokenCount` -> `output_reasoning_tokens`
-- Updated `docs/PROVIDER_EXTRACTOR_NOTES.md`, `docs/API_PARITY_MATRIX.md`, `PROJECT_PLAN.md`, `README.md`, `scripts/check_project_hygiene.py`, and this tracker for multimodal coverage.
+- Updated `docs/notes/provider-extractor-notes.md`, `docs/notes/api-parity-matrix.md`, `PROJECT_PLAN.md`, `README.md`, `scripts/check_project_hygiene.py`, and this tracker for multimodal coverage.
 - Verification after Gemini/Vertex multimodal slice:
   - `python3 scripts/check_fixtures.py` passed with 45 fixtures across Python and JavaScript.
   - `python3 -m py_compile packages/python/runcost/core.py packages/python/runcost/types.py packages/python/runcost/__init__.py scripts/check_fixtures.py scripts/check_project_hygiene.py examples/python_basic.py` passed.
@@ -313,7 +321,7 @@ Status: complete for this pass.
   - `price_cards_from_openrouter_models`
   - `priceCardsFromOpenRouterModels`
   - `PriceCardsFromOpenRouterModels`
-- Updated `docs/API_PARITY_MATRIX.md`, `PROJECT_PLAN.md`, `README.md`, TypeScript declarations, Python exports, Go API comments, fixture runners, hygiene checks, and this tracker for OpenRouter source coverage.
+- Updated `docs/notes/api-parity-matrix.md`, `PROJECT_PLAN.md`, `README.md`, TypeScript declarations, Python exports, Go API comments, fixture runners, hygiene checks, and this tracker for OpenRouter source coverage.
 - Verification after OpenRouter source adapter slice:
   - `python3 scripts/check_fixtures.py` passed with 47 fixtures across Python and JavaScript.
   - `python3 -m py_compile packages/python/runcost/core.py packages/python/runcost/types.py packages/python/runcost/__init__.py scripts/check_fixtures.py scripts/check_project_hygiene.py examples/python_basic.py` passed.
@@ -346,7 +354,7 @@ Status: complete for this pass.
   - Added `debug-trace-explain-decisions.json` to prove source priority, price-card selection, alias resolution, component pricing, and discount trace decisions.
   - Implemented opt-in debug trace output across Python, JavaScript/TypeScript, and Go with `debug_trace` / `debugTrace` options.
   - Added Python and TypeScript `DebugTrace` type surfaces.
-  - Added debug trace docs in `docs/2026-05-25-debug-trace.md` and updated README, API reference, warnings/limitations, API parity matrix, fixture runner schema validation, and hygiene checks.
+  - Added debug trace docs in `docs/reference/debug-trace.md` and updated README, API reference, warnings/limitations, API parity matrix, fixture runner schema validation, and hygiene checks.
   - Tightened Go fixture comparison so JSON numeric expectations compare by numeric value rather than representation.
 - Verification after debug trace slice:
   - `npm test` passed: 48 fixtures checked across Python and JavaScript, Go tests green, hygiene checks green.
@@ -359,7 +367,7 @@ Status: complete for this pass.
   - Added `schemas/fixture.schema.json` for the shared `ProviderResponseFixture` contract.
   - Backfilled metadata into all 48 fixtures: requirement IDs, provider, surface, scenario, tags, and expected languages.
   - Added `scripts/check_fixture_coverage.py` with metadata validation, generated coverage reporting, and stale-report detection.
-  - Added generated coverage report `docs/2026-05-25-fixture-coverage.md`.
+  - Added generated coverage report `docs/reports/fixture-coverage.md`.
   - Wired fixture coverage checks into `npm test`, added `npm run check:coverage`, and updated CI compile coverage.
   - Updated README, supported-surfaces doc, API parity matrix, project hygiene checks, and this tracker.
 - Verification after fixture metadata and coverage slice:
@@ -410,7 +418,7 @@ Status: complete for this pass.
   - `go test ./packages/go/...` passed.
 - Added package publish-readiness slice:
   - Added MIT `LICENSE`, package license metadata, `CHANGELOG.md`, `CONTRIBUTING.md`, and `SECURITY.md`.
-  - Added `docs/2026-05-25-release-process.md` covering version policy, PyPI trusted publishing, npm trusted publishing/provenance, Go semantic version tags, pre-release checks, and rollback guidance.
+  - Added `docs/process/release-process.md` covering version policy, PyPI trusted publishing, npm trusted publishing/provenance, Go semantic version tags, pre-release checks, and rollback guidance.
   - Added guarded manual `.github/workflows/release.yml` that verifies, builds Python and npm artifacts, uploads release artifacts, and publishes only when the workflow input explicitly enables publishing.
   - Added `scripts/check_release_readiness.py`, `npm run check:release`, and CI coverage for release-readiness checks.
   - Updated package install docs, README, project plan, CI workflow, project hygiene checks, and this tracker.
@@ -442,8 +450,8 @@ Status: complete for this pass.
   - `cost-ledger-aggregation-basic.json`
   - `stream-final-usage-missing-warning.json`
 - Updated fixture schema and coverage tooling for the `aggregation` scenario and `RC-AGGREGATION` requirement.
-- Added `docs/2026-05-25-aggregation-and-streaming.md` and updated README, API reference, supported surfaces, warnings/limitations, API parity matrix, project plan, package install checks, and hygiene checks.
-- Regenerated `docs/2026-05-25-fixture-coverage.md`.
+- Added `docs/reference/aggregation-and-streaming.md` and updated README, API reference, supported surfaces, warnings/limitations, API parity matrix, project plan, package install checks, and hygiene checks.
+- Regenerated `docs/reports/fixture-coverage.md`.
 - Verification after aggregation slice:
   - `python3 scripts/check_fixture_coverage.py --write-report` passed and regenerated coverage for 54 fixtures.
   - `python3 scripts/check_project_hygiene.py` passed.
@@ -497,15 +505,15 @@ Status: complete for this pass.
   - LangSmith cost tracking exposes input, output, and other categories with token/cost subtypes; trace usage metadata and bulk exports can carry total token and cost fields for comparison.
   - LiteLLM documents token usage, response cost metadata, proxy model metadata, custom pricing, provider discounts, and margins.
   - OpenRouter documents OpenAI-compatible schemas, OpenAI SDK base-URL usage, usage accounting with cost/reasoning/cache fields, and Agent SDK full-response accessors.
-- Added documented partial adapter paths in `docs/FRAMEWORK_ADAPTER_NOTES.md` for:
+- Added documented partial adapter paths in `docs/notes/framework-adapter-notes.md` for:
   - Semantic Kernel.
   - Haystack.
   - AutoGen / AG2.
   - LangSmith export / compare.
   - LiteLLM proxy metadata.
   - OpenRouter-compatible SDK paths.
-- Updated `docs/2026-05-25-supported-surfaces.md` to distinguish fixture-backed framework adapters from documented partial paths.
-- Updated `docs/API_PARITY_MATRIX.md`, `PROJECT_PLAN.md`, `README.md`, and `docs/2026-05-25-warnings-and-limitations.md` so these paths are visible without overstating support.
+- Updated `docs/reference/supported-surfaces.md` to distinguish fixture-backed framework adapters from documented partial paths.
+- Updated `docs/notes/api-parity-matrix.md`, `PROJECT_PLAN.md`, `README.md`, and `docs/reference/warnings-and-limitations.md` so these paths are visible without overstating support.
 - Added hygiene checks to keep the documented partial framework paths present in the adapter notes, supported-surface matrix, and API parity matrix.
 - Verification after framework adapter path documentation slice:
   - `python3 scripts/check_project_hygiene.py` passed.
@@ -545,6 +553,27 @@ Status: complete for this pass.
   - `jq empty` parsed schemas, fixtures, and package JSON files.
   - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
   - `git diff --check` passed.
+
+### 2026-05-25 Documentation Layout Stabilization Slice
+
+- Completed the in-progress docs reorganization against the current worktree instead of reverting it.
+- Moved existing docs into stable category paths:
+  - `docs/guides/` for quickstart and package installation.
+  - `docs/reference/` for API, streaming, debug trace, pricing, source adapter, supported surface, and warning references.
+  - `docs/notes/` for API parity, framework adapter notes, and provider extractor notes.
+  - `docs/decisions/` for the polyglot toolchain decision record.
+  - `docs/reports/` for fixture coverage.
+  - `docs/process/` for release process docs.
+- Updated README, project plan, contribution guidance, progress tracker, moved docs, fixture coverage generation, release readiness checks, and project hygiene checks to the new paths.
+- Added/kept YAML frontmatter on root and docs markdown files, with `README.md` remaining the only root onboarding doc without frontmatter.
+- Verification after documentation layout stabilization slice:
+  - `python3 scripts/check_project_hygiene.py` passed.
+  - `python3 scripts/check_fixture_coverage.py --write-report` passed and regenerated coverage at `docs/reports/fixture-coverage.md`.
+  - `python3 scripts/check_fixture_coverage.py` passed.
+  - `npm run check:release` passed.
+  - `npm test` passed: 59 fixtures, fixture coverage, Go tests, and hygiene checks green.
+  - `git diff --check` passed.
+  - Markdown frontmatter inventory passed with `README.md` intentionally exempted.
 
 ## Gap Audit 2026-05-25
 

@@ -70,7 +70,7 @@ That command creates temporary projects for Python, npm, and Go and verifies tha
 
 - MIT license and package license metadata are present.
 - Guarded registry publish workflow exists for PyPI and npm.
-- Go module tag policy is documented in `docs/2026-05-25-release-process.md`.
+- Go module tag policy is documented in `docs/process/release-process.md`.
 - `npm run check:release` verifies release docs, package version sync, license metadata, changelog presence, and release workflow guardrails.
 - Decide whether the npm package remains in `packages/javascript/core` or moves to a publish-oriented root package.
 - Add changelog automation.

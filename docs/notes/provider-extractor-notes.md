@@ -1,4 +1,11 @@
-# Provider Extractor Notes
+---
+title: RunCost Provider Extractor Notes
+date: 2026-05-25
+type: note
+status: draft
+---
+
+# RunCost Provider Extractor Notes
 
 Status: v0.x prototype
 Date: 2026-05-24

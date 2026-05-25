@@ -1,4 +1,11 @@
-# Fixture Suite
+---
+title: RunCost Fixture Suite
+date: 2026-05-25
+type: reference
+status: draft
+---
+
+# RunCost Fixture Suite
 
 The fixtures are the contract between language implementations.
 

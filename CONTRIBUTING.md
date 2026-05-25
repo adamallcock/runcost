@@ -48,7 +48,7 @@ npm run example:py
 
 Python, JavaScript/TypeScript, and Go should expose the same core concepts even
 when helper APIs are idiomatic to a single ecosystem. Update
-`docs/API_PARITY_MATRIX.md` whenever public APIs change.
+`docs/notes/api-parity-matrix.md` whenever public APIs change.
 
 ## Generated Artifacts
 

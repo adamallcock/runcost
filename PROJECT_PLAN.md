@@ -1,3 +1,10 @@
+---
+title: RunCost Project Plan
+date: 2026-05-25
+type: plan
+status: draft
+---
+
 # RunCost Project Plan
 
 Status: Draft
@@ -34,8 +41,8 @@ The repo currently contains:
 - Architecture: `ARCHITECTURE.md`
 - Evaluation protocol: `LIVE_EVALUATION_PROTOCOL.md`
 - Results matrix: `RESULTS_MATRIX.md`
-- Polyglot toolchain decision: `docs/POLYGLOT_TOOLCHAIN_DECISION.md`
-- Public API parity matrix: `docs/API_PARITY_MATRIX.md`
+- Polyglot toolchain decision: `docs/decisions/polyglot-toolchain-decision.md`
+- Public API parity matrix: `docs/notes/api-parity-matrix.md`
 - Progress tracker: `PROGRESS_TRACKER.md`
 - Shared JSON schemas: `schemas/`
 - Shared conformance fixtures: `fixtures/`
@@ -368,7 +375,7 @@ Delivered in current prototype:
 
 Current mapping notes:
 
-- `docs/PROVIDER_EXTRACTOR_NOTES.md` records the official source references and raw usage field mappings for OpenAI-compatible chat providers, Cohere, Gemini, and Bedrock.
+- `docs/notes/provider-extractor-notes.md` records the official source references and raw usage field mappings for OpenAI-compatible chat providers, Cohere, Gemini, and Bedrock.
 - Gemini/Vertex `promptTokensDetails`, `cacheTokensDetails`, `toolUsePromptTokensDetails`, and `candidatesTokensDetails` are now mapped into modality-aware image, audio, video, text, cache-read, and thinking components in the shared conformance suite.
 - OpenRouter `/api/v1/models` pricing is now mapped into canonical price cards for prompt, completion, cache read/write, internal reasoning, request, image-input, and web-search prices.
 
@@ -470,7 +477,7 @@ Delivered in current prototype:
 - LiteLLM proxy response metadata extraction with hidden response-cost comparison.
 - One-call helper APIs for LangChain, Vercel AI SDK, and LlamaIndex in Python, JavaScript/TypeScript, and Go.
 - One-call helper APIs for Haystack and LiteLLM proxy metadata in Python, JavaScript/TypeScript, and Go.
-- Framework adapter notes in `docs/FRAMEWORK_ADAPTER_NOTES.md`.
+- Framework adapter notes in `docs/notes/framework-adapter-notes.md`.
 - Documented partial adapter paths for Semantic Kernel, AutoGen/AG2, LangSmith export comparison, and OpenRouter-compatible SDK paths.
 
 Progress criteria:

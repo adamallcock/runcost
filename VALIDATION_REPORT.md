@@ -1,4 +1,11 @@
-# LLM Pricing Package Market Gap Validation
+---
+title: RunCost Market Gap Validation
+date: 2026-05-25
+type: report
+status: draft
+---
+
+# RunCost Market Gap Validation
 
 Research date: 2026-05-24
 

@@ -10,21 +10,21 @@ ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_FILES = [
     "PROJECT_PLAN.md",
     "PROGRESS_TRACKER.md",
-    "docs/2026-05-25-api-reference.md",
-    "docs/2026-05-25-aggregation-and-streaming.md",
-    "docs/2026-05-25-custom-pricing-and-discounts.md",
-    "docs/2026-05-25-debug-trace.md",
-    "docs/2026-05-25-fixture-coverage.md",
-    "docs/2026-05-25-package-installation.md",
-    "docs/2026-05-25-quickstart.md",
-    "docs/2026-05-25-release-process.md",
-    "docs/2026-05-25-source-adapters.md",
-    "docs/2026-05-25-supported-surfaces.md",
-    "docs/2026-05-25-warnings-and-limitations.md",
-    "docs/POLYGLOT_TOOLCHAIN_DECISION.md",
-    "docs/API_PARITY_MATRIX.md",
-    "docs/PROVIDER_EXTRACTOR_NOTES.md",
-    "docs/FRAMEWORK_ADAPTER_NOTES.md",
+    "docs/reference/api-reference.md",
+    "docs/reference/aggregation-and-streaming.md",
+    "docs/reference/custom-pricing-and-discounts.md",
+    "docs/reference/debug-trace.md",
+    "docs/reports/fixture-coverage.md",
+    "docs/guides/package-installation.md",
+    "docs/guides/quickstart.md",
+    "docs/process/release-process.md",
+    "docs/reference/source-adapters.md",
+    "docs/reference/supported-surfaces.md",
+    "docs/reference/warnings-and-limitations.md",
+    "docs/decisions/polyglot-toolchain-decision.md",
+    "docs/notes/api-parity-matrix.md",
+    "docs/notes/provider-extractor-notes.md",
+    "docs/notes/framework-adapter-notes.md",
     "scripts/check_fixture_coverage.py",
     "scripts/check_package_installs.py",
     "scripts/check_release_readiness.py",
@@ -173,7 +173,7 @@ def check_package_metadata() -> None:
 
 
 def check_public_api_artifacts() -> None:
-    parity = (ROOT / "docs/API_PARITY_MATRIX.md").read_text(encoding="utf-8")
+    parity = (ROOT / "docs/notes/api-parity-matrix.md").read_text(encoding="utf-8")
     typescript = (ROOT / "packages/javascript/core/index.d.ts").read_text(encoding="utf-8")
     python_init = (ROOT / "packages/python/runcost/__init__.py").read_text(encoding="utf-8")
     python_types = (ROOT / "packages/python/runcost/types.py").read_text(encoding="utf-8")
@@ -302,9 +302,9 @@ def check_ci_workflow() -> None:
 
 
 def check_documented_partial_framework_paths() -> None:
-    framework_notes = (ROOT / "docs/FRAMEWORK_ADAPTER_NOTES.md").read_text(encoding="utf-8")
-    supported_surfaces = (ROOT / "docs/2026-05-25-supported-surfaces.md").read_text(encoding="utf-8")
-    parity = (ROOT / "docs/API_PARITY_MATRIX.md").read_text(encoding="utf-8")
+    framework_notes = (ROOT / "docs/notes/framework-adapter-notes.md").read_text(encoding="utf-8")
+    supported_surfaces = (ROOT / "docs/reference/supported-surfaces.md").read_text(encoding="utf-8")
+    parity = (ROOT / "docs/notes/api-parity-matrix.md").read_text(encoding="utf-8")
 
     required_terms = [
         "Semantic Kernel",

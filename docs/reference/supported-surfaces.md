@@ -9,7 +9,7 @@ status: draft
 
 This support matrix describes the current fixture-backed prototype. A provider or framework is considered supported only when it has shared conformance fixtures.
 
-For mechanical coverage counts, see [Fixture Coverage](2026-05-25-fixture-coverage.md).
+For mechanical coverage counts, see [Fixture Coverage](../reports/fixture-coverage.md).
 
 ## Provider Extractors
 
@@ -47,7 +47,7 @@ For mechanical coverage counts, see [Fixture Coverage](2026-05-25-fixture-covera
 
 ## Documented Partial Adapter Paths
 
-These paths are researched and documented in [Framework Adapter Notes](FRAMEWORK_ADAPTER_NOTES.md), but they are not yet fixture-backed and should not be treated as implemented support.
+These paths are researched and documented in [Framework Adapter Notes](../notes/framework-adapter-notes.md), but they are not yet fixture-backed and should not be treated as implemented support.
 
 | Framework / Gateway | Object or Path | Status |
 |---|---|---|

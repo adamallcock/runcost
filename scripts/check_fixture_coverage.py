@@ -9,7 +9,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = ROOT / "fixtures"
-REPORT_PATH = ROOT / "docs" / "2026-05-25-fixture-coverage.md"
+REPORT_PATH = ROOT / "docs" / "reports" / "fixture-coverage.md"
 FIXTURE_PATHS = sorted(FIXTURE_DIR.glob("*.json"))
 
 EXPECTED_LANGUAGES = ["python", "javascript", "go"]

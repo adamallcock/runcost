@@ -1,4 +1,11 @@
-# Public API Parity Matrix
+---
+title: RunCost Public API Parity Matrix
+date: 2026-05-25
+type: reference
+status: draft
+---
+
+# RunCost Public API Parity Matrix
 
 Status: v0.x prototype
 Date: 2026-05-25
@@ -103,7 +110,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Package-level API docs | Partial | Partial | Partial | README, package examples, alpha docs, debug trace docs |
 | Public example for basic cost calculation | Yes | Yes | Yes | Python and JS examples; Go example test |
 | Schema validation in conformance tests | Yes | Yes | Partial | Python runner validates schemas for Python/JS outputs; Go checks behavior through fixtures |
-| Fixture metadata and coverage report | Yes | Yes | Yes | `schemas/fixture.schema.json`, fixture metadata, `scripts/check_fixture_coverage.py`, `docs/2026-05-25-fixture-coverage.md` |
+| Fixture metadata and coverage report | Yes | Yes | Yes | `schemas/fixture.schema.json`, fixture metadata, `scripts/check_fixture_coverage.py`, `docs/reports/fixture-coverage.md` |
 | Generated artifact drift check | Yes | Yes | Yes | `scripts/check_project_hygiene.py` |
 
 ## Framework Adapters
@@ -118,10 +125,10 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Haystack | Yes | Yes | Yes | `from_haystack_generator_result`, `fromHaystackGeneratorResult`, `FromHaystackGeneratorResult`; lower-level `extract_haystack_generator_usage`, `extractHaystackGeneratorUsage`; `haystack-openai-chat-generator-meta.json` |
 | LiteLLM proxy response metadata | Yes | Yes | Yes | `from_litellm_response`, `fromLiteLLMResponse`, `FromLiteLLMResponse`; lower-level `extract_litellm_proxy_response_usage`, `extractLiteLLMProxyResponseUsage`; `litellm-proxy-response-cost-metadata.json` |
 | OpenAI Agents SDK | Planned | Planned | Planned | Milestone 6 |
-| Semantic Kernel | Partial | Partial | Partial | Documented adapter path in `docs/FRAMEWORK_ADAPTER_NOTES.md`; no fixture-backed extractor yet |
-| AutoGen / AG2 | Partial | Partial | Partial | Documented adapter path in `docs/FRAMEWORK_ADAPTER_NOTES.md`; no fixture-backed extractor yet |
-| LangSmith export/compare | Partial | Partial | Partial | Documented adapter path in `docs/FRAMEWORK_ADAPTER_NOTES.md`; no fixture-backed extractor yet |
-| OpenRouter-compatible SDK paths | Partial | Partial | Partial | Documented adapter path in `docs/FRAMEWORK_ADAPTER_NOTES.md`; OpenRouter chat/model fixtures exist, SDK wrappers do not |
+| Semantic Kernel | Partial | Partial | Partial | Documented adapter path in `docs/notes/framework-adapter-notes.md`; no fixture-backed extractor yet |
+| AutoGen / AG2 | Partial | Partial | Partial | Documented adapter path in `docs/notes/framework-adapter-notes.md`; no fixture-backed extractor yet |
+| LangSmith export/compare | Partial | Partial | Partial | Documented adapter path in `docs/notes/framework-adapter-notes.md`; no fixture-backed extractor yet |
+| OpenRouter-compatible SDK paths | Partial | Partial | Partial | Documented adapter path in `docs/notes/framework-adapter-notes.md`; OpenRouter chat/model fixtures exist, SDK wrappers do not |
 
 ## Release Rule
 

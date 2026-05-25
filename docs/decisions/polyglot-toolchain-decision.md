@@ -1,4 +1,11 @@
-# Polyglot Toolchain Decision
+---
+title: RunCost Polyglot Toolchain Decision
+date: 2026-05-25
+type: decision-record
+status: accepted
+---
+
+# RunCost Polyglot Toolchain Decision
 
 Status: Accepted for v0.x
 Date: 2026-05-24
@@ -46,7 +53,7 @@ The canonical assets are:
 - `schemas/cost-ledger.schema.json`
 - `fixtures/*.json`
 - `scripts/check_fixtures.py`
-- `docs/API_PARITY_MATRIX.md`
+- `docs/notes/api-parity-matrix.md`
 - `PROJECT_PLAN.md`
 - `PROGRESS_TRACKER.md`
 
@@ -139,7 +146,7 @@ Every supported language follows the same change sequence:
 2. Add or update fixtures that prove the behavior.
 3. Update the Python, JavaScript/TypeScript, and Go implementations.
 4. Update type declarations or typed contract models.
-5. Update `docs/API_PARITY_MATRIX.md` if public APIs changed.
+5. Update `docs/notes/api-parity-matrix.md` if public APIs changed.
 6. Run the full verification battery.
 7. Release all language packages together or explicitly mark a language as unsupported for that feature.
 
