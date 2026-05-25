@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 from datetime import date
 from decimal import Decimal, getcontext
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 getcontext().prec = 50
@@ -1848,6 +1850,29 @@ def price_cards_from_source_cache(data: Any, **_: Any) -> List[Dict[str, Any]]:
             card["metadata"] = metadata
             cards.append(card)
     return cards
+
+
+def price_cards_from_json_file(path: Any, source_type: str = "user-pricing", **options: Any) -> List[Dict[str, Any]]:
+    file_path = Path(path)
+    data = json.loads(file_path.read_text(encoding="utf-8"))
+    adapter_options = dict(options)
+    adapter_options.setdefault("source_url", file_path.resolve().as_uri())
+    adapter_options.setdefault("sourceUrl", file_path.resolve().as_uri())
+    if source_type == "llm-prices":
+        return price_cards_from_llm_prices(data, **adapter_options)
+    if source_type == "litellm":
+        return price_cards_from_litellm(data, **adapter_options)
+    if source_type == "openrouter-models":
+        return price_cards_from_openrouter_models(data, **adapter_options)
+    if source_type == "portkey":
+        return price_cards_from_portkey(data, **adapter_options)
+    if source_type == "source-cache":
+        return price_cards_from_source_cache(data, **adapter_options)
+    if source_type == "user-pricing":
+        return price_cards_from_user_pricing(data, **adapter_options)
+    if source_type == "helicone":
+        return price_cards_from_helicone(data, **adapter_options)
+    raise ValueError(f"Unsupported JSON price source type: {source_type}")
 
 
 def price_cards_from_user_pricing(data: Any, **options: Any) -> List[Dict[str, Any]]:

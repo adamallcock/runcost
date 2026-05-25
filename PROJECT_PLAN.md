@@ -61,7 +61,7 @@ Current prototype capabilities:
 - Exact alias resolution through price-card aliases.
 - Component-aware discount policies.
 - Simon Willison `llm-prices` adapter.
-- LiteLLM, Portkey, OpenRouter models, source-cache, user compact pricing, and Helicone model-registry adapter prototypes.
+- LiteLLM, Portkey, OpenRouter models, source-cache, local JSON files, user compact pricing, and Helicone model-registry adapter prototypes.
 - Strict mode and compatibility mode.
 - Effective-date price-card selection.
 - Service-tier and region price-card matching.
@@ -341,6 +341,7 @@ Progress criteria:
 - LiteLLM service tier and cache fields map into canonical components.
 - OpenRouter string prices map correctly.
 - User compact pricing data maps into canonical price cards.
+- Local JSON price-source files map into canonical price cards.
 - Helicone endpoint/deployment pricing maps cache multipliers, reasoning, request, web-search, and modality token fields.
 - Source-cache envelopes preserve URL, retrieval time, checksum, generated time, and generated price-card count.
 

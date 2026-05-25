@@ -1,3 +1,7 @@
+import fs from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
 const MONEY_PRECISION = 18n;
 
 function parseDecimal(value) {
@@ -1862,6 +1866,24 @@ export function priceCardsFromSourceCache(data) {
       }
     }));
   });
+}
+
+export function priceCardsFromJSONFile(filePath, options = {}) {
+  const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  const sourceType = options.sourceType || options.source_type || "user-pricing";
+  const adapterOptions = {
+    ...options,
+    sourceUrl: options.sourceUrl || options.source_url || pathToFileURL(path.resolve(filePath)).href,
+    source_url: options.source_url || options.sourceUrl || pathToFileURL(path.resolve(filePath)).href
+  };
+  if (sourceType === "llm-prices") return priceCardsFromLlmPrices(data, adapterOptions);
+  if (sourceType === "litellm") return priceCardsFromLiteLLM(data, adapterOptions);
+  if (sourceType === "openrouter-models") return priceCardsFromOpenRouterModels(data, adapterOptions);
+  if (sourceType === "portkey") return priceCardsFromPortkey(data, adapterOptions);
+  if (sourceType === "source-cache") return priceCardsFromSourceCache(data, adapterOptions);
+  if (sourceType === "user-pricing") return priceCardsFromUserPricing(data, adapterOptions);
+  if (sourceType === "helicone") return priceCardsFromHelicone(data, adapterOptions);
+  throw new Error(`Unsupported JSON price source type: ${sourceType}`);
 }
 
 export function priceCardsFromUserPricing(data, options = {}) {

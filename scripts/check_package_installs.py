@@ -25,7 +25,7 @@ def check_python_install(workdir: Path) -> None:
         [
             str(python),
             "-c",
-            "from runcost import aggregate_cost_ledgers, calculate_cost, from_response, from_ag2_usage_summary, from_haystack_generator_result, from_litellm_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_source_cache, price_cards_from_user_pricing; print(aggregate_cost_ledgers, calculate_cost, from_response, from_ag2_usage_summary, from_haystack_generator_result, from_litellm_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_source_cache, price_cards_from_user_pricing)",
+            "from pathlib import Path; from runcost import aggregate_cost_ledgers, calculate_cost, from_response, from_ag2_usage_summary, from_haystack_generator_result, from_litellm_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_json_file, price_cards_from_source_cache, price_cards_from_user_pricing; p=Path('prices.json'); p.write_text('{\"provider\":\"test\",\"models\":[{\"id\":\"test\",\"prices\":{\"input\":\"1\"}}]}'); print(aggregate_cost_ledgers, calculate_cost, from_response, from_ag2_usage_summary, from_haystack_generator_result, from_litellm_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_json_file(p), price_cards_from_source_cache, price_cards_from_user_pricing)",
         ],
         workdir,
     )
@@ -50,7 +50,7 @@ def check_javascript_install(workdir: Path) -> None:
             "node",
             "--input-type=module",
             "-e",
-            'import { aggregateCostLedgers, calculateCost, fromResponse, fromAG2UsageSummary, fromHaystackGeneratorResult, fromLiteLLMResponse, createRunCostVercelMiddleware, priceCardsFromHelicone, priceCardsFromSourceCache, priceCardsFromUserPricing } from "runcost"; console.log(typeof aggregateCostLedgers, typeof calculateCost, typeof fromResponse, typeof fromAG2UsageSummary, typeof fromHaystackGeneratorResult, typeof fromLiteLLMResponse, typeof createRunCostVercelMiddleware, typeof priceCardsFromHelicone, typeof priceCardsFromSourceCache, typeof priceCardsFromUserPricing);',
+            'import fs from "node:fs"; import { aggregateCostLedgers, calculateCost, fromResponse, fromAG2UsageSummary, fromHaystackGeneratorResult, fromLiteLLMResponse, createRunCostVercelMiddleware, priceCardsFromHelicone, priceCardsFromJSONFile, priceCardsFromSourceCache, priceCardsFromUserPricing } from "runcost"; fs.writeFileSync("prices.json", JSON.stringify({ provider: "test", models: [{ id: "test", prices: { input: "1" } }] })); console.log(typeof aggregateCostLedgers, typeof calculateCost, typeof fromResponse, typeof fromAG2UsageSummary, typeof fromHaystackGeneratorResult, typeof fromLiteLLMResponse, typeof createRunCostVercelMiddleware, typeof priceCardsFromHelicone, priceCardsFromJSONFile("prices.json").length, typeof priceCardsFromSourceCache, typeof priceCardsFromUserPricing);',
         ],
         project_dir,
     )
@@ -63,6 +63,7 @@ def check_go_install(workdir: Path) -> None:
         """package installcheck
 
 import (
+    "os"
     "testing"
 
     ledger "github.com/adamallcock/runcost/packages/go/ledger"
@@ -96,6 +97,16 @@ func TestImport(t *testing.T) {
     }})
     if len(cards) != 1 {
         t.Fatalf("unexpected source-cache card count: %d", len(cards))
+    }
+    if err := os.WriteFile("prices.json", []byte(`{"provider":"test","models":[{"id":"test","prices":{"input":"1"}}]}`), 0o600); err != nil {
+        t.Fatal(err)
+    }
+    fileCards, err := ledger.PriceCardsFromJSONFile("prices.json", "user-pricing")
+    if err != nil {
+        t.Fatal(err)
+    }
+    if len(fileCards) != 1 {
+        t.Fatalf("unexpected file card count: %d", len(fileCards))
     }
 }
 """,

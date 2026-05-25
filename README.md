@@ -94,7 +94,7 @@ The implementation is still pre-alpha. The current center of gravity is normaliz
 - Component-aware discount policies.
 - Optional debug traces for price-card, component, alias, discount, and warning decisions.
 - Simon Willison `llm-prices` adapter for simple current/historical price feeds.
-- LiteLLM, Portkey, OpenRouter models, source-cache, user compact pricing, and Helicone model-registry source adapter prototypes.
+- LiteLLM, Portkey, OpenRouter models, source-cache, local JSON file, user compact pricing, and Helicone model-registry source adapter prototypes.
 - Strict mode and compatibility mode.
 - TypeScript declarations, Python typed contracts, and Go examples.
 - Shared JSON fixtures that both implementations must pass.

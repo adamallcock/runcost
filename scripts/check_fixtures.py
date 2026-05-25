@@ -28,6 +28,7 @@ from runcost import (  # noqa: E402
     from_response,
     from_vercel_ai_sdk_result,
     price_cards_from_helicone,
+    price_cards_from_json_file,
     price_cards_from_litellm,
     price_cards_from_llm_prices,
     price_cards_from_openrouter_models,
@@ -202,6 +203,8 @@ def resolve_python_price_cards(fixture):
         return price_cards_from_user_pricing(source["data"])
     if source["type"] == "helicone":
         return price_cards_from_helicone(source["data"])
+    if source["type"] == "json-file":
+        return price_cards_from_json_file(ROOT / source["path"], source.get("source_type", "user-pricing"))
     raise AssertionError(f"Unsupported price source: {source['type']}")
 
 
@@ -289,12 +292,13 @@ def run_python_fixture(fixture):
 def run_javascript_fixture(path: Path):
     script = f"""
       import {{ aggregateCostLedgers, calculateCost }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
-      import {{ fromResponse, fromLangChainMessage, fromVercelAISDKResult, fromLlamaIndexTokenCounter, fromHaystackGeneratorResult, fromLiteLLMResponse, fromAG2UsageSummary, createRunCostVercelMiddleware, priceCardsFromLlmPrices, priceCardsFromSourceCache }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
+      import {{ fromResponse, fromLangChainMessage, fromVercelAISDKResult, fromLlamaIndexTokenCounter, fromHaystackGeneratorResult, fromLiteLLMResponse, fromAG2UsageSummary, createRunCostVercelMiddleware, priceCardsFromLlmPrices, priceCardsFromSourceCache, priceCardsFromJSONFile }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
       import fs from "node:fs";
       const fixture = JSON.parse(fs.readFileSync({json.dumps(str(path))}, "utf8"));
       const input = fixture.input;
       let priceCards = input.price_cards;
       const priceSource = input.price_source || null;
+      const root = {json.dumps(str(ROOT))};
       if (!priceCards && priceSource && priceSource.type === "llm-prices") priceCards = priceCardsFromLlmPrices(priceSource.data);
       if (!priceCards && priceSource && priceSource.type === "litellm") {{
         const module = await import({json.dumps(JAVASCRIPT_CORE.as_uri())});
@@ -316,6 +320,10 @@ def run_javascript_fixture(path: Path):
       if (!priceCards && priceSource && priceSource.type === "helicone") {{
         const module = await import({json.dumps(JAVASCRIPT_CORE.as_uri())});
         priceCards = module.priceCardsFromHelicone(priceSource.data);
+      }}
+      if (!priceCards && priceSource && priceSource.type === "json-file") {{
+        const filePath = priceSource.path.startsWith("/") ? priceSource.path : `${{root}}/${{priceSource.path}}`;
+        priceCards = priceCardsFromJSONFile(filePath, {{ sourceType: priceSource.source_type || "user-pricing" }});
       }}
       const responseOptions = {{
             ...input.extract,

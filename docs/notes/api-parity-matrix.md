@@ -82,6 +82,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Portkey Models pricing shape | Yes | Yes | Yes | `price_cards_from_portkey`, `priceCardsFromPortkey`, `PriceCardsFromPortkey`; `portkey-adapter-basic.json` |
 | OpenRouter `/models` API | Yes | Yes | Yes | `price_cards_from_openrouter_models`, `priceCardsFromOpenRouterModels`, `PriceCardsFromOpenRouterModels`; `openrouter-models-adapter-basic.json`, `openrouter-models-adapter-tiered.json` |
 | RunCost source-cache envelope | Yes | Yes | Yes | `price_cards_from_source_cache`, `priceCardsFromSourceCache`, `PriceCardsFromSourceCache`; `source-cache-adapter-basic.json` |
+| Local JSON price-source file | Yes | Yes | Yes | `price_cards_from_json_file`, `priceCardsFromJSONFile`, `PriceCardsFromJSONFile`; `user-pricing-json-file-loader.json` |
 | User compact pricing data | Yes | Yes | Yes | `price_cards_from_user_pricing`, `priceCardsFromUserPricing`, `PriceCardsFromUserPricing`; `user-pricing-adapter-compact.json` |
 | Helicone cost package data | Yes | Yes | Yes | `price_cards_from_helicone`, `priceCardsFromHelicone`, `PriceCardsFromHelicone`; `helicone-adapter-basic.json` |
 | Provider official pricing snapshots | Planned | Planned | Planned | Milestone 3 |

@@ -120,6 +120,9 @@ PUBLIC_API_NAMES = [
     "price_cards_from_helicone",
     "priceCardsFromHelicone",
     "PriceCardsFromHelicone",
+    "price_cards_from_json_file",
+    "priceCardsFromJSONFile",
+    "PriceCardsFromJSONFile",
 ]
 
 
@@ -226,6 +229,7 @@ def check_public_api_artifacts() -> None:
         "priceCardsFromSourceCache",
         "priceCardsFromUserPricing",
         "priceCardsFromHelicone",
+        "priceCardsFromJSONFile",
         "extractOpenAICompatibleChatCompletionsUsage",
         "extractCohereChatUsage",
         "extractLangChainChatUsage",
@@ -264,6 +268,7 @@ def check_public_api_artifacts() -> None:
         "price_cards_from_source_cache",
         "price_cards_from_user_pricing",
         "price_cards_from_helicone",
+        "price_cards_from_json_file",
         "extract_openai_compatible_chat_completions_usage",
         "extract_cohere_chat_usage",
         "extract_langchain_chat_usage",
@@ -288,6 +293,7 @@ def check_public_api_artifacts() -> None:
         "PriceCardsFromSourceCache",
         "PriceCardsFromUserPricing",
         "PriceCardsFromHelicone",
+        "PriceCardsFromJSONFile",
         "FromResponse",
         "FromLangChainMessage",
         "FromVercelAISDKResult",
@@ -307,7 +313,7 @@ def check_public_api_artifacts() -> None:
 
 def check_fixture_floor() -> None:
     fixtures = sorted((ROOT / "fixtures").glob("*.json"))
-    assert_true(len(fixtures) >= 63, f"expected at least 63 fixtures, found {len(fixtures)}")
+    assert_true(len(fixtures) >= 64, f"expected at least 64 fixtures, found {len(fixtures)}")
     for path in fixtures:
         fixture = load_json(path)
         metadata = fixture.get("metadata")

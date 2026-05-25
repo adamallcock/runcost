@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net/url"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -2493,6 +2496,60 @@ func PriceCardsFromSourceCache(data Object) []any {
 		}
 	}
 	return cards
+}
+
+func fileURL(path string) string {
+	absolute, err := filepath.Abs(path)
+	if err != nil {
+		absolute = path
+	}
+	return (&url.URL{Scheme: "file", Path: absolute}).String()
+}
+
+func withFileSourceURL(data Object, path string) Object {
+	if _, ok := data["source"].(map[string]any); ok {
+		return data
+	}
+	copyData := Object{}
+	for key, value := range data {
+		copyData[key] = value
+	}
+	copyData["source"] = Object{"url": fileURL(path)}
+	return copyData
+}
+
+// PriceCardsFromJSONFile reads a local JSON price-source file and maps it
+// through the requested source adapter.
+func PriceCardsFromJSONFile(path string, sourceType string) ([]any, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var data Object
+	if err := json.Unmarshal(raw, &data); err != nil {
+		return nil, err
+	}
+	if sourceType == "" {
+		sourceType = "user-pricing"
+	}
+	switch sourceType {
+	case "llm-prices":
+		return PriceCardsFromLlmPrices(data), nil
+	case "litellm":
+		return PriceCardsFromLiteLLM(data), nil
+	case "openrouter-models":
+		return PriceCardsFromOpenRouterModels(data), nil
+	case "portkey":
+		return PriceCardsFromPortkey(data), nil
+	case "source-cache":
+		return PriceCardsFromSourceCache(data), nil
+	case "user-pricing":
+		return PriceCardsFromUserPricing(withFileSourceURL(data, path)), nil
+	case "helicone":
+		return PriceCardsFromHelicone(data), nil
+	default:
+		return nil, fmt.Errorf("unsupported JSON price source type: %s", sourceType)
+	}
 }
 
 // PriceCardsFromUserPricing maps user-owned compact pricing data into

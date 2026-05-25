@@ -103,6 +103,7 @@ Streaming final usage:
 | LiteLLM model price JSON | `price_cards_from_litellm` | `priceCardsFromLiteLLM` | `PriceCardsFromLiteLLM` |
 | OpenRouter models API | `price_cards_from_openrouter_models` | `priceCardsFromOpenRouterModels` | `PriceCardsFromOpenRouterModels` |
 | Portkey pricing data | `price_cards_from_portkey` | `priceCardsFromPortkey` | `PriceCardsFromPortkey` |
+| Local JSON price-source file | `price_cards_from_json_file` | `priceCardsFromJSONFile` | `PriceCardsFromJSONFile` |
 | User compact pricing data | `price_cards_from_user_pricing` | `priceCardsFromUserPricing` | `PriceCardsFromUserPricing` |
 | Helicone model-registry data | `price_cards_from_helicone` | `priceCardsFromHelicone` | `PriceCardsFromHelicone` |
 

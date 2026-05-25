@@ -280,6 +280,16 @@ func resolvePriceCards(t *testing.T, input Object) []any {
 		return PriceCardsFromUserPricing(asObject(source["data"]))
 	case "helicone":
 		return PriceCardsFromHelicone(asObject(source["data"]))
+	case "json-file":
+		path := asString(source["path"])
+		if !filepath.IsAbs(path) {
+			path = filepath.Join("../../../", path)
+		}
+		cards, err := PriceCardsFromJSONFile(path, asString(source["source_type"]))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cards
 	default:
 		t.Fatalf("unsupported price source: %s", asString(source["type"]))
 	}
