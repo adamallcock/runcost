@@ -44,6 +44,7 @@ For mechanical coverage counts, see [Fixture Coverage](../reports/fixture-covera
 | LlamaIndex | TokenCountingHandler output | Fixture-backed |
 | Haystack | OpenAIChatGenerator reply metadata / OpenAIGenerator meta usage | Fixture-backed |
 | LiteLLM proxy | OpenAI-compatible usage plus hidden response cost metadata | Fixture-backed |
+| AutoGen / AG2 | `get_actual_usage()`, `get_total_usage()`, `gather_usage_summary(...)` summary dictionaries | Fixture-backed for selected usage summary shape |
 
 ## Documented Partial Adapter Paths
 
@@ -52,7 +53,6 @@ These paths are researched and documented in [Framework Adapter Notes](../notes/
 | Framework / Gateway | Object or Path | Status |
 |---|---|---|
 | Semantic Kernel | Function invocation filters, auto-function filters, connector token metadata | Documented path; not fixture-backed |
-| AutoGen / AG2 | `get_actual_usage()`, `get_total_usage()`, `gather_usage_summary(...)` | Documented path; not fixture-backed |
 | LangSmith | Trace usage metadata and bulk export cost comparison | Documented path; not fixture-backed |
 | OpenRouter-compatible SDK paths | OpenAI SDK base URL, OpenRouter SDK, Agent SDK full responses | Documented path; not fixture-backed |
 

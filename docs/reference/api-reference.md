@@ -82,6 +82,7 @@ Common one-call helper:
 | LlamaIndex token counter | `from_llamaindex_token_counter` | `fromLlamaIndexTokenCounter` | `FromLlamaIndexTokenCounter` |
 | Haystack generator result | `from_haystack_generator_result` | `fromHaystackGeneratorResult` | `FromHaystackGeneratorResult` |
 | LiteLLM proxy / SDK response | `from_litellm_response` | `fromLiteLLMResponse` | `FromLiteLLMResponse` |
+| AutoGen / AG2 usage summary | `from_ag2_usage_summary` | `fromAG2UsageSummary` | `FromAG2UsageSummary` |
 | LangChain callback/context manager | `track_langchain_costs` / `RunCostLangChainCallback` | N/A | N/A |
 | Vercel AI SDK middleware | N/A | `createRunCostVercelMiddleware` | N/A |
 

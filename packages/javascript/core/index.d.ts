@@ -322,6 +322,8 @@ export interface ExtractOptions {
   provider?: string;
   surface: string;
   model?: string;
+  ag2_usage_mode?: "actual" | "total" | "including_cached" | "usage_excluding_cached_inference" | "usage_including_cached_inference";
+  usage_mode?: string;
 }
 
 export interface FromResponseOptions extends ExtractOptions {
@@ -389,6 +391,7 @@ export function extractVercelAISDKUsage(response: Record<string, unknown>, optio
 export function extractLlamaIndexTokenCounterUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractHaystackGeneratorUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractLiteLLMProxyResponseUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractAG2UsageSummaryUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function priceCardsFromLlmPrices(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromLiteLLM(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromOpenRouterModels(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
@@ -401,4 +404,5 @@ export function fromVercelAISDKResult(result: Record<string, unknown>, options: 
 export function fromLlamaIndexTokenCounter(counter: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromHaystackGeneratorResult(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromLiteLLMResponse(response: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromAG2UsageSummary(summary: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function createRunCostVercelMiddleware(options: RunCostVercelMiddlewareOptions): RunCostVercelMiddleware;

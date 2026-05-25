@@ -1189,6 +1189,8 @@ func ExtractUsageLedger(response Object, options Object) Object {
 		return extractHaystackGeneratorUsage(response, options)
 	case "litellm.proxy_response":
 		return extractLiteLLMProxyResponseUsage(response, options)
+	case "ag2.usage_summary":
+		return extractAG2UsageSummaryUsage(response, options)
 	}
 
 	surface := asString(options["surface"])
@@ -1916,6 +1918,80 @@ func extractLiteLLMProxyResponseUsage(response Object, options Object) Object {
 	return extractOpenAICompatibleChatCompletionsUsage(response, options)
 }
 
+func ag2UsageSummaryPayload(response Object, options Object) (Object, string) {
+	mode := asString(options["ag2_usage_mode"])
+	if mode == "" {
+		mode = asString(options["usage_mode"])
+	}
+	if mode == "" {
+		mode = "actual"
+	}
+	excluding := asObject(response["usage_excluding_cached_inference"])
+	including := asObject(response["usage_including_cached_inference"])
+	if len(excluding) > 0 || len(including) > 0 {
+		switch mode {
+		case "total", "including_cached", "usage_including_cached_inference":
+			return including, "usage_including_cached_inference"
+		default:
+			return excluding, "usage_excluding_cached_inference"
+		}
+	}
+	return response, mode
+}
+
+func ag2ModelUsage(summary Object, requestedModel string) (string, Object) {
+	if requestedModel != "" {
+		usage := asObject(summary[requestedModel])
+		if len(usage) > 0 {
+			return requestedModel, usage
+		}
+	}
+	keys := make([]string, 0, len(summary))
+	for key := range summary {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		if key == "total_cost" {
+			continue
+		}
+		usage := asObject(summary[key])
+		if len(usage) > 0 {
+			return key, usage
+		}
+	}
+	if requestedModel != "" {
+		return requestedModel, Object{}
+	}
+	return "unknown", Object{}
+}
+
+func extractAG2UsageSummaryUsage(response Object, options Object) Object {
+	summary, mode := ag2UsageSummaryPayload(response, options)
+	returnedModel, modelUsage := ag2ModelUsage(summary, asString(options["model"]))
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "unknown"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "framework.ag2.usage_summary"
+	}
+	requestedModel := asString(options["model"])
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("input_uncached_tokens", getNumber(modelUsage, "prompt_tokens"), "token", "$."+mode+"."+returnedModel+".prompt_tokens"),
+		positiveComponent("output_text_tokens", getNumber(modelUsage, "completion_tokens"), "token", "$."+mode+"."+returnedModel+".completion_tokens"),
+	}), Object{
+		"mode":        mode,
+		"summary":     summary,
+		"model_usage": modelUsage,
+	})
+}
+
 func addPriceComponent(components *[]any, usageComponent string, unit string, amount any, per string, extra Object) {
 	if amount == nil {
 		return
@@ -2580,4 +2656,25 @@ func FromLiteLLMResponse(response Object, options Object, priceCards []any, disc
 	}
 	options["adapter"] = "litellm.proxy_response"
 	return FromResponse(response, options, priceCards, discountPolicies)
+}
+
+// FromAG2UsageSummary prices an AG2 usage summary returned from get_actual_usage,
+// get_total_usage, or gather_usage_summary.
+func FromAG2UsageSummary(summary Object, options Object, priceCards []any, discountPolicies []any) Object {
+	usageSummary, _ := ag2UsageSummaryPayload(summary, options)
+	_, modelUsage := ag2ModelUsage(usageSummary, asString(options["model"]))
+	if _, exists := options["provider_reported_cost"]; !exists {
+		reportedCost, hasCost := modelUsage["cost"]
+		if !hasCost {
+			reportedCost, hasCost = usageSummary["total_cost"]
+		}
+		if hasCost {
+			options["provider_reported_cost"] = reportedCost
+			if asString(options["provider_reported_cost_mode"]) == "" {
+				options["provider_reported_cost_mode"] = "compare"
+			}
+		}
+	}
+	options["adapter"] = "ag2.usage_summary"
+	return FromResponse(summary, options, priceCards, discountPolicies)
 }

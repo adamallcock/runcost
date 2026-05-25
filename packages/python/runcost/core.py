@@ -1374,6 +1374,49 @@ def extract_litellm_proxy_response_usage(response: Dict[str, Any], **options: An
     return extract_openai_compatible_chat_completions_usage(response, **merged_options)
 
 
+def _ag2_usage_summary_payload(response: Dict[str, Any], options: Dict[str, Any]) -> tuple[Dict[str, Any], str]:
+    mode = options.get("ag2_usage_mode") or options.get("usage_mode") or "actual"
+    if "usage_excluding_cached_inference" in response or "usage_including_cached_inference" in response:
+        if mode in {"total", "including_cached", "usage_including_cached_inference"}:
+            return response.get("usage_including_cached_inference") or {}, "usage_including_cached_inference"
+        return response.get("usage_excluding_cached_inference") or {}, "usage_excluding_cached_inference"
+    return response, str(mode)
+
+
+def _ag2_model_usage(summary: Dict[str, Any], requested_model: Optional[str]) -> tuple[str, Dict[str, Any]]:
+    if requested_model and isinstance(summary.get(requested_model), dict):
+        return requested_model, summary[requested_model]
+    for key, value in summary.items():
+        if key != "total_cost" and isinstance(value, dict):
+            return key, value
+    return requested_model or "unknown", {}
+
+
+def extract_ag2_usage_summary_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    summary, mode = _ag2_usage_summary_payload(response, options)
+    returned_model, model_usage = _ag2_model_usage(summary, options.get("model"))
+    prompt_tokens = model_usage.get("prompt_tokens", 0)
+    completion_tokens = model_usage.get("completion_tokens", 0)
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "unknown"),
+        surface=options.get("surface", "framework.ag2.usage_summary"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage={
+            "mode": mode,
+            "summary": summary,
+            "model_usage": model_usage,
+        },
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", prompt_tokens, "token", f"$.{mode}.{returned_model}.prompt_tokens"),
+                _positive_component("output_text_tokens", completion_tokens, "token", f"$.{mode}.{returned_model}.completion_tokens"),
+            ]
+        ),
+    )
+
+
 def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     adapter = options.get("adapter") or options.get("framework")
     if adapter == "langchain.chat_message":
@@ -1386,6 +1429,8 @@ def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, 
         return extract_haystack_generator_usage(response, **options)
     if adapter == "litellm.proxy_response":
         return extract_litellm_proxy_response_usage(response, **options)
+    if adapter == "ag2.usage_summary":
+        return extract_ag2_usage_summary_usage(response, **options)
 
     surface = options.get("surface")
     if surface == "openai.responses":
@@ -1894,6 +1939,7 @@ def from_response(
     provider: Optional[str] = None,
     surface: str,
     model: Optional[str] = None,
+    ag2_usage_mode: Optional[str] = None,
     price_cards: Iterable[Dict[str, Any]],
     discount_policies: Optional[Iterable[Dict[str, Any]]] = None,
     mode: str = "compatibility",
@@ -1912,6 +1958,8 @@ def from_response(
         options["provider"] = provider
     if model:
         options["model"] = model
+    if ag2_usage_mode:
+        options["ag2_usage_mode"] = ag2_usage_mode
     try:
         usage_ledger = extract_usage_ledger(response, **options)
     except ValueError:
@@ -1965,6 +2013,19 @@ def from_litellm_response(response: Dict[str, Any], **options: Any) -> Dict[str,
             merged_options.setdefault("provider_reported_cost_mode", "compare")
     merged_options["adapter"] = "litellm.proxy_response"
     return from_response(response, **merged_options)
+
+
+def from_ag2_usage_summary(summary: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = dict(options)
+    usage_summary, _mode = _ag2_usage_summary_payload(summary, merged_options)
+    _model_name, model_usage = _ag2_model_usage(usage_summary, merged_options.get("model"))
+    if "provider_reported_cost" not in merged_options:
+        reported_cost = model_usage.get("cost") or usage_summary.get("total_cost")
+        if reported_cost is not None:
+            merged_options["provider_reported_cost"] = reported_cost
+            merged_options.setdefault("provider_reported_cost_mode", "compare")
+    merged_options["adapter"] = "ag2.usage_summary"
+    return from_response(summary, **merged_options)
 
 
 def _langchain_message_from_generation(generation: Any) -> Optional[Dict[str, Any]]:

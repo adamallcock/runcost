@@ -13,7 +13,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 59
+- Fixtures: 61
 - Providers: 15
 - Provider surfaces: 16
 - Usage components covered: 20
@@ -24,9 +24,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 57 |
-| `javascript` | 58 |
-| `python` | 58 |
+| `go` | 59 |
+| `javascript` | 60 |
+| `python` | 60 |
 
 ## Scenarios
 
@@ -35,7 +35,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `aggregation` | 2 |
 | `debug_trace` | 1 |
 | `discount` | 1 |
-| `framework_adapter` | 7 |
+| `framework_adapter` | 9 |
 | `long_context` | 2 |
 | `normalized_usage` | 3 |
 | `provider_reported` | 2 |
@@ -62,7 +62,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `groq` | `groq.chat_completions` | 1 |
 | `huggingface` | `huggingface.chat_completions` | 1 |
 | `mistral` | `mistral.chat_completions` | 1 |
-| `openai` | `openai.chat_completions` | 6 |
+| `openai` | `openai.chat_completions` | 8 |
 | `openai` | `openai.responses` | 28 |
 | `openrouter` | `openrouter.chat_completions` | 5 |
 | `vertex` | `vertex.gemini.generate_content` | 1 |
@@ -83,12 +83,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `input_cache_write_tokens` | 10 |
 | `input_image_tokens` | 2 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 52 |
+| `input_uncached_tokens` | 54 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 1 |
 | `output_image_tokens` | 2 |
 | `output_reasoning_tokens` | 22 |
-| `output_text_tokens` | 42 |
+| `output_text_tokens` | 44 |
 | `output_video_tokens` | 1 |
 | `request_units` | 3 |
 | `web_search_units` | 6 |
@@ -123,6 +123,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Adapter | Fixtures |
 |---|---:|
+| `from_ag2_usage_summary` | 2 |
 | `from_haystack_generator_result` | 1 |
 | `from_langchain_message` | 1 |
 | `from_litellm_response` | 1 |
@@ -140,11 +141,11 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-CUSTOM-PRICING` | 1 |
 | `RC-DEBUG-TRACE` | 1 |
 | `RC-DISCOUNT-POLICY` | 1 |
-| `RC-FIXTURE-CONFORMANCE` | 59 |
-| `RC-FRAMEWORK-ADAPTER` | 5 |
+| `RC-FIXTURE-CONFORMANCE` | 61 |
+| `RC-FRAMEWORK-ADAPTER` | 7 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
 | `RC-LONG-CONTEXT` | 2 |
-| `RC-PROVIDER-REPORTED-COST` | 3 |
+| `RC-PROVIDER-REPORTED-COST` | 5 |
 | `RC-RAW-EXTRACTOR` | 23 |
 | `RC-SERVICE-MODE` | 3 |
 | `RC-SERVICE-TIER` | 2 |
@@ -157,6 +158,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Tag | Fixtures |
 |---|---:|
+| `adapter:ag2.usage_summary` | 2 |
 | `adapter:haystack.generator_result` | 1 |
 | `adapter:langchain.chat_message` | 2 |
 | `adapter:litellm.proxy_response` | 1 |
@@ -176,21 +178,23 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:input_cache_write_tokens` | 10 |
 | `component:input_image_tokens` | 2 |
 | `component:input_image_units` | 1 |
-| `component:input_uncached_tokens` | 52 |
+| `component:input_uncached_tokens` | 54 |
 | `component:input_video_tokens` | 1 |
 | `component:output_audio_tokens` | 1 |
 | `component:output_image_tokens` | 2 |
 | `component:output_reasoning_tokens` | 22 |
-| `component:output_text_tokens` | 42 |
+| `component:output_text_tokens` | 44 |
 | `component:output_video_tokens` | 1 |
 | `component:request_units` | 3 |
 | `component:web_search_units` | 6 |
 | `debug_trace` | 1 |
 | `discount` | 1 |
 | `effective_date` | 1 |
+| `framework:ag2` | 2 |
 | `framework:haystack` | 1 |
 | `framework:litellm` | 1 |
-| `framework_adapter` | 7 |
+| `framework_adapter` | 9 |
+| `helper:from_ag2_usage_summary` | 2 |
 | `helper:from_haystack_generator_result` | 1 |
 | `helper:from_langchain_message` | 1 |
 | `helper:from_litellm_response` | 1 |
@@ -199,9 +203,10 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `helper:langchain_callback` | 1 |
 | `helper:vercel_ai_sdk_middleware` | 1 |
 | `long_context` | 2 |
+| `mode:total` | 1 |
 | `multimodal` | 1 |
 | `normalized_usage` | 3 |
-| `provider_reported` | 2 |
+| `provider_reported` | 4 |
 | `raw_provider_response` | 23 |
 | `reasoning` | 8 |
 | `service_mode` | 3 |

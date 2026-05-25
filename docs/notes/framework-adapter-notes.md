@@ -21,14 +21,15 @@ Framework extraction is selected with `extract.adapter`:
 - `llamaindex.token_counter`
 - `haystack.generator_result`
 - `litellm.proxy_response`
+- `ag2.usage_summary`
 
 The output usage ledger keeps `provider`, `surface`, and `model` from the caller or framework response, so existing provider price cards remain usable.
 
 For one-call cost calculation, use the public helpers:
 
-- Python: `from_langchain_message`, `from_vercel_ai_sdk_result`, `from_llamaindex_token_counter`, `from_haystack_generator_result`, `from_litellm_response`.
-- JavaScript/TypeScript: `fromLangChainMessage`, `fromVercelAISDKResult`, `fromLlamaIndexTokenCounter`, `fromHaystackGeneratorResult`, `fromLiteLLMResponse`.
-- Go: `FromLangChainMessage`, `FromVercelAISDKResult`, `FromLlamaIndexTokenCounter`, `FromHaystackGeneratorResult`, `FromLiteLLMResponse`.
+- Python: `from_langchain_message`, `from_vercel_ai_sdk_result`, `from_llamaindex_token_counter`, `from_haystack_generator_result`, `from_litellm_response`, `from_ag2_usage_summary`.
+- JavaScript/TypeScript: `fromLangChainMessage`, `fromVercelAISDKResult`, `fromLlamaIndexTokenCounter`, `fromHaystackGeneratorResult`, `fromLiteLLMResponse`, `fromAG2UsageSummary`.
+- Go: `FromLangChainMessage`, `FromVercelAISDKResult`, `FromLlamaIndexTokenCounter`, `FromHaystackGeneratorResult`, `FromLiteLLMResponse`, `FromAG2UsageSummary`.
 
 For framework-native ergonomics, use:
 
@@ -160,6 +161,26 @@ Notes:
 
 - LiteLLM proxy aliases and `/model/info` pricing metadata remain part of the source-adapter workstream; this adapter handles response usage and response-cost metadata, not proxy config ingestion.
 
+## AutoGen / AG2 Usage Summary
+
+Source reference:
+
+- AG2 documents `OpenAIWrapper.print_usage_summary()`, `Agent.get_actual_usage()`, `Agent.get_total_usage()`, `autogen.gather_usage_summary(agents)`, cached-vs-actual modes, custom token prices, and an Azure model-version caution: https://docs.ag2.ai/latest/docs/use-cases/notebooks/notebooks/agentchat_cost_token_tracking/
+
+Mapping:
+
+- By default, use `usage_excluding_cached_inference` when the summary includes AG2 gathered usage buckets.
+- Use `usage_including_cached_inference` when `ag2_usage_mode` / `usage_mode` is `total`, `including_cached`, or `usage_including_cached_inference`.
+- `<model>.prompt_tokens` -> `input_uncached_tokens`.
+- `<model>.completion_tokens` -> `output_text_tokens`.
+- `<model>.total_tokens` is preserved in raw usage but is never priced directly.
+- `<model>.cost` or top-level `total_cost` is passed as provider/framework-reported cost for comparison by `from_ag2_usage_summary`, `fromAG2UsageSummary`, and `FromAG2UsageSummary`.
+
+Notes:
+
+- AG2's cost can depend on custom prices and Azure model-version assumptions, so RunCost compares AG2-reported cost as framework-reported cost rather than treating it as authoritative by default.
+- This adapter is fixture-backed for selected AG2 usage summary dictionaries. It is not a full wrapper around every AutoGen or AG2 runtime callback, stream, or tool path.
+
 ## Planned / Partial Adapter Paths
 
 The following paths are documented from current primary docs but are not fixture-backed in the current prototype. Treat them as research-backed adapter targets, not implemented support.
@@ -181,23 +202,6 @@ Recommended bridge:
 Status:
 
 - Partial documentation only. No `semantic_kernel.*` adapter is implemented yet.
-
-### AutoGen / AG2
-
-Source reference:
-
-- AG2 documents `OpenAIWrapper.print_usage_summary()`, `Agent.get_actual_usage()`, `Agent.get_total_usage()`, `autogen.gather_usage_summary(agents)`, cached-vs-actual modes, custom token prices, and an Azure model-version caution: https://docs.ag2.ai/latest/docs/use-cases/notebooks/notebooks/agentchat_cost_token_tracking/
-
-Recommended bridge:
-
-- Prefer `Agent.get_actual_usage()` for non-cache completions and `Agent.get_total_usage()` when the caller wants all completions including cache.
-- Normalize AG2 summary dictionaries into one ledger per model/provider bucket when the summary is already aggregated.
-- Do not trust AG2's estimated cost as authoritative by default; compare it as provider/framework-reported cost because AG2 docs call out custom price and Azure model-version caveats.
-- Preserve the AG2 mode (`actual` vs `total`) in raw usage and warnings.
-
-Status:
-
-- Partial documentation only. No `autogen.*` or `ag2.*` adapter is implemented yet.
 
 ### LangSmith Export / Compare
 

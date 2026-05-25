@@ -19,6 +19,7 @@ from runcost import (  # noqa: E402
     aggregate_cost_ledgers,
     calculate_cost,
     extract_usage_ledger,
+    from_ag2_usage_summary,
     from_haystack_generator_result,
     from_langchain_message,
     from_litellm_response,
@@ -221,6 +222,7 @@ def run_python_fixture(fixture):
                 "llamaindex.token_counter",
                 "haystack.generator_result",
                 "litellm.proxy_response",
+                "ag2.usage_summary",
             } or input_data["extract"].get("surface") in {
                 "openai.responses",
                 "openai.chat_completions",
@@ -257,6 +259,8 @@ def run_python_fixture(fixture):
             return from_haystack_generator_result(input_data["raw_response"], **helper_options)
         if helper == "from_litellm_response":
             return from_litellm_response(input_data["raw_response"], **helper_options)
+        if helper == "from_ag2_usage_summary":
+            return from_ag2_usage_summary(input_data["raw_response"], **helper_options)
         if helper == "langchain_callback":
             with track_langchain_costs(**helper_options) as callback:
                 callback.on_llm_end(input_data["raw_response"])
@@ -281,7 +285,7 @@ def run_python_fixture(fixture):
 def run_javascript_fixture(path: Path):
     script = f"""
       import {{ aggregateCostLedgers, calculateCost }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
-      import {{ fromResponse, fromLangChainMessage, fromVercelAISDKResult, fromLlamaIndexTokenCounter, fromHaystackGeneratorResult, fromLiteLLMResponse, createRunCostVercelMiddleware, priceCardsFromLlmPrices }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
+      import {{ fromResponse, fromLangChainMessage, fromVercelAISDKResult, fromLlamaIndexTokenCounter, fromHaystackGeneratorResult, fromLiteLLMResponse, fromAG2UsageSummary, createRunCostVercelMiddleware, priceCardsFromLlmPrices }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
       import fs from "node:fs";
       const fixture = JSON.parse(fs.readFileSync({json.dumps(str(path))}, "utf8"));
       const input = fixture.input;
@@ -332,9 +336,11 @@ def run_javascript_fixture(path: Path):
                 ? fromHaystackGeneratorResult(input.raw_response, responseOptions)
                 : input.helper === "from_litellm_response"
                   ? fromLiteLLMResponse(input.raw_response, responseOptions)
-                  : input.helper === "vercel_ai_sdk_middleware"
-                    ? (await createRunCostVercelMiddleware(responseOptions).wrapGenerate({{ doGenerate: async () => input.raw_response }})).runCost
-                    : fromResponse(input.raw_response, responseOptions)
+                  : input.helper === "from_ag2_usage_summary"
+                    ? fromAG2UsageSummary(input.raw_response, responseOptions)
+                    : input.helper === "vercel_ai_sdk_middleware"
+                      ? (await createRunCostVercelMiddleware(responseOptions).wrapGenerate({{ doGenerate: async () => input.raw_response }})).runCost
+                      : fromResponse(input.raw_response, responseOptions)
         : calculateCost({{
             usageLedger: input.usage_ledger,
             priceCards,

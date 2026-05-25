@@ -70,6 +70,9 @@ PUBLIC_API_NAMES = [
     "from_litellm_response",
     "fromLiteLLMResponse",
     "FromLiteLLMResponse",
+    "from_ag2_usage_summary",
+    "fromAG2UsageSummary",
+    "FromAG2UsageSummary",
     "DebugTrace",
     "debug_trace",
     "debugTrace",
@@ -89,6 +92,8 @@ PUBLIC_API_NAMES = [
     "extract_haystack_generator_usage",
     "extractLiteLLMProxyResponseUsage",
     "extract_litellm_proxy_response_usage",
+    "extractAG2UsageSummaryUsage",
+    "extract_ag2_usage_summary_usage",
     "extractOpenRouterChatCompletionsUsage",
     "extract_openrouter_chat_completions_usage",
     "extractOpenAICompatibleChatCompletionsUsage",
@@ -193,6 +198,7 @@ def check_public_api_artifacts() -> None:
         "fromLlamaIndexTokenCounter",
         "fromHaystackGeneratorResult",
         "fromLiteLLMResponse",
+        "fromAG2UsageSummary",
         "priceCardsFromLlmPrices",
         "priceCardsFromLiteLLM",
         "priceCardsFromOpenRouterModels",
@@ -206,6 +212,7 @@ def check_public_api_artifacts() -> None:
         "extractLlamaIndexTokenCounterUsage",
         "extractHaystackGeneratorUsage",
         "extractLiteLLMProxyResponseUsage",
+        "extractAG2UsageSummaryUsage",
         "UsageLedger",
         "PriceCard",
         "CostLedger",
@@ -229,6 +236,7 @@ def check_public_api_artifacts() -> None:
         "from_llamaindex_token_counter",
         "from_haystack_generator_result",
         "from_litellm_response",
+        "from_ag2_usage_summary",
         "price_cards_from_litellm",
         "price_cards_from_openrouter_models",
         "price_cards_from_portkey",
@@ -241,6 +249,7 @@ def check_public_api_artifacts() -> None:
         "extract_llamaindex_token_counter_usage",
         "extract_haystack_generator_usage",
         "extract_litellm_proxy_response_usage",
+        "extract_ag2_usage_summary_usage",
     ]:
         assert_true(exported in python_init or exported in python_types, f"Python package missing {exported}")
 
@@ -262,6 +271,7 @@ def check_public_api_artifacts() -> None:
         "FromLlamaIndexTokenCounter",
         "FromHaystackGeneratorResult",
         "FromLiteLLMResponse",
+        "FromAG2UsageSummary",
     ]:
         assert_true(
             re.search(rf"// {exported}\b", go_source) is not None,
@@ -274,7 +284,7 @@ def check_public_api_artifacts() -> None:
 
 def check_fixture_floor() -> None:
     fixtures = sorted((ROOT / "fixtures").glob("*.json"))
-    assert_true(len(fixtures) >= 59, f"expected at least 59 fixtures, found {len(fixtures)}")
+    assert_true(len(fixtures) >= 61, f"expected at least 61 fixtures, found {len(fixtures)}")
     for path in fixtures:
         fixture = load_json(path)
         metadata = fixture.get("metadata")
@@ -306,7 +316,7 @@ def check_documented_partial_framework_paths() -> None:
     supported_surfaces = (ROOT / "docs/reference/supported-surfaces.md").read_text(encoding="utf-8")
     parity = (ROOT / "docs/notes/api-parity-matrix.md").read_text(encoding="utf-8")
 
-    required_terms = [
+    framework_note_terms = [
         "Semantic Kernel",
         "Haystack",
         "AutoGen / AG2",
@@ -314,8 +324,8 @@ def check_documented_partial_framework_paths() -> None:
         "LiteLLM Proxy Response Metadata",
         "OpenRouter-Compatible SDK Paths",
     ]
-    for term in required_terms:
-        assert_true(term in framework_notes, f"framework adapter notes missing partial path: {term}")
+    for term in framework_note_terms:
+        assert_true(term in framework_notes, f"framework adapter notes missing framework path: {term}")
 
     for term in [
         "Semantic Kernel",
@@ -325,8 +335,16 @@ def check_documented_partial_framework_paths() -> None:
         "LiteLLM proxy",
         "OpenRouter-compatible SDK paths",
     ]:
-        assert_true(term in supported_surfaces, f"supported surfaces missing partial path: {term}")
-        assert_true(term in parity, f"API parity matrix missing partial path: {term}")
+        assert_true(term in supported_surfaces, f"supported surfaces missing framework path: {term}")
+        assert_true(term in parity, f"API parity matrix missing framework path: {term}")
+
+    for term in [
+        "Semantic Kernel",
+        "LangSmith",
+        "OpenRouter-compatible SDK paths",
+    ]:
+        assert_true(term in supported_surfaces, f"supported surfaces missing partial framework path: {term}")
+        assert_true(term in parity, f"API parity matrix missing partial framework path: {term}")
 
 
 def main() -> int:

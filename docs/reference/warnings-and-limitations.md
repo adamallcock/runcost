@@ -77,8 +77,9 @@ Warnings include a message, and may include a `path` and `metadata`.
 - Tool-call pricing coverage exists only for selected fixtures and provider shapes.
 - Historical point-in-time pricing exists in the model but is not comprehensive.
 - Framework adapters cover selected usage metadata objects plus initial LangChain callback/context-manager and Vercel `wrapGenerate` middleware helpers, not every framework callback or streaming pattern.
-- Semantic Kernel, AutoGen/AG2, LangSmith, and OpenRouter-compatible SDK paths are documented as partial integration paths only; they still need fixture-backed adapters before they are supported.
-- Haystack and LiteLLM proxy metadata now have fixture-backed adapters, but only for selected OpenAI-compatible metadata shapes.
+- Semantic Kernel, LangSmith, and OpenRouter-compatible SDK paths are documented as partial integration paths only; they still need fixture-backed adapters before they are supported.
+- Haystack, LiteLLM proxy metadata, and AutoGen/AG2 usage summaries now have fixture-backed adapters, but only for selected metadata or summary shapes.
+- AutoGen/AG2 support compares AG2-reported cost from usage summaries as framework-reported cost; AG2 custom-price and Azure model-version behavior can make that value differ from RunCost price cards.
 
 ## Production Guidance
 

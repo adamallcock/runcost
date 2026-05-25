@@ -148,6 +148,8 @@ func runFixture(t *testing.T, fixture Object) Object {
 			return FromHaystackGeneratorResult(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
 		case "from_litellm_response":
 			return FromLiteLLMResponse(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
+		case "from_ag2_usage_summary":
+			return FromAG2UsageSummary(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
 		default:
 			return FromResponse(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
 		}

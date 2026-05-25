@@ -20,7 +20,7 @@ Complete `PROJECT_PLAN.md` end to end, moving from prototype foundation toward p
 Evidence collected on 2026-05-25:
 
 - `npm test` passes.
-- Python and JavaScript fixture runner checks 59 shared fixtures, with fixture metadata allowing language-scoped framework ergonomics fixtures.
+- Python and JavaScript fixture runner checks 61 shared fixtures, with fixture metadata allowing language-scoped framework ergonomics fixtures.
 - Fixture metadata and checked-in coverage report pass through `python3 scripts/check_fixture_coverage.py`.
 - Go package passes `go test ./packages/go/...`.
 - Python compile check passes for package, scripts, and Python example.
@@ -77,6 +77,7 @@ Status: complete for this pass.
 | Add documented partial framework adapter paths | Done | `docs/notes/framework-adapter-notes.md`, `docs/reference/supported-surfaces.md`, `docs/notes/api-parity-matrix.md`; hygiene check guards names | Covers Semantic Kernel, AutoGen/AG2, LangSmith export comparison, and OpenRouter-compatible SDK paths as researched but not fixture-backed targets; Haystack and LiteLLM were later promoted to fixture-backed adapters. |
 | Add Haystack and LiteLLM fixture-backed framework adapters | Done | `haystack-openai-chat-generator-meta.json`, `litellm-proxy-response-cost-metadata.json`; Python/JS fixture runner and Go tests pass | Adds one-call helpers and extractors across Python, JavaScript/TypeScript, and Go. |
 | Normalize documentation layout | Done | `docs/guides/`, `docs/reference/`, `docs/notes/`, `docs/decisions/`, `docs/reports/`, `docs/process/`; hygiene and release scripts use new paths | Preserves content while moving dated/uppercase docs into categorized lowercase paths. |
+| Add AutoGen/AG2 fixture-backed framework adapter | Done | `ag2-usage-summary-actual.json`, `ag2-usage-summary-total.json`; Python/JS fixture runner, Go tests, package install checks, release checks, examples, JSON parse, ASCII scan, and diff whitespace checks pass | Adds selected usage summary extraction and one-call helpers across Python, JavaScript/TypeScript, and Go. |
 
 ## Milestone Status
 
@@ -89,7 +90,7 @@ Status: complete for this pass.
 | Milestone 3: Source Adapter Layer | In progress | `llm-prices`, LiteLLM, Portkey, OpenRouter models, user compact pricing, and Helicone prototype adapters exist. |
 | Milestone 4: Provider Extractors V0 | In progress | OpenAI, Anthropic, OpenRouter, Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Google Gemini/Vertex, and AWS Bedrock extractors exist; cache, reasoning, billed-unit, basic raw response, and selected final streaming usage cases covered for supported surfaces. |
 | Milestone 5: Tool Call and Feature Pricing | In progress | Generic and raw OpenAI tool-call fixtures exist; Gemini/Vertex multimodal token detail fixture exists; provider-specific tool pricing coverage still sparse. |
-| Milestone 6: Framework Adapters | In progress | LangChain AIMessage, Vercel AI SDK generateText, LlamaIndex TokenCountingHandler, Haystack generator metadata, LiteLLM proxy response metadata, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` middleware, and cross-language cost-ledger aggregation exist with fixtures; Semantic Kernel, AutoGen/AG2, LangSmith export comparison, and OpenRouter-compatible SDK paths have documented partial adapter paths; remaining frameworks still need fixtures, implementations, examples, and streaming parsers. |
+| Milestone 6: Framework Adapters | In progress | LangChain AIMessage, Vercel AI SDK generateText, LlamaIndex TokenCountingHandler, Haystack generator metadata, LiteLLM proxy response metadata, AutoGen/AG2 usage summary, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` middleware, and cross-language cost-ledger aggregation exist with fixtures; Semantic Kernel, LangSmith export comparison, and OpenRouter-compatible SDK paths have documented partial adapter paths; remaining frameworks still need fixtures, implementations, examples, and streaming parsers. |
 | Milestone 7: Packaging and Developer Experience | In progress | Package metadata, type surfaces, examples, CI, clean install smoke checks, public alpha docs, license metadata, changelog, contributing/security docs, release process, release readiness checks, and guarded release workflow exist; first registry publishing remains incomplete. |
 | Milestone 8: Alpha Quality and Feedback | Not started | None. |
 | Milestone 9: Public Beta | Not started | None. |
@@ -575,6 +576,33 @@ Status: complete for this pass.
   - `git diff --check` passed.
   - Markdown frontmatter inventory passed with `README.md` intentionally exempted.
 
+### 2026-05-25 AutoGen/AG2 Adapter Slice
+
+- Verified the current AG2 usage tracking docs:
+  - `OpenAIWrapper.print_usage_summary()` exposes actual and total modes.
+  - `Agent.get_actual_usage()`, `Agent.get_total_usage()`, and `autogen.gather_usage_summary(agents)` return usage summary dictionaries.
+  - AG2 documents custom token prices and Azure model-version caveats, so RunCost treats AG2 cost as framework-reported comparison data rather than authoritative price data by default.
+- Added framework adapter extractors and one-call helpers across Python, JavaScript/TypeScript, and Go:
+  - `extract_ag2_usage_summary_usage`, `extractAG2UsageSummaryUsage`, Go internal extraction, plus `from_ag2_usage_summary`, `fromAG2UsageSummary`, `FromAG2UsageSummary`.
+- Added shared fixtures:
+  - `ag2-usage-summary-actual.json`
+  - `ag2-usage-summary-total.json`
+- Updated fixture runners, TypeScript declarations, Python exports, Go API comments, package install smoke checks, API reference, supported surfaces, API parity matrix, framework notes, README, project plan, warning docs, fixture coverage report, and hygiene checks.
+- Verification after AutoGen/AG2 adapter slice:
+  - `python3 scripts/check_fixtures.py` passed with 61 fixtures across Python and JavaScript.
+  - `gofmt -w packages/go/ledger/ledger.go packages/go/ledger/ledger_test.go && go test ./packages/go/...` passed.
+  - `python3 scripts/check_fixture_coverage.py --write-report` passed and regenerated coverage for 61 fixtures.
+  - `python3 scripts/check_project_hygiene.py` passed.
+  - `npm test` passed: 61 fixtures, fixture coverage, Go tests, and hygiene checks green.
+  - `npm run check:coverage` passed.
+  - `npm run check:packages` passed with clean Python, npm, and Go install smoke checks including the new AutoGen/AG2 helper APIs.
+  - `npm run check:release` passed.
+  - `python3 -m py_compile` passed for package modules, scripts, and examples.
+  - `npm run example:js` and `npm run example:py` both ran and returned total `0.000228`.
+  - `jq empty` parsed schemas, fixtures, and package JSON files.
+  - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
+  - `git diff --check` passed.
+
 ## Gap Audit 2026-05-25
 
 Purpose: step back from feature slices and record what is actually done, what is partial, what is a stub, and what still needs completion before private alpha, public beta, and V1.
@@ -589,8 +617,8 @@ Naming update:
 
 Audit evidence:
 
-- `python3 scripts/check_fixtures.py` passed with 59 fixtures across declared Python and JavaScript fixture coverage.
-- `python3 scripts/check_fixture_coverage.py` passed with metadata on all 59 fixtures and a current checked-in coverage report.
+- `python3 scripts/check_fixtures.py` passed with 61 fixtures across declared Python and JavaScript fixture coverage.
+- `python3 scripts/check_fixture_coverage.py` passed with metadata on all 61 fixtures and a current checked-in coverage report.
 - `npm test` passed: fixture checks, Go tests, and project hygiene checks green.
 - `npm run check:packages` passed: clean Python, npm, and Go install smoke checks green.
 - `npm run check:release` passed: release docs, license metadata, version sync, changelog, and release workflow guardrails are checked.
@@ -626,7 +654,7 @@ What is implemented and well covered:
 - Optional debug traces for price-card candidates, component matches, model alias resolution, discount applications, and warnings.
 - Source adapters for `llm-prices`, LiteLLM, Portkey, OpenRouter models, user compact pricing, and Helicone model-registry data.
 - Provider extractors for OpenAI Responses, OpenAI Chat Completions, Anthropic Messages, OpenRouter chat completions, Groq, xAI chat, Mistral, DeepSeek, Azure OpenAI chat, Hugging Face Inference Providers chat, Cohere Chat, Gemini/Vertex generateContent, and Bedrock Converse, including selected final streaming usage envelopes for OpenAI Responses, Anthropic Messages, and Gemini generateContent.
-- Framework metadata helpers for LangChain AIMessage, Vercel AI SDK generateText result objects, LlamaIndex TokenCountingHandler data, Python LangChain callback/context-manager usage, and JavaScript Vercel `wrapGenerate` middleware.
+- Framework metadata helpers for LangChain AIMessage, Vercel AI SDK generateText result objects, LlamaIndex TokenCountingHandler data, Haystack generator metadata, LiteLLM proxy response metadata, AutoGen/AG2 usage summaries, Python LangChain callback/context-manager usage, and JavaScript Vercel `wrapGenerate` middleware.
 - Cost-ledger aggregation for multi-call/session rollups, with fixture-backed `stream_usage_missing` warnings when final stream usage is expected but absent.
 - Docs for project plan, product requirements, architecture, market validation, live evaluation protocol, parity matrix, provider extractor notes, framework adapter notes, polyglot tooling decision, contribution, security, changelog, and release process.
 
@@ -640,7 +668,7 @@ Partially implemented:
 - Provider extractors: broad base coverage exists, but many surfaces are thin. OpenAI Responses, Anthropic Messages, and Gemini final stream usage shapes now have fixtures, but xAI Responses, OpenAI Conversations, Bedrock non-Converse paths, provider-specific tool fields, other streaming variants, embeddings, rerank, image/audio/video generation, and transcription paths are not covered.
 - Tool pricing: generic tool components, OpenAI raw tool calls, OpenRouter image/request/search source pricing, and custom units exist. Provider-specific tool pricing remains sparse.
 - Multimodal: Gemini/Vertex modality token details are covered. Other providers and generated-media billing are not.
-- Framework adapters: direct metadata/result objects are covered for LangChain, Vercel AI SDK, LlamaIndex, Haystack, and LiteLLM proxy responses. Initial Python LangChain callback/context-manager plus JavaScript Vercel middleware helpers exist, and generic multi-step cost-ledger aggregation now exists. Semantic Kernel, AutoGen/AG2, LangSmith export comparison, and OpenRouter-compatible SDK paths have documented partial adapter paths, but they are not implemented or fixture-backed. Framework-specific stream integrations, OpenAI Agents SDK, and concrete examples for the remaining partial paths are still missing.
+- Framework adapters: direct metadata/result objects are covered for LangChain, Vercel AI SDK, LlamaIndex, Haystack, LiteLLM proxy responses, and AutoGen/AG2 usage summaries. Initial Python LangChain callback/context-manager plus JavaScript Vercel middleware helpers exist, and generic multi-step cost-ledger aggregation now exists. Semantic Kernel, LangSmith export comparison, and OpenRouter-compatible SDK paths have documented partial adapter paths, but they are not implemented or fixture-backed. Framework-specific stream integrations, OpenAI Agents SDK, and concrete examples for the remaining partial paths are still missing.
 - Documentation: public quickstart, installation, API reference, aggregation/streaming, debug trace, custom pricing, discount, warning/strict-mode, source adapter, support-matrix docs, contribution guide, security/privacy note, changelog, and release process now exist. Deeper framework integration guides and automated release notes are still missing.
 - Packaging: clean local install checks now pass for Python, JavaScript/TypeScript, and Go. License metadata, PyPI/npm guarded release workflow, Go tag policy, changelog, provenance guidance, and release readiness checks exist. First real registry publication and trusted publisher configuration remain incomplete.
 
@@ -659,13 +687,13 @@ Highest-risk gaps before private alpha:
 2. Broader provider/framework streaming support beyond the initial OpenAI, Anthropic, and Gemini final-usage fixtures.
 3. Source adapter completeness: official snapshots, full file-reading YAML loaders, refresh/cache workflow, and historical feed semantics.
 4. Hardened typed models and generated artifact workflow, especially for Go structs and generated docs.
-5. Broader framework integration ergonomics beyond the initial LangChain/Vercel helpers, especially turning documented partial paths into fixture-backed adapters and examples.
+5. Broader framework integration ergonomics beyond the initial LangChain/Vercel helpers, especially turning remaining documented partial paths into fixture-backed adapters and examples.
 6. Deeper debug traces for extractor and framework adapter internals.
 7. Fixture generator helpers and stronger generated artifact drift detection.
 
 Recommended next sprint:
 
-1. Broader framework implementation slice: add fixtures and minimal adapters/examples for the next documented partial path, likely AutoGen/AG2 usage summaries or LangSmith export comparison.
+1. Broader framework implementation slice: add fixtures and minimal adapters/examples for the next documented partial path, likely LangSmith export comparison or Semantic Kernel telemetry.
 2. Provider streaming expansion slice: add additional stream finalization fixtures for Vertex-specific SDK wrappers, Bedrock ConverseStream, Vercel AI SDK `streamText` finish parts, and any provider-specific tool streaming fields.
 3. Release hardening slice: configure trusted publishing outside the repo, decide registry README shape, and run a no-publish release workflow dry run.
 4. Source adapter hardening slice: add official snapshots, full file-reading YAML loaders, refresh/cache workflow, and historical feed semantics.
@@ -673,7 +701,7 @@ Recommended next sprint:
 
 ## Next Best Actions
 
-1. Add fixture-backed adapter coverage for AutoGen/AG2 usage summaries or LangSmith export comparison.
+1. Add fixture-backed adapter coverage for LangSmith export comparison or Semantic Kernel telemetry.
 2. Add provider-specific fixtures for OpenAI-compatible tool, remaining multimodal providers, compound-routing, and service-tier fields beyond base token usage.
 3. Extend debug traces into source conflict reports, extractor internals, and framework middleware decisions.
 4. Add framework examples showing one- or two-line integration in Python and JavaScript for fixture-backed framework paths.

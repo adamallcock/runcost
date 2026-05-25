@@ -1414,6 +1414,70 @@ export function extractLiteLLMProxyResponseUsage(response, options = {}) {
   });
 }
 
+function ag2UsageSummaryPayload(response, options = {}) {
+  const mode = options.ag2_usage_mode || options.usage_mode || "actual";
+  if (response.usage_excluding_cached_inference || response.usage_including_cached_inference) {
+    if (["total", "including_cached", "usage_including_cached_inference"].includes(mode)) {
+      return {
+        summary: response.usage_including_cached_inference || {},
+        mode: "usage_including_cached_inference"
+      };
+    }
+    return {
+      summary: response.usage_excluding_cached_inference || {},
+      mode: "usage_excluding_cached_inference"
+    };
+  }
+  return {
+    summary: response,
+    mode: String(mode)
+  };
+}
+
+function ag2ModelUsage(summary, requestedModel) {
+  if (requestedModel && summary[requestedModel] && typeof summary[requestedModel] === "object") {
+    return {
+      model: requestedModel,
+      usage: summary[requestedModel]
+    };
+  }
+  for (const [key, value] of Object.entries(summary)) {
+    if (key !== "total_cost" && value && typeof value === "object") {
+      return {
+        model: key,
+        usage: value
+      };
+    }
+  }
+  return {
+    model: requestedModel || "unknown",
+    usage: {}
+  };
+}
+
+export function extractAG2UsageSummaryUsage(response, options = {}) {
+  const { summary, mode } = ag2UsageSummaryPayload(response, options);
+  const { model, usage } = ag2ModelUsage(summary, options.model);
+  const promptTokens = usage.prompt_tokens || 0;
+  const completionTokens = usage.completion_tokens || 0;
+
+  return baseUsageLedger({
+    provider: options.provider || "unknown",
+    surface: options.surface || "framework.ag2.usage_summary",
+    requestedModel: options.model || model,
+    returnedModel: model,
+    rawUsage: {
+      mode,
+      summary,
+      model_usage: usage
+    },
+    components: compactComponents([
+      positiveComponent("input_uncached_tokens", promptTokens, "token", `$.${mode}.${model}.prompt_tokens`),
+      positiveComponent("output_text_tokens", completionTokens, "token", `$.${mode}.${model}.completion_tokens`)
+    ])
+  });
+}
+
 export function extractUsageLedger(response, options = {}) {
   const adapter = options.adapter || options.framework;
   if (adapter === "langchain.chat_message") {
@@ -1430,6 +1494,9 @@ export function extractUsageLedger(response, options = {}) {
   }
   if (adapter === "litellm.proxy_response") {
     return extractLiteLLMProxyResponseUsage(response, options);
+  }
+  if (adapter === "ag2.usage_summary") {
+    return extractAG2UsageSummaryUsage(response, options);
   }
 
   const surface = options.surface;
@@ -1935,6 +2002,18 @@ export function fromLiteLLMResponse(response, options = {}) {
     providerReportedCost: options.providerReportedCost ?? options.provider_reported_cost ?? responseCost,
     providerReportedCostMode: options.providerReportedCostMode ?? options.provider_reported_cost_mode ?? "compare",
     adapter: "litellm.proxy_response"
+  });
+}
+
+export function fromAG2UsageSummary(summary, options = {}) {
+  const { summary: usageSummary } = ag2UsageSummaryPayload(summary, options);
+  const { usage } = ag2ModelUsage(usageSummary, options.model);
+  const reportedCost = usage.cost || usageSummary.total_cost;
+  return fromResponse(summary, {
+    ...options,
+    providerReportedCost: options.providerReportedCost ?? options.provider_reported_cost ?? reportedCost,
+    providerReportedCostMode: options.providerReportedCostMode ?? options.provider_reported_cost_mode ?? "compare",
+    adapter: "ag2.usage_summary"
   });
 }
 

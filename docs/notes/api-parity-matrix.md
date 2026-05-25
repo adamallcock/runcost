@@ -124,9 +124,9 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Vercel AI SDK middleware | N/A | Yes | N/A | `createRunCostVercelMiddleware`; `vercel-ai-sdk-middleware-wrap-generate.json` |
 | Haystack | Yes | Yes | Yes | `from_haystack_generator_result`, `fromHaystackGeneratorResult`, `FromHaystackGeneratorResult`; lower-level `extract_haystack_generator_usage`, `extractHaystackGeneratorUsage`; `haystack-openai-chat-generator-meta.json` |
 | LiteLLM proxy response metadata | Yes | Yes | Yes | `from_litellm_response`, `fromLiteLLMResponse`, `FromLiteLLMResponse`; lower-level `extract_litellm_proxy_response_usage`, `extractLiteLLMProxyResponseUsage`; `litellm-proxy-response-cost-metadata.json` |
+| AutoGen / AG2 usage summary | Yes | Yes | Yes | `from_ag2_usage_summary`, `fromAG2UsageSummary`, `FromAG2UsageSummary`; lower-level `extract_ag2_usage_summary_usage`, `extractAG2UsageSummaryUsage`; `ag2-usage-summary-actual.json`, `ag2-usage-summary-total.json` |
 | OpenAI Agents SDK | Planned | Planned | Planned | Milestone 6 |
 | Semantic Kernel | Partial | Partial | Partial | Documented adapter path in `docs/notes/framework-adapter-notes.md`; no fixture-backed extractor yet |
-| AutoGen / AG2 | Partial | Partial | Partial | Documented adapter path in `docs/notes/framework-adapter-notes.md`; no fixture-backed extractor yet |
 | LangSmith export/compare | Partial | Partial | Partial | Documented adapter path in `docs/notes/framework-adapter-notes.md`; no fixture-backed extractor yet |
 | OpenRouter-compatible SDK paths | Partial | Partial | Partial | Documented adapter path in `docs/notes/framework-adapter-notes.md`; OpenRouter chat/model fixtures exist, SDK wrappers do not |
 
