@@ -57,6 +57,16 @@ npm run example:py
 Python wheel and source distribution, packs the npm package, and verifies the
 Go module path through a clean temporary module with a local replace directive.
 
+## Registry README Policy
+
+The root `README.md` is the canonical package overview for GitHub and PyPI.
+`pyproject.toml` points PyPI at that root README.
+
+The npm package is published from `packages/javascript/core`, so it carries a
+small package-local `README.md` that summarizes the JavaScript entrypoint and
+links back to the repository for the full docs. Keep the npm README short; do
+not duplicate the full docs tree there.
+
 ## PyPI Publishing
 
 Configure PyPI trusted publishing for:
@@ -75,6 +85,18 @@ Actions workflow. npm provenance should be published with releases.
 
 The JavaScript package is in `packages/javascript/core`, so the workflow runs
 publish commands from that directory.
+
+Trusted publisher settings to configure on npm:
+
+- Publisher: GitHub Actions
+- Organization or user: `adamallcock`
+- Repository: `runcost`
+- Workflow filename: `release.yml`
+- Environment name: `release`
+- Allowed action: `npm publish`
+
+After trusted publishing is verified, restrict token-based publish access where
+the registry settings allow it.
 
 ## Go Publishing
 

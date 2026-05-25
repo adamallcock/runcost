@@ -22,6 +22,7 @@ REQUIRED_FILES = [
     "docs/process/release-process.md",
     ".github/workflows/release.yml",
     "scripts/check_release_dry_run.py",
+    "packages/javascript/core/README.md",
 ]
 
 
@@ -69,6 +70,25 @@ def check_versions_and_license() -> None:
     assert_true(f"## {version}" in changelog, f"CHANGELOG.md must include current version {version}")
 
 
+def check_registry_metadata() -> None:
+    js_package = read_json("packages/javascript/core/package.json")
+    pyproject = read_toml("pyproject.toml")
+    python_project = pyproject["project"]
+
+    assert_true(python_project.get("readme") == "README.md", "Python package must publish the root README")
+    assert_true("README.md" in js_package.get("files", []), "npm package files must include README.md")
+    assert_true(js_package.get("homepage") == "https://github.com/adamallcock/runcost#readme", "npm homepage must point at the project README")
+    assert_true(
+        js_package.get("repository", {}).get("url") == "git+https://github.com/adamallcock/runcost.git",
+        "npm repository URL must point at adamallcock/runcost",
+    )
+
+    npm_readme = (ROOT / "packages/javascript/core/README.md").read_text(encoding="utf-8")
+    assert_true("github.com/adamallcock/runcost" in npm_readme, "npm README must link to full repository docs")
+    root_readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert_true("npm run check:release-dry-run" in root_readme, "root README must include release dry-run check")
+
+
 def check_release_workflow() -> None:
     workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     required_snippets = [
@@ -97,6 +117,9 @@ def check_release_docs() -> None:
         "npm",
         "provenance",
         "check:release-dry-run",
+        "Registry README Policy",
+        "Workflow filename",
+        "Allowed action",
     ]:
         assert_true(re.search(re.escape(phrase), release_doc, re.IGNORECASE), f"release process missing {phrase}")
 
@@ -109,6 +132,7 @@ def check_release_docs() -> None:
 def main() -> int:
     check_required_files()
     check_versions_and_license()
+    check_registry_metadata()
     check_release_workflow()
     check_release_docs()
     print("Release readiness checks passed.")

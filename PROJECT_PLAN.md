@@ -551,6 +551,7 @@ Delivered in current prototype:
 - Guarded release workflow with explicit publish opt-in.
 - Release readiness checks through `npm run check:release`.
 - Local no-publish release dry run through `npm run check:release-dry-run`, covering Python source distribution and wheel build, npm package packing, and Go clean-module import verification with a local replace directive.
+- Registry README policy: PyPI uses the root README, while the npm package carries a short package-local README that links back to the repository docs.
 
 Progress criteria:
 

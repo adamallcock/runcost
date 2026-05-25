@@ -36,6 +36,7 @@ npm test
 npm run check:coverage
 npm run check:packages
 npm run check:release
+npm run check:release-dry-run
 npm run example:js
 npm run example:py
 ```

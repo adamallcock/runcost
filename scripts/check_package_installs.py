@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -14,13 +15,31 @@ def run(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> Non
     subprocess.run(command, cwd=cwd, env=env, check=True)
 
 
-def check_python_install(workdir: Path) -> None:
+def copy_source_tree(workdir: Path) -> Path:
+    source_root = workdir / "source"
+    shutil.copytree(
+        ROOT,
+        source_root,
+        ignore=shutil.ignore_patterns(
+            ".git",
+            "node_modules",
+            "build",
+            "dist",
+            "*.egg-info",
+            "__pycache__",
+            ".pytest_cache",
+        ),
+    )
+    return source_root
+
+
+def check_python_install(source_root: Path, workdir: Path) -> None:
     venv_dir = workdir / "python-venv"
     run(["python3", "-m", "venv", str(venv_dir)], workdir)
     python = venv_dir / "bin" / "python"
     pip_env = os.environ.copy()
     pip_env.setdefault("PIP_DISABLE_PIP_VERSION_CHECK", "1")
-    run([str(python), "-m", "pip", "install", "--quiet", str(ROOT)], workdir, env=pip_env)
+    run([str(python), "-m", "pip", "install", "--quiet", str(source_root)], workdir, env=pip_env)
     run(
         [
             str(python),
@@ -31,12 +50,12 @@ def check_python_install(workdir: Path) -> None:
     )
 
 
-def check_javascript_install(workdir: Path) -> None:
+def check_javascript_install(source_root: Path, workdir: Path) -> None:
     pack_dir = workdir / "npm-pack"
     project_dir = workdir / "npm-project"
     pack_dir.mkdir()
     project_dir.mkdir()
-    run(["npm", "pack", str(ROOT / "packages/javascript/core"), "--pack-destination", str(pack_dir)], ROOT)
+    run(["npm", "pack", str(source_root / "packages/javascript/core"), "--pack-destination", str(pack_dir)], source_root)
     tarballs = sorted(pack_dir.glob("runcost-*.tgz"))
     if len(tarballs) != 1:
         raise AssertionError(f"expected exactly one runcost tarball, found {len(tarballs)}")
@@ -56,7 +75,7 @@ def check_javascript_install(workdir: Path) -> None:
     )
 
 
-def check_go_install(workdir: Path) -> None:
+def check_go_install(source_root: Path, workdir: Path) -> None:
     project_dir = workdir / "go-project"
     project_dir.mkdir()
     (project_dir / "ledger_test.go").write_text(
@@ -145,7 +164,7 @@ models:
         encoding="utf-8",
     )
     run(["go", "mod", "init", "runcost-install-check"], project_dir)
-    run(["go", "mod", "edit", "-replace", f"github.com/adamallcock/runcost={ROOT}"], project_dir)
+    run(["go", "mod", "edit", "-replace", f"github.com/adamallcock/runcost={source_root}"], project_dir)
     run(["go", "get", "github.com/adamallcock/runcost/packages/go/ledger"], project_dir)
     run(["go", "test", "./..."], project_dir)
 
@@ -153,9 +172,10 @@ models:
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="runcost-install-check-") as temp:
         workdir = Path(temp)
-        check_python_install(workdir)
-        check_javascript_install(workdir)
-        check_go_install(workdir)
+        source_root = copy_source_tree(workdir)
+        check_python_install(source_root, workdir)
+        check_javascript_install(source_root, workdir)
+        check_go_install(source_root, workdir)
     print("Package install checks passed.")
     return 0
 

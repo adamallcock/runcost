@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import subprocess
+import tarfile
 import tempfile
 from pathlib import Path
 
@@ -61,6 +62,10 @@ def check_npm_pack(source_root: Path, workdir: Path) -> None:
     pack_dir.mkdir()
     run(["npm", "pack", str(source_root / "packages/javascript/core"), "--pack-destination", str(pack_dir)], source_root)
     tarball = assert_one(pack_dir, "runcost-*.tgz", "npm package tarball")
+    with tarfile.open(tarball, "r:gz") as archive:
+        names = set(archive.getnames())
+    if "package/README.md" not in names:
+        raise AssertionError("npm package tarball must include README.md")
     print(f"Built npm artifact: {tarball.name}", flush=True)
 
 

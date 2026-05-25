@@ -60,6 +60,7 @@ Evidence collected on 2026-05-25:
 - Polyglot decision record exists in `docs/decisions/polyglot-toolchain-decision.md`.
 - Public API parity matrix exists in `docs/notes/api-parity-matrix.md`.
 - Public quickstart, installation, API reference, aggregation/streaming, debug-trace, fixture-coverage, supported-surface, custom pricing, source adapter, warning, and release process docs exist under `docs/`.
+- Registry README policy exists in `docs/process/release-process.md`; PyPI uses the root README and npm carries `packages/javascript/core/README.md`.
 - Root `LICENSE`, `CHANGELOG.md`, `CONTRIBUTING.md`, and `SECURITY.md` exist.
 - CI workflow exists in `.github/workflows/ci.yml`.
 - Guarded release workflow exists in `.github/workflows/release.yml`.
@@ -115,7 +116,7 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 | Milestone 4: Provider Extractors V0 | Partial | No | OpenAI, Anthropic, OpenRouter, Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Gemini/Vertex, and Bedrock Converse extractors exist for selected surfaces; selected final streaming usage cases are fixture-backed. | xAI Responses, OpenAI Conversations, Bedrock non-Converse paths, additional stream protocols, embeddings, rerank, generated media, transcription, and deeper provider-specific feature fields. |
 | Milestone 5: Tool Call and Feature Pricing | Partial | No | Generic and raw OpenAI tool-call fixtures exist; OpenRouter request/image/search source pricing and Gemini/Vertex multimodal token details exist. | Provider-specific tool pricing breadth for computer use, rerank, embeddings, image/audio/video generation, transcription, storage/session/GB-day forms, and direct pass-through costs. |
 | Milestone 6: Framework Adapters | Partial | No | LangChain AIMessage, Vercel AI SDK generateText, LlamaIndex TokenCountingHandler, Haystack metadata, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` middleware, and aggregation exist with fixtures. | Semantic Kernel, LangSmith export comparison, OpenRouter-compatible SDK wrappers, OpenAI Agents SDK, framework stream integrations, and concrete examples for remaining paths. |
-| Milestone 7: Packaging and Developer Experience | Partial | Yes | Package metadata, types, examples, CI, clean install checks, alpha docs, license metadata, changelog, contributing/security docs, release process, release readiness checks, guarded release workflow, and local no-publish release dry run exist. | First registry publication, trusted publisher configuration, registry README decision, and real post-tag Go module verification. |
+| Milestone 7: Packaging and Developer Experience | Partial | Yes | Package metadata, types, examples, CI, clean install checks, alpha docs, license metadata, changelog, contributing/security docs, registry README policy, release process, release readiness checks, guarded release workflow, and local no-publish release dry run exist. | First registry publication, external trusted publisher configuration, and real post-tag Go module verification. |
 | Milestone 8: Alpha Quality and Feedback | Not started | No | None. | Real application alpha runs, issue-to-fixture loop, invoice/dashboard comparison, and integration ergonomics validation. |
 | Milestone 9: Public Beta | Not started | No | None. | Stable v0.x schemas, package publishing pipeline, source-data update process, and public dependency caveats. |
 | Milestone 10: V1 | Not started | No | None. | Stable schemas/warning codes/package APIs, production-ready packages, strong provider/source coverage, historical-pricing path, and top framework integrations. |
@@ -920,6 +921,29 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
   - `npm test` passed: 68 fixtures, fixture generator checks, source refresh command checks, fixture coverage, taxonomy checks, Go tests, and hygiene checks green.
   - `git diff --check` passed.
 
+### 2026-05-25 Registry README And Trusted Publisher Notes Slice
+
+- Selected the active Milestone 7 registry README and trusted-publisher documentation gap.
+- Added `packages/javascript/core/README.md` as the npm package-page README and included it in the npm package allowlist.
+- Kept the root `README.md` as the canonical GitHub/PyPI README through `pyproject.toml`.
+- Added a registry README policy and exact npm trusted-publisher setup notes to `docs/process/release-process.md`.
+- Strengthened release readiness checks so they fail if:
+  - PyPI no longer points at the root README.
+  - The npm package allowlist drops `README.md`.
+  - The npm README stops linking back to the full repository docs.
+  - The root README omits the release dry-run command.
+  - Release docs drop the registry README policy or npm trusted-publisher fields.
+- Strengthened the release dry run so it opens the packed npm tarball and verifies `package/README.md` is present.
+- Updated package install checks to install, pack, and import from a temporary source copy so validation does not leave Python build metadata in the working tree.
+- Verification after the registry README and trusted-publisher notes slice:
+  - `python3 -m py_compile scripts/check_package_installs.py scripts/check_release_dry_run.py scripts/check_release_readiness.py` passed.
+  - `npm run check:release` passed.
+  - `npm run check:release-dry-run` passed and showed the npm tarball includes `README.md`.
+  - `npm run check:packages` passed with the npm tarball containing `README.md`.
+  - `npm test` passed: 68 fixtures, fixture generator checks, source refresh command checks, fixture coverage, taxonomy checks, Go tests, and hygiene checks green.
+  - `find . -maxdepth 4 \( -name 'build' -o -name '*.egg-info' -o -name 'dist' \) -print` produced no output after package and release dry-run checks.
+  - `git diff --check` passed.
+
 ## Gap Audit 2026-05-25
 
 Purpose: step back from feature slices and record what is actually done, what is partial, what is a stub, and what still needs completion before private alpha, public beta, and V1.
@@ -988,8 +1012,8 @@ Partially implemented:
 - Tool pricing: generic tool components, OpenAI raw tool calls, OpenRouter image/request/search source pricing, and custom units exist. Provider-specific tool pricing remains sparse.
 - Multimodal: Gemini/Vertex modality token details are covered. Other providers and generated-media billing are not.
 - Framework adapters: direct metadata/result objects are covered for LangChain, Vercel AI SDK, LlamaIndex, Haystack, LiteLLM proxy responses, and AutoGen/AG2 usage summaries. Initial Python LangChain callback/context-manager plus JavaScript Vercel middleware helpers exist, and generic multi-step cost-ledger aggregation now exists. Semantic Kernel, LangSmith export comparison, and OpenRouter-compatible SDK paths have documented partial adapter paths, but they are not implemented or fixture-backed. Framework-specific stream integrations, OpenAI Agents SDK, and concrete examples for the remaining partial paths are still missing.
-- Documentation: public quickstart, installation, API reference, aggregation/streaming, debug trace, custom pricing, discount, warning/strict-mode, source adapter, support-matrix docs, contribution guide, security/privacy note, changelog, and release process now exist. Deeper framework integration guides and automated release notes are still missing.
-- Packaging: clean local install checks now pass for Python, JavaScript/TypeScript, and Go. License metadata, PyPI/npm guarded release workflow, Go tag policy, changelog, provenance guidance, release readiness checks, and a no-publish release dry run exist. First real registry publication, trusted publisher configuration, registry README policy, and real post-tag Go module verification remain incomplete.
+- Documentation: public quickstart, installation, API reference, aggregation/streaming, debug trace, custom pricing, discount, warning/strict-mode, source adapter, support-matrix docs, contribution guide, security/privacy note, changelog, registry README policy, and release process now exist. Deeper framework integration guides and automated release notes are still missing.
+- Packaging: clean local install checks now pass for Python, JavaScript/TypeScript, and Go. License metadata, PyPI/npm guarded release workflow, Go tag policy, changelog, provenance guidance, release readiness checks, registry README checks, and a no-publish release dry run exist. First real registry publication, external trusted publisher configuration, and real post-tag Go module verification remain incomplete.
 
 Stubs or placeholders:
 
@@ -1002,7 +1026,7 @@ Stubs or placeholders:
 
 Highest-risk gaps before private alpha:
 
-1. First real registry release readiness: configure PyPI/npm trusted publishing, decide package README shape, and verify Go tags after a real tag is pushed.
+1. First real registry release readiness: configure PyPI/npm trusted publishing and verify Go tags after a real tag is pushed.
 2. Broader provider/framework streaming support beyond the initial OpenAI, Anthropic, and Gemini final-usage fixtures.
 3. Hardened typed models and generated artifact workflow, especially for Go structs and generated docs.
 4. Broader framework integration ergonomics beyond the initial LangChain/Vercel helpers, especially turning remaining documented partial paths into fixture-backed adapters and examples.
@@ -1015,7 +1039,7 @@ Only one candidate should become the active lane at a time. Milestone 7 release 
 
 1. Broader framework implementation slice: add fixtures and minimal adapters/examples for the next documented partial path, likely LangSmith export comparison or Semantic Kernel telemetry.
 2. Provider streaming expansion slice: add additional stream finalization fixtures for Vertex-specific SDK wrappers, Bedrock ConverseStream, Vercel AI SDK `streamText` finish parts, and any provider-specific tool streaming fields.
-3. Release hardening slice: configure trusted publishing outside the repo, decide registry README shape, and verify the first real tag/package publication path.
+3. Release hardening slice: configure trusted publishing outside the repo and verify the first real tag/package publication path.
 4. Generated artifact slice: add schema-derived type/doc checks.
 
 ## Backlog: Next Best Actions
@@ -1026,4 +1050,4 @@ These are ranked backlog items, not simultaneous active work.
 2. Add provider-specific fixtures for OpenAI-compatible tool, remaining multimodal providers, compound-routing, and service-tier fields beyond base token usage.
 3. Extend debug traces into source conflict reports, extractor internals, and framework middleware decisions.
 4. Add framework examples showing one- or two-line integration in Python and JavaScript for fixture-backed framework paths.
-5. Harden release automation with registry README decisions, trusted-publisher setup notes, and first-tag verification.
+5. Harden release automation with first registry publication and first-tag verification.
