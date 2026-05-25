@@ -30,7 +30,9 @@ REQUIRED_FILES = [
     "scripts/check_package_installs.py",
     "scripts/check_release_readiness.py",
     "scripts/check_schema_taxonomy.py",
+    "scripts/check_source_refresh.py",
     "scripts/create_fixture.py",
+    "scripts/refresh_price_sources.py",
     "LICENSE",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
@@ -165,6 +167,10 @@ def check_package_metadata() -> None:
         "check_schema_taxonomy.py" in scripts.get("test", ""),
         "root npm test must run schema taxonomy checks",
     )
+    assert_true(
+        "check_source_refresh.py" in scripts.get("test", ""),
+        "root npm test must run source refresh command checks",
+    )
     assert_true("check_fixture_coverage.py" in scripts.get("test", ""), "root npm test must run fixture coverage checks")
     assert_true(
         "check_fixture_coverage.py" in scripts.get("check:coverage", ""),
@@ -188,6 +194,10 @@ def check_package_metadata() -> None:
         "root check:taxonomy must run schema taxonomy checks",
     )
     assert_true("create_fixture.py" in scripts.get("fixture:new", ""), "root fixture:new must run fixture generator")
+    assert_true(
+        "refresh_price_sources.py" in scripts.get("prices:refresh", ""),
+        "root prices:refresh must run source refresh command",
+    )
 
     js_package_path = ROOT / "packages/javascript/core/package.json"
     js_package = load_json(js_package_path)
@@ -332,7 +342,9 @@ def check_ci_workflow() -> None:
         "npm test",
         "check_fixture_coverage.py",
         "check_fixture_generator.py",
+        "check_source_refresh.py",
         "check_schema_taxonomy.py",
+        "refresh_price_sources.py",
         "npm run check:packages",
         "npm run check:release",
         "npm run example:js",

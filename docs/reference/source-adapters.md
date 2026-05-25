@@ -22,6 +22,27 @@ Source adapters convert external pricing catalogs into RunCost price cards. They
 | User compact pricing data | `price_cards_from_user_pricing` / `priceCardsFromUserPricing` / `PriceCardsFromUserPricing` | Handles compact JSON/YAML-shaped model records after callers parse them into objects. |
 | Helicone model-registry endpoint data | `price_cards_from_helicone` / `priceCardsFromHelicone` / `PriceCardsFromHelicone` | Handles endpoint pricing arrays, cache multipliers, reasoning, request, web-search, and image/audio/video token modality prices covered by fixtures. |
 
+## Explicit Refresh Command
+
+Normal cost calculation never fetches live pricing data. To refresh a source explicitly, run `npm run prices:refresh --` and write a RunCost source-cache envelope:
+
+```bash
+npm run prices:refresh -- \
+  --preset llm-prices-current \
+  --output vendor/prices/llm-prices-current.source-cache.json
+```
+
+For offline or reviewed snapshots, pass `--input` and the source adapter type:
+
+```bash
+npm run prices:refresh -- \
+  --source-type user-pricing \
+  --input fixtures/source-files/user-pricing-file-basic.json \
+  --output vendor/prices/user-pricing.source-cache.json
+```
+
+The command records the source URL, retrieval time, SHA-256 checksum, generated time, and converted canonical price cards. Load the generated file with the source-cache adapter or with the local JSON file loader using `source_type="source-cache"` / `sourceType: "source-cache"`.
+
 ## Adapter Contract
 
 Every source adapter should:
@@ -60,7 +81,7 @@ High-value next adapters:
 
 - Official provider page snapshots where license and terms permit.
 - Historical source bundles with effective dates.
-- A file-reading refresh command that writes source-cache envelopes from live or vendored source snapshots.
+- More refresh presets for live or vendored source snapshots.
 
 ## Maintenance Rules
 
@@ -81,4 +102,5 @@ Recommended pipeline:
 - Some providers publish prices by marketing family, API surface, region, or tier rather than exact model ID.
 - Tool-call pricing is often spread across product docs instead of model catalogs.
 - Local JSON file loading is supported; YAML still requires callers to parse data before passing it to an adapter.
+- The refresh command supports JSON snapshots only.
 - The current adapters are prototypes; source coverage must be expanded fixture by fixture.
