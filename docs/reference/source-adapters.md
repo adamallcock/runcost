@@ -13,7 +13,7 @@ Source adapters convert external pricing catalogs into RunCost price cards. They
 
 | Source | Current function | Notes |
 |---|---|---|
-| Simon Willison `llm-prices` | `price_cards_from_llm_prices` / `priceCardsFromLlmPrices` / `PriceCardsFromLlmPrices` | Handles simple current and historical pricing records. |
+| Simon Willison `llm-prices` | `price_cards_from_llm_prices` / `priceCardsFromLlmPrices` / `PriceCardsFromLlmPrices` | Handles current records and historical `from_date` / `to_date` windows, including historical source URL detection. |
 | LiteLLM model prices JSON | `price_cards_from_litellm` / `priceCardsFromLiteLLM` / `PriceCardsFromLiteLLM` | Handles token, cached token, and reasoning token fields that map cleanly to RunCost components. |
 | OpenRouter models API | `price_cards_from_openrouter_models` / `priceCardsFromOpenRouterModels` / `PriceCardsFromOpenRouterModels` | Handles prompt, completion, cache, reasoning, request, image, web search, and tiered context fields covered by fixtures. |
 | Portkey pricing data | `price_cards_from_portkey` / `priceCardsFromPortkey` / `PriceCardsFromPortkey` | Handles token, cache, reasoning, and web-search price fields covered by fixtures. |

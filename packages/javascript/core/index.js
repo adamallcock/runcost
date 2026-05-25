@@ -1552,9 +1552,18 @@ function unsupportedSurfaceLedger(response, options = {}) {
   };
 }
 
+function llmPricesIsHistorical(data) {
+  return (data.prices || []).some((price) => (
+    price && typeof price === "object" && ("from_date" in price || "to_date" in price)
+  ));
+}
+
 export function priceCardsFromLlmPrices(data, options = {}) {
-  const retrievedAt = options.retrievedAt || `${data.updated_at || "1970-01-01"}T00:00:00Z`;
-  const sourceUrl = options.sourceUrl || "https://www.llm-prices.com/current-v1.json";
+  const retrievedAt = options.retrievedAt || options.retrieved_at || `${data.updated_at || "1970-01-01"}T00:00:00Z`;
+  const defaultUrl = llmPricesIsHistorical(data)
+    ? "https://www.llm-prices.com/historical-v1.json"
+    : "https://www.llm-prices.com/current-v1.json";
+  const sourceUrl = options.sourceUrl || options.source_url || defaultUrl;
   return (data.prices || []).flatMap((price) => {
     const components = [
       {

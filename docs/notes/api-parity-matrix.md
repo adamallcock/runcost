@@ -77,7 +77,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Source | Python | JavaScript/TypeScript | Go | Evidence |
 |---|---:|---:|---:|---|
 | User-supplied canonical price cards | Yes | Yes | Yes | most fixtures |
-| Simon Willison `llm-prices` | Yes | Yes | Yes | `price_cards_from_llm_prices`, `priceCardsFromLlmPrices`, `PriceCardsFromLlmPrices`; `llm-prices-adapter-basic.json` |
+| Simon Willison `llm-prices` | Yes | Yes | Yes | `price_cards_from_llm_prices`, `priceCardsFromLlmPrices`, `PriceCardsFromLlmPrices`; `llm-prices-adapter-basic.json`, `llm-prices-adapter-historical.json` |
 | LiteLLM model pricing JSON | Yes | Yes | Yes | `price_cards_from_litellm`, `priceCardsFromLiteLLM`, `PriceCardsFromLiteLLM`; `litellm-adapter-basic.json` |
 | Portkey Models pricing shape | Yes | Yes | Yes | `price_cards_from_portkey`, `priceCardsFromPortkey`, `PriceCardsFromPortkey`; `portkey-adapter-basic.json` |
 | OpenRouter `/models` API | Yes | Yes | Yes | `price_cards_from_openrouter_models`, `priceCardsFromOpenRouterModels`, `PriceCardsFromOpenRouterModels`; `openrouter-models-adapter-basic.json`, `openrouter-models-adapter-tiered.json` |

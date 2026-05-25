@@ -307,7 +307,7 @@ def check_public_api_artifacts() -> None:
 
 def check_fixture_floor() -> None:
     fixtures = sorted((ROOT / "fixtures").glob("*.json"))
-    assert_true(len(fixtures) >= 62, f"expected at least 62 fixtures, found {len(fixtures)}")
+    assert_true(len(fixtures) >= 63, f"expected at least 63 fixtures, found {len(fixtures)}")
     for path in fixtures:
         fixture = load_json(path)
         metadata = fixture.get("metadata")

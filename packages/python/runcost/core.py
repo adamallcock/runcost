@@ -1478,9 +1478,17 @@ def _unsupported_surface_ledger(response: Dict[str, Any], **options: Any) -> Dic
     }
 
 
+def _llm_prices_is_historical(data: Dict[str, Any]) -> bool:
+    for price in data.get("prices", []):
+        if isinstance(price, dict) and ("from_date" in price or "to_date" in price):
+            return True
+    return False
+
+
 def price_cards_from_llm_prices(data: Dict[str, Any], **options: Any) -> List[Dict[str, Any]]:
-    retrieved_at = options.get("retrieved_at") or f"{data.get('updated_at', '1970-01-01')}T00:00:00Z"
-    source_url = options.get("source_url", "https://www.llm-prices.com/current-v1.json")
+    retrieved_at = options.get("retrieved_at") or options.get("retrievedAt") or f"{data.get('updated_at', '1970-01-01')}T00:00:00Z"
+    default_url = "https://www.llm-prices.com/historical-v1.json" if _llm_prices_is_historical(data) else "https://www.llm-prices.com/current-v1.json"
+    source_url = options.get("source_url") or options.get("sourceUrl") or default_url
     cards = []
 
     for price in data.get("prices", []):

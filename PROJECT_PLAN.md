@@ -337,7 +337,7 @@ Progress criteria:
 - Each adapter has at least one fixture that maps source data into canonical price cards.
 - Adapter output validates against `price-card.schema.json`.
 - Source conflict fixture shows both disagreeing values.
-- `llm-prices` historical dates are preserved.
+- `llm-prices` historical date windows and historical feed provenance are preserved.
 - LiteLLM service tier and cache fields map into canonical components.
 - OpenRouter string prices map correctly.
 - User compact pricing data maps into canonical price cards.

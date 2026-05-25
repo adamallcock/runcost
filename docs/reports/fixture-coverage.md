@@ -13,7 +13,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 62
+- Fixtures: 63
 - Providers: 15
 - Provider surfaces: 16
 - Usage components covered: 20
@@ -24,9 +24,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 60 |
-| `javascript` | 61 |
-| `python` | 61 |
+| `go` | 61 |
+| `javascript` | 62 |
+| `python` | 62 |
 
 ## Scenarios
 
@@ -42,7 +42,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `raw_provider_response` | 23 |
 | `service_mode` | 3 |
 | `service_tier` | 2 |
-| `source_adapter` | 8 |
+| `source_adapter` | 9 |
 | `source_priority` | 2 |
 | `strict_error` | 1 |
 | `warning` | 3 |
@@ -63,7 +63,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `huggingface` | `huggingface.chat_completions` | 1 |
 | `mistral` | `mistral.chat_completions` | 1 |
 | `openai` | `openai.chat_completions` | 8 |
-| `openai` | `openai.responses` | 29 |
+| `openai` | `openai.responses` | 30 |
 | `openrouter` | `openrouter.chat_completions` | 5 |
 | `vertex` | `vertex.gemini.generate_content` | 1 |
 | `xai` | `xai.chat_completions` | 1 |
@@ -83,12 +83,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `input_cache_write_tokens` | 10 |
 | `input_image_tokens` | 2 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 55 |
+| `input_uncached_tokens` | 56 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 1 |
 | `output_image_tokens` | 2 |
 | `output_reasoning_tokens` | 22 |
-| `output_text_tokens` | 45 |
+| `output_text_tokens` | 46 |
 | `output_video_tokens` | 1 |
 | `request_units` | 3 |
 | `web_search_units` | 6 |
@@ -114,7 +114,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 |---|---:|
 | `helicone` | 1 |
 | `litellm` | 1 |
-| `llm-prices` | 1 |
+| `llm-prices` | 2 |
 | `openrouter-models` | 2 |
 | `portkey` | 1 |
 | `source-cache` | 1 |
@@ -142,7 +142,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-CUSTOM-PRICING` | 1 |
 | `RC-DEBUG-TRACE` | 1 |
 | `RC-DISCOUNT-POLICY` | 1 |
-| `RC-FIXTURE-CONFORMANCE` | 62 |
+| `RC-FIXTURE-CONFORMANCE` | 63 |
 | `RC-FRAMEWORK-ADAPTER` | 7 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
 | `RC-LONG-CONTEXT` | 2 |
@@ -150,7 +150,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-RAW-EXTRACTOR` | 23 |
 | `RC-SERVICE-MODE` | 3 |
 | `RC-SERVICE-TIER` | 2 |
-| `RC-SOURCE-ADAPTER` | 8 |
+| `RC-SOURCE-ADAPTER` | 9 |
 | `RC-SOURCE-PRIORITY` | 2 |
 | `RC-STRICT-MODE` | 1 |
 | `RC-WARNING-MODE` | 4 |
@@ -179,18 +179,18 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:input_cache_write_tokens` | 10 |
 | `component:input_image_tokens` | 2 |
 | `component:input_image_units` | 1 |
-| `component:input_uncached_tokens` | 55 |
+| `component:input_uncached_tokens` | 56 |
 | `component:input_video_tokens` | 1 |
 | `component:output_audio_tokens` | 1 |
 | `component:output_image_tokens` | 2 |
 | `component:output_reasoning_tokens` | 22 |
-| `component:output_text_tokens` | 45 |
+| `component:output_text_tokens` | 46 |
 | `component:output_video_tokens` | 1 |
 | `component:request_units` | 3 |
 | `component:web_search_units` | 6 |
 | `debug_trace` | 1 |
 | `discount` | 1 |
-| `effective_date` | 1 |
+| `effective_date` | 2 |
 | `framework:ag2` | 2 |
 | `framework:haystack` | 1 |
 | `framework:litellm` | 1 |
@@ -203,6 +203,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `helper:from_vercel_ai_sdk_result` | 1 |
 | `helper:langchain_callback` | 1 |
 | `helper:vercel_ai_sdk_middleware` | 1 |
+| `historical_pricing` | 1 |
 | `long_context` | 2 |
 | `mode:total` | 1 |
 | `multimodal` | 1 |
@@ -214,12 +215,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `service_tier` | 2 |
 | `source:helicone` | 1 |
 | `source:litellm` | 1 |
-| `source:llm-prices` | 1 |
+| `source:llm-prices` | 2 |
 | `source:openrouter-models` | 2 |
 | `source:portkey` | 1 |
 | `source:source-cache` | 1 |
 | `source:user-pricing` | 1 |
-| `source_adapter` | 8 |
+| `source_adapter` | 9 |
 | `source_priority` | 2 |
 | `stale_price` | 1 |
 | `streaming` | 4 |

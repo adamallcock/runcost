@@ -2014,6 +2014,18 @@ func PriceCardsFromLlmPrices(data Object) []any {
 	if updatedAt == "" {
 		updatedAt = "1970-01-01"
 	}
+	sourceURL := "https://www.llm-prices.com/current-v1.json"
+	for _, rawPrice := range asSlice(data["prices"]) {
+		price := asObject(rawPrice)
+		if _, ok := price["from_date"]; ok {
+			sourceURL = "https://www.llm-prices.com/historical-v1.json"
+			break
+		}
+		if _, ok := price["to_date"]; ok {
+			sourceURL = "https://www.llm-prices.com/historical-v1.json"
+			break
+		}
+	}
 	cards := []any{}
 	for _, rawPrice := range asSlice(data["prices"]) {
 		price := asObject(rawPrice)
@@ -2051,7 +2063,7 @@ func PriceCardsFromLlmPrices(data Object) []any {
 			"components":     components,
 			"source": Object{
 				"name":         "llm-prices",
-				"url":          "https://www.llm-prices.com/current-v1.json",
+				"url":          sourceURL,
 				"retrieved_at": updatedAt + "T00:00:00Z",
 			},
 		})
