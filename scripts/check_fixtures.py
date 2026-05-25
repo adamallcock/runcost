@@ -242,6 +242,7 @@ def run_python_fixture(fixture):
             } or input_data["extract"].get("surface") in {
                 "openai.responses",
                 "xai.responses",
+                "openai.embeddings",
                 "openai.chat_completions",
                 "anthropic.messages",
                 "openrouter.chat_completions",

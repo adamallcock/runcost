@@ -40,6 +40,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Provider-reported cost authoritative use mode | Yes | Yes | Yes | `provider-reported-cost-used.json` |
 | Price source priority for user overrides | Yes | Yes | Yes | `price-source-priority-user-override.json` |
 | Price source disagreement warning | Yes | Yes | Yes | `price-source-disagreement-warning.json` |
+| Byte-stable price-card tie breaking | Yes | Yes | Yes | `byte-stable-price-card-tie-break.json` |
 | Streaming final-usage missing warning | Yes | Yes | Yes | `stream_usage_missing`; `stream-final-usage-missing-warning.json` |
 | Streaming final-usage event extraction | Yes | Yes | Yes | OpenAI `response.completed`, Anthropic Messages SSE events, and Gemini stream chunk fixtures |
 | Debug trace / explain mode | Yes | Yes | Yes | `debug-trace-explain-decisions.json`; optional `debug_trace` / `debugTrace` output |
@@ -57,6 +58,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Surface | Python | JavaScript/TypeScript | Go | Evidence |
 |---|---:|---:|---:|---|
 | OpenAI Responses | Yes | Yes | Yes | `openai-responses-raw-cached-reasoning.json`, `openai-responses-raw-tool-calls.json`, `openai-responses-stream-completed-event.json` |
+| OpenAI Embeddings | Yes | Yes | Yes | `extract_openai_embeddings_usage`, `extractOpenAIEmbeddingsUsage`; `openai-embeddings-raw-basic.json` |
 | OpenAI Chat Completions | Yes | Yes | Yes | `openai-chat-raw-cached-reasoning.json` |
 | Shared OpenAI-compatible chat helper | Yes | Yes | Yes | `extract_openai_compatible_chat_completions_usage`, `extractOpenAICompatibleChatCompletionsUsage`; Go routes through `ExtractUsageLedger` |
 | Anthropic Messages | Yes | Yes | Yes | `anthropic-messages-raw-cache.json`, `anthropic-messages-raw-cache-1h.json`, `anthropic-messages-stream-events.json` |

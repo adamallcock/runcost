@@ -49,6 +49,22 @@ Mapping:
 - `surface: "xai.responses"` defaults the canonical provider to `xai` even when callers omit `provider`.
 - Provider-specific tool, multimodal, and future Responses-only fields still need separate fixtures before being treated as supported.
 
+## OpenAI Embeddings
+
+Surface:
+
+- `openai.embeddings`
+
+Source references:
+
+- OpenAI Embeddings API reference documents `CreateEmbeddingResponse` returning `usage.prompt_tokens` and `usage.total_tokens`: https://developers.openai.com/api/reference/resources/embeddings/methods/create
+
+Mapping:
+
+- `usage.prompt_tokens` -> `embedding_tokens`.
+- `usage.total_tokens` is preserved in raw usage and used as a fallback only when `prompt_tokens` is absent.
+- Embedding vectors are ignored for pricing.
+
 ## Anthropic Messages
 
 Surface:

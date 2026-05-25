@@ -380,6 +380,7 @@ export function calculateCost(options: CalculateCostOptions): CostLedger;
 export function aggregateCostLedgers(options: AggregateCostLedgersOptions): CostLedger;
 export function extractUsageLedger(response: Record<string, unknown>, options: ExtractOptions): UsageLedger;
 export function extractOpenAIResponsesUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAIEmbeddingsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractOpenAIChatCompletionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractOpenAICompatibleChatCompletionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractOpenRouterChatCompletionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;

@@ -55,7 +55,7 @@ Current prototype capabilities:
 
 - Decimal-safe cost calculation.
 - Componentized output ledgers.
-- Raw extractors for OpenAI Responses, OpenAI Chat Completions, Anthropic Messages, Cohere Chat, Google Gemini/Vertex `generateContent`, AWS Bedrock Converse, and selected OpenAI-compatible chat providers.
+- Raw extractors for OpenAI Responses, OpenAI Chat Completions, OpenAI Embeddings, Anthropic Messages, Cohere Chat, Google Gemini/Vertex `generateContent`, AWS Bedrock Converse, and selected OpenAI-compatible chat providers.
 - Final streaming usage extraction for selected OpenAI Responses, Anthropic Messages, and Gemini stream shapes.
 - Components for input, cached input, cache write, output, reasoning, tool units, and pass-through custom units.
 - Exact alias resolution through price-card aliases.
@@ -365,6 +365,7 @@ Provider surfaces:
 
 - OpenAI Responses.
 - OpenAI Chat Completions.
+- OpenAI Embeddings.
 - Anthropic Messages.
 - Google Gemini API `generateContent`.
 - Vertex AI Gemini.
@@ -382,6 +383,7 @@ Delivered in current prototype:
 
 - OpenAI Responses.
 - OpenAI Chat Completions.
+- OpenAI Embeddings.
 - Anthropic Messages.
 - OpenRouter Chat Completions.
 - Groq OpenAI-compatible Chat Completions.
@@ -397,7 +399,7 @@ Delivered in current prototype:
 
 Current mapping notes:
 
-- `docs/notes/provider-extractor-notes.md` records the official source references and raw usage field mappings for OpenAI Responses, xAI Responses, OpenAI-compatible chat providers, Cohere, Gemini, and Bedrock.
+- `docs/notes/provider-extractor-notes.md` records the official source references and raw usage field mappings for OpenAI Responses, OpenAI Embeddings, xAI Responses, OpenAI-compatible chat providers, Cohere, Gemini, and Bedrock.
 - xAI Responses is currently mapped through the OpenAI-compatible Responses usage envelope, with provider defaulting to `xai` for `surface: "xai.responses"`.
 - Gemini/Vertex `promptTokensDetails`, `cacheTokensDetails`, `toolUsePromptTokensDetails`, and `candidatesTokensDetails` are now mapped into modality-aware image, audio, video, text, cache-read, and thinking components in the shared conformance suite.
 - OpenRouter `/api/v1/models` pricing is now mapped into canonical price cards for prompt, completion, cache read/write, internal reasoning, request, image-input, and web-search prices.

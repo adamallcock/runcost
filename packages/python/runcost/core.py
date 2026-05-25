@@ -145,8 +145,9 @@ def _matching_cards(
         if not _card_context_matches(usage_ledger, card):
             continue
         score = _card_score(usage_ledger, card) + _source_priority_score(card, price_source_priority)
-        scored_cards.append((-score, index, card))
-    return [card for _, _, card in sorted(scored_cards, key=lambda item: (item[0], item[1]))]
+        source_name = str((card.get("source") or {}).get("name", ""))
+        scored_cards.append((-score, source_name, str(card.get("id", "")), index, card))
+    return [item[-1] for item in sorted(scored_cards, key=lambda item: item[:-1])]
 
 
 def _total_input_tokens(usage_ledger: Dict[str, Any]) -> Decimal:
@@ -870,6 +871,25 @@ def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> 
     )
 
 
+def extract_openai_embeddings_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage = response.get("usage", {})
+    tokens = usage.get("prompt_tokens", usage.get("total_tokens", 0))
+    source_path = "$.usage.prompt_tokens" if "prompt_tokens" in usage else "$.usage.total_tokens"
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "openai"),
+        surface=options.get("surface", "openai.embeddings"),
+        requested_model=options.get("model", response.get("model")),
+        returned_model=response.get("model"),
+        raw_usage=usage,
+        components=_compact_components(
+            [
+                _positive_component("embedding_tokens", tokens, "token", source_path),
+            ]
+        ),
+    )
+
+
 OPENAI_COMPATIBLE_CHAT_PROVIDERS = {
     "openai.chat_completions": "openai",
     "openrouter.chat_completions": "openrouter",
@@ -1467,6 +1487,8 @@ def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, 
     surface = options.get("surface")
     if surface in {"openai.responses", "xai.responses"}:
         return extract_openai_responses_usage(response, **options)
+    if surface == "openai.embeddings":
+        return extract_openai_embeddings_usage(response, **options)
     if surface == "openai.chat_completions":
         return extract_openai_chat_completions_usage(response, **options)
     if surface in OPENAI_COMPATIBLE_CHAT_PROVIDERS:

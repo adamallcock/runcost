@@ -57,6 +57,7 @@ Output:
 |---|---|---|---|
 | Generic dispatch | `extract_usage_ledger` | `extractUsageLedger` | `ExtractUsageLedger` |
 | OpenAI Responses | `extract_openai_responses_usage` | `extractOpenAIResponsesUsage` | via dispatch |
+| OpenAI Embeddings | `extract_openai_embeddings_usage` | `extractOpenAIEmbeddingsUsage` | via dispatch |
 | xAI Responses | via `extract_usage_ledger(..., surface="xai.responses")` | via `extractUsageLedger(..., { surface: "xai.responses" })` | via dispatch |
 | OpenAI Chat Completions | `extract_openai_chat_completions_usage` | `extractOpenAIChatCompletionsUsage` | via dispatch |
 | OpenAI-compatible Chat Completions | `extract_openai_compatible_chat_completions_usage` | `extractOpenAICompatibleChatCompletionsUsage` | via dispatch |

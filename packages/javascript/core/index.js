@@ -98,6 +98,12 @@ function usageContext(usageLedger) {
   return usageLedger.context || {};
 }
 
+function compareText(left, right) {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
 function cardIdentityMatches(usageLedger, card) {
   const model = billedModel(usageLedger);
   const modelMatches = card.model === model || (card.aliases || []).includes(model);
@@ -161,7 +167,12 @@ function matchingCards(usageLedger, priceCards, priceSourcePriority = []) {
       score: cardScore(usageLedger, card) + sourcePriorityScore(card, priceSourcePriority)
     }))
     .filter(({ card }) => cardIdentityMatches(usageLedger, card) && cardContextMatches(usageLedger, card))
-    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .sort((a, b) => (
+      b.score - a.score ||
+      compareText(String((a.card.source || {}).name || ""), String((b.card.source || {}).name || "")) ||
+      compareText(String(a.card.id || ""), String(b.card.id || "")) ||
+      a.index - b.index
+    ))
     .map(({ card }) => card);
 }
 
@@ -894,6 +905,23 @@ export function extractOpenAIResponsesUsage(response, options = {}) {
   });
 }
 
+export function extractOpenAIEmbeddingsUsage(response, options = {}) {
+  const usage = response.usage || {};
+  const tokens = hasOwn(usage, "prompt_tokens") ? usage.prompt_tokens : usage.total_tokens || 0;
+  const sourcePath = hasOwn(usage, "prompt_tokens") ? "$.usage.prompt_tokens" : "$.usage.total_tokens";
+
+  return baseUsageLedger({
+    provider: options.provider || "openai",
+    surface: options.surface || "openai.embeddings",
+    requestedModel: options.model || response.model,
+    returnedModel: response.model,
+    rawUsage: usage,
+    components: compactComponents([
+      positiveComponent("embedding_tokens", tokens, "token", sourcePath)
+    ])
+  });
+}
+
 const OPENAI_COMPATIBLE_CHAT_PROVIDERS = {
   "openai.chat_completions": "openai",
   "openrouter.chat_completions": "openrouter",
@@ -1535,6 +1563,9 @@ export function extractUsageLedger(response, options = {}) {
   const surface = options.surface;
   if (surface === "openai.responses" || surface === "xai.responses") {
     return extractOpenAIResponsesUsage(response, options);
+  }
+  if (surface === "openai.embeddings") {
+    return extractOpenAIEmbeddingsUsage(response, options);
   }
   if (surface === "openai.chat_completions") {
     return extractOpenAIChatCompletionsUsage(response, options);

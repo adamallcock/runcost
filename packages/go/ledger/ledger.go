@@ -244,6 +244,16 @@ func matchingCards(usageLedger Object, priceCards []any, options Object) []Objec
 		if scored[left].score != scored[right].score {
 			return scored[left].score > scored[right].score
 		}
+		leftSource := asString(asObject(scored[left].card["source"])["name"])
+		rightSource := asString(asObject(scored[right].card["source"])["name"])
+		if leftSource != rightSource {
+			return leftSource < rightSource
+		}
+		leftID := asString(scored[left].card["id"])
+		rightID := asString(scored[right].card["id"])
+		if leftID != rightID {
+			return leftID < rightID
+		}
 		return scored[left].index < scored[right].index
 	})
 	cards := []Object{}
@@ -1236,6 +1246,8 @@ func ExtractUsageLedger(response Object, options Object) Object {
 	switch surface {
 	case "openai.responses", "xai.responses":
 		return extractOpenAIResponsesUsage(response, options)
+	case "openai.embeddings":
+		return extractOpenAIEmbeddingsUsage(response, options)
 	case "openai.chat_completions":
 		return extractOpenAIChatCompletionsUsage(response, options)
 	case "anthropic.messages":
@@ -1348,6 +1360,32 @@ func extractOpenAIResponsesUsage(response Object, options Object) Object {
 	}
 	components = append(components, toolComponents...)
 	return baseUsageLedger(provider, surface, requestedModel, asString(response["model"]), compactComponents(components), usage)
+}
+
+func extractOpenAIEmbeddingsUsage(response Object, options Object) Object {
+	usage := asObject(response["usage"])
+	tokens := getNumber(usage, "prompt_tokens")
+	sourcePath := "$.usage.prompt_tokens"
+	if _, ok := usage["prompt_tokens"]; !ok {
+		tokens = getNumber(usage, "total_tokens")
+		sourcePath = "$.usage.total_tokens"
+	}
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "openai"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.embeddings"
+	}
+	requestedModel := asString(options["model"])
+	if requestedModel == "" {
+		requestedModel = asString(response["model"])
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, asString(response["model"]), compactComponents([]any{
+		positiveComponent("embedding_tokens", tokens, "token", sourcePath),
+	}), usage)
 }
 
 func extractOpenAICompatibleChatCompletionsUsage(response Object, options Object) Object {
@@ -3286,6 +3324,7 @@ func FromResponse(response Object, options Object, priceCards []any, discountPol
 	surface := asString(options["surface"])
 	if surface != "openai.responses" &&
 		surface != "xai.responses" &&
+		surface != "openai.embeddings" &&
 		surface != "anthropic.messages" &&
 		surface != "google.gemini.generate_content" &&
 		surface != "vertex.gemini.generate_content" &&

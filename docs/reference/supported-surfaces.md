@@ -18,6 +18,7 @@ For mechanical coverage counts, see [Fixture Coverage](../reports/fixture-covera
 | OpenAI | Responses | Fixture-backed |
 | OpenAI | Responses streaming `response.completed` event | Fixture-backed |
 | OpenAI | Chat Completions | Fixture-backed |
+| OpenAI | Embeddings | Fixture-backed |
 | Anthropic | Messages | Fixture-backed |
 | Anthropic | Messages SSE event sequence | Fixture-backed |
 | OpenRouter | Chat Completions | Fixture-backed |
