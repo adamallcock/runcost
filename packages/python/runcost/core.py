@@ -7,6 +7,24 @@ from typing import Any, Dict, Iterable, List, Optional
 getcontext().prec = 50
 
 
+def _plain_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: _plain_value(child) for key, child in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_plain_value(child) for child in value]
+    if hasattr(value, "model_dump"):
+        return _plain_value(value.model_dump())
+    if hasattr(value, "dict") and callable(value.dict):
+        return _plain_value(value.dict())
+    if hasattr(value, "__dict__") and not isinstance(value, type):
+        return {
+            key: _plain_value(child)
+            for key, child in vars(value).items()
+            if not key.startswith("_")
+        }
+    return value
+
+
 def _decimal(value: Any) -> Decimal:
     return Decimal(str(value))
 
@@ -1498,3 +1516,72 @@ def from_llamaindex_token_counter(counter: Dict[str, Any], **options: Any) -> Di
     merged_options = dict(options)
     merged_options["adapter"] = "llamaindex.token_counter"
     return from_response(counter, **merged_options)
+
+
+def _langchain_message_from_generation(generation: Any) -> Optional[Dict[str, Any]]:
+    plain_generation = _plain_value(generation)
+    if isinstance(plain_generation, dict):
+        message = plain_generation.get("message")
+        if isinstance(message, dict):
+            return message
+        if "usage_metadata" in plain_generation or "usageMetadata" in plain_generation:
+            return plain_generation
+    return None
+
+
+def _langchain_messages_from_llm_result(result: Any) -> List[Dict[str, Any]]:
+    plain_result = _plain_value(result)
+    if isinstance(plain_result, dict) and ("usage_metadata" in plain_result or "usageMetadata" in plain_result):
+        return [plain_result]
+    messages: List[Dict[str, Any]] = []
+    for generation_group in (plain_result or {}).get("generations", []) if isinstance(plain_result, dict) else []:
+        generations = generation_group if isinstance(generation_group, list) else [generation_group]
+        for generation in generations:
+            message = _langchain_message_from_generation(generation)
+            if message is not None:
+                messages.append(message)
+    return messages
+
+
+class RunCostLangChainCallback:
+    """Small LangChain-compatible callback handler that records RunCost ledgers."""
+
+    def __init__(self, **options: Any) -> None:
+        self.options = dict(options)
+        self.ledgers: List[Dict[str, Any]] = []
+
+    def __enter__(self) -> "RunCostLangChainCallback":
+        return self
+
+    def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+        return None
+
+    def as_config(self) -> Dict[str, Any]:
+        return {"callbacks": [self]}
+
+    def record_message(self, message: Any) -> Dict[str, Any]:
+        ledger = from_langchain_message(_plain_value(message), **self.options)
+        self.ledgers.append(ledger)
+        return ledger
+
+    def on_llm_end(self, response: Any, **_: Any) -> None:
+        for message in _langchain_messages_from_llm_result(response):
+            self.record_message(message)
+
+    def on_chat_model_end(self, response: Any, **kwargs: Any) -> None:
+        self.on_llm_end(response, **kwargs)
+
+    @property
+    def latest(self) -> Optional[Dict[str, Any]]:
+        return self.ledgers[-1] if self.ledgers else None
+
+    @property
+    def total(self) -> str:
+        total = "0"
+        for ledger in self.ledgers:
+            total = _add(total, ledger["total"])
+        return total
+
+
+def track_langchain_costs(**options: Any) -> RunCostLangChainCallback:
+    return RunCostLangChainCallback(**options)

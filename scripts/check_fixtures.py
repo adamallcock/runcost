@@ -26,6 +26,7 @@ from runcost import (  # noqa: E402
     price_cards_from_llm_prices,
     price_cards_from_openrouter_models,
     price_cards_from_portkey,
+    track_langchain_costs,
 )
 
 
@@ -42,6 +43,10 @@ SCHEMA_PATHS = {
     "fixture": ROOT / "schemas" / "fixture.schema.json",
 }
 SCHEMAS = {name: load_json(path) for name, path in SCHEMA_PATHS.items()}
+
+
+def expected_languages(fixture):
+    return fixture.get("metadata", {}).get("expected_languages", ["python", "javascript", "go"])
 
 
 def _type_matches(value, expected_type):
@@ -182,29 +187,31 @@ def run_python_fixture(fixture):
     validate_price_cards(price_cards, f"{fixture['name']}.price_cards")
     validate_discount_policies(input_data.get("discount_policies", []), f"{fixture['name']}.discount_policies")
     if "raw_response" in input_data:
-        if input_data["extract"].get("adapter") in {
-            "langchain.chat_message",
-            "vercel_ai_sdk.generate_text",
-            "llamaindex.token_counter",
-        } or input_data["extract"].get("surface") in {
-            "openai.responses",
-            "openai.chat_completions",
-            "anthropic.messages",
-            "openrouter.chat_completions",
-            "groq.chat_completions",
-            "xai.chat_completions",
-            "mistral.chat_completions",
-            "deepseek.chat_completions",
-            "azure.openai.chat_completions",
-            "huggingface.chat_completions",
-            "google.gemini.generate_content",
-            "vertex.gemini.generate_content",
-            "aws.bedrock.converse",
-            "cohere.chat",
-        }:
+        helper = input_data.get("helper")
+        if helper != "langchain_callback" and (
+            input_data["extract"].get("adapter") in {
+                "langchain.chat_message",
+                "vercel_ai_sdk.generate_text",
+                "llamaindex.token_counter",
+            } or input_data["extract"].get("surface") in {
+                "openai.responses",
+                "openai.chat_completions",
+                "anthropic.messages",
+                "openrouter.chat_completions",
+                "groq.chat_completions",
+                "xai.chat_completions",
+                "mistral.chat_completions",
+                "deepseek.chat_completions",
+                "azure.openai.chat_completions",
+                "huggingface.chat_completions",
+                "google.gemini.generate_content",
+                "vertex.gemini.generate_content",
+                "aws.bedrock.converse",
+                "cohere.chat",
+            }
+        ):
             usage_ledger = extract_usage_ledger(input_data["raw_response"], **input_data["extract"])
             validate_schema(usage_ledger, SCHEMAS["usage_ledger"], path=f"{fixture['name']}.extracted_usage_ledger")
-        helper = input_data.get("helper")
         helper_options = {
             "price_cards": price_cards,
             "discount_policies": input_data.get("discount_policies", []),
@@ -218,6 +225,12 @@ def run_python_fixture(fixture):
             return from_vercel_ai_sdk_result(input_data["raw_response"], **helper_options)
         if helper == "from_llamaindex_token_counter":
             return from_llamaindex_token_counter(input_data["raw_response"], **helper_options)
+        if helper == "langchain_callback":
+            with track_langchain_costs(**helper_options) as callback:
+                callback.on_llm_end(input_data["raw_response"])
+                if not callback.latest:
+                    raise AssertionError(f"{fixture['name']}: LangChain callback recorded no cost ledgers")
+                return callback.latest
         return from_response(
             input_data["raw_response"],
             **helper_options,
@@ -236,7 +249,7 @@ def run_python_fixture(fixture):
 def run_javascript_fixture(path: Path):
     script = f"""
       import {{ calculateCost }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
-      import {{ fromResponse, fromLangChainMessage, fromVercelAISDKResult, fromLlamaIndexTokenCounter, priceCardsFromLlmPrices }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
+      import {{ fromResponse, fromLangChainMessage, fromVercelAISDKResult, fromLlamaIndexTokenCounter, createRunCostVercelMiddleware, priceCardsFromLlmPrices }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
       import fs from "node:fs";
       const fixture = JSON.parse(fs.readFileSync({json.dumps(str(path))}, "utf8"));
       const input = fixture.input;
@@ -268,7 +281,9 @@ def run_javascript_fixture(path: Path):
             ? fromVercelAISDKResult(input.raw_response, responseOptions)
             : input.helper === "from_llamaindex_token_counter"
               ? fromLlamaIndexTokenCounter(input.raw_response, responseOptions)
-              : fromResponse(input.raw_response, responseOptions)
+              : input.helper === "vercel_ai_sdk_middleware"
+                ? (await createRunCostVercelMiddleware(responseOptions).wrapGenerate({{ doGenerate: async () => input.raw_response }})).runCost
+                : fromResponse(input.raw_response, responseOptions)
         : calculateCost({{
             usageLedger: input.usage_ledger,
             priceCards,
@@ -295,7 +310,13 @@ def main() -> int:
         validate_schema(fixture, SCHEMAS["fixture"], path=f"{path.name}:fixture")
         if "error" in fixture["expected"]:
             expected_code = fixture["expected"]["error"]["code"]
-            for label, runner in (("python", lambda: run_python_fixture(fixture)), ("javascript", lambda: run_javascript_fixture(path))):
+            runners = []
+            languages = expected_languages(fixture)
+            if "python" in languages:
+                runners.append(("python", lambda: run_python_fixture(fixture)))
+            if "javascript" in languages:
+                runners.append(("javascript", lambda: run_javascript_fixture(path)))
+            for label, runner in runners:
                 try:
                     runner()
                 except Exception as exc:
@@ -313,19 +334,22 @@ def main() -> int:
         if "debug_trace" in expected:
             validate_schema(expected["debug_trace"], SCHEMAS["debug_trace"], path=f"{path.name}:expected.debug_trace")
 
-        python_result = run_python_fixture(fixture)
-        validate_schema(python_result, SCHEMAS["cost_ledger"], path=f"{path.name}:python")
-        if "debug_trace" in python_result:
-            validate_schema(python_result["debug_trace"], SCHEMAS["debug_trace"], path=f"{path.name}:python.debug_trace")
-        assert_total_matches_components(python_result, f"{path.name}:python")
-        assert_subset(python_result, expected, f"{path.name}:python")
+        languages = expected_languages(fixture)
+        if "python" in languages:
+            python_result = run_python_fixture(fixture)
+            validate_schema(python_result, SCHEMAS["cost_ledger"], path=f"{path.name}:python")
+            if "debug_trace" in python_result:
+                validate_schema(python_result["debug_trace"], SCHEMAS["debug_trace"], path=f"{path.name}:python.debug_trace")
+            assert_total_matches_components(python_result, f"{path.name}:python")
+            assert_subset(python_result, expected, f"{path.name}:python")
 
-        javascript_result = run_javascript_fixture(path)
-        validate_schema(javascript_result, SCHEMAS["cost_ledger"], path=f"{path.name}:javascript")
-        if "debug_trace" in javascript_result:
-            validate_schema(javascript_result["debug_trace"], SCHEMAS["debug_trace"], path=f"{path.name}:javascript.debug_trace")
-        assert_total_matches_components(javascript_result, f"{path.name}:javascript")
-        assert_subset(javascript_result, expected, f"{path.name}:javascript")
+        if "javascript" in languages:
+            javascript_result = run_javascript_fixture(path)
+            validate_schema(javascript_result, SCHEMAS["cost_ledger"], path=f"{path.name}:javascript")
+            if "debug_trace" in javascript_result:
+                validate_schema(javascript_result["debug_trace"], SCHEMAS["debug_trace"], path=f"{path.name}:javascript.debug_trace")
+            assert_total_matches_components(javascript_result, f"{path.name}:javascript")
+            assert_subset(javascript_result, expected, f"{path.name}:javascript")
 
     print(f"Checked {len(FIXTURES)} fixtures against Python and JavaScript cores.")
     return 0

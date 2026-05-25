@@ -116,6 +116,15 @@ func runFixture(t *testing.T, fixture Object) Object {
 	return CalculateCostWithOptions(asObject(input["usage_ledger"]), priceCards, discountPolicies, options)
 }
 
+func fixtureExpectedLanguages(fixture Object) []any {
+	metadata := asObject(fixture["metadata"])
+	languages := asSlice(metadata["expected_languages"])
+	if len(languages) == 0 {
+		return []any{"python", "javascript", "go"}
+	}
+	return languages
+}
+
 func TestFixtures(t *testing.T) {
 	paths, err := filepath.Glob("../../../fixtures/*.json")
 	if err != nil {
@@ -128,6 +137,9 @@ func TestFixtures(t *testing.T) {
 	for _, path := range paths {
 		t.Run(filepath.Base(path), func(t *testing.T) {
 			fixture := decodeFile(t, path)
+			if !containsString(fixtureExpectedLanguages(fixture), "go") {
+				t.Skip("fixture does not declare Go coverage")
+			}
 			if expectedError, ok := asObject(fixture["expected"])["error"]; ok {
 				code := asString(asObject(expectedError)["code"])
 				defer func() {

@@ -21,6 +21,11 @@ For one-call cost calculation, use the public helpers:
 - JavaScript/TypeScript: `fromLangChainMessage`, `fromVercelAISDKResult`, `fromLlamaIndexTokenCounter`.
 - Go: `FromLangChainMessage`, `FromVercelAISDKResult`, `FromLlamaIndexTokenCounter`.
 
+For framework-native ergonomics, use:
+
+- Python LangChain: `track_langchain_costs(...)` or `RunCostLangChainCallback(...)`.
+- JavaScript Vercel AI SDK: `createRunCostVercelMiddleware(...)`.
+
 ## LangChain AIMessage
 
 Source references:
@@ -36,6 +41,25 @@ Mapping:
 - `usage_metadata.output_tokens` minus `output_token_details.reasoning` -> `output_text_tokens`.
 - `usage_metadata.output_token_details.reasoning` -> `output_reasoning_tokens`.
 - `usage_metadata.total_tokens` is preserved in raw usage but is never priced directly.
+
+Callback/context-manager helper:
+
+```python
+from runcost import track_langchain_costs
+
+with track_langchain_costs(
+    provider="openai",
+    surface="openai.chat_completions",
+    model="gpt-5-nano",
+    price_cards=price_cards,
+) as cost_callback:
+    chain.invoke(messages, config=cost_callback.as_config())
+
+print(cost_callback.total)
+print(cost_callback.latest)
+```
+
+The helper is dependency-free and duck-types LangChain callback output. It currently records AIMessage-like generations from `on_llm_end` / `on_chat_model_end`.
 
 ## Vercel AI SDK
 
@@ -54,6 +78,21 @@ Mapping:
 - If `textTokens` is absent, derive output text as `outputTokens - reasoningTokens`.
 - `outputTokenDetails.reasoningTokens` or top-level `reasoningTokens` -> `output_reasoning_tokens`.
 - `totalTokens` is preserved in raw usage but is never priced directly.
+
+Middleware helper:
+
+```js
+import { createRunCostVercelMiddleware } from "runcost";
+
+const runcostMiddleware = createRunCostVercelMiddleware({
+  provider: "openai",
+  surface: "openai.responses",
+  model: "gpt-5-nano",
+  priceCards
+});
+```
+
+The helper implements `wrapGenerate`, records ledgers in `middleware.ledgers`, and attaches the latest ledger to the result as `runCost` by default.
 
 ## LlamaIndex TokenCountingHandler
 

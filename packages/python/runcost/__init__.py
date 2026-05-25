@@ -20,6 +20,8 @@ from .core import (
     price_cards_from_llm_prices,
     price_cards_from_openrouter_models,
     price_cards_from_portkey,
+    RunCostLangChainCallback,
+    track_langchain_costs,
 )
 from .types import (
     AppliedDiscount,
@@ -90,4 +92,6 @@ __all__ = [
     "price_cards_from_llm_prices",
     "price_cards_from_openrouter_models",
     "price_cards_from_portkey",
+    "RunCostLangChainCallback",
+    "track_langchain_costs",
 ]

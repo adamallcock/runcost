@@ -1472,3 +1472,34 @@ export function fromLlamaIndexTokenCounter(counter, options) {
     adapter: "llamaindex.token_counter"
   });
 }
+
+export function createRunCostVercelMiddleware(options = {}) {
+  const ledgers = [];
+  const onCostLedger = options.onCostLedger;
+  const attachCostLedger = options.attachCostLedger !== false;
+  const costOptions = { ...options };
+  delete costOptions.onCostLedger;
+  delete costOptions.attachCostLedger;
+
+  return {
+    ledgers,
+    get latest() {
+      return ledgers.length > 0 ? ledgers[ledgers.length - 1] : null;
+    },
+    async wrapGenerate({ doGenerate, params, model }) {
+      const result = await doGenerate();
+      const ledger = fromVercelAISDKResult(result, costOptions);
+      ledgers.push(ledger);
+      if (typeof onCostLedger === "function") {
+        onCostLedger(ledger, { result, params, model });
+      }
+      if (!attachCostLedger || result == null || typeof result !== "object") {
+        return result;
+      }
+      return {
+        ...result,
+        runCost: ledger
+      };
+    }
+  };
+}

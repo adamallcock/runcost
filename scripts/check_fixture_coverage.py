@@ -159,6 +159,15 @@ def infer_tags(fixture: dict[str, Any], scenario: str) -> list[str]:
     return sorted(tags)
 
 
+def infer_expected_languages(fixture: dict[str, Any]) -> list[str]:
+    helper = fixture["input"].get("helper")
+    if helper == "langchain_callback":
+        return ["python"]
+    if helper == "vercel_ai_sdk_middleware":
+        return ["javascript"]
+    return EXPECTED_LANGUAGES
+
+
 def infer_metadata(fixture: dict[str, Any]) -> dict[str, Any]:
     provider, surface = infer_provider_surface(fixture)
     scenario = infer_scenario(fixture)
@@ -168,7 +177,7 @@ def infer_metadata(fixture: dict[str, Any]) -> dict[str, Any]:
         "surface": surface,
         "scenario": scenario,
         "tags": infer_tags(fixture, scenario),
-        "expected_languages": EXPECTED_LANGUAGES,
+        "expected_languages": infer_expected_languages(fixture),
     }
 
 

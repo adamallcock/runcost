@@ -106,8 +106,10 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Framework | Python | JavaScript/TypeScript | Go | Evidence |
 |---|---:|---:|---:|---|
 | LangChain | Yes | Yes | Yes | `from_langchain_message`, `fromLangChainMessage`, `FromLangChainMessage`; lower-level `extract_langchain_chat_usage`, `extractLangChainChatUsage`; `langchain-chat-message-usage-metadata.json` |
+| LangChain callback/context manager | Yes | N/A | N/A | `track_langchain_costs`, `RunCostLangChainCallback`; `langchain-callback-context-manager.json` |
 | LlamaIndex | Yes | Yes | Yes | `from_llamaindex_token_counter`, `fromLlamaIndexTokenCounter`, `FromLlamaIndexTokenCounter`; lower-level `extract_llamaindex_token_counter_usage`, `extractLlamaIndexTokenCounterUsage`; `llamaindex-token-counter-events.json` |
 | Vercel AI SDK | Yes | Yes | Yes | `from_vercel_ai_sdk_result`, `fromVercelAISDKResult`, `FromVercelAISDKResult`; lower-level `extract_vercel_ai_sdk_usage`, `extractVercelAISDKUsage`; `vercel-ai-sdk-generate-text-total-usage.json` |
+| Vercel AI SDK middleware | N/A | Yes | N/A | `createRunCostVercelMiddleware`; `vercel-ai-sdk-middleware-wrap-generate.json` |
 | OpenAI Agents SDK | Planned | Planned | Planned | Milestone 6 |
 | LiteLLM proxy response metadata | Planned | Planned | Planned | Milestone 6 |
 | OpenRouter-compatible SDK paths | Planned | Planned | Planned | Milestone 6 |

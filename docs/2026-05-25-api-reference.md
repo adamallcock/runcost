@@ -62,6 +62,8 @@ Common one-call helper:
 | LangChain AIMessage | `from_langchain_message` | `fromLangChainMessage` | `FromLangChainMessage` |
 | Vercel AI SDK `generateText` result | `from_vercel_ai_sdk_result` | `fromVercelAISDKResult` | `FromVercelAISDKResult` |
 | LlamaIndex token counter | `from_llamaindex_token_counter` | `fromLlamaIndexTokenCounter` | `FromLlamaIndexTokenCounter` |
+| LangChain callback/context manager | `track_langchain_costs` / `RunCostLangChainCallback` | N/A | N/A |
+| Vercel AI SDK middleware | N/A | `createRunCostVercelMiddleware` | N/A |
 
 The framework helpers route through the same cost calculator after extracting canonical usage.
 

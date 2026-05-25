@@ -35,7 +35,9 @@ For mechanical coverage counts, see [Fixture Coverage](2026-05-25-fixture-covera
 | Framework | Object | Status |
 |---|---|---|
 | LangChain | AIMessage usage metadata | Fixture-backed |
+| LangChain | Python callback/context-manager helper | Fixture-backed for Python |
 | Vercel AI SDK | `generateText` result | Fixture-backed |
+| Vercel AI SDK | `wrapGenerate` middleware helper | Fixture-backed for JavaScript |
 | LlamaIndex | TokenCountingHandler output | Fixture-backed |
 
 ## Price Sources

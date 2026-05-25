@@ -80,6 +80,7 @@ The implementation is still pre-alpha. The current center of gravity is normaliz
 - Raw extractors for OpenRouter Chat Completions, Cohere Chat, Google Gemini/Vertex generateContent, and AWS Bedrock Converse.
 - Shared OpenAI-compatible chat extraction for Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face Inference Providers, and OpenRouter.
 - One-call framework helpers for LangChain AIMessage, Vercel AI SDK generateText, and LlamaIndex TokenCountingHandler outputs.
+- Framework-native helpers for Python LangChain callback/context-manager usage and JavaScript Vercel AI SDK `wrapGenerate` middleware.
 - Exact alias resolution through price-card aliases.
 - Component-aware discount policies.
 - Optional debug traces for price-card, component, alias, discount, and warning decisions.

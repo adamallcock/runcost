@@ -325,6 +325,28 @@ export interface FromResponseOptions extends ExtractOptions {
   debug_trace?: boolean;
 }
 
+export interface RunCostVercelMiddlewareOptions extends FromResponseOptions {
+  attachCostLedger?: boolean;
+  onCostLedger?: (
+    ledger: CostLedger,
+    context: {
+      result: Record<string, unknown>;
+      params?: unknown;
+      model?: unknown;
+    }
+  ) => void;
+}
+
+export interface RunCostVercelMiddleware {
+  ledgers: CostLedger[];
+  readonly latest: CostLedger | null;
+  wrapGenerate(args: {
+    doGenerate: () => Promise<Record<string, unknown>>;
+    params?: unknown;
+    model?: unknown;
+  }): Promise<Record<string, unknown>>;
+}
+
 export interface SourceAdapterOptions {
   retrievedAt?: string;
   sourceUrl?: string;
@@ -352,3 +374,4 @@ export function fromResponse(response: Record<string, unknown>, options: FromRes
 export function fromLangChainMessage(message: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromVercelAISDKResult(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromLlamaIndexTokenCounter(counter: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function createRunCostVercelMiddleware(options: RunCostVercelMiddlewareOptions): RunCostVercelMiddleware;

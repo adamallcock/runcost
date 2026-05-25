@@ -44,9 +44,12 @@ PUBLIC_API_NAMES = [
     "from_langchain_message",
     "fromLangChainMessage",
     "FromLangChainMessage",
+    "track_langchain_costs",
+    "RunCostLangChainCallback",
     "from_vercel_ai_sdk_result",
     "fromVercelAISDKResult",
     "FromVercelAISDKResult",
+    "createRunCostVercelMiddleware",
     "from_llamaindex_token_counter",
     "fromLlamaIndexTokenCounter",
     "FromLlamaIndexTokenCounter",
@@ -152,6 +155,7 @@ def check_public_api_artifacts() -> None:
         "calculateCost",
         "fromResponse",
         "fromLangChainMessage",
+        "createRunCostVercelMiddleware",
         "fromVercelAISDKResult",
         "fromLlamaIndexTokenCounter",
         "priceCardsFromLlmPrices",
@@ -179,6 +183,8 @@ def check_public_api_artifacts() -> None:
         "calculate_cost",
         "from_response",
         "from_langchain_message",
+        "track_langchain_costs",
+        "RunCostLangChainCallback",
         "from_vercel_ai_sdk_result",
         "from_llamaindex_token_counter",
         "price_cards_from_litellm",
@@ -217,17 +223,17 @@ def check_public_api_artifacts() -> None:
 
 def check_fixture_floor() -> None:
     fixtures = sorted((ROOT / "fixtures").glob("*.json"))
-    assert_true(len(fixtures) >= 48, f"expected at least 48 fixtures, found {len(fixtures)}")
+    assert_true(len(fixtures) >= 50, f"expected at least 50 fixtures, found {len(fixtures)}")
     for path in fixtures:
         fixture = load_json(path)
         metadata = fixture.get("metadata")
         assert_true(isinstance(metadata, dict), f"{path.name} must include metadata")
         for key in ["requirement_ids", "provider", "surface", "scenario", "tags", "expected_languages"]:
             assert_true(key in metadata, f"{path.name} metadata missing {key}")
-        assert_true(
-            metadata.get("expected_languages") == ["python", "javascript", "go"],
-            f"{path.name} must declare python/javascript/go expected languages",
-        )
+        languages = metadata.get("expected_languages")
+        assert_true(isinstance(languages, list) and languages, f"{path.name} must declare expected languages")
+        unknown = sorted(set(languages) - {"python", "javascript", "go"})
+        assert_true(not unknown, f"{path.name} declares unknown expected languages: {unknown}")
 
 
 def check_ci_workflow() -> None:
