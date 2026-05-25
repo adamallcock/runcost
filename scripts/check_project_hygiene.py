@@ -281,6 +281,34 @@ def check_ci_workflow() -> None:
         assert_true(command in workflow, f"CI workflow missing command: {command}")
 
 
+def check_documented_partial_framework_paths() -> None:
+    framework_notes = (ROOT / "docs/FRAMEWORK_ADAPTER_NOTES.md").read_text(encoding="utf-8")
+    supported_surfaces = (ROOT / "docs/2026-05-25-supported-surfaces.md").read_text(encoding="utf-8")
+    parity = (ROOT / "docs/API_PARITY_MATRIX.md").read_text(encoding="utf-8")
+
+    required_terms = [
+        "Semantic Kernel",
+        "Haystack",
+        "AutoGen / AG2",
+        "LangSmith",
+        "LiteLLM Proxy Metadata",
+        "OpenRouter-Compatible SDK Paths",
+    ]
+    for term in required_terms:
+        assert_true(term in framework_notes, f"framework adapter notes missing partial path: {term}")
+
+    for term in [
+        "Semantic Kernel",
+        "Haystack",
+        "AutoGen / AG2",
+        "LangSmith",
+        "LiteLLM proxy",
+        "OpenRouter-compatible SDK paths",
+    ]:
+        assert_true(term in supported_surfaces, f"supported surfaces missing partial path: {term}")
+        assert_true(term in parity, f"API parity matrix missing partial path: {term}")
+
+
 def main() -> int:
     check_required_files()
     check_json_files()
@@ -288,6 +316,7 @@ def main() -> int:
     check_public_api_artifacts()
     check_fixture_floor()
     check_ci_workflow()
+    check_documented_partial_framework_paths()
     print("Project hygiene checks passed.")
     return 0
 

@@ -43,6 +43,19 @@ For mechanical coverage counts, see [Fixture Coverage](2026-05-25-fixture-covera
 | Vercel AI SDK | `wrapGenerate` middleware helper | Fixture-backed for JavaScript |
 | LlamaIndex | TokenCountingHandler output | Fixture-backed |
 
+## Documented Partial Adapter Paths
+
+These paths are researched and documented in [Framework Adapter Notes](FRAMEWORK_ADAPTER_NOTES.md), but they are not yet fixture-backed and should not be treated as implemented support.
+
+| Framework / Gateway | Object or Path | Status |
+|---|---|---|
+| Semantic Kernel | Function invocation filters, auto-function filters, connector token metadata | Documented path; not fixture-backed |
+| Haystack | `OpenAIChatGenerator` reply metadata and `OpenAIGenerator` meta usage | Documented path; not fixture-backed |
+| AutoGen / AG2 | `get_actual_usage()`, `get_total_usage()`, `gather_usage_summary(...)` | Documented path; not fixture-backed |
+| LangSmith | Trace usage metadata and bulk export cost comparison | Documented path; not fixture-backed |
+| LiteLLM proxy | Direct usage metadata, response cost metadata, `/model/info` pricing metadata | Documented path; not fixture-backed |
+| OpenRouter-compatible SDK paths | OpenAI SDK base URL, OpenRouter SDK, Agent SDK full responses | Documented path; not fixture-backed |
+
 ## Aggregation
 
 | Surface | Object | Status |
@@ -65,4 +78,5 @@ For mechanical coverage counts, see [Fixture Coverage](2026-05-25-fixture-covera
 
 - Support means extraction and pricing behavior has at least one shared fixture across Python and JavaScript, with Go coverage through the conformance suite where applicable.
 - Support does not mean every model, region, service tier, tool, or historical price is present.
+- Documented partial adapter paths are integration targets with source evidence; they still need adapters, fixtures, examples, and parity-matrix promotion before they become supported.
 - The next support expansion should prioritize provider-specific tool-call pricing, streaming usage, and clean framework middleware ergonomics.

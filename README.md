@@ -88,6 +88,7 @@ The implementation is still pre-alpha. The current center of gravity is normaliz
 - Shared OpenAI-compatible chat extraction for Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face Inference Providers, and OpenRouter.
 - One-call framework helpers for LangChain AIMessage, Vercel AI SDK generateText, and LlamaIndex TokenCountingHandler outputs.
 - Framework-native helpers for Python LangChain callback/context-manager usage and JavaScript Vercel AI SDK `wrapGenerate` middleware.
+- Documented partial adapter paths for Semantic Kernel, Haystack, AutoGen/AG2, LangSmith export comparison, LiteLLM proxy metadata, and OpenRouter-compatible SDK paths.
 - Multi-call/session aggregation for already-calculated cost ledgers, including missing final streaming usage warnings.
 - Exact alias resolution through price-card aliases.
 - Component-aware discount policies.

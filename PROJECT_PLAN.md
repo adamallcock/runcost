@@ -468,13 +468,14 @@ Delivered in current prototype:
 - LlamaIndex `TokenCountingHandler` event and cumulative counter extraction.
 - One-call helper APIs for LangChain, Vercel AI SDK, and LlamaIndex in Python, JavaScript/TypeScript, and Go.
 - Framework adapter notes in `docs/FRAMEWORK_ADAPTER_NOTES.md`.
+- Documented partial adapter paths for Semantic Kernel, Haystack, AutoGen/AG2, LangSmith export comparison, LiteLLM proxy metadata, and OpenRouter-compatible SDK paths.
 
 Progress criteria:
 
 - LangChain Python callback works with one context manager.
 - Vercel AI SDK wrapper works with one middleware/helper.
 - LlamaIndex callback handler captures model and usage metadata.
-- Semantic Kernel and AutoGen have documented adapter paths even if initial support is partial.
+- Semantic Kernel, Haystack, AutoGen/AG2, LangSmith, LiteLLM proxy metadata, and OpenRouter-compatible SDK paths have documented adapter paths even if initial support is partial.
 - Framework fixtures cover direct result objects, callbacks, streaming finalization, and multi-step runs.
 
 Exit gate:

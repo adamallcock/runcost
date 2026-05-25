@@ -77,6 +77,7 @@ Warnings include a message, and may include a `path` and `metadata`.
 - Tool-call pricing coverage exists only for selected fixtures and provider shapes.
 - Historical point-in-time pricing exists in the model but is not comprehensive.
 - Framework adapters cover selected usage metadata objects plus initial LangChain callback/context-manager and Vercel `wrapGenerate` middleware helpers, not every framework callback or streaming pattern.
+- Semantic Kernel, Haystack, AutoGen/AG2, LangSmith, LiteLLM proxy metadata, and OpenRouter-compatible SDK paths are documented as partial integration paths only; they still need fixture-backed adapters before they are supported.
 
 ## Production Guidance
 
