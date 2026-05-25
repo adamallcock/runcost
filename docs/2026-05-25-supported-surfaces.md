@@ -42,6 +42,8 @@ For mechanical coverage counts, see [Fixture Coverage](2026-05-25-fixture-covera
 | Vercel AI SDK | `generateText` result | Fixture-backed |
 | Vercel AI SDK | `wrapGenerate` middleware helper | Fixture-backed for JavaScript |
 | LlamaIndex | TokenCountingHandler output | Fixture-backed |
+| Haystack | OpenAIChatGenerator reply metadata / OpenAIGenerator meta usage | Fixture-backed |
+| LiteLLM proxy | OpenAI-compatible usage plus hidden response cost metadata | Fixture-backed |
 
 ## Documented Partial Adapter Paths
 
@@ -50,10 +52,8 @@ These paths are researched and documented in [Framework Adapter Notes](FRAMEWORK
 | Framework / Gateway | Object or Path | Status |
 |---|---|---|
 | Semantic Kernel | Function invocation filters, auto-function filters, connector token metadata | Documented path; not fixture-backed |
-| Haystack | `OpenAIChatGenerator` reply metadata and `OpenAIGenerator` meta usage | Documented path; not fixture-backed |
 | AutoGen / AG2 | `get_actual_usage()`, `get_total_usage()`, `gather_usage_summary(...)` | Documented path; not fixture-backed |
 | LangSmith | Trace usage metadata and bulk export cost comparison | Documented path; not fixture-backed |
-| LiteLLM proxy | Direct usage metadata, response cost metadata, `/model/info` pricing metadata | Documented path; not fixture-backed |
 | OpenRouter-compatible SDK paths | OpenAI SDK base URL, OpenRouter SDK, Agent SDK full responses | Documented path; not fixture-backed |
 
 ## Aggregation

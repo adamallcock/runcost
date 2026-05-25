@@ -1185,6 +1185,10 @@ func ExtractUsageLedger(response Object, options Object) Object {
 		return extractVercelAISDKUsage(response, options)
 	case "llamaindex.token_counter":
 		return extractLlamaIndexTokenCounterUsage(response, options)
+	case "haystack.generator_result":
+		return extractHaystackGeneratorUsage(response, options)
+	case "litellm.proxy_response":
+		return extractLiteLLMProxyResponseUsage(response, options)
 	}
 
 	surface := asString(options["surface"])
@@ -1834,6 +1838,84 @@ func extractLlamaIndexTokenCounterUsage(response Object, options Object) Object 
 	}), response)
 }
 
+func haystackUsagePayload(response Object) (Object, Object, string) {
+	replies := asSlice(response["replies"])
+	if len(replies) > 0 {
+		reply := asObject(replies[0])
+		metadata := asObject(reply["_meta"])
+		if len(metadata) == 0 {
+			metadata = asObject(reply["meta"])
+		}
+		if len(metadata) > 0 {
+			return asObject(metadata["usage"]), metadata, "$.replies[0]._meta.usage"
+		}
+	}
+	metaItems := asSlice(response["meta"])
+	if len(metaItems) > 0 {
+		metadata := asObject(metaItems[0])
+		return asObject(metadata["usage"]), metadata, "$.meta[0].usage"
+	}
+	metadata := asObject(response["meta"])
+	if len(metadata) > 0 {
+		return asObject(metadata["usage"]), metadata, "$.meta.usage"
+	}
+	return asObject(response["usage"]), response, "$.usage"
+}
+
+func extractHaystackGeneratorUsage(response Object, options Object) Object {
+	usage, metadata, sourceRoot := haystackUsagePayload(response)
+	cachedInput, cachedSourcePath := openAICompatibleCachedInput(usage)
+	reasoning, reasoningSourcePath := openAICompatibleReasoningOutput(usage)
+	prompt := getNumber(usage, "prompt_tokens")
+	if _, ok := usage["prompt_tokens"]; !ok {
+		prompt = add(getNumber(usage, "prompt_cache_hit_tokens"), getNumber(usage, "prompt_cache_miss_tokens"))
+	}
+	completion := getNumber(usage, "completion_tokens")
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "unknown"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "framework.haystack.generator"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(metadata["model"])
+	if returnedModel == "" {
+		returnedModel = asString(response["model"])
+	}
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("input_uncached_tokens", subtract(prompt, cachedInput), "token", sourceRoot+".prompt_tokens"),
+		positiveComponent("input_cache_read_tokens", cachedInput, "token", strings.Replace(cachedSourcePath, "$.usage", sourceRoot, 1)),
+		positiveComponent("output_text_tokens", subtract(completion, reasoning), "token", sourceRoot+".completion_tokens"),
+		positiveComponent("output_reasoning_tokens", reasoning, "token", strings.Replace(reasoningSourcePath, "$.usage", sourceRoot, 1)),
+	}), usage)
+}
+
+func extractLiteLLMProxyResponseUsage(response Object, options Object) Object {
+	hidden := asObject(response["_hidden_params"])
+	if len(hidden) == 0 {
+		hidden = asObject(response["hidden_params"])
+	}
+	if asString(options["provider"]) == "" {
+		provider := asString(hidden["custom_llm_provider"])
+		if provider == "" {
+			provider = asString(hidden["litellm_provider"])
+		}
+		if provider != "" {
+			options["provider"] = provider
+		}
+	}
+	return extractOpenAICompatibleChatCompletionsUsage(response, options)
+}
+
 func addPriceComponent(components *[]any, usageComponent string, unit string, amount any, per string, extra Object) {
 	if amount == nil {
 		return
@@ -2472,4 +2554,30 @@ func FromVercelAISDKResult(result Object, options Object, priceCards []any, disc
 func FromLlamaIndexTokenCounter(counter Object, options Object, priceCards []any, discountPolicies []any) Object {
 	options["adapter"] = "llamaindex.token_counter"
 	return FromResponse(counter, options, priceCards, discountPolicies)
+}
+
+// FromHaystackGeneratorResult prices a Haystack OpenAI generator result by
+// reading reply/meta usage metadata and applying provider price cards.
+func FromHaystackGeneratorResult(result Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options["adapter"] = "haystack.generator_result"
+	return FromResponse(result, options, priceCards, discountPolicies)
+}
+
+// FromLiteLLMResponse prices a LiteLLM proxy or SDK response by reading
+// OpenAI-compatible usage and comparing hidden response_cost metadata when present.
+func FromLiteLLMResponse(response Object, options Object, priceCards []any, discountPolicies []any) Object {
+	hidden := asObject(response["_hidden_params"])
+	if len(hidden) == 0 {
+		hidden = asObject(response["hidden_params"])
+	}
+	if _, exists := options["provider_reported_cost"]; !exists {
+		if responseCost, ok := hidden["response_cost"]; ok {
+			options["provider_reported_cost"] = responseCost
+			if asString(options["provider_reported_cost_mode"]) == "" {
+				options["provider_reported_cost_mode"] = "compare"
+			}
+		}
+	}
+	options["adapter"] = "litellm.proxy_response"
+	return FromResponse(response, options, priceCards, discountPolicies)
 }

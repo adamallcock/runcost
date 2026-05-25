@@ -12,14 +12,16 @@ Framework extraction is selected with `extract.adapter`:
 - `langchain.chat_message`
 - `vercel_ai_sdk.generate_text`
 - `llamaindex.token_counter`
+- `haystack.generator_result`
+- `litellm.proxy_response`
 
 The output usage ledger keeps `provider`, `surface`, and `model` from the caller or framework response, so existing provider price cards remain usable.
 
 For one-call cost calculation, use the public helpers:
 
-- Python: `from_langchain_message`, `from_vercel_ai_sdk_result`, `from_llamaindex_token_counter`.
-- JavaScript/TypeScript: `fromLangChainMessage`, `fromVercelAISDKResult`, `fromLlamaIndexTokenCounter`.
-- Go: `FromLangChainMessage`, `FromVercelAISDKResult`, `FromLlamaIndexTokenCounter`.
+- Python: `from_langchain_message`, `from_vercel_ai_sdk_result`, `from_llamaindex_token_counter`, `from_haystack_generator_result`, `from_litellm_response`.
+- JavaScript/TypeScript: `fromLangChainMessage`, `fromVercelAISDKResult`, `fromLlamaIndexTokenCounter`, `fromHaystackGeneratorResult`, `fromLiteLLMResponse`.
+- Go: `FromLangChainMessage`, `FromVercelAISDKResult`, `FromLlamaIndexTokenCounter`, `FromHaystackGeneratorResult`, `FromLiteLLMResponse`.
 
 For framework-native ergonomics, use:
 
@@ -112,6 +114,45 @@ Notes:
 
 - LlamaIndex token counting may be tokenizer-estimated rather than provider-reported for some providers. The adapter is useful for framework-level visibility but provider raw responses should be preferred when exact billing metadata is available.
 
+## Haystack Generator Results
+
+Source references:
+
+- `OpenAIChatGenerator` replies are `ChatMessage` objects with `_meta` containing model, finish reason, and OpenAI-style `usage`; the docs show prompt tokens, completion tokens, total tokens, cached prompt tokens, and reasoning tokens in that metadata. Streaming examples show `usage: None` for the streamed reply metadata: https://docs.haystack.deepset.ai/docs/openaichatgenerator
+- `OpenAIGenerator` returns a `meta` list with token-count and finish metadata, including OpenAI-style `usage`: https://docs.haystack.deepset.ai/docs/openaigenerator
+
+Mapping:
+
+- Chat results: `response["replies"][0]._meta.usage` or `response["replies"][0].meta.usage`.
+- Text-generation results: `response["meta"][0].usage`.
+- `prompt_tokens` minus `prompt_tokens_details.cached_tokens` -> `input_uncached_tokens`.
+- `prompt_tokens_details.cached_tokens` -> `input_cache_read_tokens`.
+- `completion_tokens` minus `completion_tokens_details.reasoning_tokens` -> `output_text_tokens`.
+- `completion_tokens_details.reasoning_tokens` -> `output_reasoning_tokens`.
+- `total_tokens` is preserved in raw usage but is never priced directly.
+
+Notes:
+
+- Haystack streamed reply metadata can report `usage: None`; RunCost currently prices fixture-backed final result metadata and does not estimate streamed partial deltas.
+
+## LiteLLM Proxy Response Metadata
+
+Source references:
+
+- LiteLLM completion docs state that LiteLLM returns token usage by default and exposes response cost in hidden response metadata: https://docs.litellm.ai/docs/completion/token_usage
+- LiteLLM usage docs state that LiteLLM returns OpenAI-compatible usage across providers: https://docs.litellm.ai/docs/completion/usage
+- LiteLLM proxy custom pricing docs describe response-cost logging, custom pricing, provider discounts, and provider margins: https://docs.litellm.ai/docs/proxy/custom_pricing
+
+Mapping:
+
+- Reuse the OpenAI-compatible chat usage mapping for `usage.prompt_tokens`, `usage.completion_tokens`, `usage.total_tokens`, `usage.prompt_tokens_details.cached_tokens`, and `usage.completion_tokens_details.reasoning_tokens`.
+- `_hidden_params.custom_llm_provider` or `_hidden_params.litellm_provider` can supply the provider when the caller does not.
+- `_hidden_params.response_cost` is passed as provider/framework-reported cost for comparison by `from_litellm_response`, `fromLiteLLMResponse`, and `FromLiteLLMResponse`.
+
+Notes:
+
+- LiteLLM proxy aliases and `/model/info` pricing metadata remain part of the source-adapter workstream; this adapter handles response usage and response-cost metadata, not proxy config ingestion.
+
 ## Planned / Partial Adapter Paths
 
 The following paths are documented from current primary docs but are not fixture-backed in the current prototype. Treat them as research-backed adapter targets, not implemented support.
@@ -133,24 +174,6 @@ Recommended bridge:
 Status:
 
 - Partial documentation only. No `semantic_kernel.*` adapter is implemented yet.
-
-### Haystack
-
-Source references:
-
-- `OpenAIChatGenerator` replies are `ChatMessage` objects with `_meta` containing model, finish reason, and OpenAI-style `usage`; the docs show prompt tokens, completion tokens, total tokens, cached prompt tokens, and reasoning tokens in that metadata. Streaming examples show `usage: None` for the streamed reply metadata: https://docs.haystack.deepset.ai/docs/openaichatgenerator
-- `OpenAIGenerator` returns a `meta` list with token-count and finish metadata, including OpenAI-style `usage`: https://docs.haystack.deepset.ai/docs/openaigenerator
-
-Recommended bridge:
-
-- For chat, read `response["replies"][*]._meta.usage` or the public metadata accessor if present.
-- For text generation, read `response["meta"][*].usage`.
-- Reuse the OpenAI-compatible chat usage mapping for `prompt_tokens`, `completion_tokens`, `total_tokens`, `prompt_tokens_details.cached_tokens`, and `completion_tokens_details.reasoning_tokens`.
-- Treat Haystack streaming metadata with `usage: None` as a missing-final-usage case unless a provider raw response or final callback supplies usage separately.
-
-Status:
-
-- Partial documentation only. No `haystack.*` adapter is implemented yet.
 
 ### AutoGen / AG2
 
@@ -186,24 +209,6 @@ Recommended bridge:
 Status:
 
 - Partial documentation only. No `langsmith.*` adapter is implemented yet.
-
-### LiteLLM Proxy Metadata
-
-Source references:
-
-- LiteLLM completion docs state that LiteLLM returns token usage by default and exposes response cost in hidden response metadata: https://docs.litellm.ai/docs/completion/token_usage
-- LiteLLM proxy model management docs show `model_info` as the place for additional model metadata and model-cost information returned by `/model/info`: https://docs.litellm.ai/docs/proxy/model_management
-- LiteLLM custom pricing docs describe proxy spend tracking, custom pricing, cost per token/second, zero-cost models, provider discounts, and provider margins: https://docs.litellm.ai/docs/proxy/custom_pricing
-
-Recommended bridge:
-
-- For direct LiteLLM SDK responses, read provider-compatible `usage` first and compare `_hidden_params.response_cost` as framework/provider-reported cost when present.
-- For proxy deployments, ingest `/model/info` pricing metadata as a price source and preserve proxy model aliases separately from upstream provider model IDs.
-- Preserve LiteLLM provider discounts/margins as explicit user or gateway adjustment policies rather than silently baking them into provider list price.
-
-Status:
-
-- Partial documentation only. Price-source import from LiteLLM JSON exists, but no `litellm.proxy_response` metadata adapter is implemented yet.
 
 ### OpenRouter-Compatible SDK Paths
 

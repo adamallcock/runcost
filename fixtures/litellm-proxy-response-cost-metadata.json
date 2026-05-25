@@ -1,0 +1,189 @@
+{
+  "name": "litellm-proxy-response-cost-metadata",
+  "description": "Extracts LiteLLM proxy OpenAI-compatible usage and compares hidden response_cost metadata.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-FRAMEWORK-ADAPTER",
+      "RC-PROVIDER-REPORTED-COST"
+    ],
+    "provider": "openai",
+    "surface": "openai.chat_completions",
+    "scenario": "framework_adapter",
+    "tags": [
+      "adapter:litellm.proxy_response",
+      "component:input_cache_read_tokens",
+      "component:input_uncached_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_text_tokens",
+      "framework_adapter",
+      "framework:litellm",
+      "helper:from_litellm_response",
+      "warning:provider_reported_cost_mismatch"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "id": "chatcmpl-litellm-fixture",
+      "object": "chat.completion",
+      "model": "gpt-5-nano-2026-05-24",
+      "choices": [
+        {
+          "index": 0,
+          "finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "Done."
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 150,
+        "completion_tokens": 50,
+        "total_tokens": 200,
+        "prompt_tokens_details": {
+          "cached_tokens": 30
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 10
+        }
+      },
+      "_hidden_params": {
+        "custom_llm_provider": "openai",
+        "response_cost": "0.00032"
+      }
+    },
+    "helper": "from_litellm_response",
+    "extract": {
+      "adapter": "litellm.proxy_response",
+      "provider": "openai",
+      "surface": "openai.chat_completions",
+      "model": "gpt-5-nano"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-5-nano:litellm-fixture",
+        "provider": "openai",
+        "surface": "openai.chat_completions",
+        "model": "gpt-5-nano",
+        "aliases": [
+          "gpt-5-nano-2026-05-24"
+        ],
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.chat_completions",
+      "model": {
+        "requested": "gpt-5-nano",
+        "returned": "gpt-5-nano-2026-05-24",
+        "billed": "gpt-5-nano",
+        "alias_resolution": "source_exact"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "120",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.00012",
+          "price_card_id": "openai:gpt-5-nano:litellm-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "30",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.000003",
+          "price_card_id": "openai:gpt-5-nano:litellm-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "40",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.00016",
+          "price_card_id": "openai:gpt-5-nano:litellm-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "10",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.00004",
+          "price_card_id": "openai:gpt-5-nano:litellm-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.000323",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "provider_reported_cost_mismatch",
+          "message": "Provider reported cost 0.00032 differs from calculated total 0.000323."
+        }
+      ]
+    }
+  }
+}

@@ -80,6 +80,8 @@ Common one-call helper:
 | LangChain AIMessage | `from_langchain_message` | `fromLangChainMessage` | `FromLangChainMessage` |
 | Vercel AI SDK `generateText` result | `from_vercel_ai_sdk_result` | `fromVercelAISDKResult` | `FromVercelAISDKResult` |
 | LlamaIndex token counter | `from_llamaindex_token_counter` | `fromLlamaIndexTokenCounter` | `FromLlamaIndexTokenCounter` |
+| Haystack generator result | `from_haystack_generator_result` | `fromHaystackGeneratorResult` | `FromHaystackGeneratorResult` |
+| LiteLLM proxy / SDK response | `from_litellm_response` | `fromLiteLLMResponse` | `FromLiteLLMResponse` |
 | LangChain callback/context manager | `track_langchain_costs` / `RunCostLangChainCallback` | N/A | N/A |
 | Vercel AI SDK middleware | N/A | `createRunCostVercelMiddleware` | N/A |
 

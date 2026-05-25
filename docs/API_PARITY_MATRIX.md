@@ -115,12 +115,12 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | LlamaIndex | Yes | Yes | Yes | `from_llamaindex_token_counter`, `fromLlamaIndexTokenCounter`, `FromLlamaIndexTokenCounter`; lower-level `extract_llamaindex_token_counter_usage`, `extractLlamaIndexTokenCounterUsage`; `llamaindex-token-counter-events.json` |
 | Vercel AI SDK | Yes | Yes | Yes | `from_vercel_ai_sdk_result`, `fromVercelAISDKResult`, `FromVercelAISDKResult`; lower-level `extract_vercel_ai_sdk_usage`, `extractVercelAISDKUsage`; `vercel-ai-sdk-generate-text-total-usage.json` |
 | Vercel AI SDK middleware | N/A | Yes | N/A | `createRunCostVercelMiddleware`; `vercel-ai-sdk-middleware-wrap-generate.json` |
+| Haystack | Yes | Yes | Yes | `from_haystack_generator_result`, `fromHaystackGeneratorResult`, `FromHaystackGeneratorResult`; lower-level `extract_haystack_generator_usage`, `extractHaystackGeneratorUsage`; `haystack-openai-chat-generator-meta.json` |
+| LiteLLM proxy response metadata | Yes | Yes | Yes | `from_litellm_response`, `fromLiteLLMResponse`, `FromLiteLLMResponse`; lower-level `extract_litellm_proxy_response_usage`, `extractLiteLLMProxyResponseUsage`; `litellm-proxy-response-cost-metadata.json` |
 | OpenAI Agents SDK | Planned | Planned | Planned | Milestone 6 |
 | Semantic Kernel | Partial | Partial | Partial | Documented adapter path in `docs/FRAMEWORK_ADAPTER_NOTES.md`; no fixture-backed extractor yet |
-| Haystack | Partial | Partial | Partial | Documented adapter path in `docs/FRAMEWORK_ADAPTER_NOTES.md`; no fixture-backed extractor yet |
 | AutoGen / AG2 | Partial | Partial | Partial | Documented adapter path in `docs/FRAMEWORK_ADAPTER_NOTES.md`; no fixture-backed extractor yet |
 | LangSmith export/compare | Partial | Partial | Partial | Documented adapter path in `docs/FRAMEWORK_ADAPTER_NOTES.md`; no fixture-backed extractor yet |
-| LiteLLM proxy response metadata | Partial | Partial | Partial | Documented adapter path in `docs/FRAMEWORK_ADAPTER_NOTES.md`; no fixture-backed extractor yet |
 | OpenRouter-compatible SDK paths | Partial | Partial | Partial | Documented adapter path in `docs/FRAMEWORK_ADAPTER_NOTES.md`; OpenRouter chat/model fixtures exist, SDK wrappers do not |
 
 ## Release Rule

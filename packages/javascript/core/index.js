@@ -1347,6 +1347,73 @@ export function extractLlamaIndexTokenCounterUsage(response, options = {}) {
   });
 }
 
+function haystackUsagePayload(response) {
+  const replies = response.replies || [];
+  if (replies.length) {
+    const reply = replies[0] || {};
+    const metadata = reply._meta || reply.meta || {};
+    if (metadata && typeof metadata === "object") {
+      return {
+        usage: metadata.usage || {},
+        metadata,
+        sourceRoot: "$.replies[0]._meta.usage"
+      };
+    }
+  }
+  const meta = response.meta;
+  if (Array.isArray(meta) && meta.length) {
+    const metadata = meta[0] || {};
+    return {
+      usage: metadata.usage || {},
+      metadata,
+      sourceRoot: "$.meta[0].usage"
+    };
+  }
+  if (meta && typeof meta === "object") {
+    return {
+      usage: meta.usage || {},
+      metadata: meta,
+      sourceRoot: "$.meta.usage"
+    };
+  }
+  return {
+    usage: response.usage || {},
+    metadata: response,
+    sourceRoot: "$.usage"
+  };
+}
+
+export function extractHaystackGeneratorUsage(response, options = {}) {
+  const { usage, metadata, sourceRoot } = haystackUsagePayload(response);
+  const cachedInput = openAICompatibleCachedInput(usage);
+  const reasoning = openAICompatibleReasoningOutput(usage);
+  const prompt = usage.prompt_tokens ?? ((usage.prompt_cache_hit_tokens || 0) + (usage.prompt_cache_miss_tokens || 0));
+  const completion = usage.completion_tokens || 0;
+  const returnedModel = metadata.model || response.model || options.model;
+
+  return baseUsageLedger({
+    provider: options.provider || "unknown",
+    surface: options.surface || "framework.haystack.generator",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage: usage,
+    components: compactComponents([
+      positiveComponent("input_uncached_tokens", prompt - cachedInput.value, "token", `${sourceRoot}.prompt_tokens`),
+      positiveComponent("input_cache_read_tokens", cachedInput.value, "token", cachedInput.sourcePath.replace("$.usage", sourceRoot)),
+      positiveComponent("output_text_tokens", completion - reasoning.value, "token", `${sourceRoot}.completion_tokens`),
+      positiveComponent("output_reasoning_tokens", reasoning.value, "token", reasoning.sourcePath.replace("$.usage", sourceRoot))
+    ])
+  });
+}
+
+export function extractLiteLLMProxyResponseUsage(response, options = {}) {
+  const hidden = response._hidden_params || response.hidden_params || {};
+  return extractOpenAICompatibleChatCompletionsUsage(response, {
+    ...options,
+    provider: options.provider || hidden.custom_llm_provider || hidden.litellm_provider
+  });
+}
+
 export function extractUsageLedger(response, options = {}) {
   const adapter = options.adapter || options.framework;
   if (adapter === "langchain.chat_message") {
@@ -1357,6 +1424,12 @@ export function extractUsageLedger(response, options = {}) {
   }
   if (adapter === "llamaindex.token_counter") {
     return extractLlamaIndexTokenCounterUsage(response, options);
+  }
+  if (adapter === "haystack.generator_result") {
+    return extractHaystackGeneratorUsage(response, options);
+  }
+  if (adapter === "litellm.proxy_response") {
+    return extractLiteLLMProxyResponseUsage(response, options);
   }
 
   const surface = options.surface;
@@ -1844,6 +1917,24 @@ export function fromLlamaIndexTokenCounter(counter, options) {
   return fromResponse(counter, {
     ...options,
     adapter: "llamaindex.token_counter"
+  });
+}
+
+export function fromHaystackGeneratorResult(result, options = {}) {
+  return fromResponse(result, {
+    ...options,
+    adapter: "haystack.generator_result"
+  });
+}
+
+export function fromLiteLLMResponse(response, options = {}) {
+  const hidden = response._hidden_params || response.hidden_params || {};
+  const responseCost = hidden.response_cost;
+  return fromResponse(response, {
+    ...options,
+    providerReportedCost: options.providerReportedCost ?? options.provider_reported_cost ?? responseCost,
+    providerReportedCostMode: options.providerReportedCostMode ?? options.provider_reported_cost_mode ?? "compare",
+    adapter: "litellm.proxy_response"
   });
 }
 

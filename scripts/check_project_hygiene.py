@@ -64,6 +64,12 @@ PUBLIC_API_NAMES = [
     "from_llamaindex_token_counter",
     "fromLlamaIndexTokenCounter",
     "FromLlamaIndexTokenCounter",
+    "from_haystack_generator_result",
+    "fromHaystackGeneratorResult",
+    "FromHaystackGeneratorResult",
+    "from_litellm_response",
+    "fromLiteLLMResponse",
+    "FromLiteLLMResponse",
     "DebugTrace",
     "debug_trace",
     "debugTrace",
@@ -79,6 +85,10 @@ PUBLIC_API_NAMES = [
     "extract_vercel_ai_sdk_usage",
     "extractLlamaIndexTokenCounterUsage",
     "extract_llamaindex_token_counter_usage",
+    "extractHaystackGeneratorUsage",
+    "extract_haystack_generator_usage",
+    "extractLiteLLMProxyResponseUsage",
+    "extract_litellm_proxy_response_usage",
     "extractOpenRouterChatCompletionsUsage",
     "extract_openrouter_chat_completions_usage",
     "extractOpenAICompatibleChatCompletionsUsage",
@@ -181,6 +191,8 @@ def check_public_api_artifacts() -> None:
         "createRunCostVercelMiddleware",
         "fromVercelAISDKResult",
         "fromLlamaIndexTokenCounter",
+        "fromHaystackGeneratorResult",
+        "fromLiteLLMResponse",
         "priceCardsFromLlmPrices",
         "priceCardsFromLiteLLM",
         "priceCardsFromOpenRouterModels",
@@ -192,6 +204,8 @@ def check_public_api_artifacts() -> None:
         "extractLangChainChatUsage",
         "extractVercelAISDKUsage",
         "extractLlamaIndexTokenCounterUsage",
+        "extractHaystackGeneratorUsage",
+        "extractLiteLLMProxyResponseUsage",
         "UsageLedger",
         "PriceCard",
         "CostLedger",
@@ -213,6 +227,8 @@ def check_public_api_artifacts() -> None:
         "RunCostLangChainCallback",
         "from_vercel_ai_sdk_result",
         "from_llamaindex_token_counter",
+        "from_haystack_generator_result",
+        "from_litellm_response",
         "price_cards_from_litellm",
         "price_cards_from_openrouter_models",
         "price_cards_from_portkey",
@@ -223,6 +239,8 @@ def check_public_api_artifacts() -> None:
         "extract_langchain_chat_usage",
         "extract_vercel_ai_sdk_usage",
         "extract_llamaindex_token_counter_usage",
+        "extract_haystack_generator_usage",
+        "extract_litellm_proxy_response_usage",
     ]:
         assert_true(exported in python_init or exported in python_types, f"Python package missing {exported}")
 
@@ -242,6 +260,8 @@ def check_public_api_artifacts() -> None:
         "FromLangChainMessage",
         "FromVercelAISDKResult",
         "FromLlamaIndexTokenCounter",
+        "FromHaystackGeneratorResult",
+        "FromLiteLLMResponse",
     ]:
         assert_true(
             re.search(rf"// {exported}\b", go_source) is not None,
@@ -254,7 +274,7 @@ def check_public_api_artifacts() -> None:
 
 def check_fixture_floor() -> None:
     fixtures = sorted((ROOT / "fixtures").glob("*.json"))
-    assert_true(len(fixtures) >= 57, f"expected at least 57 fixtures, found {len(fixtures)}")
+    assert_true(len(fixtures) >= 59, f"expected at least 59 fixtures, found {len(fixtures)}")
     for path in fixtures:
         fixture = load_json(path)
         metadata = fixture.get("metadata")
@@ -291,7 +311,7 @@ def check_documented_partial_framework_paths() -> None:
         "Haystack",
         "AutoGen / AG2",
         "LangSmith",
-        "LiteLLM Proxy Metadata",
+        "LiteLLM Proxy Response Metadata",
         "OpenRouter-Compatible SDK Paths",
     ]
     for term in required_terms:

@@ -1317,6 +1317,63 @@ def extract_llamaindex_token_counter_usage(response: Dict[str, Any], **options: 
     )
 
 
+def _haystack_usage_payload(response: Dict[str, Any]) -> tuple[Dict[str, Any], Dict[str, Any], str]:
+    replies = response.get("replies")
+    if isinstance(replies, list) and replies:
+        reply = replies[0]
+        if isinstance(reply, dict):
+            metadata = reply.get("_meta") or reply.get("meta") or {}
+            if isinstance(metadata, dict):
+                return metadata.get("usage") or {}, metadata, "$.replies[0]._meta.usage"
+    meta = response.get("meta")
+    if isinstance(meta, list) and meta:
+        first_meta = meta[0]
+        if isinstance(first_meta, dict):
+            return first_meta.get("usage") or {}, first_meta, "$.meta[0].usage"
+    if isinstance(meta, dict):
+        return meta.get("usage") or {}, meta, "$.meta.usage"
+    return response.get("usage") or {}, response, "$.usage"
+
+
+def extract_haystack_generator_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage, metadata, source_root = _haystack_usage_payload(response)
+    cached_input, cached_source = _openai_compatible_cached_input(usage)
+    reasoning, reasoning_source = _openai_compatible_reasoning_output(usage)
+    prompt_tokens = usage.get(
+        "prompt_tokens",
+        usage.get("prompt_cache_hit_tokens", 0) + usage.get("prompt_cache_miss_tokens", 0),
+    )
+    completion_tokens = usage.get("completion_tokens", 0)
+    returned_model = metadata.get("model") or response.get("model") or options.get("model")
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "unknown"),
+        surface=options.get("surface", "framework.haystack.generator"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=usage,
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", prompt_tokens - cached_input, "token", f"{source_root}.prompt_tokens"),
+                _positive_component("input_cache_read_tokens", cached_input, "token", cached_source.replace("$.usage", source_root)),
+                _positive_component("output_text_tokens", completion_tokens - reasoning, "token", f"{source_root}.completion_tokens"),
+                _positive_component("output_reasoning_tokens", reasoning, "token", reasoning_source.replace("$.usage", source_root)),
+            ]
+        ),
+    )
+
+
+def extract_litellm_proxy_response_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    hidden = response.get("_hidden_params") or response.get("hidden_params") or {}
+    if not isinstance(hidden, dict):
+        hidden = {}
+    provider = options.get("provider") or hidden.get("custom_llm_provider") or hidden.get("litellm_provider")
+    merged_options = dict(options)
+    if provider:
+        merged_options["provider"] = provider
+    return extract_openai_compatible_chat_completions_usage(response, **merged_options)
+
+
 def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     adapter = options.get("adapter") or options.get("framework")
     if adapter == "langchain.chat_message":
@@ -1325,6 +1382,10 @@ def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, 
         return extract_vercel_ai_sdk_usage(response, **options)
     if adapter == "llamaindex.token_counter":
         return extract_llamaindex_token_counter_usage(response, **options)
+    if adapter == "haystack.generator_result":
+        return extract_haystack_generator_usage(response, **options)
+    if adapter == "litellm.proxy_response":
+        return extract_litellm_proxy_response_usage(response, **options)
 
     surface = options.get("surface")
     if surface == "openai.responses":
@@ -1886,6 +1947,24 @@ def from_llamaindex_token_counter(counter: Dict[str, Any], **options: Any) -> Di
     merged_options = dict(options)
     merged_options["adapter"] = "llamaindex.token_counter"
     return from_response(counter, **merged_options)
+
+
+def from_haystack_generator_result(result: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = dict(options)
+    merged_options["adapter"] = "haystack.generator_result"
+    return from_response(result, **merged_options)
+
+
+def from_litellm_response(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = dict(options)
+    hidden = response.get("_hidden_params") or response.get("hidden_params") or {}
+    if isinstance(hidden, dict) and "provider_reported_cost" not in merged_options:
+        response_cost = hidden.get("response_cost")
+        if response_cost is not None:
+            merged_options["provider_reported_cost"] = response_cost
+            merged_options.setdefault("provider_reported_cost_mode", "compare")
+    merged_options["adapter"] = "litellm.proxy_response"
+    return from_response(response, **merged_options)
 
 
 def _langchain_message_from_generation(generation: Any) -> Optional[Dict[str, Any]]:

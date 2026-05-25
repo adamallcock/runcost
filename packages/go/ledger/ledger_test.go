@@ -144,6 +144,10 @@ func runFixture(t *testing.T, fixture Object) Object {
 			return FromVercelAISDKResult(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
 		case "from_llamaindex_token_counter":
 			return FromLlamaIndexTokenCounter(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
+		case "from_haystack_generator_result":
+			return FromHaystackGeneratorResult(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
+		case "from_litellm_response":
+			return FromLiteLLMResponse(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
 		default:
 			return FromResponse(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
 		}

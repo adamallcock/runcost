@@ -13,7 +13,7 @@ Complete `PROJECT_PLAN.md` end to end, moving from prototype foundation toward p
 Evidence collected on 2026-05-25:
 
 - `npm test` passes.
-- Python and JavaScript fixture runner checks 57 shared fixtures, with fixture metadata allowing language-scoped framework ergonomics fixtures.
+- Python and JavaScript fixture runner checks 59 shared fixtures, with fixture metadata allowing language-scoped framework ergonomics fixtures.
 - Fixture metadata and checked-in coverage report pass through `python3 scripts/check_fixture_coverage.py`.
 - Go package passes `go test ./packages/go/...`.
 - Python compile check passes for package, scripts, and Python example.
@@ -67,7 +67,8 @@ Status: complete for this pass.
 | Add CI workflow | Done | `.github/workflows/ci.yml`; hygiene check passes | CI runs conformance tests, examples, and Python compile checks. |
 | Add cost-ledger aggregation primitive | Done | `cost-ledger-aggregation-basic.json`, `stream-final-usage-missing-warning.json`; Python/JS/Go tests pass | Aggregates already-calculated ledgers and emits `stream_usage_missing` when expected final stream usage is absent. |
 | Add provider streaming final-usage extraction | Done | `openai-responses-stream-completed-event.json`, `anthropic-messages-stream-events.json`, `gemini-generate-content-stream-chunks.json`; Python/JS/Go tests pass | Handles selected final-usage stream event envelopes without estimating arbitrary partial deltas. |
-| Add documented partial framework adapter paths | Done | `docs/FRAMEWORK_ADAPTER_NOTES.md`, `docs/2026-05-25-supported-surfaces.md`, `docs/API_PARITY_MATRIX.md`; hygiene check guards names | Covers Semantic Kernel, Haystack, AutoGen/AG2, LangSmith export comparison, LiteLLM proxy metadata, and OpenRouter-compatible SDK paths as researched but not fixture-backed targets. |
+| Add documented partial framework adapter paths | Done | `docs/FRAMEWORK_ADAPTER_NOTES.md`, `docs/2026-05-25-supported-surfaces.md`, `docs/API_PARITY_MATRIX.md`; hygiene check guards names | Covers Semantic Kernel, AutoGen/AG2, LangSmith export comparison, and OpenRouter-compatible SDK paths as researched but not fixture-backed targets; Haystack and LiteLLM were later promoted to fixture-backed adapters. |
+| Add Haystack and LiteLLM fixture-backed framework adapters | Done | `haystack-openai-chat-generator-meta.json`, `litellm-proxy-response-cost-metadata.json`; Python/JS fixture runner and Go tests pass | Adds one-call helpers and extractors across Python, JavaScript/TypeScript, and Go. |
 
 ## Milestone Status
 
@@ -80,7 +81,7 @@ Status: complete for this pass.
 | Milestone 3: Source Adapter Layer | In progress | `llm-prices`, LiteLLM, Portkey, OpenRouter models, user compact pricing, and Helicone prototype adapters exist. |
 | Milestone 4: Provider Extractors V0 | In progress | OpenAI, Anthropic, OpenRouter, Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Google Gemini/Vertex, and AWS Bedrock extractors exist; cache, reasoning, billed-unit, basic raw response, and selected final streaming usage cases covered for supported surfaces. |
 | Milestone 5: Tool Call and Feature Pricing | In progress | Generic and raw OpenAI tool-call fixtures exist; Gemini/Vertex multimodal token detail fixture exists; provider-specific tool pricing coverage still sparse. |
-| Milestone 6: Framework Adapters | In progress | LangChain AIMessage, Vercel AI SDK generateText, LlamaIndex TokenCountingHandler helpers, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` middleware, and cross-language cost-ledger aggregation exist with fixtures; Semantic Kernel, Haystack, AutoGen/AG2, LangSmith export comparison, LiteLLM proxy metadata, and OpenRouter-compatible SDK paths now have documented partial adapter paths; remaining frameworks still need fixtures, implementations, examples, and streaming parsers. |
+| Milestone 6: Framework Adapters | In progress | LangChain AIMessage, Vercel AI SDK generateText, LlamaIndex TokenCountingHandler, Haystack generator metadata, LiteLLM proxy response metadata, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` middleware, and cross-language cost-ledger aggregation exist with fixtures; Semantic Kernel, AutoGen/AG2, LangSmith export comparison, and OpenRouter-compatible SDK paths have documented partial adapter paths; remaining frameworks still need fixtures, implementations, examples, and streaming parsers. |
 | Milestone 7: Packaging and Developer Experience | In progress | Package metadata, type surfaces, examples, CI, clean install smoke checks, public alpha docs, license metadata, changelog, contributing/security docs, release process, release readiness checks, and guarded release workflow exist; first registry publishing remains incomplete. |
 | Milestone 8: Alpha Quality and Feedback | Not started | None. |
 | Milestone 9: Public Beta | Not started | None. |
@@ -518,6 +519,33 @@ Status: complete for this pass.
   - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
   - `git diff --check` passed.
 
+### 2026-05-25 Haystack And LiteLLM Adapter Slice
+
+- Verified current primary docs for the two closest documented partial paths:
+  - Haystack `OpenAIChatGenerator` reply metadata carries OpenAI-style `usage` under reply `_meta`, including cached prompt and reasoning token details; `OpenAIGenerator` returns equivalent metadata in a `meta` list.
+  - LiteLLM returns OpenAI-compatible `usage` across providers and exposes `_hidden_params.response_cost` / logging `response_cost` for computed cost comparison.
+- Added framework adapter extractors and one-call helpers across Python, JavaScript/TypeScript, and Go:
+  - `extract_haystack_generator_usage`, `extractHaystackGeneratorUsage`, Go internal extraction, plus `from_haystack_generator_result`, `fromHaystackGeneratorResult`, `FromHaystackGeneratorResult`.
+  - `extract_litellm_proxy_response_usage`, `extractLiteLLMProxyResponseUsage`, Go internal extraction, plus `from_litellm_response`, `fromLiteLLMResponse`, `FromLiteLLMResponse`.
+- Added shared fixtures:
+  - `haystack-openai-chat-generator-meta.json`
+  - `litellm-proxy-response-cost-metadata.json`
+- Updated fixture runners, TypeScript declarations, Python exports, Go API comments, package install smoke checks, API reference, supported surfaces, API parity matrix, framework notes, README, project plan, warning docs, fixture coverage report, and hygiene checks.
+- Verification after Haystack and LiteLLM adapter slice:
+  - `python3 scripts/check_fixtures.py` passed with 59 fixtures across Python and JavaScript.
+  - `gofmt -w packages/go/ledger/ledger.go packages/go/ledger/ledger_test.go && go test ./packages/go/...` passed.
+  - `python3 scripts/check_fixture_coverage.py --write-report` passed and regenerated coverage for 59 fixtures.
+  - `python3 scripts/check_project_hygiene.py` passed.
+  - `npm test` passed: 59 fixtures, fixture coverage, Go tests, and hygiene checks green.
+  - `npm run check:coverage` passed.
+  - `npm run check:packages` passed with clean Python, npm, and Go install smoke checks including the new Haystack and LiteLLM helper APIs.
+  - `npm run check:release` passed.
+  - `python3 -m py_compile` passed for package modules, scripts, and examples.
+  - `npm run example:js` and `npm run example:py` both ran and returned total `0.000228`.
+  - `jq empty` parsed schemas, fixtures, and package JSON files.
+  - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
+  - `git diff --check` passed.
+
 ## Gap Audit 2026-05-25
 
 Purpose: step back from feature slices and record what is actually done, what is partial, what is a stub, and what still needs completion before private alpha, public beta, and V1.
@@ -532,8 +560,8 @@ Naming update:
 
 Audit evidence:
 
-- `python3 scripts/check_fixtures.py` passed with 57 fixtures across declared Python and JavaScript fixture coverage.
-- `python3 scripts/check_fixture_coverage.py` passed with metadata on all 57 fixtures and a current checked-in coverage report.
+- `python3 scripts/check_fixtures.py` passed with 59 fixtures across declared Python and JavaScript fixture coverage.
+- `python3 scripts/check_fixture_coverage.py` passed with metadata on all 59 fixtures and a current checked-in coverage report.
 - `npm test` passed: fixture checks, Go tests, and project hygiene checks green.
 - `npm run check:packages` passed: clean Python, npm, and Go install smoke checks green.
 - `npm run check:release` passed: release docs, license metadata, version sync, changelog, and release workflow guardrails are checked.
@@ -583,7 +611,7 @@ Partially implemented:
 - Provider extractors: broad base coverage exists, but many surfaces are thin. OpenAI Responses, Anthropic Messages, and Gemini final stream usage shapes now have fixtures, but xAI Responses, OpenAI Conversations, Bedrock non-Converse paths, provider-specific tool fields, other streaming variants, embeddings, rerank, image/audio/video generation, and transcription paths are not covered.
 - Tool pricing: generic tool components, OpenAI raw tool calls, OpenRouter image/request/search source pricing, and custom units exist. Provider-specific tool pricing remains sparse.
 - Multimodal: Gemini/Vertex modality token details are covered. Other providers and generated-media billing are not.
-- Framework adapters: direct metadata/result objects are covered, initial Python LangChain callback/context-manager plus JavaScript Vercel middleware helpers exist, and generic multi-step cost-ledger aggregation now exists. Semantic Kernel, Haystack, AutoGen/AG2, LangSmith export comparison, LiteLLM proxy metadata, and OpenRouter-compatible SDK paths now have documented partial adapter paths, but they are not implemented or fixture-backed. Framework-specific stream integrations, OpenAI Agents SDK, and concrete examples for these partial paths are still missing.
+- Framework adapters: direct metadata/result objects are covered for LangChain, Vercel AI SDK, LlamaIndex, Haystack, and LiteLLM proxy responses. Initial Python LangChain callback/context-manager plus JavaScript Vercel middleware helpers exist, and generic multi-step cost-ledger aggregation now exists. Semantic Kernel, AutoGen/AG2, LangSmith export comparison, and OpenRouter-compatible SDK paths have documented partial adapter paths, but they are not implemented or fixture-backed. Framework-specific stream integrations, OpenAI Agents SDK, and concrete examples for the remaining partial paths are still missing.
 - Documentation: public quickstart, installation, API reference, aggregation/streaming, debug trace, custom pricing, discount, warning/strict-mode, source adapter, support-matrix docs, contribution guide, security/privacy note, changelog, and release process now exist. Deeper framework integration guides and automated release notes are still missing.
 - Packaging: clean local install checks now pass for Python, JavaScript/TypeScript, and Go. License metadata, PyPI/npm guarded release workflow, Go tag policy, changelog, provenance guidance, and release readiness checks exist. First real registry publication and trusted publisher configuration remain incomplete.
 
@@ -608,7 +636,7 @@ Highest-risk gaps before private alpha:
 
 Recommended next sprint:
 
-1. Broader framework implementation slice: add fixtures and minimal adapters/examples for one or two documented partial paths, starting with Haystack metadata and LiteLLM proxy metadata because their usage shapes are closest to existing OpenAI-compatible paths.
+1. Broader framework implementation slice: add fixtures and minimal adapters/examples for the next documented partial path, likely AutoGen/AG2 usage summaries or LangSmith export comparison.
 2. Provider streaming expansion slice: add additional stream finalization fixtures for Vertex-specific SDK wrappers, Bedrock ConverseStream, Vercel AI SDK `streamText` finish parts, and any provider-specific tool streaming fields.
 3. Release hardening slice: configure trusted publishing outside the repo, decide registry README shape, and run a no-publish release workflow dry run.
 4. Source adapter hardening slice: add official snapshots, full file-reading YAML loaders, refresh/cache workflow, and historical feed semantics.
@@ -616,8 +644,8 @@ Recommended next sprint:
 
 ## Next Best Actions
 
-1. Add fixture-backed adapters/examples for Haystack generator metadata and LiteLLM proxy response metadata.
+1. Add fixture-backed adapter coverage for AutoGen/AG2 usage summaries or LangSmith export comparison.
 2. Add provider-specific fixtures for OpenAI-compatible tool, remaining multimodal providers, compound-routing, and service-tier fields beyond base token usage.
 3. Extend debug traces into source conflict reports, extractor internals, and framework middleware decisions.
-4. Add framework examples showing one- or two-line integration in Python and JavaScript for fixture-backed and documented partial paths.
+4. Add framework examples showing one- or two-line integration in Python and JavaScript for fixture-backed framework paths.
 5. Harden release automation with registry README decisions, trusted-publisher setup notes, and a no-publish release workflow dry run.

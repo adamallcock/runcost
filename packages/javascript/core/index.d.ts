@@ -387,6 +387,8 @@ export function extractCohereChatUsage(response: Record<string, unknown>, option
 export function extractLangChainChatUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractVercelAISDKUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractLlamaIndexTokenCounterUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractHaystackGeneratorUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractLiteLLMProxyResponseUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function priceCardsFromLlmPrices(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromLiteLLM(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromOpenRouterModels(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
@@ -397,4 +399,6 @@ export function fromResponse(response: Record<string, unknown>, options: FromRes
 export function fromLangChainMessage(message: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromVercelAISDKResult(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromLlamaIndexTokenCounter(counter: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromHaystackGeneratorResult(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromLiteLLMResponse(response: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function createRunCostVercelMiddleware(options: RunCostVercelMiddlewareOptions): RunCostVercelMiddleware;
