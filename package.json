@@ -12,6 +12,7 @@
     "check:coverage": "python3 scripts/check_fixture_coverage.py",
     "check:packages": "python3 scripts/check_package_installs.py",
     "check:release": "python3 scripts/check_release_readiness.py",
+    "check:release-dry-run": "python3 scripts/check_release_dry_run.py",
     "example:js": "node examples/javascript_basic.mjs",
     "example:py": "python3 examples/python_basic.py"
   },

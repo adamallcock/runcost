@@ -21,6 +21,7 @@ REQUIRED_FILES = [
     "SECURITY.md",
     "docs/process/release-process.md",
     ".github/workflows/release.yml",
+    "scripts/check_release_dry_run.py",
 ]
 
 
@@ -74,6 +75,7 @@ def check_release_workflow() -> None:
         "workflow_dispatch:",
         "EXPECTED_VERSION: ${{ inputs.version }}",
         "npm run check:release",
+        "npm run check:release-dry-run",
         "python3 -m build",
         "npm pack ./packages/javascript/core",
         "id-token: write",
@@ -94,6 +96,7 @@ def check_release_docs() -> None:
         "PyPI",
         "npm",
         "provenance",
+        "check:release-dry-run",
     ]:
         assert_true(re.search(re.escape(phrase), release_doc, re.IGNORECASE), f"release process missing {phrase}")
 

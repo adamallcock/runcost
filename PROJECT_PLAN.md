@@ -541,6 +541,17 @@ DX features:
 - Guarded release workflow for Python, JavaScript/TypeScript, and Go tag-based releases.
 - Release readiness checks for versions, docs, metadata, and workflow guardrails.
 
+Delivered in current prototype:
+
+- Package metadata for Python and JavaScript/TypeScript.
+- Go module path at `github.com/adamallcock/runcost`.
+- Clean local install checks for Python, JavaScript/TypeScript, and Go.
+- Public quickstart, installation, API reference, supported-surface, source-adapter, warning, and release-process docs.
+- License, changelog, contribution guide, and security policy.
+- Guarded release workflow with explicit publish opt-in.
+- Release readiness checks through `npm run check:release`.
+- Local no-publish release dry run through `npm run check:release-dry-run`, covering Python source distribution and wheel build, npm package packing, and Go clean-module import verification with a local replace directive.
+
 Progress criteria:
 
 - Local package install works in clean sample projects.

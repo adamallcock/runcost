@@ -43,6 +43,7 @@ npm test
 npm run check:coverage
 npm run check:packages
 npm run check:release
+npm run check:release-dry-run
 npm run example:js
 npm run example:py
 ```
@@ -51,6 +52,10 @@ npm run example:py
 5. Create and push a semantic version tag, for example `v0.1.0`.
 6. Run the manual `release` workflow with publishing disabled first.
 7. Enable publishing only after the dry run artifacts look correct.
+
+`npm run check:release-dry-run` is local and does not publish. It builds the
+Python wheel and source distribution, packs the npm package, and verifies the
+Go module path through a clean temporary module with a local replace directive.
 
 ## PyPI Publishing
 
