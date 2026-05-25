@@ -10,10 +10,18 @@ ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_FILES = [
     "PROJECT_PLAN.md",
     "PROGRESS_TRACKER.md",
+    "docs/2026-05-25-api-reference.md",
+    "docs/2026-05-25-custom-pricing-and-discounts.md",
+    "docs/2026-05-25-package-installation.md",
+    "docs/2026-05-25-quickstart.md",
+    "docs/2026-05-25-source-adapters.md",
+    "docs/2026-05-25-supported-surfaces.md",
+    "docs/2026-05-25-warnings-and-limitations.md",
     "docs/POLYGLOT_TOOLCHAIN_DECISION.md",
     "docs/API_PARITY_MATRIX.md",
     "docs/PROVIDER_EXTRACTOR_NOTES.md",
     "docs/FRAMEWORK_ADAPTER_NOTES.md",
+    "scripts/check_package_installs.py",
     "packages/javascript/core/index.d.ts",
     "packages/python/runcost/types.py",
     "packages/go/ledger/example_test.go",
@@ -101,6 +109,10 @@ def check_package_metadata() -> None:
         "check_project_hygiene.py" in scripts.get("test", ""),
         "root npm test must run project hygiene checks",
     )
+    assert_true(
+        "check_package_installs.py" in scripts.get("check:packages", ""),
+        "root check:packages must run clean package install checks",
+    )
 
     js_package_path = ROOT / "packages/javascript/core/package.json"
     js_package = load_json(js_package_path)
@@ -108,6 +120,8 @@ def check_package_metadata() -> None:
     assert_true(types_path.exists(), "JavaScript package types field must point to an existing file")
     exports = js_package.get("exports", {}).get(".", {})
     assert_true(exports.get("types") == "./index.d.ts", "JavaScript package exports must expose index.d.ts")
+    assert_true(not js_package.get("private", False), "JavaScript package must be publishable")
+    assert_true("files" in js_package, "JavaScript package must define a publish file allowlist")
 
 
 def check_public_api_artifacts() -> None:
@@ -195,6 +209,7 @@ def check_ci_workflow() -> None:
     workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     for command in [
         "npm test",
+        "npm run check:packages",
         "npm run example:js",
         "npm run example:py",
         "python3 -m py_compile",

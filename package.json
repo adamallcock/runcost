@@ -6,6 +6,7 @@
   "scripts": {
     "test": "python3 scripts/check_fixtures.py && go test ./packages/go/... && python3 scripts/check_project_hygiene.py",
     "check:hygiene": "python3 scripts/check_project_hygiene.py",
+    "check:packages": "python3 scripts/check_package_installs.py",
     "example:js": "node examples/javascript_basic.mjs",
     "example:py": "python3 examples/python_basic.py"
   },

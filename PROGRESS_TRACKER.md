@@ -10,13 +10,14 @@ Complete `PROJECT_PLAN.md` end to end, moving from prototype foundation toward p
 
 ## Current Verified Baseline
 
-Evidence collected on 2026-05-24:
+Evidence collected on 2026-05-25:
 
 - `npm test` passes.
 - Python and JavaScript fixture runner checks 47 shared fixtures.
 - Go package passes `go test ./packages/go/...`.
 - Python compile check passes for package, scripts, and Python example.
 - JavaScript and Python examples run.
+- Clean package install checks pass for Python, JavaScript/TypeScript, and Go through `npm run check:packages`.
 - Project hygiene check passes.
 - JSON files parse through `jq`.
 - ASCII scan reports no non-ASCII text.
@@ -29,6 +30,7 @@ Evidence collected on 2026-05-24:
 - Project plan exists in `PROJECT_PLAN.md`.
 - Polyglot decision record exists in `docs/POLYGLOT_TOOLCHAIN_DECISION.md`.
 - Public API parity matrix exists in `docs/API_PARITY_MATRIX.md`.
+- Public quickstart, installation, API reference, supported-surface, custom pricing, source adapter, and warning docs exist under `docs/`.
 - CI workflow exists in `.github/workflows/ci.yml`.
 
 ## Current Sprint
@@ -69,7 +71,7 @@ Status: complete for this pass.
 | Milestone 4: Provider Extractors V0 | In progress | OpenAI, Anthropic, OpenRouter, Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Google Gemini/Vertex, and AWS Bedrock extractors exist; cache, reasoning, billed-unit, and basic raw response cases covered for the supported surfaces. |
 | Milestone 5: Tool Call and Feature Pricing | In progress | Generic and raw OpenAI tool-call fixtures exist; Gemini/Vertex multimodal token detail fixture exists; provider-specific tool pricing coverage still sparse. |
 | Milestone 6: Framework Adapters | In progress | LangChain AIMessage, Vercel AI SDK generateText, and LlamaIndex TokenCountingHandler one-call helpers and metadata extractors exist with shared fixtures; remaining frameworks still need documented adapter paths. |
-| Milestone 7: Packaging and Developer Experience | In progress | Package metadata, type surfaces, examples, and CI exist; publish-ready packaging missing. |
+| Milestone 7: Packaging and Developer Experience | In progress | Package metadata, type surfaces, examples, CI, clean install smoke checks, and public alpha docs exist; registry publishing remains incomplete. |
 | Milestone 8: Alpha Quality and Feedback | Not started | None. |
 | Milestone 9: Public Beta | Not started | None. |
 | Milestone 10: V1 | Not started | None. |
@@ -312,6 +314,22 @@ Status: complete for this pass.
   - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
   - `python3 scripts/check_project_hygiene.py` passed.
   - `git status --short` could not run because this directory is not a Git repository.
+- Added package and documentation readiness slice:
+  - Switched Go module path to `github.com/adamallcock/runcost`.
+  - Made the JavaScript package publishable by removing package-level `private` and adding package files, keywords, and repository metadata.
+  - Added Python project URLs and keywords.
+  - Added `scripts/check_package_installs.py` to verify clean Python, JavaScript/TypeScript, and Go installs from temporary projects.
+  - Added `npm run check:packages` and CI coverage for clean install checks.
+  - Added public docs for quickstart, installation, API reference, supported surfaces, custom pricing and discounts, source adapters, and warnings/limitations.
+  - Updated `README.md` from draft-only project inventory toward alpha package onboarding.
+  - Updated hygiene checks to require the new docs, package check script, package check CI command, and JavaScript package publish allowlist.
+- Verification after package/docs readiness slice:
+  - `npm test` passed: 47 fixtures checked across Python and JavaScript, Go tests green, hygiene checks green.
+  - `npm run check:packages` passed: fresh Python venv import, npm tarball import, and fresh Go module import all green.
+  - `python3 -m py_compile packages/python/runcost/core.py packages/python/runcost/types.py packages/python/runcost/__init__.py scripts/check_fixtures.py scripts/check_project_hygiene.py scripts/check_package_installs.py examples/python_basic.py` passed.
+  - `npm run example:js` and `npm run example:py` both ran and returned total `0.000228`.
+  - `jq` parsed schemas, fixtures, and package JSON files.
+  - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
 
 ## Gap Audit 2026-05-25
 
@@ -323,12 +341,13 @@ Naming update:
 - Public docs now use `RunCost`.
 - Python import path is now `runcost`.
 - JavaScript package name is now `runcost`.
-- Go module name is now `runcost`.
+- Go module path is now `github.com/adamallcock/runcost`.
 
 Audit evidence:
 
 - `python3 scripts/check_fixtures.py` passed with 47 fixtures across Python and JavaScript.
 - `npm test` passed: fixture checks, Go tests, and project hygiene checks green.
+- `npm run check:packages` passed: clean Python, npm, and Go install smoke checks green.
 - Current package surfaces inspected:
   - `packages/python/runcost/`
   - `packages/javascript/core/`
@@ -343,9 +362,9 @@ Audit evidence:
 
 Supported languages today:
 
-- Python: first-class prototype core, typed with manual `TypedDict` contracts, package metadata exists in `pyproject.toml`, examples run, no publish-readiness checks yet.
-- JavaScript/TypeScript: first-class prototype ESM core, manual `index.d.ts` declarations, package metadata exists but package is still `private: true`, examples run, no publish pipeline yet.
-- Go: first-class conformance participant with public functions, docs, and example tests, but still map-backed prototype APIs rather than stable schema-derived structs.
+- Python: first-class prototype core, typed with manual `TypedDict` contracts, package metadata exists in `pyproject.toml`, examples run, and clean local install checks pass.
+- JavaScript/TypeScript: first-class prototype ESM core, manual `index.d.ts` declarations, package metadata exists, package tarball install checks pass, and publish allowlist exists, but no registry pipeline yet.
+- Go: first-class conformance participant with public functions, docs, example tests, public GitHub module path, and clean module import checks, but still map-backed prototype APIs rather than stable schema-derived structs.
 - Future languages: no implementation yet. The policy says future languages must consume schemas and fixtures first.
 
 What is implemented and well covered:
@@ -373,8 +392,8 @@ Partially implemented:
 - Tool pricing: generic tool components, OpenAI raw tool calls, OpenRouter image/request/search source pricing, and custom units exist. Provider-specific tool pricing remains sparse.
 - Multimodal: Gemini/Vertex modality token details are covered. Other providers and generated-media billing are not.
 - Framework adapters: direct metadata/result objects are covered. True callbacks, context managers, middleware, streaming finalization, multi-step run aggregation, LangSmith export compare, Semantic Kernel, Haystack, AutoGen/AG2, OpenAI Agents SDK, LiteLLM proxy metadata, and OpenRouter SDK paths are not implemented.
-- Documentation: strong planning and internal mapping docs exist, but public quickstarts, API reference, custom pricing guide, discount guide, warning/strict-mode guide, source adapter docs, provider support matrix, framework support matrix, contribution guide, security/privacy note, changelog, and release notes are still incomplete or missing.
-- Packaging: package metadata exists, but publish-readiness is not done. JavaScript package is private, Python package is version `0.0.0`, Go module path is not a public import path, and clean-project install checks are not present.
+- Documentation: public quickstart, installation, API reference, custom pricing, discount, warning/strict-mode, source adapter, and support-matrix docs now exist. Contribution guide, security/privacy note, changelog, release notes, and deeper framework integration guides are still missing.
+- Packaging: clean local install checks now pass for Python, JavaScript/TypeScript, and Go. Registry publish-readiness is not done: license metadata, PyPI/npm workflows, Go tag policy, changelog, provenance, and release automation are still missing.
 
 Stubs or placeholders:
 
@@ -382,13 +401,13 @@ Stubs or placeholders:
 - Warning codes such as `stream_usage_missing` exist in schemas/types but no streaming implementation or fixture currently emits them.
 - Public API type surfaces are manually maintained placeholders for generated/schema-derived models.
 - `scripts/check_project_hygiene.py` is a useful guard but still mostly checks presence, API-name strings, fixture floor, package metadata, and CI commands. It is not yet a full drift detector.
-- README still describes the project as a draft/prototype and does not provide production-ready install or API-reference docs.
+- README now provides alpha package onboarding and links to public docs, but does not yet represent a production-ready package.
 - Go APIs are explicitly prototype map-backed `Object` functions.
 
 Highest-risk gaps before private alpha:
 
-1. Package install/publish readiness across Python, JavaScript/TypeScript, and Go.
-2. Public docs for quickstart, API reference, supported surfaces, warning behavior, custom pricing, discounts, and source adapters.
+1. Package publish readiness across Python, JavaScript/TypeScript, and Go.
+2. Public docs for contribution, security/privacy, release notes, changelog, and deeper framework integration recipes.
 3. A true debug trace or explain mode so users can see alias, price-card, condition, source-priority, and discount decisions.
 4. Fixture metadata and coverage reporting so support claims can be audited mechanically.
 5. Real framework integration ergonomics: callbacks/middleware/context managers, not only metadata-object helpers.
@@ -398,16 +417,16 @@ Highest-risk gaps before private alpha:
 
 Recommended next sprint:
 
-1. Package and docs readiness slice: make local clean-project installs work for Python, JS/TS, and Go; add quickstart/API docs; update README from draft to alpha-readiness.
-2. Debug trace slice: define `DebugTrace` schema, add fixtures, and expose trace output across all languages.
-3. Fixture coverage slice: add fixture metadata, coverage report, and hygiene checks for warning codes, components, providers, adapters, and expected-language coverage.
-4. Framework ergonomics slice: add real LangChain callback/context-manager and Vercel AI SDK middleware examples or helpers.
-5. Source adapter slice: add user JSON/YAML loader and Helicone compatibility fixture before more provider breadth.
+1. Debug trace slice: define `DebugTrace` schema, add fixtures, and expose trace output across all languages.
+2. Fixture coverage slice: add fixture metadata, coverage report, and hygiene checks for warning codes, components, providers, adapters, and expected-language coverage.
+3. Framework ergonomics slice: add real LangChain callback/context-manager and Vercel AI SDK middleware examples or helpers.
+4. Source adapter slice: add user JSON/YAML loader and Helicone compatibility fixture before more provider breadth.
+5. Publish readiness slice: decide license metadata, add changelog/release notes, and prepare PyPI/npm workflows plus Go tag policy.
 
 ## Next Best Actions
 
 1. Add provider-specific fixtures for OpenAI-compatible tool, remaining multimodal providers, compound-routing, and service-tier fields beyond base token usage.
 2. Add source conflict report API or debug trace shape beyond warnings.
-3. Add packaging publish-readiness checks for Python, JavaScript/TypeScript, and Go.
+3. Add packaging publish-readiness checks and release automation for Python, JavaScript/TypeScript, and Go.
 4. Add documented partial adapter paths for Semantic Kernel, Haystack, AutoGen/AG2, LangSmith export comparison, LiteLLM proxy metadata, and OpenRouter-compatible SDK paths.
 5. Add framework examples showing one- or two-line integration in Python and JavaScript.

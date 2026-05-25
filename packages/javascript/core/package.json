@@ -2,10 +2,26 @@
   "name": "runcost",
   "version": "0.0.0",
   "type": "module",
-  "private": true,
   "description": "Prototype cost calculator for LLM and agent API responses.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adamallcock/runcost.git",
+    "directory": "packages/javascript/core"
+  },
+  "keywords": [
+    "llm",
+    "ai",
+    "pricing",
+    "tokens",
+    "cost"
+  ],
   "main": "index.js",
   "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "package.json"
+  ],
   "exports": {
     ".": {
       "types": "./index.d.ts",

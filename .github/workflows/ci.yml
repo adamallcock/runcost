@@ -31,6 +31,9 @@ jobs:
       - name: Run conformance tests
         run: npm test
 
+      - name: Run clean package install checks
+        run: npm run check:packages
+
       - name: Run examples
         run: |
           npm run example:js
@@ -41,6 +44,8 @@ jobs:
           python3 -m py_compile \
             packages/python/runcost/core.py \
             packages/python/runcost/types.py \
+            packages/python/runcost/__init__.py \
             scripts/check_fixtures.py \
             scripts/check_project_hygiene.py \
+            scripts/check_package_installs.py \
             examples/python_basic.py

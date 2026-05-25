@@ -1,12 +1,54 @@
 # RunCost
 
-Draft project for a small, multi-language cost ledger for LLM and agent API calls.
+RunCost is a small, multi-language cost ledger for LLM and agent API calls.
 
 The goal is to answer:
 
 > What did this call cost, and why?
 
-Current repo state:
+It takes provider SDK responses, framework usage objects, or normalized usage ledgers and returns a componentized cost ledger: input cost, cached input cost, output cost, reasoning cost, tool and feature units, discounts, price sources, and warnings.
+
+## Quickstart
+
+Python from a cloned checkout:
+
+```bash
+python3 -m pip install .
+```
+
+JavaScript/TypeScript from a cloned checkout:
+
+```bash
+npm pack ./packages/javascript/core
+npm install ./runcost-0.0.0.tgz
+```
+
+Go:
+
+```bash
+go get github.com/adamallcock/runcost/packages/go/ledger
+```
+
+Run the current checks:
+
+```bash
+npm test
+npm run check:packages
+npm run example:js
+npm run example:py
+```
+
+## Documentation
+
+- Quickstart: `docs/2026-05-25-quickstart.md`
+- Installation: `docs/2026-05-25-package-installation.md`
+- API reference: `docs/2026-05-25-api-reference.md`
+- Supported surfaces: `docs/2026-05-25-supported-surfaces.md`
+- Custom pricing and discounts: `docs/2026-05-25-custom-pricing-and-discounts.md`
+- Source adapters: `docs/2026-05-25-source-adapters.md`
+- Warnings and limitations: `docs/2026-05-25-warnings-and-limitations.md`
+
+## Project State
 
 - Market validation: `VALIDATION_REPORT.md`
 - Product requirements: `PRODUCT_REQUIREMENTS.md`
@@ -24,20 +66,7 @@ Current repo state:
   - JavaScript: `packages/javascript/core/`
   - Go: `packages/go/ledger/`
 
-Run the current fixture check:
-
-```bash
-npm test
-```
-
-Run the current examples:
-
-```bash
-npm run example:js
-npm run example:py
-```
-
-The implementation is intentionally minimal: normalized usage plus price cards in, componentized cost ledger out. Provider SDK extractors, price-source adapters, framework integrations, and packaging come next.
+The implementation is still pre-alpha. The current center of gravity is normalized usage plus price cards in, componentized cost ledger out. Registry publishing, debug traces, streaming aggregation, and broader tool-call pricing are still ahead.
 
 ## Prototype Capabilities
 
