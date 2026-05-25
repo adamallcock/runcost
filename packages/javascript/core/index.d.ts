@@ -1,0 +1,310 @@
+export type MoneyString = string;
+export type DecimalString = string;
+export type SchemaVersion = "0.1";
+export type CalculationMode = "compatibility" | "strict";
+
+export type UsageUnit =
+  | "token"
+  | "request"
+  | "call"
+  | "session"
+  | "search"
+  | "file"
+  | "image"
+  | "video"
+  | "audio"
+  | "second"
+  | "hour"
+  | "gb_day"
+  | "usd"
+  | "custom";
+
+export type UsageComponentName =
+  | "input_uncached_tokens"
+  | "input_cache_read_tokens"
+  | "input_cache_write_tokens"
+  | "input_cache_write_1h_tokens"
+  | "input_image_units"
+  | "input_audio_tokens"
+  | "input_image_tokens"
+  | "input_video_tokens"
+  | "output_text_tokens"
+  | "output_reasoning_tokens"
+  | "output_audio_tokens"
+  | "output_image_tokens"
+  | "output_video_tokens"
+  | "embedding_tokens"
+  | "request_units"
+  | "web_search_units"
+  | "file_search_units"
+  | "code_interpreter_session_units"
+  | "code_interpreter_call_units"
+  | "computer_use_action_units"
+  | "tool_call_units"
+  | "tool_execution_seconds"
+  | "rerank_search_units"
+  | "image_generation_units"
+  | "video_generation_units"
+  | "audio_generation_units"
+  | "transcription_seconds"
+  | "endpoint_runtime_seconds"
+  | "endpoint_instance_hours"
+  | "custom_units";
+
+export type AliasResolution =
+  | "none"
+  | "user_exact"
+  | "source_exact"
+  | "package_exact"
+  | "provider_heuristic"
+  | "unknown";
+
+export interface UsageModel {
+  requested: string;
+  returned?: string;
+  billed?: string;
+  alias_resolution?: AliasResolution;
+}
+
+export interface UsageContext {
+  service_tier?: string;
+  region?: string;
+  priced_at?: string;
+  total_input_tokens?: number | string;
+  stale_after_days?: number | string;
+  price_stale_after_days?: number | string;
+  request_id?: string;
+  trace_id?: string;
+  [key: string]: unknown;
+}
+
+export interface UsageTool {
+  provider?: string;
+  name?: string;
+  billing_source?: "provider" | "gateway" | "user" | "unknown";
+}
+
+export interface UsageComponent {
+  name: UsageComponentName;
+  quantity: DecimalString;
+  unit: UsageUnit;
+  tool?: UsageTool;
+  source_path?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface UsageLedger {
+  schema_version: SchemaVersion;
+  provider: string;
+  surface: string;
+  model: UsageModel;
+  context?: UsageContext;
+  components: UsageComponent[];
+  raw_usage?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
+export interface EffectiveDateRange {
+  from?: string | null;
+  to?: string | null;
+}
+
+export interface Price {
+  amount: MoneyString;
+  currency: string;
+  per: DecimalString;
+}
+
+export interface PriceComponent {
+  usage_component: string;
+  unit: UsageUnit;
+  price: Price;
+  discount_eligible?: boolean;
+  conditions?: PriceComponentConditions;
+  notes?: string;
+}
+
+export interface PriceComponentConditions {
+  min_total_input_tokens?: DecimalString;
+  max_total_input_tokens?: DecimalString;
+}
+
+export interface SourceInfo {
+  name: string;
+  url?: string;
+  retrieved_at?: string;
+  version?: string;
+  license?: string;
+}
+
+export interface PriceCard {
+  schema_version: SchemaVersion;
+  id: string;
+  provider: string;
+  surface?: string;
+  model: string;
+  aliases?: string[];
+  service_tier?: string;
+  region?: string;
+  effective?: EffectiveDateRange;
+  components: PriceComponent[];
+  source: SourceInfo;
+  metadata?: Record<string, unknown>;
+}
+
+export interface DiscountPolicyMatch {
+  provider?: string;
+  surface?: string;
+  model?: string;
+  service_tier?: string;
+  region?: string;
+  components?: string[];
+  exclude_components?: string[];
+  tags?: Record<string, string>;
+}
+
+export interface DiscountAdjustment {
+  type: "multiplier" | "percentage_discount" | "percentage_markup";
+  value: DecimalString;
+}
+
+export interface DiscountPolicy {
+  schema_version: SchemaVersion;
+  id: string;
+  description?: string;
+  match?: DiscountPolicyMatch;
+  effective?: EffectiveDateRange;
+  adjustment: DiscountAdjustment;
+  precedence?: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CostModel {
+  requested: string;
+  returned?: string;
+  billed: string;
+  alias_resolution?: string;
+}
+
+export interface CostComponent {
+  name: string;
+  quantity: DecimalString;
+  unit: string;
+  unit_price: MoneyString;
+  cost: MoneyString;
+  price_card_id?: string;
+  discount_eligible?: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+export interface AppliedDiscount {
+  policy_id: string;
+  component: string;
+  amount: MoneyString;
+}
+
+export type WarningCode =
+  | "unknown_provider"
+  | "unknown_surface"
+  | "unknown_model"
+  | "alias_inferred"
+  | "price_not_found"
+  | "price_stale"
+  | "price_source_disagreement"
+  | "usage_field_ignored"
+  | "inclusive_usage_ambiguous"
+  | "component_unpriced"
+  | "service_tier_unsupported"
+  | "long_context_rule_missing"
+  | "discount_not_applied"
+  | "stream_usage_missing"
+  | "historical_price_missing"
+  | "tool_component_unpriced"
+  | "provider_reported_cost_used"
+  | "provider_reported_cost_mismatch";
+
+export interface CostWarning {
+  code: WarningCode;
+  message: string;
+  path?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CostLedger {
+  schema_version: SchemaVersion;
+  provider: string;
+  surface: string;
+  model: CostModel;
+  currency: string;
+  components: CostComponent[];
+  total: MoneyString;
+  price_sources?: SourceInfo[];
+  applied_discounts?: AppliedDiscount[];
+  warnings: CostWarning[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface CalculateCostOptions {
+  usageLedger: UsageLedger;
+  priceCards: PriceCard[];
+  discountPolicies?: DiscountPolicy[];
+  mode?: CalculationMode;
+  staleAfterDays?: number;
+  stale_after_days?: number;
+  providerReportedCost?: MoneyString;
+  provider_reported_cost?: MoneyString;
+  providerReportedCostMode?: "compare" | "use";
+  provider_reported_cost_mode?: "compare" | "use";
+  priceSourcePriority?: string[];
+  price_source_priority?: string[];
+}
+
+export interface ExtractOptions {
+  adapter?: string;
+  framework?: string;
+  provider?: string;
+  surface: string;
+  model?: string;
+}
+
+export interface FromResponseOptions extends ExtractOptions {
+  priceCards?: PriceCard[];
+  discountPolicies?: DiscountPolicy[];
+  mode?: CalculationMode;
+  staleAfterDays?: number;
+  stale_after_days?: number;
+  providerReportedCost?: MoneyString;
+  provider_reported_cost?: MoneyString;
+  providerReportedCostMode?: "compare" | "use";
+  provider_reported_cost_mode?: "compare" | "use";
+  priceSourcePriority?: string[];
+  price_source_priority?: string[];
+}
+
+export interface SourceAdapterOptions {
+  retrievedAt?: string;
+  sourceUrl?: string;
+  provider?: string;
+}
+
+export function calculateCost(options: CalculateCostOptions): CostLedger;
+export function extractUsageLedger(response: Record<string, unknown>, options: ExtractOptions): UsageLedger;
+export function extractOpenAIResponsesUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAIChatCompletionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAICompatibleChatCompletionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenRouterChatCompletionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractAnthropicMessagesUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractGeminiGenerateContentUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractBedrockConverseUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractCohereChatUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractLangChainChatUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractVercelAISDKUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractLlamaIndexTokenCounterUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function priceCardsFromLlmPrices(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
+export function priceCardsFromLiteLLM(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
+export function priceCardsFromOpenRouterModels(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
+export function priceCardsFromPortkey(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
+export function fromResponse(response: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromLangChainMessage(message: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromVercelAISDKResult(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromLlamaIndexTokenCounter(counter: Record<string, unknown>, options: FromResponseOptions): CostLedger;

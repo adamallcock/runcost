@@ -1,0 +1,1417 @@
+from __future__ import annotations
+
+from datetime import date
+from decimal import Decimal, getcontext
+from typing import Any, Dict, Iterable, List, Optional
+
+getcontext().prec = 50
+
+
+def _decimal(value: Any) -> Decimal:
+    return Decimal(str(value))
+
+
+def _format_decimal(value: Decimal) -> str:
+    normalized = value.normalize()
+    if normalized == normalized.to_integral():
+        return str(normalized.quantize(Decimal("1")))
+    return format(normalized, "f").rstrip("0").rstrip(".")
+
+
+def _add(left: str, right: str) -> str:
+    return _format_decimal(_decimal(left) + _decimal(right))
+
+
+def _subtract(left: str, right: str) -> str:
+    return _format_decimal(_decimal(left) - _decimal(right))
+
+
+def _multiply_divide(quantity: Any, amount: Any, per: Any) -> str:
+    per_decimal = _decimal(per)
+    if per_decimal == 0:
+        raise ValueError("price.per must not be zero")
+    return _format_decimal((_decimal(quantity) * _decimal(amount)) / per_decimal)
+
+
+def _billed_model(usage_ledger: Dict[str, Any]) -> str:
+    model = usage_ledger["model"]
+    return model.get("billed") or model.get("returned") or model["requested"]
+
+
+def _date_part(value: Any) -> Optional[str]:
+    if not value:
+        return None
+    return str(value)[:10]
+
+
+def _date_value(value: Any) -> Optional[date]:
+    text = _date_part(value)
+    if not text:
+        return None
+    return date.fromisoformat(text)
+
+
+def _usage_context(usage_ledger: Dict[str, Any]) -> Dict[str, Any]:
+    return usage_ledger.get("context", {})
+
+
+def _card_identity_matches(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> bool:
+    billed_model = _billed_model(usage_ledger)
+    model_matches = card["model"] == billed_model or billed_model in card.get("aliases", [])
+    provider_matches = card["provider"] == usage_ledger["provider"]
+    surface_matches = "surface" not in card or card["surface"] == usage_ledger["surface"]
+    return model_matches and provider_matches and surface_matches
+
+
+def _effective_matches(card: Dict[str, Any], priced_at: Optional[str]) -> bool:
+    if not priced_at:
+        return True
+    effective = card.get("effective") or {}
+    from_date = effective.get("from")
+    to_date = effective.get("to")
+    if from_date and priced_at < from_date:
+        return False
+    if to_date and priced_at > to_date:
+        return False
+    return True
+
+
+def _card_context_matches(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> bool:
+    context = _usage_context(usage_ledger)
+    service_tier = context.get("service_tier")
+    region = context.get("region")
+    priced_at = _date_part(context.get("priced_at"))
+
+    if service_tier and card.get("service_tier") and card["service_tier"] != service_tier:
+        return False
+    if region and card.get("region") and card["region"] != region:
+        return False
+    return _effective_matches(card, priced_at)
+
+
+def _card_score(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> int:
+    context = _usage_context(usage_ledger)
+    score = 0
+    if card.get("surface") == usage_ledger["surface"]:
+        score += 8
+    if context.get("service_tier") and card.get("service_tier") == context["service_tier"]:
+        score += 4
+    if context.get("region") and card.get("region") == context["region"]:
+        score += 2
+    if card.get("effective"):
+        score += 1
+    return score
+
+
+def _source_priority_score(card: Dict[str, Any], price_source_priority: Optional[Iterable[str]]) -> int:
+    if not price_source_priority:
+        return 0
+    priority = list(price_source_priority)
+    source_name = (card.get("source") or {}).get("name")
+    if source_name not in priority:
+        return 0
+    return (len(priority) - priority.index(source_name)) * 100
+
+
+def _matching_cards(
+    usage_ledger: Dict[str, Any],
+    price_cards: Iterable[Dict[str, Any]],
+    price_source_priority: Optional[Iterable[str]] = None,
+) -> List[Dict[str, Any]]:
+    scored_cards = []
+    for index, card in enumerate(price_cards):
+        if not _card_identity_matches(usage_ledger, card):
+            continue
+        if not _card_context_matches(usage_ledger, card):
+            continue
+        score = _card_score(usage_ledger, card) + _source_priority_score(card, price_source_priority)
+        scored_cards.append((-score, index, card))
+    return [card for _, _, card in sorted(scored_cards, key=lambda item: (item[0], item[1]))]
+
+
+def _total_input_tokens(usage_ledger: Dict[str, Any]) -> Decimal:
+    context = _usage_context(usage_ledger)
+    if context.get("total_input_tokens") is not None:
+        return _decimal(context["total_input_tokens"])
+    total = Decimal("0")
+    for component in usage_ledger.get("components", []):
+        if component.get("unit") == "token" and str(component.get("name", "")).startswith("input_"):
+            total += _decimal(component.get("quantity", "0"))
+    return total
+
+
+def _conditions_match(usage_ledger: Dict[str, Any], price_component: Dict[str, Any]) -> bool:
+    conditions = price_component.get("conditions") or {}
+    if not conditions:
+        return True
+    total_input = _total_input_tokens(usage_ledger)
+    if conditions.get("min_total_input_tokens") is not None and total_input < _decimal(conditions["min_total_input_tokens"]):
+        return False
+    if conditions.get("max_total_input_tokens") is not None and total_input > _decimal(conditions["max_total_input_tokens"]):
+        return False
+    return True
+
+
+def _candidate_price_components(
+    price_cards: Iterable[Dict[str, Any]],
+    component: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    matches = []
+    for card in price_cards:
+        for price_component in card["components"]:
+            if (
+                price_component["usage_component"] == component["name"]
+                and price_component["unit"] == component["unit"]
+            ):
+                matches.append({"card": card, "price_component": price_component})
+
+    return matches
+
+
+def _find_price_components(
+    usage_ledger: Dict[str, Any],
+    price_cards: Iterable[Dict[str, Any]],
+    component: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    return [
+        match
+        for match in _candidate_price_components(price_cards, component)
+        if _conditions_match(usage_ledger, match["price_component"])
+    ]
+
+
+def _long_context_rule_missing_warning(
+    usage_ledger: Dict[str, Any],
+    candidates: List[Dict[str, Any]],
+    component: Dict[str, Any],
+) -> Optional[Dict[str, str]]:
+    if not candidates or not any(match["price_component"].get("conditions") for match in candidates):
+        return None
+    total_input = _format_decimal(_total_input_tokens(usage_ledger))
+    return {
+        "code": "long_context_rule_missing",
+        "message": f"No long-context pricing rule matched {component['name']} at {total_input} input tokens.",
+    }
+
+
+def _has_price_card_for_usage(
+    usage_ledger: Dict[str, Any],
+    price_cards: Iterable[Dict[str, Any]],
+) -> bool:
+    return any(_card_identity_matches(usage_ledger, card) for card in price_cards)
+
+
+def _no_matching_card_warning(
+    usage_ledger: Dict[str, Any],
+    price_cards: Iterable[Dict[str, Any]],
+) -> Dict[str, str]:
+    context = _usage_context(usage_ledger)
+    identity_cards = [card for card in price_cards if _card_identity_matches(usage_ledger, card)]
+    service_tier = context.get("service_tier")
+    if service_tier and identity_cards and all(card.get("service_tier") and card.get("service_tier") != service_tier for card in identity_cards):
+        return {
+            "code": "service_tier_unsupported",
+            "message": f"No price card found for service tier {service_tier}.",
+        }
+    priced_at = _date_part(context.get("priced_at"))
+    if priced_at and identity_cards and not any(_effective_matches(card, priced_at) for card in identity_cards):
+        return {
+            "code": "historical_price_missing",
+            "message": f"No price card effective for {priced_at}.",
+        }
+    return {
+        "code": "price_not_found",
+        "message": f"No price card matched provider, surface, model, and context for {_billed_model(usage_ledger)}.",
+    }
+
+
+def _policy_matches(
+    policy: Dict[str, Any],
+    usage_ledger: Dict[str, Any],
+    component: Dict[str, Any],
+) -> bool:
+    match = policy.get("match", {})
+    billed_model = _billed_model(usage_ledger)
+
+    if match.get("provider") and match["provider"] != usage_ledger["provider"]:
+        return False
+    if match.get("surface") and match["surface"] != usage_ledger["surface"]:
+        return False
+    if match.get("model") and match["model"] != billed_model:
+        return False
+    context = _usage_context(usage_ledger)
+    if match.get("service_tier") and match["service_tier"] != context.get("service_tier"):
+        return False
+    if match.get("region") and match["region"] != context.get("region"):
+        return False
+    if match.get("components") and component["name"] not in match["components"]:
+        return False
+    if match.get("exclude_components") and component["name"] in match["exclude_components"]:
+        return False
+    return True
+
+
+def _apply_discounts(
+    cost: str,
+    policies: Iterable[Dict[str, Any]],
+    usage_ledger: Dict[str, Any],
+    component: Dict[str, Any],
+    discount_eligible: bool,
+) -> Dict[str, Any]:
+    if not discount_eligible:
+        return {"cost": cost, "applied": []}
+
+    current = cost
+    applied: List[Dict[str, str]] = []
+    sorted_policies = sorted(policies, key=lambda policy: policy.get("precedence", 100))
+
+    for policy in sorted_policies:
+        if not _policy_matches(policy, usage_ledger, component):
+            continue
+
+        before = current
+        adjustment = policy["adjustment"]
+        if adjustment["type"] == "multiplier":
+            current = _multiply_divide(current, adjustment["value"], "1")
+        elif adjustment["type"] == "percentage_discount":
+            multiplier = _subtract("1", _multiply_divide(adjustment["value"], "1", "100"))
+            current = _multiply_divide(current, multiplier, "1")
+        elif adjustment["type"] == "percentage_markup":
+            multiplier = _add("1", _multiply_divide(adjustment["value"], "1", "100"))
+            current = _multiply_divide(current, multiplier, "1")
+
+        applied.append(
+            {
+                "policy_id": policy["id"],
+                "component": component["name"],
+                "amount": _subtract(before, current),
+            }
+        )
+
+    return {"cost": current, "applied": applied}
+
+
+def _stale_after_days(usage_ledger: Dict[str, Any], stale_after_days: Optional[int]) -> Optional[int]:
+    if stale_after_days is not None:
+        return int(stale_after_days)
+    context = _usage_context(usage_ledger)
+    value = context.get("stale_after_days") or context.get("price_stale_after_days")
+    return int(value) if value is not None else None
+
+
+def _stale_price_warning(
+    usage_ledger: Dict[str, Any],
+    card: Dict[str, Any],
+    stale_after_days: Optional[int],
+) -> Optional[Dict[str, str]]:
+    threshold = _stale_after_days(usage_ledger, stale_after_days)
+    if threshold is None:
+        return None
+    priced_at = _date_value(_usage_context(usage_ledger).get("priced_at"))
+    retrieved_at = _date_value((card.get("source") or {}).get("retrieved_at"))
+    if priced_at is None or retrieved_at is None:
+        return None
+    age_days = (priced_at - retrieved_at).days
+    if age_days <= threshold:
+        return None
+    source_name = (card.get("source") or {}).get("name", "unknown")
+    return {
+        "code": "price_stale",
+        "message": f"Price source {source_name} is {age_days} days old; threshold is {threshold} days.",
+    }
+
+
+def _provider_reported_warning(
+    total: str,
+    provider_reported_cost: Optional[Any],
+    provider_reported_cost_mode: str,
+) -> Optional[Dict[str, Any]]:
+    if provider_reported_cost is None or provider_reported_cost_mode != "compare":
+        return None
+    provider_total = _format_decimal(_decimal(provider_reported_cost))
+    if provider_total == total:
+        return None
+    return {
+        "code": "provider_reported_cost_mismatch",
+        "message": f"Provider reported cost {provider_total} differs from calculated total {total}.",
+    }
+
+
+def _apply_provider_reported_cost_use(
+    total: str,
+    components: List[Dict[str, Any]],
+    warnings: List[Dict[str, Any]],
+    provider_reported_cost: Optional[Any],
+    provider_reported_cost_mode: str,
+) -> str:
+    if provider_reported_cost is None or provider_reported_cost_mode != "use":
+        return total
+    provider_total = _format_decimal(_decimal(provider_reported_cost))
+    adjustment = _subtract(provider_total, total)
+    if adjustment != "0":
+        components.append(
+            {
+                "name": "custom_units",
+                "quantity": adjustment,
+                "unit": "usd",
+                "unit_price": "1",
+                "cost": adjustment,
+                "price_card_id": "__provider_reported_cost__",
+                "discount_eligible": False,
+                "metadata": {
+                    "reason": "provider_reported_cost_reconciliation",
+                    "calculated_total": total,
+                    "provider_reported_cost": provider_total,
+                },
+            }
+        )
+    warnings.append(
+        {
+            "code": "provider_reported_cost_used",
+            "message": f"Provider reported cost {provider_total} used as authoritative total.",
+        }
+    )
+    return provider_total
+
+
+def _price_source_disagreement_warning(
+    matches: List[Dict[str, Any]],
+    component: Dict[str, Any],
+    price_source_priority: Optional[Iterable[str]],
+) -> Optional[Dict[str, str]]:
+    if price_source_priority or len(matches) < 2:
+        return None
+    unit_prices = set()
+    for match in matches:
+        price = match["price_component"]["price"]
+        unit_prices.add(_multiply_divide(price["amount"], "1", price["per"]))
+    if len(unit_prices) <= 1:
+        return None
+    chosen = matches[0]["card"]["id"]
+    return {
+        "code": "price_source_disagreement",
+        "message": f"Multiple price sources disagree for {component['name']}; using {chosen}.",
+    }
+
+
+def calculate_cost(
+    *,
+    usage_ledger: Dict[str, Any],
+    price_cards: Iterable[Dict[str, Any]],
+    discount_policies: Optional[Iterable[Dict[str, Any]]] = None,
+    mode: str = "compatibility",
+    stale_after_days: Optional[int] = None,
+    provider_reported_cost: Optional[Any] = None,
+    provider_reported_cost_mode: str = "compare",
+    price_source_priority: Optional[Iterable[str]] = None,
+) -> Dict[str, Any]:
+    policies = list(discount_policies or [])
+    price_cards_list = list(price_cards)
+    components = []
+    warnings = []
+    applied_discounts = []
+    sources_by_name: Dict[str, Dict[str, Any]] = {}
+    total = "0"
+    resolved_billed_model = _billed_model(usage_ledger)
+    alias_resolution = usage_ledger["model"].get("alias_resolution", "none")
+    has_model_card = _has_price_card_for_usage(usage_ledger, price_cards_list)
+    matching_cards = _matching_cards(usage_ledger, price_cards_list, price_source_priority)
+    warned_unknown_model = False
+    warned_no_matching_card = False
+    warned_stale_cards = set()
+
+    for component in usage_ledger["components"]:
+        if not has_model_card:
+            if not warned_unknown_model:
+                warnings.append(
+                    {
+                        "code": "unknown_model",
+                        "message": f"No price card found for {resolved_billed_model}.",
+                    }
+                )
+                warned_unknown_model = True
+            continue
+
+        if not matching_cards:
+            if not warned_no_matching_card:
+                warnings.append(_no_matching_card_warning(usage_ledger, price_cards_list))
+                warned_no_matching_card = True
+            continue
+
+        candidates = _candidate_price_components(matching_cards, component)
+        matches = [
+            match
+            for match in candidates
+            if _conditions_match(usage_ledger, match["price_component"])
+        ]
+        if not matches:
+            long_context_warning = _long_context_rule_missing_warning(usage_ledger, candidates, component)
+            if long_context_warning:
+                warnings.append(long_context_warning)
+            else:
+                warnings.append(
+                    {
+                        "code": "tool_component_unpriced"
+                        if "tool" in component["name"]
+                        else "component_unpriced",
+                        "message": f"No price found for {component['name']} ({component['unit']}).",
+                    }
+                )
+            continue
+
+        disagreement_warning = _price_source_disagreement_warning(matches, component, price_source_priority)
+        if disagreement_warning:
+            warnings.append(disagreement_warning)
+        match = matches[0]
+        card = match["card"]
+        price_component = match["price_component"]
+        if card["model"] != resolved_billed_model and resolved_billed_model in card.get("aliases", []):
+            resolved_billed_model = card["model"]
+            if alias_resolution == "none":
+                alias_resolution = "source_exact"
+
+        price = price_component["price"]
+        base_cost = _multiply_divide(component["quantity"], price["amount"], price["per"])
+        discount_eligible = price_component.get("discount_eligible", True)
+        discounted = _apply_discounts(
+            base_cost,
+            policies,
+            usage_ledger,
+            component,
+            discount_eligible,
+        )
+
+        applied_discounts.extend(discounted["applied"])
+        total = _add(total, discounted["cost"])
+        sources_by_name[card["source"]["name"]] = card["source"]
+        if card["id"] not in warned_stale_cards:
+            stale_warning = _stale_price_warning(usage_ledger, card, stale_after_days)
+            if stale_warning:
+                warnings.append(stale_warning)
+                warned_stale_cards.add(card["id"])
+
+        components.append(
+            {
+                "name": component["name"],
+                "quantity": component["quantity"],
+                "unit": component["unit"],
+                "unit_price": _multiply_divide(price["amount"], "1", price["per"]),
+                "cost": discounted["cost"],
+                "price_card_id": card["id"],
+                "discount_eligible": discount_eligible,
+            }
+        )
+
+    model = usage_ledger["model"]
+    total = _apply_provider_reported_cost_use(
+        total,
+        components,
+        warnings,
+        provider_reported_cost,
+        provider_reported_cost_mode,
+    )
+    provider_warning = _provider_reported_warning(
+        total,
+        provider_reported_cost,
+        provider_reported_cost_mode,
+    )
+    if provider_warning:
+        warnings.append(provider_warning)
+    result = {
+        "schema_version": "0.1",
+        "provider": usage_ledger["provider"],
+        "surface": usage_ledger["surface"],
+        "model": {
+            "requested": model["requested"],
+            "returned": model.get("returned") or "",
+            "billed": resolved_billed_model,
+            "alias_resolution": alias_resolution,
+        },
+        "currency": "USD",
+        "components": components,
+        "total": total,
+        "price_sources": list(sources_by_name.values()),
+        "applied_discounts": applied_discounts,
+        "warnings": warnings,
+    }
+    if mode == "strict" and warnings:
+        raise ValueError(f"strict mode cost calculation failed: {warnings[0]['code']}")
+    return result
+
+
+def _number_string(value: Any) -> str:
+    return str(value if value is not None else 0)
+
+
+def _positive_component(name: str, quantity: Any, unit: str, source_path: str) -> Optional[Dict[str, Any]]:
+    if _decimal(quantity) <= 0:
+        return None
+    return {
+        "name": name,
+        "quantity": _number_string(quantity),
+        "unit": unit,
+        "source_path": source_path,
+    }
+
+
+def _compact_components(components: Iterable[Optional[Dict[str, Any]]]) -> List[Dict[str, Any]]:
+    return [component for component in components if component is not None]
+
+
+def _base_usage_ledger(
+    *,
+    provider: str,
+    surface: str,
+    requested_model: Optional[str],
+    returned_model: Optional[str],
+    components: List[Dict[str, Any]],
+    raw_usage: Dict[str, Any],
+) -> Dict[str, Any]:
+    model = returned_model or requested_model
+    return {
+        "schema_version": "0.1",
+        "provider": provider,
+        "surface": surface,
+        "model": {
+            "requested": requested_model or model,
+            "returned": returned_model,
+            "billed": model,
+            "alias_resolution": "none",
+        },
+        "components": components,
+        "raw_usage": raw_usage,
+    }
+
+
+def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage = response.get("usage", {})
+    cached_input = usage.get("input_tokens_details", {}).get("cached_tokens", 0)
+    reasoning = usage.get("output_tokens_details", {}).get("reasoning_tokens", 0)
+    input_tokens = usage.get("input_tokens", 0)
+    output_tokens = usage.get("output_tokens", 0)
+    tool_components = []
+    for item in response.get("output", []):
+        if item.get("type") == "web_search_call":
+            tool_components.append(_positive_component("web_search_units", 1, "search", "$.output[*].type"))
+        elif item.get("type") == "file_search_call":
+            tool_components.append(_positive_component("file_search_units", 1, "call", "$.output[*].type"))
+        elif item.get("type") == "code_interpreter_call":
+            tool_components.append(_positive_component("code_interpreter_call_units", 1, "call", "$.output[*].type"))
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "openai"),
+        surface=options.get("surface", "openai.responses"),
+        requested_model=options.get("model", response.get("model")),
+        returned_model=response.get("model"),
+        raw_usage=usage,
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", input_tokens - cached_input, "token", "$.usage.input_tokens"),
+                _positive_component("input_cache_read_tokens", cached_input, "token", "$.usage.input_tokens_details.cached_tokens"),
+                _positive_component("output_text_tokens", output_tokens - reasoning, "token", "$.usage.output_tokens"),
+                _positive_component("output_reasoning_tokens", reasoning, "token", "$.usage.output_tokens_details.reasoning_tokens"),
+                *tool_components,
+            ]
+        ),
+    )
+
+
+OPENAI_COMPATIBLE_CHAT_PROVIDERS = {
+    "openai.chat_completions": "openai",
+    "openrouter.chat_completions": "openrouter",
+    "groq.chat_completions": "groq",
+    "xai.chat_completions": "xai",
+    "mistral.chat_completions": "mistral",
+    "deepseek.chat_completions": "deepseek",
+    "azure.openai.chat_completions": "azure",
+    "huggingface.chat_completions": "huggingface",
+}
+
+
+def _openai_compatible_cached_input(usage: Dict[str, Any]) -> tuple[Any, str]:
+    prompt_details = usage.get("prompt_tokens_details", {})
+    if "cached_tokens" in prompt_details:
+        return prompt_details.get("cached_tokens", 0), "$.usage.prompt_tokens_details.cached_tokens"
+    if "prompt_cache_hit_tokens" in usage:
+        return usage.get("prompt_cache_hit_tokens", 0), "$.usage.prompt_cache_hit_tokens"
+    return 0, "$.usage.prompt_tokens_details.cached_tokens"
+
+
+def _openai_compatible_reasoning_output(usage: Dict[str, Any]) -> tuple[Any, str]:
+    completion_details = usage.get("completion_tokens_details", {})
+    if "reasoning_tokens" in completion_details:
+        return completion_details.get("reasoning_tokens", 0), "$.usage.completion_tokens_details.reasoning_tokens"
+    output_details = usage.get("output_tokens_details", {})
+    if "reasoning_tokens" in output_details:
+        return output_details.get("reasoning_tokens", 0), "$.usage.output_tokens_details.reasoning_tokens"
+    return 0, "$.usage.completion_tokens_details.reasoning_tokens"
+
+
+def extract_openai_compatible_chat_completions_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage = response.get("usage", {})
+    cached_input, cached_source = _openai_compatible_cached_input(usage)
+    reasoning, reasoning_source = _openai_compatible_reasoning_output(usage)
+    prompt_tokens = usage.get(
+        "prompt_tokens",
+        usage.get("prompt_cache_hit_tokens", 0) + usage.get("prompt_cache_miss_tokens", 0),
+    )
+    completion_tokens = usage.get("completion_tokens", 0)
+    surface = options.get("surface", "openai.chat_completions")
+    provider = options.get("provider", OPENAI_COMPATIBLE_CHAT_PROVIDERS.get(surface, "openai"))
+
+    return _base_usage_ledger(
+        provider=provider,
+        surface=surface,
+        requested_model=options.get("model", response.get("model")),
+        returned_model=response.get("model"),
+        raw_usage=usage,
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", prompt_tokens - cached_input, "token", "$.usage.prompt_tokens"),
+                _positive_component("input_cache_read_tokens", cached_input, "token", cached_source),
+                _positive_component("output_text_tokens", completion_tokens - reasoning, "token", "$.usage.completion_tokens"),
+                _positive_component("output_reasoning_tokens", reasoning, "token", reasoning_source),
+            ]
+        ),
+    )
+
+
+def extract_openai_chat_completions_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = {"provider": "openai", "surface": "openai.chat_completions"}
+    merged_options.update(options)
+    return extract_openai_compatible_chat_completions_usage(response, **merged_options)
+
+
+def extract_openrouter_chat_completions_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = {"provider": "openrouter", "surface": "openrouter.chat_completions"}
+    merged_options.update(options)
+    return extract_openai_compatible_chat_completions_usage(response, **merged_options)
+
+
+def extract_anthropic_messages_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage = response.get("usage", {})
+    input_tokens = usage.get("input_tokens", 0)
+    cache_write = usage.get("cache_creation_input_tokens", 0)
+    cache_write_1h = usage.get("cache_creation_input_tokens_1h", 0)
+    cache_read = usage.get("cache_read_input_tokens", 0)
+    output_tokens = usage.get("output_tokens", 0)
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "anthropic"),
+        surface=options.get("surface", "anthropic.messages"),
+        requested_model=options.get("model", response.get("model")),
+        returned_model=response.get("model"),
+        raw_usage=usage,
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", input_tokens, "token", "$.usage.input_tokens"),
+                _positive_component("input_cache_write_tokens", cache_write - cache_write_1h, "token", "$.usage.cache_creation_input_tokens"),
+                _positive_component("input_cache_write_1h_tokens", cache_write_1h, "token", "$.usage.cache_creation_input_tokens_1h"),
+                _positive_component("input_cache_read_tokens", cache_read, "token", "$.usage.cache_read_input_tokens"),
+                _positive_component("output_text_tokens", output_tokens, "token", "$.usage.output_tokens"),
+            ]
+        ),
+    )
+
+
+GEMINI_INPUT_MODALITY_COMPONENTS = {
+    "MODALITY_UNSPECIFIED": "input_uncached_tokens",
+    "TEXT": "input_uncached_tokens",
+    "DOCUMENT": "input_uncached_tokens",
+    "IMAGE": "input_image_tokens",
+    "AUDIO": "input_audio_tokens",
+    "VIDEO": "input_video_tokens",
+}
+
+GEMINI_OUTPUT_MODALITY_COMPONENTS = {
+    "MODALITY_UNSPECIFIED": "output_text_tokens",
+    "TEXT": "output_text_tokens",
+    "DOCUMENT": "output_text_tokens",
+    "IMAGE": "output_image_tokens",
+    "AUDIO": "output_audio_tokens",
+    "VIDEO": "output_video_tokens",
+}
+
+GEMINI_INPUT_COMPONENT_ORDER = [
+    "input_uncached_tokens",
+    "input_image_tokens",
+    "input_audio_tokens",
+    "input_video_tokens",
+]
+
+GEMINI_OUTPUT_COMPONENT_ORDER = [
+    "output_text_tokens",
+    "output_image_tokens",
+    "output_audio_tokens",
+    "output_video_tokens",
+]
+
+
+def _gemini_modality_counts(details: Any) -> Dict[str, Decimal]:
+    counts: Dict[str, Decimal] = {}
+    if not isinstance(details, list):
+        return counts
+    for detail in details:
+        if not isinstance(detail, dict):
+            continue
+        modality = str(detail.get("modality") or "MODALITY_UNSPECIFIED").upper()
+        counts[modality] = counts.get(modality, Decimal("0")) + _decimal(detail.get("tokenCount", 0))
+    return counts
+
+
+def _gemini_sum_counts(counts: Dict[str, Decimal]) -> Decimal:
+    total = Decimal("0")
+    for quantity in counts.values():
+        total += quantity
+    return total
+
+
+def _gemini_add_count(counts: Dict[str, Decimal], modality: str, quantity: Any) -> None:
+    parsed = _decimal(quantity)
+    if parsed == 0:
+        return
+    counts[modality] = counts.get(modality, Decimal("0")) + parsed
+
+
+def _gemini_net_input_counts(
+    prompt_counts: Dict[str, Decimal],
+    cache_counts: Dict[str, Decimal],
+    tool_counts: Dict[str, Decimal],
+) -> Dict[str, Decimal]:
+    net_counts: Dict[str, Decimal] = {}
+    for modality in set(prompt_counts) | set(cache_counts) | set(tool_counts):
+        net_counts[modality] = (
+            prompt_counts.get(modality, Decimal("0"))
+            - cache_counts.get(modality, Decimal("0"))
+            + tool_counts.get(modality, Decimal("0"))
+        )
+    return net_counts
+
+
+def _gemini_component_quantities(
+    counts: Dict[str, Decimal],
+    modality_components: Dict[str, str],
+    fallback_component: str,
+) -> Dict[str, Decimal]:
+    quantities: Dict[str, Decimal] = {}
+    for modality, quantity in counts.items():
+        component = modality_components.get(modality, fallback_component)
+        quantities[component] = quantities.get(component, Decimal("0")) + quantity
+    return quantities
+
+
+def _gemini_ordered_components(
+    quantities: Dict[str, Decimal],
+    order: Iterable[str],
+    source_path: str,
+) -> List[Optional[Dict[str, Any]]]:
+    return [
+        _positive_component(component, _format_decimal(quantities.get(component, Decimal("0"))), "token", source_path)
+        for component in order
+    ]
+
+
+def extract_gemini_generate_content_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage = response.get("usageMetadata", {})
+    cached_input = _decimal(usage.get("cachedContentTokenCount", 0))
+    prompt_tokens = _decimal(usage.get("promptTokenCount", 0))
+    candidates_tokens = _decimal(usage.get("candidatesTokenCount", 0))
+    thoughts_tokens = _decimal(usage.get("thoughtsTokenCount", 0))
+    prompt_counts = _gemini_modality_counts(usage.get("promptTokensDetails"))
+    cache_counts = _gemini_modality_counts(usage.get("cacheTokensDetails"))
+    tool_counts = _gemini_modality_counts(usage.get("toolUsePromptTokensDetails"))
+    candidate_counts = _gemini_modality_counts(usage.get("candidatesTokensDetails"))
+
+    tool_prompt_tokens = (
+        _decimal(usage.get("toolUsePromptTokenCount", 0))
+        if "toolUsePromptTokenCount" in usage
+        else _gemini_sum_counts(tool_counts)
+    )
+    tool_remainder = tool_prompt_tokens - _gemini_sum_counts(tool_counts)
+    if tool_remainder > 0:
+        _gemini_add_count(tool_counts, "TEXT", tool_remainder)
+
+    detail_safe_for_input = bool(prompt_counts) and (cached_input == 0 or bool(cache_counts))
+    if detail_safe_for_input:
+        input_quantities = _gemini_component_quantities(
+            _gemini_net_input_counts(prompt_counts, cache_counts, tool_counts),
+            GEMINI_INPUT_MODALITY_COMPONENTS,
+            "input_uncached_tokens",
+        )
+        input_components = _gemini_ordered_components(
+            input_quantities,
+            GEMINI_INPUT_COMPONENT_ORDER,
+            "$.usageMetadata.promptTokensDetails",
+        )
+        cache_read_source = "$.usageMetadata.cachedContentTokenCount"
+        cache_read = cached_input or _gemini_sum_counts(cache_counts)
+    else:
+        input_components = [
+            _positive_component(
+                "input_uncached_tokens",
+                _format_decimal(prompt_tokens - cached_input + tool_prompt_tokens),
+                "token",
+                "$.usageMetadata.promptTokenCount",
+            )
+        ]
+        cache_read_source = "$.usageMetadata.cachedContentTokenCount"
+        cache_read = cached_input
+
+    if candidate_counts:
+        output_quantities = _gemini_component_quantities(
+            candidate_counts,
+            GEMINI_OUTPUT_MODALITY_COMPONENTS,
+            "output_text_tokens",
+        )
+        output_components = _gemini_ordered_components(
+            output_quantities,
+            GEMINI_OUTPUT_COMPONENT_ORDER,
+            "$.usageMetadata.candidatesTokensDetails",
+        )
+    else:
+        output_components = [
+            _positive_component(
+                "output_text_tokens",
+                _format_decimal(candidates_tokens),
+                "token",
+                "$.usageMetadata.candidatesTokenCount",
+            )
+        ]
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "google"),
+        surface=options.get("surface", "google.gemini.generate_content"),
+        requested_model=options.get("model", response.get("modelVersion")),
+        returned_model=response.get("modelVersion") or options.get("model"),
+        raw_usage=usage,
+        components=_compact_components(
+            input_components[:1]
+            + [
+                _positive_component("input_cache_read_tokens", _format_decimal(cache_read), "token", cache_read_source),
+            ]
+            + input_components[1:]
+            + output_components[:1]
+            + [
+                _positive_component("output_reasoning_tokens", _format_decimal(thoughts_tokens), "token", "$.usageMetadata.thoughtsTokenCount"),
+            ]
+            + output_components[1:]
+        ),
+    )
+
+
+def extract_bedrock_converse_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage = response.get("usage", {})
+    cache_read = usage.get("cacheReadInputTokens", 0)
+    cache_write = usage.get("cacheWriteInputTokens", 0)
+    cache_write_1h = sum(
+        detail.get("inputTokens", 0)
+        for detail in usage.get("cacheDetails", [])
+        if detail.get("ttl") == "1h"
+    )
+    input_tokens = usage.get("inputTokens", 0)
+    output_tokens = usage.get("outputTokens", 0)
+    returned_model = response.get("modelId") or options.get("model")
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "bedrock"),
+        surface=options.get("surface", "aws.bedrock.converse"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=usage,
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", input_tokens - cache_read - cache_write, "token", "$.usage.inputTokens"),
+                _positive_component("input_cache_write_tokens", cache_write - cache_write_1h, "token", "$.usage.cacheWriteInputTokens"),
+                _positive_component("input_cache_write_1h_tokens", cache_write_1h, "token", "$.usage.cacheDetails"),
+                _positive_component("input_cache_read_tokens", cache_read, "token", "$.usage.cacheReadInputTokens"),
+                _positive_component("output_text_tokens", output_tokens, "token", "$.usage.outputTokens"),
+            ]
+        ),
+    )
+
+
+def _cohere_chat_usage_payload(response: Dict[str, Any]) -> tuple[Dict[str, Any], str]:
+    usage = response.get("usage")
+    if isinstance(usage, dict) and "billed_units" in usage:
+        return usage, "$.usage"
+    meta = response.get("meta", {})
+    return meta if isinstance(meta, dict) else {}, "$.meta"
+
+
+def extract_cohere_chat_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage, source_root = _cohere_chat_usage_payload(response)
+    billed_units = usage.get("billed_units", {})
+    input_tokens = billed_units.get("input_tokens", 0)
+    output_tokens = billed_units.get("output_tokens", 0)
+    returned_model = response.get("model") or options.get("model")
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "cohere"),
+        surface=options.get("surface", "cohere.chat"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=usage,
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", input_tokens, "token", f"{source_root}.billed_units.input_tokens"),
+                _positive_component("output_text_tokens", output_tokens, "token", f"{source_root}.billed_units.output_tokens"),
+            ]
+        ),
+    )
+
+
+def extract_langchain_chat_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage = response.get("usage_metadata") or response.get("usageMetadata") or {}
+    input_details = usage.get("input_token_details", {})
+    output_details = usage.get("output_token_details", {})
+    cache_read = input_details.get("cache_read", 0)
+    cache_write = input_details.get("cache_creation", 0)
+    input_tokens = usage.get("input_tokens", 0)
+    output_tokens = usage.get("output_tokens", 0)
+    reasoning = output_details.get("reasoning", 0)
+    metadata = response.get("response_metadata", {})
+    returned_model = metadata.get("model_name") or metadata.get("model") or options.get("model")
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "unknown"),
+        surface=options.get("surface", "framework.langchain.chat"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=usage,
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", input_tokens - cache_read - cache_write, "token", "$.usage_metadata.input_tokens"),
+                _positive_component("input_cache_read_tokens", cache_read, "token", "$.usage_metadata.input_token_details.cache_read"),
+                _positive_component("input_cache_write_tokens", cache_write, "token", "$.usage_metadata.input_token_details.cache_creation"),
+                _positive_component("output_text_tokens", output_tokens - reasoning, "token", "$.usage_metadata.output_tokens"),
+                _positive_component("output_reasoning_tokens", reasoning, "token", "$.usage_metadata.output_token_details.reasoning"),
+            ]
+        ),
+    )
+
+
+def _vercel_ai_sdk_usage_payload(response: Dict[str, Any]) -> tuple[Dict[str, Any], str]:
+    if isinstance(response.get("totalUsage"), dict):
+        return response["totalUsage"], "$.totalUsage"
+    if isinstance(response.get("usage"), dict):
+        return response["usage"], "$.usage"
+    return {}, "$.usage"
+
+
+def extract_vercel_ai_sdk_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage, source_root = _vercel_ai_sdk_usage_payload(response)
+    input_details = usage.get("inputTokenDetails", {})
+    output_details = usage.get("outputTokenDetails", {})
+    cache_read = input_details.get("cacheReadTokens", usage.get("cachedInputTokens", 0))
+    cache_write = input_details.get("cacheWriteTokens", 0)
+    input_tokens = usage.get("inputTokens", 0)
+    uncached = input_details.get("noCacheTokens", input_tokens - cache_read - cache_write)
+    output_tokens = usage.get("outputTokens", 0)
+    reasoning = output_details.get("reasoningTokens", usage.get("reasoningTokens", 0))
+    text_tokens = output_details.get("textTokens", output_tokens - reasoning)
+    response_metadata = response.get("response", {})
+    model_metadata = response.get("model", {})
+    returned_model = response_metadata.get("modelId") or model_metadata.get("modelId") or options.get("model")
+
+    return _base_usage_ledger(
+        provider=options.get("provider") or model_metadata.get("provider", "unknown"),
+        surface=options.get("surface", "framework.vercel_ai_sdk"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=usage,
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", uncached, "token", f"{source_root}.inputTokenDetails.noCacheTokens"),
+                _positive_component("input_cache_read_tokens", cache_read, "token", f"{source_root}.inputTokenDetails.cacheReadTokens"),
+                _positive_component("input_cache_write_tokens", cache_write, "token", f"{source_root}.inputTokenDetails.cacheWriteTokens"),
+                _positive_component("output_text_tokens", text_tokens, "token", f"{source_root}.outputTokenDetails.textTokens"),
+                _positive_component("output_reasoning_tokens", reasoning, "token", f"{source_root}.outputTokenDetails.reasoningTokens"),
+            ]
+        ),
+    )
+
+
+def extract_llamaindex_token_counter_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    events = response.get("llm_token_counts", [])
+    if events:
+        prompt_tokens = sum(event.get("prompt_token_count", 0) for event in events)
+        completion_tokens = sum(event.get("completion_token_count", 0) for event in events)
+    else:
+        prompt_tokens = response.get("prompt_llm_token_count", 0)
+        completion_tokens = response.get("completion_llm_token_count", 0)
+
+    returned_model = response.get("model") or options.get("model")
+    return _base_usage_ledger(
+        provider=options.get("provider", "unknown"),
+        surface=options.get("surface", "framework.llamaindex.token_counter"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=response,
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", prompt_tokens, "token", "$.llm_token_counts[*].prompt_token_count"),
+                _positive_component("output_text_tokens", completion_tokens, "token", "$.llm_token_counts[*].completion_token_count"),
+            ]
+        ),
+    )
+
+
+def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    adapter = options.get("adapter") or options.get("framework")
+    if adapter == "langchain.chat_message":
+        return extract_langchain_chat_usage(response, **options)
+    if adapter == "vercel_ai_sdk.generate_text":
+        return extract_vercel_ai_sdk_usage(response, **options)
+    if adapter == "llamaindex.token_counter":
+        return extract_llamaindex_token_counter_usage(response, **options)
+
+    surface = options.get("surface")
+    if surface == "openai.responses":
+        return extract_openai_responses_usage(response, **options)
+    if surface == "openai.chat_completions":
+        return extract_openai_chat_completions_usage(response, **options)
+    if surface in OPENAI_COMPATIBLE_CHAT_PROVIDERS:
+        return extract_openai_compatible_chat_completions_usage(response, **options)
+    if surface == "anthropic.messages":
+        return extract_anthropic_messages_usage(response, **options)
+    if surface in {"google.gemini.generate_content", "vertex.gemini.generate_content"}:
+        return extract_gemini_generate_content_usage(response, **options)
+    if surface == "aws.bedrock.converse":
+        return extract_bedrock_converse_usage(response, **options)
+    if surface == "cohere.chat":
+        return extract_cohere_chat_usage(response, **options)
+    raise ValueError(f"Unsupported surface: {surface}")
+
+
+def _unsupported_surface_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    surface = options.get("surface", "unknown")
+    provider = options.get("provider", "unknown")
+    model = options.get("model") or response.get("model") or "unknown"
+    return {
+        "schema_version": "0.1",
+        "provider": provider,
+        "surface": surface,
+        "model": {
+            "requested": model,
+            "returned": response.get("model"),
+            "billed": model,
+            "alias_resolution": "unknown",
+        },
+        "currency": "USD",
+        "components": [],
+        "total": "0",
+        "price_sources": [],
+        "applied_discounts": [],
+        "warnings": [
+            {
+                "code": "unknown_surface",
+                "message": f"Unsupported surface: {surface}.",
+            }
+        ],
+    }
+
+
+def price_cards_from_llm_prices(data: Dict[str, Any], **options: Any) -> List[Dict[str, Any]]:
+    retrieved_at = options.get("retrieved_at") or f"{data.get('updated_at', '1970-01-01')}T00:00:00Z"
+    source_url = options.get("source_url", "https://www.llm-prices.com/current-v1.json")
+    cards = []
+
+    for price in data.get("prices", []):
+        components = [
+            {
+                "usage_component": "input_uncached_tokens",
+                "unit": "token",
+                "price": {"amount": _number_string(price["input"]), "currency": "USD", "per": "1000000"},
+            },
+            {
+                "usage_component": "output_text_tokens",
+                "unit": "token",
+                "price": {"amount": _number_string(price["output"]), "currency": "USD", "per": "1000000"},
+            },
+        ]
+        if price.get("input_cached") is not None:
+            components.append(
+                {
+                    "usage_component": "input_cache_read_tokens",
+                    "unit": "token",
+                    "price": {"amount": _number_string(price["input_cached"]), "currency": "USD", "per": "1000000"},
+                }
+            )
+
+        cards.append(
+            {
+                "schema_version": "0.1",
+                "id": f"{price['vendor']}:{price['id']}:llm-prices",
+                "provider": price["vendor"],
+                "model": price["id"],
+                "aliases": [price["name"]] if price.get("name") else [],
+                "effective": {
+                    "from": price.get("from_date"),
+                    "to": price.get("to_date"),
+                },
+                "components": components,
+                "source": {
+                    "name": "llm-prices",
+                    "url": source_url,
+                    "retrieved_at": retrieved_at,
+                },
+            }
+        )
+
+    return cards
+
+
+def _add_price_component(
+    components: List[Dict[str, Any]],
+    usage_component: str,
+    unit: str,
+    amount: Any,
+    per: str = "1",
+    **extra: Any,
+) -> None:
+    if amount is None:
+        return
+    component = {
+        "usage_component": usage_component,
+        "unit": unit,
+        "price": {"amount": _number_string(amount), "currency": "USD", "per": per},
+    }
+    component.update(extra)
+    components.append(component)
+
+
+def price_cards_from_litellm(data: Dict[str, Any], **options: Any) -> List[Dict[str, Any]]:
+    retrieved_at = options.get("retrieved_at") or f"{data.get('updated_at', '1970-01-01')}T00:00:00Z"
+    source_url = options.get("source_url", "https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json")
+    cards = []
+    for model, config in data.items():
+        if model in {"sample_spec", "updated_at"} or not isinstance(config, dict):
+            continue
+        provider = config.get("litellm_provider") or options.get("provider", "unknown")
+        components: List[Dict[str, Any]] = []
+        _add_price_component(components, "input_uncached_tokens", "token", config.get("input_cost_per_token"))
+        _add_price_component(components, "output_text_tokens", "token", config.get("output_cost_per_token"))
+        _add_price_component(components, "input_cache_read_tokens", "token", config.get("cache_read_input_token_cost"))
+        _add_price_component(components, "input_cache_write_tokens", "token", config.get("cache_creation_input_token_cost"))
+        _add_price_component(components, "input_cache_write_1h_tokens", "token", config.get("cache_creation_input_token_cost_1h"))
+        _add_price_component(
+            components,
+            "output_reasoning_tokens",
+            "token",
+            config.get("output_cost_per_reasoning_token", config.get("output_cost_per_token")),
+        )
+        if not components:
+            continue
+        cards.append(
+            {
+                "schema_version": "0.1",
+                "id": f"{provider}:{model}:litellm",
+                "provider": provider,
+                "model": model,
+                "components": components,
+                "source": {
+                    "name": "litellm",
+                    "url": source_url,
+                    "retrieved_at": retrieved_at,
+                },
+            }
+        )
+    return cards
+
+
+def price_cards_from_portkey(data: Dict[str, Any], **options: Any) -> List[Dict[str, Any]]:
+    retrieved_at = options.get("retrieved_at") or f"{data.get('updated_at', '1970-01-01')}T00:00:00Z"
+    source_url = options.get("source_url", "https://github.com/Portkey-AI/models")
+    provider = data.get("provider") or options.get("provider", "unknown")
+    cards = []
+    for model, entry in data.get("models", {}).items():
+        pricing = entry.get("pricing") or entry.get("pay_as_you_go") or {}
+        components: List[Dict[str, Any]] = []
+        _add_price_component(
+            components,
+            "input_uncached_tokens",
+            "token",
+            None if pricing.get("request_token") is None else _multiply_divide(pricing["request_token"], "1", "100"),
+        )
+        _add_price_component(
+            components,
+            "output_text_tokens",
+            "token",
+            None if pricing.get("response_token") is None else _multiply_divide(pricing["response_token"], "1", "100"),
+        )
+        _add_price_component(
+            components,
+            "input_cache_read_tokens",
+            "token",
+            None if pricing.get("cache_read_input_token") is None else _multiply_divide(pricing["cache_read_input_token"], "1", "100"),
+        )
+        _add_price_component(
+            components,
+            "input_cache_write_tokens",
+            "token",
+            None if pricing.get("cache_write_input_token") is None else _multiply_divide(pricing["cache_write_input_token"], "1", "100"),
+        )
+        additional = pricing.get("additional_units", {})
+        _add_price_component(
+            components,
+            "output_reasoning_tokens",
+            "token",
+            None if additional.get("thinking_token") is None else _multiply_divide(additional["thinking_token"], "1", "100"),
+        )
+        _add_price_component(
+            components,
+            "web_search_units",
+            "search",
+            None if additional.get("web_search") is None else _multiply_divide(additional["web_search"], "1", "100"),
+        )
+        if not components:
+            continue
+        cards.append(
+            {
+                "schema_version": "0.1",
+                "id": f"{provider}:{model}:portkey",
+                "provider": provider,
+                "model": model,
+                "components": components,
+                "source": {
+                    "name": "portkey",
+                    "url": source_url,
+                    "retrieved_at": retrieved_at,
+                },
+            }
+        )
+    return cards
+
+
+def _openrouter_pricing_tiers(pricing: Any) -> List[Dict[str, Any]]:
+    if isinstance(pricing, list):
+        return [tier for tier in pricing if isinstance(tier, dict)]
+    if isinstance(pricing, dict):
+        return [pricing]
+    return []
+
+
+def _openrouter_tier_conditions(tiers: List[Dict[str, Any]], index: int) -> Dict[str, Any]:
+    tier = tiers[index]
+    conditions: Dict[str, Any] = {}
+    if tier.get("min_context") is not None:
+        conditions["min_total_input_tokens"] = _number_string(tier["min_context"])
+    if tier.get("min_context") is None:
+        next_min_context = next((candidate.get("min_context") for candidate in tiers[index + 1:] if candidate.get("min_context") is not None), None)
+        if next_min_context is not None:
+            conditions["max_total_input_tokens"] = _subtract(next_min_context, "1")
+    return {"conditions": conditions} if conditions else {}
+
+
+def price_cards_from_openrouter_models(data: Dict[str, Any], **options: Any) -> List[Dict[str, Any]]:
+    retrieved_at = options.get("retrieved_at") or options.get("retrievedAt") or f"{data.get('updated_at', '1970-01-01')}T00:00:00Z"
+    source_url = options.get("source_url") or options.get("sourceUrl") or "https://openrouter.ai/api/v1/models"
+    provider = options.get("provider", "openrouter")
+    cards = []
+    for model in data.get("data", []):
+        if not isinstance(model, dict):
+            continue
+        model_id = model.get("id") or model.get("canonical_slug")
+        if not model_id:
+            continue
+        tiers = _openrouter_pricing_tiers(model.get("pricing"))
+        components: List[Dict[str, Any]] = []
+        for index, tier in enumerate(tiers):
+            token_conditions = _openrouter_tier_conditions(tiers, index)
+            _add_price_component(components, "input_uncached_tokens", "token", tier.get("prompt"), "1", **token_conditions)
+            _add_price_component(components, "output_text_tokens", "token", tier.get("completion"), "1", **token_conditions)
+            _add_price_component(components, "input_cache_read_tokens", "token", tier.get("input_cache_read"), "1", **token_conditions)
+            _add_price_component(components, "input_cache_write_tokens", "token", tier.get("input_cache_write"), "1", **token_conditions)
+            _add_price_component(components, "output_reasoning_tokens", "token", tier.get("internal_reasoning"), "1", **token_conditions)
+            if index == 0:
+                _add_price_component(components, "input_image_units", "image", tier.get("image"), "1")
+                _add_price_component(components, "request_units", "request", tier.get("request"), "1")
+                _add_price_component(components, "web_search_units", "search", tier.get("web_search"), "1")
+        if not components:
+            continue
+        aliases = [
+            alias
+            for alias in [model.get("canonical_slug"), model.get("name")]
+            if alias and alias != model_id
+        ]
+        effective: Dict[str, Any] = {}
+        if model.get("expiration_date"):
+            effective["to"] = model["expiration_date"]
+        card = {
+            "schema_version": "0.1",
+            "id": f"{provider}:{model_id}:openrouter-models",
+            "provider": provider,
+            "model": model_id,
+            "aliases": aliases,
+            "components": components,
+            "source": {
+                "name": "openrouter",
+                "url": source_url,
+                "retrieved_at": retrieved_at,
+            },
+        }
+        if effective:
+            card["effective"] = effective
+        cards.append(card)
+    return cards
+
+
+def from_response(
+    response: Dict[str, Any],
+    *,
+    adapter: Optional[str] = None,
+    framework: Optional[str] = None,
+    provider: Optional[str] = None,
+    surface: str,
+    model: Optional[str] = None,
+    price_cards: Iterable[Dict[str, Any]],
+    discount_policies: Optional[Iterable[Dict[str, Any]]] = None,
+    mode: str = "compatibility",
+    stale_after_days: Optional[int] = None,
+    provider_reported_cost: Optional[Any] = None,
+    provider_reported_cost_mode: str = "compare",
+    price_source_priority: Optional[Iterable[str]] = None,
+) -> Dict[str, Any]:
+    options: Dict[str, Any] = {"surface": surface}
+    if adapter:
+        options["adapter"] = adapter
+    if framework:
+        options["framework"] = framework
+    if provider:
+        options["provider"] = provider
+    if model:
+        options["model"] = model
+    try:
+        usage_ledger = extract_usage_ledger(response, **options)
+    except ValueError:
+        if mode == "strict":
+            raise
+        return _unsupported_surface_ledger(response, **options)
+    return calculate_cost(
+        usage_ledger=usage_ledger,
+        price_cards=price_cards,
+        discount_policies=discount_policies,
+        mode=mode,
+        stale_after_days=stale_after_days,
+        provider_reported_cost=provider_reported_cost,
+        provider_reported_cost_mode=provider_reported_cost_mode,
+        price_source_priority=price_source_priority,
+    )
+
+
+def from_langchain_message(message: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = dict(options)
+    merged_options["adapter"] = "langchain.chat_message"
+    return from_response(message, **merged_options)
+
+
+def from_vercel_ai_sdk_result(result: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = dict(options)
+    merged_options["adapter"] = "vercel_ai_sdk.generate_text"
+    return from_response(result, **merged_options)
+
+
+def from_llamaindex_token_counter(counter: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = dict(options)
+    merged_options["adapter"] = "llamaindex.token_counter"
+    return from_response(counter, **merged_options)
