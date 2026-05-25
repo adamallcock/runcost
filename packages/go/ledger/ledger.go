@@ -2298,6 +2298,116 @@ func PriceCardsFromOpenRouterModels(data Object) []any {
 	return cards
 }
 
+func modelsDevTiers(cost Object) []Object {
+	rawTiers := []Object{}
+	for _, rawTier := range asSlice(cost["tiers"]) {
+		tier := asObject(rawTier)
+		if len(tier) == 0 {
+			continue
+		}
+		tierInfo := asObject(tier["tier"])
+		if asString(tierInfo["type"]) == "context" && tierInfo["size"] != nil {
+			rawTiers = append(rawTiers, Object{"cost": tier, "size": tierInfo["size"]})
+		}
+	}
+	sort.SliceStable(rawTiers, func(left int, right int) bool {
+		return rat(rawTiers[left]["size"]).Cmp(rat(rawTiers[right]["size"])) < 0
+	})
+	baseConditions := Object{}
+	if len(rawTiers) > 0 {
+		baseConditions["max_total_input_tokens"] = subtract(rawTiers[0]["size"], "1")
+	}
+	tiers := []Object{{"cost": cost, "conditions": baseConditions}}
+	for index, tier := range rawTiers {
+		conditions := Object{"min_total_input_tokens": numberString(tier["size"])}
+		if index+1 < len(rawTiers) {
+			conditions["max_total_input_tokens"] = subtract(rawTiers[index+1]["size"], "1")
+		}
+		tiers = append(tiers, Object{"cost": tier["cost"], "conditions": conditions})
+	}
+	return tiers
+}
+
+func addModelsDevCostComponents(components *[]any, cost Object, conditions Object) {
+	extra := Object{}
+	if len(conditions) > 0 {
+		extra["conditions"] = conditions
+	}
+	addPriceComponent(components, "input_uncached_tokens", "token", cost["input"], "1000000", extra)
+	addPriceComponent(components, "output_text_tokens", "token", cost["output"], "1000000", extra)
+	addPriceComponent(components, "output_reasoning_tokens", "token", cost["reasoning"], "1000000", extra)
+	addPriceComponent(components, "input_cache_read_tokens", "token", cost["cache_read"], "1000000", extra)
+	addPriceComponent(components, "input_cache_write_tokens", "token", cost["cache_write"], "1000000", extra)
+	addPriceComponent(components, "input_audio_tokens", "token", cost["input_audio"], "1000000", extra)
+	addPriceComponent(components, "output_audio_tokens", "token", cost["output_audio"], "1000000", extra)
+}
+
+// PriceCardsFromModelsDev maps models.dev api.json data into canonical price cards.
+func PriceCardsFromModelsDev(data Object) []any {
+	updatedAt := asString(data["updated_at"])
+	if updatedAt == "" {
+		updatedAt = "1970-01-01"
+	}
+	cards := []any{}
+	for providerID, rawProvider := range data {
+		provider, ok := rawProvider.(map[string]any)
+		if !ok || len(provider) == 0 {
+			continue
+		}
+		models, ok := provider["models"].(map[string]any)
+		if !ok {
+			continue
+		}
+		for modelID, rawModel := range models {
+			model, ok := rawModel.(map[string]any)
+			if !ok || len(model) == 0 {
+				continue
+			}
+			components := []any{}
+			for _, tier := range modelsDevTiers(asObject(model["cost"])) {
+				addModelsDevCostComponents(&components, asObject(tier["cost"]), asObject(tier["conditions"]))
+			}
+			if len(components) == 0 {
+				continue
+			}
+			aliases := []any{}
+			if name := asString(model["name"]); name != "" && name != modelID {
+				aliases = append(aliases, name)
+			}
+			aliases = append(aliases, fmt.Sprintf("%s/%s", providerID, modelID))
+			card := Object{
+				"schema_version": "0.1",
+				"id":             fmt.Sprintf("%s:%s:models-dev", providerID, modelID),
+				"provider":       providerID,
+				"model":          modelID,
+				"aliases":        aliases,
+				"components":     components,
+				"source": Object{
+					"name":         "models.dev",
+					"url":          "https://models.dev/api.json",
+					"retrieved_at": updatedAt + "T00:00:00Z",
+					"license":      "MIT",
+				},
+				"metadata": Object{
+					"models_dev": Object{
+						"provider_name": provider["name"],
+						"family":        model["family"],
+						"limit":         model["limit"],
+						"modalities":    model["modalities"],
+						"reasoning":     model["reasoning"],
+						"tool_call":     model["tool_call"],
+						"status":        model["status"],
+						"release_date":  model["release_date"],
+						"last_updated":  model["last_updated"],
+					},
+				},
+			}
+			cards = append(cards, card)
+		}
+	}
+	return cards
+}
+
 func sourceInfo(data Object, defaultName string, defaultURL string) Object {
 	source := Object{}
 	if rawSource, ok := data["source"].(map[string]any); ok {
@@ -2539,6 +2649,8 @@ func PriceCardsFromJSONFile(path string, sourceType string) ([]any, error) {
 		return PriceCardsFromLiteLLM(data), nil
 	case "openrouter-models":
 		return PriceCardsFromOpenRouterModels(data), nil
+	case "models-dev":
+		return PriceCardsFromModelsDev(data), nil
 	case "portkey":
 		return PriceCardsFromPortkey(data), nil
 	case "source-cache":

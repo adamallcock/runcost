@@ -395,6 +395,7 @@ export function extractAG2UsageSummaryUsage(response: Record<string, unknown>, o
 export function priceCardsFromLlmPrices(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromLiteLLM(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromOpenRouterModels(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
+export function priceCardsFromModelsDev(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromPortkey(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromSourceCache(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromJSONFile(path: string, options?: SourceAdapterOptions & { sourceType?: string; source_type?: string }): PriceCard[];

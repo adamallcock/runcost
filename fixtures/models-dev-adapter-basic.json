@@ -1,0 +1,228 @@
+{
+  "name": "models-dev-adapter-basic",
+  "description": "Maps models.dev api.json provider/model pricing, capabilities, and context tier data into canonical RunCost price cards.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SOURCE-ADAPTER"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "source_adapter",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:input_cache_read_tokens",
+      "component:input_cache_write_tokens",
+      "component:input_audio_tokens",
+      "component:output_text_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_audio_tokens",
+      "source:models-dev",
+      "source_adapter"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-modelsdev",
+        "returned": "gpt-modelsdev",
+        "billed": "gpt-modelsdev",
+        "alias_resolution": "none"
+      },
+      "context": {
+        "total_input_tokens": "1000"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token"
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "20",
+          "unit": "token"
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "5",
+          "unit": "token"
+        },
+        {
+          "name": "input_audio_tokens",
+          "quantity": "3",
+          "unit": "token"
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "10",
+          "unit": "token"
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "7",
+          "unit": "token"
+        },
+        {
+          "name": "output_audio_tokens",
+          "quantity": "4",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_source": {
+      "type": "models-dev",
+      "data": {
+        "updated_at": "2026-05-25",
+        "openai": {
+          "id": "openai",
+          "name": "OpenAI",
+          "doc": "https://platform.openai.com/docs/models",
+          "models": {
+            "gpt-modelsdev": {
+              "id": "gpt-modelsdev",
+              "name": "GPT Models.dev Fixture",
+              "family": "gpt",
+              "reasoning": true,
+              "tool_call": true,
+              "release_date": "2026-01-01",
+              "last_updated": "2026-05-25",
+              "modalities": {
+                "input": [
+                  "text",
+                  "audio"
+                ],
+                "output": [
+                  "text",
+                  "audio"
+                ]
+              },
+              "limit": {
+                "context": 200000,
+                "output": 16000
+              },
+              "cost": {
+                "input": 2.5,
+                "output": 10,
+                "reasoning": 10,
+                "cache_read": 0.25,
+                "cache_write": 3,
+                "input_audio": 1,
+                "output_audio": 2,
+                "tiers": [
+                  {
+                    "tier": {
+                      "type": "context",
+                      "size": 128000
+                    },
+                    "input": 5,
+                    "output": 20,
+                    "cache_read": 0.5
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-modelsdev",
+        "returned": "gpt-modelsdev",
+        "billed": "gpt-modelsdev",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.0000025",
+          "cost": "0.00025",
+          "price_card_id": "openai:gpt-modelsdev:models-dev",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.00000025",
+          "cost": "0.000005",
+          "price_card_id": "openai:gpt-modelsdev:models-dev",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "5",
+          "unit": "token",
+          "unit_price": "0.000003",
+          "cost": "0.000015",
+          "price_card_id": "openai:gpt-modelsdev:models-dev",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_audio_tokens",
+          "quantity": "3",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.000003",
+          "price_card_id": "openai:gpt-modelsdev:models-dev",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "10",
+          "unit": "token",
+          "unit_price": "0.00001",
+          "cost": "0.0001",
+          "price_card_id": "openai:gpt-modelsdev:models-dev",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "7",
+          "unit": "token",
+          "unit_price": "0.00001",
+          "cost": "0.00007",
+          "price_card_id": "openai:gpt-modelsdev:models-dev",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_audio_tokens",
+          "quantity": "4",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.000008",
+          "price_card_id": "openai:gpt-modelsdev:models-dev",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.000451",
+      "price_sources": [
+        {
+          "name": "models.dev",
+          "url": "https://models.dev/api.json",
+          "retrieved_at": "2026-05-25T00:00:00Z",
+          "license": "MIT"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

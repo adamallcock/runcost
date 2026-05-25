@@ -1773,6 +1773,97 @@ export function priceCardsFromOpenRouterModels(data, options = {}) {
   });
 }
 
+function modelsDevTiers(cost) {
+  if (!cost || typeof cost !== "object") {
+    return [];
+  }
+  const rawTiers = [];
+  for (const tier of cost.tiers || []) {
+    if (!tier || typeof tier !== "object") {
+      continue;
+    }
+    const tierInfo = tier.tier && typeof tier.tier === "object" ? tier.tier : {};
+    if (tierInfo.type === "context" && tierInfo.size !== undefined && tierInfo.size !== null) {
+      rawTiers.push({ cost: tier, size: tierInfo.size });
+    }
+  }
+  rawTiers.sort((left, right) => Number(left.size) - Number(right.size));
+  const baseConditions = {};
+  if (rawTiers.length > 0) {
+    baseConditions.max_total_input_tokens = subtractDecimal(rawTiers[0].size, "1");
+  }
+  const tiers = [{ cost, conditions: baseConditions }];
+  rawTiers.forEach((tier, index) => {
+    const conditions = { min_total_input_tokens: numberString(tier.size) };
+    if (index + 1 < rawTiers.length) {
+      conditions.max_total_input_tokens = subtractDecimal(rawTiers[index + 1].size, "1");
+    }
+    tiers.push({ cost: tier.cost, conditions });
+  });
+  return tiers;
+}
+
+function addModelsDevCostComponents(components, cost, conditions) {
+  const extra = Object.keys(conditions).length > 0 ? { conditions } : {};
+  addPriceComponent(components, "input_uncached_tokens", "token", cost.input, "1000000", extra);
+  addPriceComponent(components, "output_text_tokens", "token", cost.output, "1000000", extra);
+  addPriceComponent(components, "output_reasoning_tokens", "token", cost.reasoning, "1000000", extra);
+  addPriceComponent(components, "input_cache_read_tokens", "token", cost.cache_read, "1000000", extra);
+  addPriceComponent(components, "input_cache_write_tokens", "token", cost.cache_write, "1000000", extra);
+  addPriceComponent(components, "input_audio_tokens", "token", cost.input_audio, "1000000", extra);
+  addPriceComponent(components, "output_audio_tokens", "token", cost.output_audio, "1000000", extra);
+}
+
+export function priceCardsFromModelsDev(data, options = {}) {
+  const retrievedAt = options.retrievedAt || options.retrieved_at || `${data.updated_at || "1970-01-01"}T00:00:00Z`;
+  const sourceUrl = options.sourceUrl || options.source_url || "https://models.dev/api.json";
+  return Object.entries(data || {}).flatMap(([providerId, provider]) => {
+    if (!provider || typeof provider !== "object") {
+      return [];
+    }
+    return Object.entries(provider.models || {}).flatMap(([modelId, model]) => {
+      if (!model || typeof model !== "object") {
+        return [];
+      }
+      const components = [];
+      for (const tier of modelsDevTiers(model.cost)) {
+        addModelsDevCostComponents(components, tier.cost, tier.conditions);
+      }
+      if (components.length === 0) {
+        return [];
+      }
+      const aliases = [model.name, `${providerId}/${modelId}`].filter((alias) => alias && alias !== modelId);
+      return [{
+        schema_version: "0.1",
+        id: `${providerId}:${modelId}:models-dev`,
+        provider: providerId,
+        model: modelId,
+        aliases,
+        components,
+        source: {
+          name: "models.dev",
+          url: sourceUrl,
+          retrieved_at: retrievedAt,
+          license: "MIT"
+        },
+        metadata: {
+          models_dev: {
+            provider_name: provider.name,
+            family: model.family,
+            limit: model.limit,
+            modalities: model.modalities,
+            reasoning: model.reasoning,
+            tool_call: model.tool_call,
+            status: model.status,
+            release_date: model.release_date,
+            last_updated: model.last_updated
+          }
+        }
+      }];
+    });
+  });
+}
+
 function sourceInfo(data, defaultName, defaultUrl, options = {}) {
   const source = data && typeof data.source === "object" && data.source !== null ? data.source : {};
   const retrievedAt = options.retrievedAt || options.retrieved_at || source.retrieved_at || source.retrievedAt || data.retrieved_at || data.retrievedAt || `${data.updated_at || "1970-01-01"}T00:00:00Z`;
@@ -1879,6 +1970,7 @@ export function priceCardsFromJSONFile(filePath, options = {}) {
   if (sourceType === "llm-prices") return priceCardsFromLlmPrices(data, adapterOptions);
   if (sourceType === "litellm") return priceCardsFromLiteLLM(data, adapterOptions);
   if (sourceType === "openrouter-models") return priceCardsFromOpenRouterModels(data, adapterOptions);
+  if (sourceType === "models-dev") return priceCardsFromModelsDev(data, adapterOptions);
   if (sourceType === "portkey") return priceCardsFromPortkey(data, adapterOptions);
   if (sourceType === "source-cache") return priceCardsFromSourceCache(data, adapterOptions);
   if (sourceType === "user-pricing") return priceCardsFromUserPricing(data, adapterOptions);

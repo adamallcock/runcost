@@ -223,11 +223,12 @@ func validateCostLedger(t *testing.T, ledger Object, path string) {
 	for index, value := range asSlice(ledger["price_sources"]) {
 		sourcePath := fmt.Sprintf("%s.price_sources[%d]", path, index)
 		source := requireObject(t, value, sourcePath)
-		assertAllowedKeys(t, source, map[string]bool{"name": true, "url": true, "retrieved_at": true, "version": true}, sourcePath)
+		assertAllowedKeys(t, source, map[string]bool{"name": true, "url": true, "retrieved_at": true, "version": true, "license": true}, sourcePath)
 		requireString(t, source["name"], sourcePath+".name")
 		requireOptionalString(t, source["url"], sourcePath+".url")
 		requireOptionalString(t, source["retrieved_at"], sourcePath+".retrieved_at")
 		requireOptionalString(t, source["version"], sourcePath+".version")
+		requireOptionalString(t, source["license"], sourcePath+".license")
 	}
 	for index, value := range asSlice(ledger["applied_discounts"]) {
 		discountPath := fmt.Sprintf("%s.applied_discounts[%d]", path, index)
@@ -272,6 +273,8 @@ func resolvePriceCards(t *testing.T, input Object) []any {
 		return PriceCardsFromLiteLLM(asObject(source["data"]))
 	case "openrouter-models":
 		return PriceCardsFromOpenRouterModels(asObject(source["data"]))
+	case "models-dev":
+		return PriceCardsFromModelsDev(asObject(source["data"]))
 	case "portkey":
 		return PriceCardsFromPortkey(asObject(source["data"]))
 	case "source-cache":

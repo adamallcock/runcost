@@ -1745,6 +1745,94 @@ def price_cards_from_openrouter_models(data: Dict[str, Any], **options: Any) -> 
     return cards
 
 
+def _models_dev_tiers(cost: Any) -> List[Dict[str, Any]]:
+    if not isinstance(cost, dict):
+        return []
+    raw_tiers = []
+    for tier in cost.get("tiers", []):
+        if not isinstance(tier, dict):
+            continue
+        tier_info = tier.get("tier") if isinstance(tier.get("tier"), dict) else {}
+        if tier_info.get("type") == "context" and tier_info.get("size") is not None:
+            raw_tiers.append({"cost": tier, "size": tier_info["size"]})
+    raw_tiers.sort(key=lambda tier: _decimal(tier["size"]))
+    base_conditions: Dict[str, Any] = {}
+    if raw_tiers:
+        base_conditions["max_total_input_tokens"] = _subtract(raw_tiers[0]["size"], "1")
+    tiers = [{"cost": cost, "conditions": base_conditions}]
+    for index, tier in enumerate(raw_tiers):
+        conditions: Dict[str, Any] = {"min_total_input_tokens": _number_string(tier["size"])}
+        if index + 1 < len(raw_tiers):
+            conditions["max_total_input_tokens"] = _subtract(raw_tiers[index + 1]["size"], "1")
+        tiers.append({"cost": tier["cost"], "conditions": conditions})
+    return tiers
+
+
+def _add_models_dev_cost_components(components: List[Dict[str, Any]], cost: Dict[str, Any], conditions: Dict[str, Any]) -> None:
+    extra = {"conditions": conditions} if conditions else {}
+    _add_price_component(components, "input_uncached_tokens", "token", cost.get("input"), "1000000", **extra)
+    _add_price_component(components, "output_text_tokens", "token", cost.get("output"), "1000000", **extra)
+    _add_price_component(components, "output_reasoning_tokens", "token", cost.get("reasoning"), "1000000", **extra)
+    _add_price_component(components, "input_cache_read_tokens", "token", cost.get("cache_read"), "1000000", **extra)
+    _add_price_component(components, "input_cache_write_tokens", "token", cost.get("cache_write"), "1000000", **extra)
+    _add_price_component(components, "input_audio_tokens", "token", cost.get("input_audio"), "1000000", **extra)
+    _add_price_component(components, "output_audio_tokens", "token", cost.get("output_audio"), "1000000", **extra)
+
+
+def price_cards_from_models_dev(data: Dict[str, Any], **options: Any) -> List[Dict[str, Any]]:
+    retrieved_at = options.get("retrieved_at") or options.get("retrievedAt") or f"{data.get('updated_at', '1970-01-01')}T00:00:00Z"
+    source_url = options.get("source_url") or options.get("sourceUrl") or "https://models.dev/api.json"
+    cards = []
+    for provider_id, provider in data.items():
+        if not isinstance(provider, dict):
+            continue
+        models = provider.get("models") if isinstance(provider.get("models"), dict) else {}
+        for model_id, model in models.items():
+            if not isinstance(model, dict):
+                continue
+            components: List[Dict[str, Any]] = []
+            for tier in _models_dev_tiers(model.get("cost")):
+                _add_models_dev_cost_components(components, tier["cost"], tier["conditions"])
+            if not components:
+                continue
+            aliases = [
+                alias
+                for alias in [model.get("name"), f"{provider_id}/{model_id}"]
+                if alias and alias != model_id
+            ]
+            metadata = {
+                "models_dev": {
+                    "provider_name": provider.get("name"),
+                    "family": model.get("family"),
+                    "limit": model.get("limit"),
+                    "modalities": model.get("modalities"),
+                    "reasoning": model.get("reasoning"),
+                    "tool_call": model.get("tool_call"),
+                    "status": model.get("status"),
+                    "release_date": model.get("release_date"),
+                    "last_updated": model.get("last_updated"),
+                }
+            }
+            cards.append(
+                {
+                    "schema_version": "0.1",
+                    "id": f"{provider_id}:{model_id}:models-dev",
+                    "provider": provider_id,
+                    "model": model_id,
+                    "aliases": aliases,
+                    "components": components,
+                    "source": {
+                        "name": "models.dev",
+                        "url": source_url,
+                        "retrieved_at": retrieved_at,
+                        "license": "MIT",
+                    },
+                    "metadata": metadata,
+                }
+            )
+    return cards
+
+
 def _source_info(data: Dict[str, Any], default_name: str, default_url: str, **options: Any) -> Dict[str, Any]:
     source = data.get("source") if isinstance(data.get("source"), dict) else {}
     retrieved_at = (
@@ -1864,6 +1952,8 @@ def price_cards_from_json_file(path: Any, source_type: str = "user-pricing", **o
         return price_cards_from_litellm(data, **adapter_options)
     if source_type == "openrouter-models":
         return price_cards_from_openrouter_models(data, **adapter_options)
+    if source_type == "models-dev":
+        return price_cards_from_models_dev(data, **adapter_options)
     if source_type == "portkey":
         return price_cards_from_portkey(data, **adapter_options)
     if source_type == "source-cache":

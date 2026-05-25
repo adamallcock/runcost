@@ -102,6 +102,7 @@ Streaming final usage:
 | Simon Willison `llm-prices` | `price_cards_from_llm_prices` | `priceCardsFromLlmPrices` | `PriceCardsFromLlmPrices` |
 | LiteLLM model price JSON | `price_cards_from_litellm` | `priceCardsFromLiteLLM` | `PriceCardsFromLiteLLM` |
 | OpenRouter models API | `price_cards_from_openrouter_models` | `priceCardsFromOpenRouterModels` | `PriceCardsFromOpenRouterModels` |
+| models.dev API catalog | `price_cards_from_models_dev` | `priceCardsFromModelsDev` | `PriceCardsFromModelsDev` |
 | Portkey pricing data | `price_cards_from_portkey` | `priceCardsFromPortkey` | `PriceCardsFromPortkey` |
 | Local JSON price-source file | `price_cards_from_json_file` | `priceCardsFromJSONFile` | `PriceCardsFromJSONFile` |
 | User compact pricing data | `price_cards_from_user_pricing` | `priceCardsFromUserPricing` | `PriceCardsFromUserPricing` |

@@ -19,6 +19,7 @@ from runcost import (  # noqa: E402
     price_cards_from_helicone,
     price_cards_from_litellm,
     price_cards_from_llm_prices,
+    price_cards_from_models_dev,
     price_cards_from_openrouter_models,
     price_cards_from_portkey,
     price_cards_from_user_pricing,
@@ -29,6 +30,7 @@ Adapter = Callable[[Any], list[dict[str, Any]]]
 ADAPTERS: dict[str, Adapter] = {
     "llm-prices": price_cards_from_llm_prices,
     "litellm": price_cards_from_litellm,
+    "models-dev": price_cards_from_models_dev,
     "openrouter-models": price_cards_from_openrouter_models,
     "portkey": price_cards_from_portkey,
     "user-pricing": price_cards_from_user_pricing,
@@ -47,6 +49,10 @@ PRESETS: dict[str, dict[str, str]] = {
     "openrouter-models": {
         "source_type": "openrouter-models",
         "url": "https://openrouter.ai/api/v1/models",
+    },
+    "models-dev": {
+        "source_type": "models-dev",
+        "url": "https://models.dev/api.json",
     },
 }
 
