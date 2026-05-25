@@ -87,6 +87,178 @@ func assertSubset(t *testing.T, actual any, expected any, path string) {
 	}
 }
 
+func assertAllowedKeys(t *testing.T, object Object, allowed map[string]bool, path string) {
+	t.Helper()
+	for key := range object {
+		if !allowed[key] {
+			t.Fatalf("%s: unexpected property %q", path, key)
+		}
+	}
+}
+
+func requireObject(t *testing.T, value any, path string) Object {
+	t.Helper()
+	object, ok := value.(map[string]any)
+	if !ok {
+		t.Fatalf("%s: expected object, got %T", path, value)
+	}
+	return object
+}
+
+func requireSlice(t *testing.T, value any, path string) []any {
+	t.Helper()
+	slice, ok := value.([]any)
+	if !ok {
+		t.Fatalf("%s: expected array, got %T", path, value)
+	}
+	return slice
+}
+
+func requireString(t *testing.T, value any, path string) string {
+	t.Helper()
+	text, ok := value.(string)
+	if !ok {
+		t.Fatalf("%s: expected string, got %T", path, value)
+	}
+	if text == "" {
+		t.Fatalf("%s: must not be empty", path)
+	}
+	return text
+}
+
+func requireOptionalString(t *testing.T, value any, path string) {
+	t.Helper()
+	if value == nil {
+		return
+	}
+	if _, ok := value.(string); !ok {
+		t.Fatalf("%s: expected string, got %T", path, value)
+	}
+}
+
+func requireOptionalBool(t *testing.T, value any, path string) {
+	t.Helper()
+	if value == nil {
+		return
+	}
+	if _, ok := value.(bool); !ok {
+		t.Fatalf("%s: expected boolean, got %T", path, value)
+	}
+}
+
+func requireDecimal(t *testing.T, value any, path string) *big.Rat {
+	t.Helper()
+	parsed, ok := new(big.Rat).SetString(numberString(value))
+	if !ok {
+		t.Fatalf("%s: invalid decimal %q", path, numberString(value))
+	}
+	return parsed
+}
+
+func validateCostLedger(t *testing.T, ledger Object, path string) {
+	t.Helper()
+	assertAllowedKeys(t, ledger, map[string]bool{
+		"schema_version":    true,
+		"provider":          true,
+		"surface":           true,
+		"model":             true,
+		"currency":          true,
+		"components":        true,
+		"total":             true,
+		"price_sources":     true,
+		"applied_discounts": true,
+		"warnings":          true,
+		"debug_trace":       true,
+		"metadata":          true,
+	}, path)
+	if requireString(t, ledger["schema_version"], path+".schema_version") != "0.1" {
+		t.Fatalf("%s.schema_version: expected 0.1", path)
+	}
+	requireString(t, ledger["provider"], path+".provider")
+	requireString(t, ledger["surface"], path+".surface")
+	requireString(t, ledger["currency"], path+".currency")
+	requireDecimal(t, ledger["total"], path+".total")
+
+	model := requireObject(t, ledger["model"], path+".model")
+	assertAllowedKeys(t, model, map[string]bool{
+		"requested":        true,
+		"returned":         true,
+		"billed":           true,
+		"alias_resolution": true,
+	}, path+".model")
+	requireString(t, model["requested"], path+".model.requested")
+	requireString(t, model["billed"], path+".model.billed")
+	requireOptionalString(t, model["returned"], path+".model.returned")
+	requireOptionalString(t, model["alias_resolution"], path+".model.alias_resolution")
+
+	componentTotal := new(big.Rat)
+	for index, value := range requireSlice(t, ledger["components"], path+".components") {
+		componentPath := fmt.Sprintf("%s.components[%d]", path, index)
+		component := requireObject(t, value, componentPath)
+		assertAllowedKeys(t, component, map[string]bool{
+			"name":              true,
+			"quantity":          true,
+			"unit":              true,
+			"unit_price":        true,
+			"cost":              true,
+			"price_card_id":     true,
+			"discount_eligible": true,
+			"metadata":          true,
+		}, componentPath)
+		requireString(t, component["name"], componentPath+".name")
+		requireDecimal(t, component["quantity"], componentPath+".quantity")
+		requireString(t, component["unit"], componentPath+".unit")
+		requireDecimal(t, component["unit_price"], componentPath+".unit_price")
+		componentTotal.Add(componentTotal, requireDecimal(t, component["cost"], componentPath+".cost"))
+		requireOptionalString(t, component["price_card_id"], componentPath+".price_card_id")
+		requireOptionalBool(t, component["discount_eligible"], componentPath+".discount_eligible")
+		if metadata, ok := component["metadata"]; ok {
+			requireObject(t, metadata, componentPath+".metadata")
+		}
+	}
+	if componentTotal.Cmp(requireDecimal(t, ledger["total"], path+".total")) != 0 {
+		t.Fatalf("%s: component costs sum to %s, total is %s", path, componentTotal.String(), requireDecimal(t, ledger["total"], path+".total").String())
+	}
+
+	for index, value := range asSlice(ledger["price_sources"]) {
+		sourcePath := fmt.Sprintf("%s.price_sources[%d]", path, index)
+		source := requireObject(t, value, sourcePath)
+		assertAllowedKeys(t, source, map[string]bool{"name": true, "url": true, "retrieved_at": true, "version": true}, sourcePath)
+		requireString(t, source["name"], sourcePath+".name")
+		requireOptionalString(t, source["url"], sourcePath+".url")
+		requireOptionalString(t, source["retrieved_at"], sourcePath+".retrieved_at")
+		requireOptionalString(t, source["version"], sourcePath+".version")
+	}
+	for index, value := range asSlice(ledger["applied_discounts"]) {
+		discountPath := fmt.Sprintf("%s.applied_discounts[%d]", path, index)
+		discount := requireObject(t, value, discountPath)
+		assertAllowedKeys(t, discount, map[string]bool{"policy_id": true, "component": true, "amount": true}, discountPath)
+		requireString(t, discount["policy_id"], discountPath+".policy_id")
+		requireString(t, discount["component"], discountPath+".component")
+		requireDecimal(t, discount["amount"], discountPath+".amount")
+	}
+	for index, value := range requireSlice(t, ledger["warnings"], path+".warnings") {
+		warningPath := fmt.Sprintf("%s.warnings[%d]", path, index)
+		warning := requireObject(t, value, warningPath)
+		assertAllowedKeys(t, warning, map[string]bool{"code": true, "message": true, "path": true, "metadata": true}, warningPath)
+		requireString(t, warning["code"], warningPath+".code")
+		requireString(t, warning["message"], warningPath+".message")
+		requireOptionalString(t, warning["path"], warningPath+".path")
+		if metadata, ok := warning["metadata"]; ok {
+			requireObject(t, metadata, warningPath+".metadata")
+		}
+	}
+	if debugTrace, ok := ledger["debug_trace"]; ok {
+		trace := requireObject(t, debugTrace, path+".debug_trace")
+		requireString(t, trace["schema_version"], path+".debug_trace.schema_version")
+		requireSlice(t, trace["decisions"], path+".debug_trace.decisions")
+		requireObject(t, trace["summary"], path+".debug_trace.summary")
+	}
+	if metadata, ok := ledger["metadata"]; ok {
+		requireObject(t, metadata, path+".metadata")
+	}
+}
+
 func resolvePriceCards(t *testing.T, input Object) []any {
 	t.Helper()
 	if value, ok := input["price_cards"]; ok {
@@ -196,6 +368,7 @@ func TestFixtures(t *testing.T) {
 				return
 			}
 			result := runFixture(t, fixture)
+			validateCostLedger(t, result, filepath.Base(path)+":go")
 			expected := asObject(asObject(fixture["expected"])["cost_ledger"])
 			assertSubset(t, result, expected, filepath.Base(path))
 		})

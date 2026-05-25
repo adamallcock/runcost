@@ -205,6 +205,7 @@ Delivered in current prototype:
 - Component-total invariant checks for Python and JavaScript fixture outputs.
 - Fixture coverage reporting.
 - Fixture generator helpers through `scripts/create_fixture.py`, `scripts/check_fixture_generator.py`, and `npm run fixture:new`.
+- Go fixture-test validation for generated cost-ledger structure and exact component-total invariants.
 
 Progress criteria:
 
@@ -1284,6 +1285,7 @@ Tasks:
 18. Done: add cost-ledger aggregation and missing final streaming usage warning fixtures.
 19. Done: add selected provider streaming final-usage extraction fixtures.
 20. Done: add fixture generator helpers and single-fixture validation.
+21. Done: add Go-side cost-ledger structure and component-total invariant validation.
 
 Sprint exit criteria:
 

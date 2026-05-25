@@ -109,7 +109,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Public typed contract models | Partial | Partial | Partial | `types.py`, `index.d.ts`, Go docs/examples; `DebugTrace` typed for Python and TypeScript |
 | Package-level API docs | Partial | Partial | Partial | README, package examples, alpha docs, debug trace docs |
 | Public example for basic cost calculation | Yes | Yes | Yes | Python and JS examples; Go example test |
-| Schema validation in conformance tests | Yes | Yes | Partial | Python runner validates schemas for Python/JS outputs; Go checks behavior through fixtures |
+| Schema validation in conformance tests | Yes | Yes | Partial | Python runner validates schemas for Python/JS outputs; Go now validates generated cost-ledger structure and component-total invariants in fixture tests |
 | Fixture metadata and coverage report | Yes | Yes | Yes | `schemas/fixture.schema.json`, fixture metadata, `scripts/check_fixture_coverage.py`, `docs/reports/fixture-coverage.md` |
 | Generated artifact drift check | Yes | Yes | Yes | `scripts/check_project_hygiene.py` |
 

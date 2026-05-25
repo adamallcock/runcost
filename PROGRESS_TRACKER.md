@@ -26,9 +26,9 @@ The tracker separates roadmap state from active work state:
 
 ## Active Focus
 
-Current active lane: none selected after completing the Milestone 1 fixture generator helper slice.
+Current active lane: none selected after completing the Milestone 1 Go-side cost-ledger validation slice.
 
-Why no active lane is selected: fixture generator helpers were completed and verified in the latest slice. The next implementation lane should be selected after re-inspecting whether the pending Markdown rename pass has landed.
+Why no active lane is selected: Go-side cost-ledger validation was completed and verified in the latest slice. The next implementation lane should be selected after re-inspecting whether the pending Markdown rename pass has landed.
 
 Doc rename coordination: another agent may rename Markdown files to match repository naming rules. Until that lands, avoid broad documentation churn and re-inspect paths before changing cross-document links.
 
@@ -104,9 +104,9 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 | Milestone | Roadmap state | Active now? | Evidence | Exit-gate remaining |
 |---|---|---:|---|---|
 | Milestone 0: Prototype Foundation | Complete for current scope | No | `npm test` passes; cores, examples, schemas, and broad shared fixtures exist. | Later type hardening moved into Milestones 1 and 1.5. |
-| Milestone 1: Contract Hardening | Partial | No | Schemas exist; fixture runner validates schemas including debug traces and fixture metadata; warning fixtures exist; coverage report and hygiene checks exist; fixture generator helpers now create runnable normalized-usage fixture skeletons. | Stronger Go-side schema validation, stronger Go component-total invariant checks, and final v0.1 schema naming/taxonomy lock. |
+| Milestone 1: Contract Hardening | Partial | No | Schemas exist; fixture runner validates schemas including debug traces and fixture metadata; warning fixtures exist; coverage report and hygiene checks exist; fixture generator helpers now create runnable normalized-usage fixture skeletons; Go fixture tests validate generated cost-ledger structure and exact component totals. | Final v0.1 schema naming/taxonomy lock. |
 | Milestone 1.5: Polyglot Toolchain Foundation | Complete for current scope | No | Decision record, manual type artifacts, parity matrix, Go examples, hygiene checks, and CI workflow exist. | Generated/schema-derived type workflow remains a later hardening item, not a current active lane. |
-| Milestone 2: Core Calculator Correctness | Partial | No | Decimal-safe calculator, aliases, strict/compatibility modes, effective dates, service tiers, stale prices, provider-reported cost modes, source priority, source disagreement, debug traces, long-context thresholds, batch/priority/provisioned fixtures, and Python/JS component-total invariant checks exist. | More adversarial fixtures, typed warning payload maturity, stronger Go invariant validation, and production-like review of byte-stable output ordering. |
+| Milestone 2: Core Calculator Correctness | Partial | No | Decimal-safe calculator, aliases, strict/compatibility modes, effective dates, service tiers, stale prices, provider-reported cost modes, source priority, source disagreement, debug traces, long-context thresholds, batch/priority/provisioned fixtures, and cross-language component-total invariant checks exist. | More adversarial fixtures, typed warning payload maturity, and production-like review of byte-stable output ordering. |
 | Milestone 3: Source Adapter Layer | Partial | No | `llm-prices`, LiteLLM, Portkey, OpenRouter models, user compact pricing, and Helicone prototype adapters exist. | Official pricing snapshots, models.dev enrichment, file-based YAML/JSON loaders, offline cache format, explicit refresh command, source capability warnings, and historical feed semantics. |
 | Milestone 4: Provider Extractors V0 | Partial | No | OpenAI, Anthropic, OpenRouter, Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Gemini/Vertex, and Bedrock Converse extractors exist for selected surfaces; selected final streaming usage cases are fixture-backed. | xAI Responses, OpenAI Conversations, Bedrock non-Converse paths, additional stream protocols, embeddings, rerank, generated media, transcription, and deeper provider-specific feature fields. |
 | Milestone 5: Tool Call and Feature Pricing | Partial | No | Generic and raw OpenAI tool-call fixtures exist; OpenRouter request/image/search source pricing and Gemini/Vertex multimodal token details exist. | Provider-specific tool pricing breadth for computer use, rerank, embeddings, image/audio/video generation, transcription, storage/session/GB-day forms, and direct pass-through costs. |
@@ -665,6 +665,31 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
   - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
   - `git diff --check` passed.
 
+### 2026-05-25 Go-Side Cost-Ledger Validation Slice
+
+- Selected a second Milestone 1 hardening slice focused on Go conformance, avoiding broad Markdown rename churn.
+- Added Go fixture-test validation for generated `CostLedger` objects:
+  - Top-level allowed keys and required fields.
+  - Model object shape.
+  - Cost component required fields and decimal fields.
+  - Exact component cost sum equals ledger total with `big.Rat`.
+  - Price source, applied discount, warning, debug trace, and metadata object shapes.
+- Kept existing expected-subset comparison after structural validation, so Go still verifies fixture-specific expected output.
+- Updated API parity notes to reflect stronger Go conformance evidence.
+- Verification after Go-side validation slice:
+  - `go test ./packages/go/...` passed.
+  - `npm test` passed: 61 fixtures, fixture generator checks, fixture coverage, Go tests, and hygiene checks green.
+  - `python3 -m py_compile` passed for package modules, scripts, and examples.
+  - `python3 scripts/check_project_hygiene.py` passed.
+  - `npm run check:coverage` passed.
+  - `npm run check:release` passed.
+  - `npm --silent run fixture:new -- --example normalized_usage | python3 -m json.tool >/dev/null` passed.
+  - `jq empty package.json packages/javascript/core/package.json schemas/*.json fixtures/*.json` passed.
+  - `npm run check:packages` passed with clean Python, npm, and Go install smoke checks.
+  - `npm run example:js` and `npm run example:py` both ran and returned total `0.000228`.
+  - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
+  - `git diff --check` passed.
+
 ## Gap Audit 2026-05-25
 
 Purpose: step back from feature slices and record what is actually done, what is partial, what is a stub, and what still needs completion before private alpha, public beta, and V1.
@@ -722,9 +747,9 @@ What is implemented and well covered:
 
 Partially implemented:
 
-- Contract hardening: schema validation, fixture metadata, debug trace fixtures, fixture coverage reporting, single-fixture validation, and fixture generator helpers exist. Remaining gaps are stronger Go-side schema validation/component-total invariant checks and final v0.1 schema naming/taxonomy lock.
+- Contract hardening: schema validation, fixture metadata, debug trace fixtures, fixture coverage reporting, single-fixture validation, fixture generator helpers, and Go-side cost-ledger structure/component-total validation exist. Remaining gap is final v0.1 schema naming/taxonomy lock.
 - Polyglot maintainability: parity matrix and hygiene checks exist, but generated type/docs workflows are not real yet. TypeScript and Python types are manual. Go uses object maps.
-- Go conformance: Go runs every fixture and checks expected subsets, but schema validation for generated Go outputs and component-total invariant checks are weaker than Python/JavaScript.
+- Go conformance: Go runs every fixture, validates generated cost-ledger structure, enforces exact component-total invariants, and checks expected subsets. Full JSON Schema validation and schema-derived structs remain future hardening work.
 - Source adapters: core adapters exist for six sources, including user compact pricing and Helicone model-registry data. Provider official pricing snapshots, models.dev enrichment, full file-reading YAML loaders, offline cache format, explicit refresh command, and source capability warnings are still missing.
 - Historical pricing: effective dates and `llm-prices` date fields exist, but `llm-prices` historical feed semantics are not fixture-proven end to end.
 - Provider extractors: broad base coverage exists, but many surfaces are thin. OpenAI Responses, Anthropic Messages, and Gemini final stream usage shapes now have fixtures, but xAI Responses, OpenAI Conversations, Bedrock non-Converse paths, provider-specific tool fields, other streaming variants, embeddings, rerank, image/audio/video generation, and transcription paths are not covered.
@@ -751,11 +776,11 @@ Highest-risk gaps before private alpha:
 4. Hardened typed models and generated artifact workflow, especially for Go structs and generated docs.
 5. Broader framework integration ergonomics beyond the initial LangChain/Vercel helpers, especially turning remaining documented partial paths into fixture-backed adapters and examples.
 6. Deeper debug traces for extractor and framework adapter internals.
-7. Stronger generated artifact drift detection and stronger Go-side schema/invariant checks.
+7. Stronger generated artifact drift detection and schema-derived type/doc checks.
 
 Recommended next sprint candidates:
 
-Only one candidate should become the active lane at a time. No implementation lane is currently selected after the fixture generator helper slice; future feature work should re-inspect the Markdown rename pass before editing broad docs.
+Only one candidate should become the active lane at a time. No implementation lane is currently selected after the Go-side cost-ledger validation slice; future feature work should re-inspect the Markdown rename pass before editing broad docs.
 
 1. Broader framework implementation slice: add fixtures and minimal adapters/examples for the next documented partial path, likely LangSmith export comparison or Semantic Kernel telemetry.
 2. Provider streaming expansion slice: add additional stream finalization fixtures for Vertex-specific SDK wrappers, Bedrock ConverseStream, Vercel AI SDK `streamText` finish parts, and any provider-specific tool streaming fields.
