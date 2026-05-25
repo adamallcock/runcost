@@ -997,12 +997,12 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 - Normalized older fixture expected component arrays to the canonical taxonomy order without changing usage inputs or pricing amounts.
 - Updated provider extractor notes, supported surfaces, API reference, API parity matrix, project plan, fixture coverage report, package install checks, hygiene checks, and this tracker.
 - Verification after the Bedrock InvokeModel and byte-stable ordering slice:
-  - `python3 scripts/check_fixtures.py --fixture fixtures/bedrock-invoke-model-anthropic-messages.json` passed.
+  - `python3 scripts/check_fixtures.py --fixture fixtures/byte-stable-component-ordering.json --fixture fixtures/anthropic-messages-raw-cache-1h.json --fixture fixtures/bedrock-converse-raw-cache.json --fixture fixtures/gemini-generate-content-raw-multimodal.json` passed.
   - `python3 scripts/check_fixtures.py` passed with 73 fixtures.
   - `python3 scripts/check_fixture_coverage.py --write-report` passed and regenerated coverage for 73 fixtures.
   - `npm test` passed: 73 fixtures, fixture generator checks, source refresh command checks, fixture coverage, taxonomy checks, Go tests, and hygiene checks green.
-  - `go test -count=1 ./packages/go/...` passed.
-  - `python3 -m py_compile packages/python/runcost/core.py packages/python/runcost/__init__.py scripts/check_fixtures.py scripts/check_package_installs.py scripts/check_project_hygiene.py` passed.
+  - `go test ./packages/go/...` passed.
+  - `python3 -m py_compile packages/python/runcost/core.py packages/python/runcost/__init__.py scripts/check_fixtures.py scripts/check_fixture_coverage.py scripts/check_package_installs.py scripts/check_project_hygiene.py` passed.
   - `jq empty package.json packages/javascript/core/package.json schemas/*.json fixtures/*.json fixtures/source-files/*.json` passed.
   - `npm run check:packages` passed with the new Python and JavaScript Bedrock InvokeModel exports included in clean package install checks.
   - `npm run check:release` passed.
