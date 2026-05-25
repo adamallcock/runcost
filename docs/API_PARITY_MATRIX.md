@@ -1,7 +1,7 @@
 # Public API Parity Matrix
 
 Status: v0.x prototype
-Date: 2026-05-24
+Date: 2026-05-25
 
 This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages expose the same developer-facing capabilities. It is a release gate: public APIs should not drift silently between languages.
 
@@ -32,6 +32,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Provider-reported cost authoritative use mode | Yes | Yes | Yes | `provider-reported-cost-used.json` |
 | Price source priority for user overrides | Yes | Yes | Yes | `price-source-priority-user-override.json` |
 | Price source disagreement warning | Yes | Yes | Yes | `price-source-disagreement-warning.json` |
+| Debug trace / explain mode | Yes | Yes | Yes | `debug-trace-explain-decisions.json`; optional `debug_trace` / `debugTrace` output |
 | Long-context threshold price component selection | Yes | Yes | Yes | `long-context-threshold-selection.json` |
 | Missing long-context rule warning | Yes | Yes | Yes | `long-context-rule-missing.json` |
 | Batch service-mode pricing through service tier | Yes | Yes | Yes | `service-mode-batch-selection.json` |
@@ -93,8 +94,8 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 
 | Surface | Python | JavaScript/TypeScript | Go | Evidence |
 |---|---:|---:|---:|---|
-| Public typed contract models | Partial | Partial | Partial | `types.py`, `index.d.ts`, Go docs/examples |
-| Package-level API docs | Partial | Partial | Partial | README and package examples |
+| Public typed contract models | Partial | Partial | Partial | `types.py`, `index.d.ts`, Go docs/examples; `DebugTrace` typed for Python and TypeScript |
+| Package-level API docs | Partial | Partial | Partial | README, package examples, alpha docs, debug trace docs |
 | Public example for basic cost calculation | Yes | Yes | Yes | Python and JS examples; Go example test |
 | Schema validation in conformance tests | Yes | Yes | Partial | Python runner validates schemas for Python/JS outputs; Go checks behavior through fixtures |
 | Generated artifact drift check | Yes | Yes | Yes | `scripts/check_project_hygiene.py` |

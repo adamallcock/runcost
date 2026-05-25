@@ -214,6 +214,14 @@ func hasSourcePriority(options Object) bool {
 	return len(asSlice(options["price_source_priority"])) > 0 || len(asSlice(options["priceSourcePriority"])) > 0
 }
 
+func sourcePriority(options Object) []any {
+	priority := asSlice(options["price_source_priority"])
+	if len(priority) == 0 {
+		priority = asSlice(options["priceSourcePriority"])
+	}
+	return priority
+}
+
 func matchingCards(usageLedger Object, priceCards []any, options Object) []Object {
 	type scoredCard struct {
 		card  Object
@@ -596,6 +604,71 @@ func priceSourceDisagreementWarning(matches []Object, component Object, options 
 	}, true
 }
 
+func debugTraceEnabled(options Object) bool {
+	if value, ok := options["debug_trace"].(bool); ok && value {
+		return true
+	}
+	if value, ok := options["debugTrace"].(bool); ok && value {
+		return true
+	}
+	return false
+}
+
+func newDebugTrace() Object {
+	return Object{
+		"schema_version": "0.1",
+		"decisions":      []any{},
+		"summary": Object{
+			"priced_components":   0,
+			"unpriced_components": 0,
+			"warnings":            0,
+			"applied_discounts":   0,
+		},
+	}
+}
+
+func appendTraceDecision(trace Object, decision Object) {
+	if trace == nil {
+		return
+	}
+	trace["decisions"] = append(asSlice(trace["decisions"]), decision)
+}
+
+func incrementTraceSummary(trace Object, key string) {
+	if trace == nil {
+		return
+	}
+	summary := asObject(trace["summary"])
+	current := 0
+	if value, ok := optionalInt(summary[key]); ok {
+		current = value
+	}
+	summary[key] = current + 1
+}
+
+func setTraceSummary(trace Object, key string, value int) {
+	if trace == nil {
+		return
+	}
+	asObject(trace["summary"])[key] = value
+}
+
+func priceCardIDs(cards []Object) []any {
+	ids := []any{}
+	for _, card := range cards {
+		ids = append(ids, asString(card["id"]))
+	}
+	return ids
+}
+
+func matchPriceCardIDs(matches []Object) []any {
+	ids := []any{}
+	for _, match := range matches {
+		ids = append(ids, asString(asObject(match["card"])["id"]))
+	}
+	return ids
+}
+
 // CalculateCost returns a componentized cost ledger for normalized usage,
 // canonical price cards, and optional discount policies.
 //
@@ -621,6 +694,10 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 	appliedDiscounts := []any{}
 	sourceByName := map[string]Object{}
 	sourceNames := []string{}
+	var trace Object
+	if debugTraceEnabled(options) {
+		trace = newDebugTrace()
+	}
 	total := "0"
 	resolvedBilledModel := billedModel(usageLedger)
 	aliasResolution := asString(asObject(usageLedger["model"])["alias_resolution"])
@@ -633,6 +710,14 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 	}
 	hasModelCard := hasPriceCardForUsage(usageLedger, priceCards)
 	candidateCards := matchingCards(usageLedger, priceCards, options)
+	if trace != nil {
+		appendTraceDecision(trace, Object{
+			"type":                     "price_card_candidates",
+			"model":                    resolvedBilledModel,
+			"candidate_price_card_ids": priceCardIDs(candidateCards),
+			"source_priority":          sourcePriority(options),
+		})
+	}
 	warnedUnknownModel := false
 	warnedNoMatchingCard := false
 	warnedStaleCards := map[string]bool{}
@@ -647,6 +732,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 				})
 				warnedUnknownModel = true
 			}
+			incrementTraceSummary(trace, "unpriced_components")
 			continue
 		}
 
@@ -655,6 +741,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 				warnings = append(warnings, noMatchingCardWarning(usageLedger, priceCards))
 				warnedNoMatchingCard = true
 			}
+			incrementTraceSummary(trace, "unpriced_components")
 			continue
 		}
 
@@ -678,6 +765,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 					"message": fmt.Sprintf("No price found for %s (%s).", asString(component["name"]), asString(component["unit"])),
 				})
 			}
+			incrementTraceSummary(trace, "unpriced_components")
 			continue
 		}
 
@@ -686,11 +774,26 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		}
 		card := asObject(matches[0]["card"])
 		priceComponent := asObject(matches[0]["price_component"])
+		appendTraceDecision(trace, Object{
+			"type":                     "price_component_match",
+			"component":                asString(component["name"]),
+			"candidate_price_card_ids": matchPriceCardIDs(matches),
+			"selected_price_card_id":   asString(card["id"]),
+			"selected_source":          asString(asObject(card["source"])["name"]),
+		})
 		if asString(card["model"]) != resolvedBilledModel && containsString(asSlice(card["aliases"]), resolvedBilledModel) {
+			previousBilledModel := resolvedBilledModel
 			resolvedBilledModel = asString(card["model"])
 			if aliasResolution == "none" {
 				aliasResolution = "source_exact"
 			}
+			appendTraceDecision(trace, Object{
+				"type":          "model_alias_resolution",
+				"from":          previousBilledModel,
+				"to":            resolvedBilledModel,
+				"price_card_id": asString(card["id"]),
+				"resolution":    aliasResolution,
+			})
 		}
 
 		price := asObject(priceComponent["price"])
@@ -698,6 +801,15 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		eligible := discountEligible(priceComponent)
 		finalCost, applied := applyDiscounts(baseCost, discountPolicies, usageLedger, component, eligible)
 		appliedDiscounts = append(appliedDiscounts, applied...)
+		for _, rawApplied := range applied {
+			appliedItem := asObject(rawApplied)
+			appendTraceDecision(trace, Object{
+				"type":      "discount_application",
+				"component": asString(appliedItem["component"]),
+				"policy_id": asString(appliedItem["policy_id"]),
+				"amount":    asString(appliedItem["amount"]),
+			})
+		}
 		total = add(total, finalCost)
 
 		source := asObject(card["source"])
@@ -723,6 +835,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 			"price_card_id":     asString(card["id"]),
 			"discount_eligible": eligible,
 		})
+		incrementTraceSummary(trace, "priced_components")
 	}
 
 	priceSources := []any{}
@@ -732,6 +845,18 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 	total, components, warnings = applyProviderReportedCostUse(total, components, warnings, options)
 	if warning, ok := providerReportedWarning(total, options); ok {
 		warnings = append(warnings, warning)
+	}
+	if trace != nil {
+		for _, rawWarning := range warnings {
+			warning := asObject(rawWarning)
+			appendTraceDecision(trace, Object{
+				"type":         "warning",
+				"warning_code": asString(warning["code"]),
+				"message":      asString(warning["message"]),
+			})
+		}
+		setTraceSummary(trace, "warnings", len(warnings))
+		setTraceSummary(trace, "applied_discounts", len(appliedDiscounts))
 	}
 
 	model := asObject(usageLedger["model"])
@@ -751,6 +876,9 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		"price_sources":     priceSources,
 		"applied_discounts": appliedDiscounts,
 		"warnings":          warnings,
+	}
+	if trace != nil {
+		result["debug_trace"] = trace
 	}
 	if mode == "strict" && len(warnings) > 0 {
 		panic(fmt.Sprintf("strict mode cost calculation failed: %s", asString(asObject(warnings[0])["code"])))

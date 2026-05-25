@@ -38,6 +38,7 @@ SCHEMA_PATHS = {
     "price_card": ROOT / "schemas" / "price-card.schema.json",
     "discount_policy": ROOT / "schemas" / "discount-policy.schema.json",
     "cost_ledger": ROOT / "schemas" / "cost-ledger.schema.json",
+    "debug_trace": ROOT / "schemas" / "debug-trace.schema.json",
 }
 SCHEMAS = {name: load_json(path) for name, path in SCHEMA_PATHS.items()}
 
@@ -307,14 +308,20 @@ def main() -> int:
 
         expected = fixture["expected"]["cost_ledger"]
         validate_schema(expected, SCHEMAS["cost_ledger"], path=f"{path.name}:expected")
+        if "debug_trace" in expected:
+            validate_schema(expected["debug_trace"], SCHEMAS["debug_trace"], path=f"{path.name}:expected.debug_trace")
 
         python_result = run_python_fixture(fixture)
         validate_schema(python_result, SCHEMAS["cost_ledger"], path=f"{path.name}:python")
+        if "debug_trace" in python_result:
+            validate_schema(python_result["debug_trace"], SCHEMAS["debug_trace"], path=f"{path.name}:python.debug_trace")
         assert_total_matches_components(python_result, f"{path.name}:python")
         assert_subset(python_result, expected, f"{path.name}:python")
 
         javascript_result = run_javascript_fixture(path)
         validate_schema(javascript_result, SCHEMAS["cost_ledger"], path=f"{path.name}:javascript")
+        if "debug_trace" in javascript_result:
+            validate_schema(javascript_result["debug_trace"], SCHEMAS["debug_trace"], path=f"{path.name}:javascript.debug_trace")
         assert_total_matches_components(javascript_result, f"{path.name}:javascript")
         assert_subset(javascript_result, expected, f"{path.name}:javascript")
 

@@ -27,10 +27,11 @@ Inputs:
 - `providerReportedCost` / `provider_reported_cost`: optional provider total for comparison or authoritative use.
 - `providerReportedCostMode` / `provider_reported_cost_mode`: `compare` or `use`.
 - `staleAfterDays` / `stale_after_days`: freshness warning threshold.
+- `debugTrace` / `debug_trace`: include an optional decision trace in the returned cost ledger.
 
 Output:
 
-- `CostLedger` with `components`, `total`, `price_sources`, `applied_discounts`, and `warnings`.
+- `CostLedger` with `components`, `total`, `price_sources`, `applied_discounts`, `warnings`, and optional `debug_trace`.
 
 ## Raw Provider Extraction
 
@@ -81,11 +82,18 @@ Compatibility mode returns a ledger with warnings when possible.
 
 Strict mode raises or fails fixture validation when the calculator would otherwise emit warnings. This is useful for tests, billing reconciliation, and production cost controls.
 
+## Debug Trace
+
+Set `debug_trace=True` in Python, `debugTrace: true` or `debug_trace: true` in JavaScript, or `"debug_trace": true` in Go options to include `debug_trace` in the returned ledger.
+
+The trace records price-card candidates, selected component prices, alias resolution, discount applications, and warnings. See [Debug Trace](2026-05-25-debug-trace.md).
+
 ## Canonical Schemas
 
 - `schemas/usage-ledger.schema.json`
 - `schemas/price-card.schema.json`
 - `schemas/discount-policy.schema.json`
 - `schemas/cost-ledger.schema.json`
+- `schemas/debug-trace.schema.json`
 
 The schemas are language-neutral and should remain the source of truth for future generated types.

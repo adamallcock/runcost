@@ -426,6 +426,23 @@ function priceSourceDisagreementWarning(matches, component, priceSourcePriority)
   };
 }
 
+function debugTraceEnabled(value) {
+  return value === true;
+}
+
+function newDebugTrace() {
+  return {
+    schema_version: "0.1",
+    decisions: [],
+    summary: {
+      priced_components: 0,
+      unpriced_components: 0,
+      warnings: 0,
+      applied_discounts: 0
+    }
+  };
+}
+
 export function calculateCost({
   usageLedger,
   priceCards,
@@ -438,12 +455,15 @@ export function calculateCost({
   providerReportedCostMode,
   provider_reported_cost_mode,
   priceSourcePriority,
-  price_source_priority
+  price_source_priority,
+  debugTrace,
+  debug_trace
 }) {
   const components = [];
   const warnings = [];
   const appliedDiscounts = [];
   const sourceByName = new Map();
+  const trace = debugTraceEnabled(debugTrace ?? debug_trace) ? newDebugTrace() : null;
   let total = "0";
   let resolvedBilledModel = billedModel(usageLedger);
   let aliasResolution = usageLedger.model.alias_resolution || "none";
@@ -456,6 +476,14 @@ export function calculateCost({
   const staleThreshold = staleAfterDays ?? stale_after_days;
   const reportedCost = providerReportedCost ?? provider_reported_cost;
   const reportedCostMode = providerReportedCostMode ?? provider_reported_cost_mode ?? "compare";
+  if (trace) {
+    trace.decisions.push({
+      type: "price_card_candidates",
+      model: resolvedBilledModel,
+      candidate_price_card_ids: candidateCards.map((card) => card.id),
+      source_priority: sourcePriority
+    });
+  }
 
   for (const component of usageLedger.components) {
     if (!hasModelCard) {
@@ -466,6 +494,9 @@ export function calculateCost({
         });
         warnedUnknownModel = true;
       }
+      if (trace) {
+        trace.summary.unpriced_components += 1;
+      }
       continue;
     }
 
@@ -473,6 +504,9 @@ export function calculateCost({
       if (!warnedNoMatchingCard) {
         warnings.push(noMatchingCardWarning(usageLedger, priceCards));
         warnedNoMatchingCard = true;
+      }
+      if (trace) {
+        trace.summary.unpriced_components += 1;
       }
       continue;
     }
@@ -491,6 +525,9 @@ export function calculateCost({
           message: `No price found for ${component.name} (${component.unit}).`
         });
       }
+      if (trace) {
+        trace.summary.unpriced_components += 1;
+      }
       continue;
     }
 
@@ -500,10 +537,29 @@ export function calculateCost({
     }
     const match = matches[0];
     const { card, priceComponent } = match;
+    if (trace) {
+      trace.decisions.push({
+        type: "price_component_match",
+        component: component.name,
+        candidate_price_card_ids: matches.map(({ card: matchedCard }) => matchedCard.id),
+        selected_price_card_id: card.id,
+        selected_source: card.source.name
+      });
+    }
     if (card.model !== resolvedBilledModel && (card.aliases || []).includes(resolvedBilledModel)) {
+      const previousBilledModel = resolvedBilledModel;
       resolvedBilledModel = card.model;
       if (aliasResolution === "none") {
         aliasResolution = "source_exact";
+      }
+      if (trace) {
+        trace.decisions.push({
+          type: "model_alias_resolution",
+          from: previousBilledModel,
+          to: resolvedBilledModel,
+          price_card_id: card.id,
+          resolution: aliasResolution
+        });
       }
     }
 
@@ -522,6 +578,16 @@ export function calculateCost({
     );
 
     appliedDiscounts.push(...discounted.applied);
+    if (trace) {
+      for (const applied of discounted.applied) {
+        trace.decisions.push({
+          type: "discount_application",
+          component: applied.component,
+          policy_id: applied.policy_id,
+          amount: applied.amount
+        });
+      }
+    }
     total = addDecimal(total, discounted.cost);
     sourceByName.set(card.source.name, card.source);
     if (!warnedStaleCards.has(card.id)) {
@@ -541,12 +607,26 @@ export function calculateCost({
       price_card_id: card.id,
       discount_eligible: discountEligible
     });
+    if (trace) {
+      trace.summary.priced_components += 1;
+    }
   }
 
   total = applyProviderReportedCostUse(total, components, warnings, reportedCost, reportedCostMode);
   const reportedWarning = providerReportedWarning(total, reportedCost, reportedCostMode);
   if (reportedWarning) {
     warnings.push(reportedWarning);
+  }
+  if (trace) {
+    for (const warning of warnings) {
+      trace.decisions.push({
+        type: "warning",
+        warning_code: warning.code,
+        message: warning.message
+      });
+    }
+    trace.summary.warnings = warnings.length;
+    trace.summary.applied_discounts = appliedDiscounts.length;
   }
 
   const result = {
@@ -566,6 +646,9 @@ export function calculateCost({
     applied_discounts: appliedDiscounts,
     warnings
   };
+  if (trace) {
+    result.debug_trace = trace;
+  }
   if (mode === "strict" && warnings.length > 0) {
     throw new Error(`strict mode cost calculation failed: ${warnings[0].code}`);
   }
@@ -1363,7 +1446,9 @@ export function fromResponse(response, options) {
     providerReportedCostMode: options.providerReportedCostMode,
     provider_reported_cost_mode: options.provider_reported_cost_mode,
     priceSourcePriority: options.priceSourcePriority,
-    price_source_priority: options.price_source_priority
+    price_source_priority: options.price_source_priority,
+    debugTrace: options.debugTrace,
+    debug_trace: options.debug_trace
   });
 }
 

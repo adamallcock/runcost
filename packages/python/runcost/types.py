@@ -238,6 +238,46 @@ class CostWarning(TypedDict, total=False):
     metadata: Dict[str, Any]
 
 
+DebugDecisionType = Literal[
+    "price_card_candidates",
+    "price_component_match",
+    "model_alias_resolution",
+    "discount_application",
+    "warning",
+]
+
+
+class DebugDecision(TypedDict, total=False):
+    type: DebugDecisionType
+    component: str
+    model: str
+    from_: str
+    to: str
+    resolution: str
+    price_card_id: str
+    selected_price_card_id: str
+    selected_source: str
+    candidate_price_card_ids: List[str]
+    source_priority: List[str]
+    policy_id: str
+    amount: str
+    warning_code: str
+    message: str
+
+
+class DebugTraceSummary(TypedDict):
+    priced_components: int
+    unpriced_components: int
+    warnings: int
+    applied_discounts: int
+
+
+class DebugTrace(TypedDict):
+    schema_version: SchemaVersion
+    decisions: List[DebugDecision]
+    summary: DebugTraceSummary
+
+
 class CostLedger(TypedDict, total=False):
     schema_version: SchemaVersion
     provider: str
@@ -249,4 +289,5 @@ class CostLedger(TypedDict, total=False):
     price_sources: List[SourceInfo]
     applied_discounts: List[AppliedDiscount]
     warnings: List[CostWarning]
+    debug_trace: DebugTrace
     metadata: Dict[str, Any]

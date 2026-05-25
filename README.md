@@ -43,6 +43,7 @@ npm run example:py
 - Quickstart: `docs/2026-05-25-quickstart.md`
 - Installation: `docs/2026-05-25-package-installation.md`
 - API reference: `docs/2026-05-25-api-reference.md`
+- Debug trace: `docs/2026-05-25-debug-trace.md`
 - Supported surfaces: `docs/2026-05-25-supported-surfaces.md`
 - Custom pricing and discounts: `docs/2026-05-25-custom-pricing-and-discounts.md`
 - Source adapters: `docs/2026-05-25-source-adapters.md`
@@ -66,7 +67,7 @@ npm run example:py
   - JavaScript: `packages/javascript/core/`
   - Go: `packages/go/ledger/`
 
-The implementation is still pre-alpha. The current center of gravity is normalized usage plus price cards in, componentized cost ledger out. Registry publishing, debug traces, streaming aggregation, and broader tool-call pricing are still ahead.
+The implementation is still pre-alpha. The current center of gravity is normalized usage plus price cards in, componentized cost ledger out. Registry publishing, streaming aggregation, and broader tool-call pricing are still ahead.
 
 ## Prototype Capabilities
 
@@ -79,6 +80,7 @@ The implementation is still pre-alpha. The current center of gravity is normaliz
 - One-call framework helpers for LangChain AIMessage, Vercel AI SDK generateText, and LlamaIndex TokenCountingHandler outputs.
 - Exact alias resolution through price-card aliases.
 - Component-aware discount policies.
+- Optional debug traces for price-card, component, alias, discount, and warning decisions.
 - Simon Willison `llm-prices` adapter for simple current/historical price feeds.
 - LiteLLM, Portkey, and OpenRouter models source adapter prototypes.
 - Strict mode and compatibility mode.

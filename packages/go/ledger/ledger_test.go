@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -44,6 +45,18 @@ func assertSubset(t *testing.T, actual any, expected any, path string) {
 	case []any:
 		if !reflect.DeepEqual(actual, expected) {
 			t.Fatalf("%s: expected %#v, got %#v", path, expected, actual)
+		}
+	case json.Number:
+		expectedNumber, ok := new(big.Rat).SetString(expectedTyped.String())
+		if !ok {
+			t.Fatalf("%s: invalid expected number %q", path, expectedTyped.String())
+		}
+		actualNumber, ok := new(big.Rat).SetString(numberString(actual))
+		if !ok {
+			t.Fatalf("%s: expected number %q, got non-number %#v", path, expectedTyped.String(), actual)
+		}
+		if expectedNumber.Cmp(actualNumber) != 0 {
+			t.Fatalf("%s: expected %s, got %s", path, expectedNumber.String(), actualNumber.String())
 		}
 	default:
 		if !reflect.DeepEqual(actual, expected) {

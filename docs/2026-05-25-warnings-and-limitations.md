@@ -70,7 +70,7 @@ Warnings include a message, and may include a `path` and `metadata`.
 - Source adapters are prototypes, not a comprehensive provider price database.
 - Streaming aggregation is not implemented as a first-class API.
 - Multi-call session aggregation is not implemented as a first-class API.
-- Debug trace or explain mode is not implemented yet.
+- Debug trace exists for core calculator decisions, but provider extractor and framework middleware traces are still shallow.
 - Official price-page monitoring and pull-request automation are not implemented.
 - Tool-call pricing coverage exists only for selected fixtures and provider shapes.
 - Historical point-in-time pricing exists in the model but is not comprehensive.

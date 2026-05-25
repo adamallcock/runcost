@@ -230,6 +230,45 @@ export interface CostWarning {
   metadata?: Record<string, unknown>;
 }
 
+export type DebugDecisionType =
+  | "price_card_candidates"
+  | "price_component_match"
+  | "model_alias_resolution"
+  | "discount_application"
+  | "warning";
+
+export interface DebugDecision {
+  type: DebugDecisionType;
+  component?: string;
+  model?: string;
+  from?: string;
+  to?: string;
+  resolution?: string;
+  price_card_id?: string;
+  selected_price_card_id?: string;
+  selected_source?: string;
+  candidate_price_card_ids?: string[];
+  source_priority?: string[];
+  policy_id?: string;
+  amount?: string;
+  warning_code?: WarningCode | string;
+  message?: string;
+  [key: string]: unknown;
+}
+
+export interface DebugTraceSummary {
+  priced_components: number;
+  unpriced_components: number;
+  warnings: number;
+  applied_discounts: number;
+}
+
+export interface DebugTrace {
+  schema_version: SchemaVersion;
+  decisions: DebugDecision[];
+  summary: DebugTraceSummary;
+}
+
 export interface CostLedger {
   schema_version: SchemaVersion;
   provider: string;
@@ -241,6 +280,7 @@ export interface CostLedger {
   price_sources?: SourceInfo[];
   applied_discounts?: AppliedDiscount[];
   warnings: CostWarning[];
+  debug_trace?: DebugTrace;
   metadata?: Record<string, unknown>;
 }
 
@@ -257,6 +297,8 @@ export interface CalculateCostOptions {
   provider_reported_cost_mode?: "compare" | "use";
   priceSourcePriority?: string[];
   price_source_priority?: string[];
+  debugTrace?: boolean;
+  debug_trace?: boolean;
 }
 
 export interface ExtractOptions {
@@ -279,6 +321,8 @@ export interface FromResponseOptions extends ExtractOptions {
   provider_reported_cost_mode?: "compare" | "use";
   priceSourcePriority?: string[];
   price_source_priority?: string[];
+  debugTrace?: boolean;
+  debug_trace?: boolean;
 }
 
 export interface SourceAdapterOptions {

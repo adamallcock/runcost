@@ -394,6 +394,23 @@ def _price_source_disagreement_warning(
     }
 
 
+def _debug_trace_enabled(value: Any) -> bool:
+    return value is True
+
+
+def _new_debug_trace() -> Dict[str, Any]:
+    return {
+        "schema_version": "0.1",
+        "decisions": [],
+        "summary": {
+            "priced_components": 0,
+            "unpriced_components": 0,
+            "warnings": 0,
+            "applied_discounts": 0,
+        },
+    }
+
+
 def calculate_cost(
     *,
     usage_ledger: Dict[str, Any],
@@ -404,18 +421,30 @@ def calculate_cost(
     provider_reported_cost: Optional[Any] = None,
     provider_reported_cost_mode: str = "compare",
     price_source_priority: Optional[Iterable[str]] = None,
+    debug_trace: bool = False,
 ) -> Dict[str, Any]:
     policies = list(discount_policies or [])
     price_cards_list = list(price_cards)
+    source_priority = list(price_source_priority or [])
     components = []
     warnings = []
     applied_discounts = []
     sources_by_name: Dict[str, Dict[str, Any]] = {}
+    trace = _new_debug_trace() if _debug_trace_enabled(debug_trace) else None
     total = "0"
     resolved_billed_model = _billed_model(usage_ledger)
     alias_resolution = usage_ledger["model"].get("alias_resolution", "none")
     has_model_card = _has_price_card_for_usage(usage_ledger, price_cards_list)
-    matching_cards = _matching_cards(usage_ledger, price_cards_list, price_source_priority)
+    matching_cards = _matching_cards(usage_ledger, price_cards_list, source_priority)
+    if trace is not None:
+        trace["decisions"].append(
+            {
+                "type": "price_card_candidates",
+                "model": resolved_billed_model,
+                "candidate_price_card_ids": [card["id"] for card in matching_cards],
+                "source_priority": source_priority,
+            }
+        )
     warned_unknown_model = False
     warned_no_matching_card = False
     warned_stale_cards = set()
@@ -430,12 +459,16 @@ def calculate_cost(
                     }
                 )
                 warned_unknown_model = True
+            if trace is not None:
+                trace["summary"]["unpriced_components"] += 1
             continue
 
         if not matching_cards:
             if not warned_no_matching_card:
                 warnings.append(_no_matching_card_warning(usage_ledger, price_cards_list))
                 warned_no_matching_card = True
+            if trace is not None:
+                trace["summary"]["unpriced_components"] += 1
             continue
 
         candidates = _candidate_price_components(matching_cards, component)
@@ -457,6 +490,8 @@ def calculate_cost(
                         "message": f"No price found for {component['name']} ({component['unit']}).",
                     }
                 )
+            if trace is not None:
+                trace["summary"]["unpriced_components"] += 1
             continue
 
         disagreement_warning = _price_source_disagreement_warning(matches, component, price_source_priority)
@@ -465,10 +500,31 @@ def calculate_cost(
         match = matches[0]
         card = match["card"]
         price_component = match["price_component"]
+        if trace is not None:
+            trace["decisions"].append(
+                {
+                    "type": "price_component_match",
+                    "component": component["name"],
+                    "candidate_price_card_ids": [candidate["card"]["id"] for candidate in matches],
+                    "selected_price_card_id": card["id"],
+                    "selected_source": card["source"]["name"],
+                }
+            )
         if card["model"] != resolved_billed_model and resolved_billed_model in card.get("aliases", []):
+            previous_billed_model = resolved_billed_model
             resolved_billed_model = card["model"]
             if alias_resolution == "none":
                 alias_resolution = "source_exact"
+            if trace is not None:
+                trace["decisions"].append(
+                    {
+                        "type": "model_alias_resolution",
+                        "from": previous_billed_model,
+                        "to": resolved_billed_model,
+                        "price_card_id": card["id"],
+                        "resolution": alias_resolution,
+                    }
+                )
 
         price = price_component["price"]
         base_cost = _multiply_divide(component["quantity"], price["amount"], price["per"])
@@ -482,6 +538,16 @@ def calculate_cost(
         )
 
         applied_discounts.extend(discounted["applied"])
+        if trace is not None:
+            for applied in discounted["applied"]:
+                trace["decisions"].append(
+                    {
+                        "type": "discount_application",
+                        "component": applied["component"],
+                        "policy_id": applied["policy_id"],
+                        "amount": applied["amount"],
+                    }
+                )
         total = _add(total, discounted["cost"])
         sources_by_name[card["source"]["name"]] = card["source"]
         if card["id"] not in warned_stale_cards:
@@ -501,6 +567,8 @@ def calculate_cost(
                 "discount_eligible": discount_eligible,
             }
         )
+        if trace is not None:
+            trace["summary"]["priced_components"] += 1
 
     model = usage_ledger["model"]
     total = _apply_provider_reported_cost_use(
@@ -517,6 +585,17 @@ def calculate_cost(
     )
     if provider_warning:
         warnings.append(provider_warning)
+    if trace is not None:
+        for warning in warnings:
+            trace["decisions"].append(
+                {
+                    "type": "warning",
+                    "warning_code": warning["code"],
+                    "message": warning["message"],
+                }
+            )
+        trace["summary"]["warnings"] = len(warnings)
+        trace["summary"]["applied_discounts"] = len(applied_discounts)
     result = {
         "schema_version": "0.1",
         "provider": usage_ledger["provider"],
@@ -534,6 +613,8 @@ def calculate_cost(
         "applied_discounts": applied_discounts,
         "warnings": warnings,
     }
+    if trace is not None:
+        result["debug_trace"] = trace
     if mode == "strict" and warnings:
         raise ValueError(f"strict mode cost calculation failed: {warnings[0]['code']}")
     return result
@@ -1371,6 +1452,7 @@ def from_response(
     provider_reported_cost: Optional[Any] = None,
     provider_reported_cost_mode: str = "compare",
     price_source_priority: Optional[Iterable[str]] = None,
+    debug_trace: bool = False,
 ) -> Dict[str, Any]:
     options: Dict[str, Any] = {"surface": surface}
     if adapter:
@@ -1396,6 +1478,7 @@ def from_response(
         provider_reported_cost=provider_reported_cost,
         provider_reported_cost_mode=provider_reported_cost_mode,
         price_source_priority=price_source_priority,
+        debug_trace=debug_trace,
     )
 
 

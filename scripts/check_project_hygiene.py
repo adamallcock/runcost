@@ -12,6 +12,7 @@ REQUIRED_FILES = [
     "PROGRESS_TRACKER.md",
     "docs/2026-05-25-api-reference.md",
     "docs/2026-05-25-custom-pricing-and-discounts.md",
+    "docs/2026-05-25-debug-trace.md",
     "docs/2026-05-25-package-installation.md",
     "docs/2026-05-25-quickstart.md",
     "docs/2026-05-25-source-adapters.md",
@@ -24,6 +25,7 @@ REQUIRED_FILES = [
     "scripts/check_package_installs.py",
     "packages/javascript/core/index.d.ts",
     "packages/python/runcost/types.py",
+    "schemas/debug-trace.schema.json",
     "packages/go/ledger/example_test.go",
     ".github/workflows/ci.yml",
 ]
@@ -45,6 +47,9 @@ PUBLIC_API_NAMES = [
     "from_llamaindex_token_counter",
     "fromLlamaIndexTokenCounter",
     "FromLlamaIndexTokenCounter",
+    "DebugTrace",
+    "debug_trace",
+    "debugTrace",
     "extract_gemini_generate_content_usage",
     "extractGeminiGenerateContentUsage",
     "extractBedrockConverseUsage",
@@ -153,6 +158,7 @@ def check_public_api_artifacts() -> None:
         "UsageLedger",
         "PriceCard",
         "CostLedger",
+        "DebugTrace",
     ]:
         assert_true(exported in typescript, f"TypeScript declarations missing {exported}")
 
@@ -161,6 +167,7 @@ def check_public_api_artifacts() -> None:
         "PriceCard",
         "DiscountPolicy",
         "CostLedger",
+        "DebugTrace",
         "calculate_cost",
         "from_response",
         "from_langchain_message",
@@ -202,7 +209,7 @@ def check_public_api_artifacts() -> None:
 
 def check_fixture_floor() -> None:
     fixtures = sorted((ROOT / "fixtures").glob("*.json"))
-    assert_true(len(fixtures) >= 47, f"expected at least 47 fixtures, found {len(fixtures)}")
+    assert_true(len(fixtures) >= 48, f"expected at least 48 fixtures, found {len(fixtures)}")
 
 
 def check_ci_workflow() -> None:
