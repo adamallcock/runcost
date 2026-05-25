@@ -1971,11 +1971,85 @@ export function priceCardsFromJSONFile(filePath, options = {}) {
   if (sourceType === "litellm") return priceCardsFromLiteLLM(data, adapterOptions);
   if (sourceType === "openrouter-models") return priceCardsFromOpenRouterModels(data, adapterOptions);
   if (sourceType === "models-dev") return priceCardsFromModelsDev(data, adapterOptions);
+  if (sourceType === "official-snapshot") return priceCardsFromOfficialSnapshot(data, adapterOptions);
   if (sourceType === "portkey") return priceCardsFromPortkey(data, adapterOptions);
   if (sourceType === "source-cache") return priceCardsFromSourceCache(data, adapterOptions);
   if (sourceType === "user-pricing") return priceCardsFromUserPricing(data, adapterOptions);
   if (sourceType === "helicone") return priceCardsFromHelicone(data, adapterOptions);
   throw new Error(`Unsupported JSON price source type: ${sourceType}`);
+}
+
+function addOfficialSnapshotComponent(components, row, componentName, unit, keys, per) {
+  addPriceComponent(components, componentName, unit, componentAmount(row, keys), per);
+}
+
+export function priceCardsFromOfficialSnapshot(data, options = {}) {
+  if (!data || typeof data !== "object") {
+    return [];
+  }
+  if (data.price_cards) {
+    return canonicalPriceCards(data.price_cards);
+  }
+  if (data.priceCards) {
+    return canonicalPriceCards(data.priceCards);
+  }
+  const source = sourceInfo(data, "official-snapshot", "file://official-pricing-snapshot", options);
+  const providerDefault = data.provider || options.provider || "unknown";
+  const surfaceDefault = data.surface || options.surface;
+  const perDefault = numberString(data.per || "1000000");
+  const rows = data.rows || data.models || [];
+  return rows.flatMap((row) => {
+    if (!row || typeof row !== "object") return [];
+    const model = row.model || row.id;
+    const provider = row.provider || providerDefault;
+    if (!model || !provider) return [];
+    const per = numberString(row.per || perDefault);
+    const components = [];
+    for (const rawComponent of row.components || []) {
+      if (!rawComponent || typeof rawComponent !== "object") continue;
+      const amount = rawComponent.amount ?? (rawComponent.price && rawComponent.price.amount);
+      addPriceComponent(
+        components,
+        rawComponent.usage_component,
+        rawComponent.unit || "token",
+        amount,
+        numberString(rawComponent.per || (rawComponent.price && rawComponent.price.per) || per)
+      );
+    }
+    addOfficialSnapshotComponent(components, row, "input_uncached_tokens", "token", ["input", "prompt", "input_uncached"], per);
+    addOfficialSnapshotComponent(components, row, "input_cache_read_tokens", "token", ["cache_read", "cached_input", "input_cache_read"], per);
+    addOfficialSnapshotComponent(components, row, "input_cache_write_tokens", "token", ["cache_write", "input_cache_write"], per);
+    addOfficialSnapshotComponent(components, row, "input_cache_write_1h_tokens", "token", ["cache_write_1h", "input_cache_write_1h"], per);
+    addOfficialSnapshotComponent(components, row, "output_text_tokens", "token", ["output", "completion", "output_text"], per);
+    addOfficialSnapshotComponent(components, row, "output_reasoning_tokens", "token", ["reasoning", "thinking", "output_reasoning"], per);
+    addOfficialSnapshotComponent(components, row, "input_audio_tokens", "token", ["input_audio", "audio_input"], per);
+    addOfficialSnapshotComponent(components, row, "output_audio_tokens", "token", ["output_audio", "audio_output"], per);
+    addOfficialSnapshotComponent(components, row, "request_units", "request", ["request", "per_request"], "1");
+    addOfficialSnapshotComponent(components, row, "web_search_units", "search", ["web_search", "search"], "1");
+    if (components.length === 0) return [];
+    const card = {
+      schema_version: "0.1",
+      id: row.price_card_id || row.priceCardId || `${provider}:${model}:official-snapshot`,
+      provider,
+      model,
+      aliases: row.aliases || [],
+      components,
+      source,
+      metadata: {
+        official_snapshot: {
+          source_label: row.source_label || row.sourceLabel,
+          notes: row.notes,
+          capabilities: row.capabilities
+        }
+      }
+    };
+    const surface = row.surface || surfaceDefault;
+    if (surface) card.surface = surface;
+    if (row.service_tier) card.service_tier = row.service_tier;
+    if (row.region) card.region = row.region;
+    if (row.effective && typeof row.effective === "object") card.effective = row.effective;
+    return [card];
+  });
 }
 
 export function priceCardsFromUserPricing(data, options = {}) {

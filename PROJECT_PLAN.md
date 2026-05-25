@@ -61,7 +61,7 @@ Current prototype capabilities:
 - Exact alias resolution through price-card aliases.
 - Component-aware discount policies.
 - Simon Willison `llm-prices` adapter.
-- LiteLLM, Portkey, OpenRouter models, models.dev, source-cache, local JSON files, explicit source refresh, user compact pricing, and Helicone model-registry adapter prototypes.
+- LiteLLM, Portkey, OpenRouter models, models.dev, reviewed official snapshots, source-cache, local JSON files, explicit source refresh, user compact pricing, and Helicone model-registry adapter prototypes.
 - Strict mode and compatibility mode.
 - Effective-date price-card selection.
 - Service-tier and region price-card matching.
@@ -319,6 +319,7 @@ Adapters:
 - Portkey Models pricing endpoints.
 - Helicone cost package or extracted registry-compatible data.
 - OpenRouter `/api/v1/models`.
+- Reviewed official provider pricing snapshots where license and terms permit.
 - User JSON/YAML price cards.
 - models.dev catalog enrichment.
 
@@ -341,6 +342,7 @@ Progress criteria:
 - LiteLLM service tier and cache fields map into canonical components.
 - OpenRouter string prices map correctly.
 - models.dev per-million token, cache, reasoning, audio token, and context tier fields map into canonical components.
+- Reviewed official pricing snapshots preserve provider source URL, retrieval time, version/license metadata, effective dates, aliases, token prices, and tool/search unit prices.
 - User compact pricing data maps into canonical price cards.
 - Local JSON price-source files map into canonical price cards.
 - Helicone endpoint/deployment pricing maps cache multipliers, reasoning, request, web-search, and modality token fields.
@@ -1300,7 +1302,7 @@ Sprint exit criteria:
 - `npm test` validates schemas and runs all language conformance tests.
 - At least 16 fixtures pass across Python, JavaScript, and Go.
 - Strict mode and compatibility mode behavior is documented and tested.
-- Five real upstream price-source adapters beyond `llm-prices` exist in prototype form, plus a user compact pricing adapter.
+- Five real upstream price-source adapters beyond `llm-prices` exist in prototype form, plus reviewed official snapshots and a user compact pricing adapter.
 - Multi-call cost-ledger aggregation is fixture-backed across Python, JavaScript/TypeScript, and Go.
 - OpenAI Responses, Anthropic Messages, and Gemini generateContent final streaming usage shapes are fixture-backed across Python, JavaScript/TypeScript, and Go.
 - The plan for code generation, schema validation, and package release synchronization is documented and actionable.

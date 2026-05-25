@@ -2651,6 +2651,8 @@ func PriceCardsFromJSONFile(path string, sourceType string) ([]any, error) {
 		return PriceCardsFromOpenRouterModels(data), nil
 	case "models-dev":
 		return PriceCardsFromModelsDev(data), nil
+	case "official-snapshot":
+		return PriceCardsFromOfficialSnapshot(data), nil
 	case "portkey":
 		return PriceCardsFromPortkey(data), nil
 	case "source-cache":
@@ -2662,6 +2664,139 @@ func PriceCardsFromJSONFile(path string, sourceType string) ([]any, error) {
 	default:
 		return nil, fmt.Errorf("unsupported JSON price source type: %s", sourceType)
 	}
+}
+
+func addOfficialSnapshotComponent(components *[]any, row Object, componentName string, unit string, keys []string, per string) {
+	addPriceComponent(components, componentName, unit, componentAmount(row, keys...), per, nil)
+}
+
+// PriceCardsFromOfficialSnapshot maps reviewed official provider pricing
+// snapshots into canonical price cards.
+func PriceCardsFromOfficialSnapshot(data Object) []any {
+	if rawCards, ok := data["price_cards"].([]any); ok {
+		return rawCards
+	}
+	if rawCards, ok := data["priceCards"].([]any); ok {
+		return rawCards
+	}
+	source := sourceInfo(data, "official-snapshot", "file://official-pricing-snapshot")
+	providerDefault := asString(data["provider"])
+	if providerDefault == "" {
+		providerDefault = "unknown"
+	}
+	surfaceDefault := asString(data["surface"])
+	perDefault := numberString(data["per"])
+	if perDefault == "0" {
+		perDefault = "1000000"
+	}
+	rawRows, ok := data["rows"].([]any)
+	if !ok {
+		rawRows, _ = data["models"].([]any)
+	}
+	cards := []any{}
+	for _, rawRow := range rawRows {
+		row, ok := rawRow.(map[string]any)
+		if !ok {
+			continue
+		}
+		model := asString(row["model"])
+		if model == "" {
+			model = asString(row["id"])
+		}
+		provider := asString(row["provider"])
+		if provider == "" {
+			provider = providerDefault
+		}
+		if model == "" || provider == "" {
+			continue
+		}
+		per := numberString(row["per"])
+		if per == "0" {
+			per = perDefault
+		}
+		components := []any{}
+		if rawComponents, ok := row["components"].([]any); ok {
+			for _, rawComponent := range rawComponents {
+				component, ok := rawComponent.(map[string]any)
+				if !ok {
+					continue
+				}
+				price := asObject(component["price"])
+				amount := component["amount"]
+				if amount == nil {
+					amount = price["amount"]
+				}
+				componentPer := numberString(component["per"])
+				if componentPer == "0" {
+					componentPer = numberString(price["per"])
+				}
+				if componentPer == "0" {
+					componentPer = per
+				}
+				unit := asString(component["unit"])
+				if unit == "" {
+					unit = "token"
+				}
+				addPriceComponent(&components, asString(component["usage_component"]), unit, amount, componentPer, nil)
+			}
+		}
+		addOfficialSnapshotComponent(&components, row, "input_uncached_tokens", "token", []string{"input", "prompt", "input_uncached"}, per)
+		addOfficialSnapshotComponent(&components, row, "input_cache_read_tokens", "token", []string{"cache_read", "cached_input", "input_cache_read"}, per)
+		addOfficialSnapshotComponent(&components, row, "input_cache_write_tokens", "token", []string{"cache_write", "input_cache_write"}, per)
+		addOfficialSnapshotComponent(&components, row, "input_cache_write_1h_tokens", "token", []string{"cache_write_1h", "input_cache_write_1h"}, per)
+		addOfficialSnapshotComponent(&components, row, "output_text_tokens", "token", []string{"output", "completion", "output_text"}, per)
+		addOfficialSnapshotComponent(&components, row, "output_reasoning_tokens", "token", []string{"reasoning", "thinking", "output_reasoning"}, per)
+		addOfficialSnapshotComponent(&components, row, "input_audio_tokens", "token", []string{"input_audio", "audio_input"}, per)
+		addOfficialSnapshotComponent(&components, row, "output_audio_tokens", "token", []string{"output_audio", "audio_output"}, per)
+		addOfficialSnapshotComponent(&components, row, "request_units", "request", []string{"request", "per_request"}, "1")
+		addOfficialSnapshotComponent(&components, row, "web_search_units", "search", []string{"web_search", "search"}, "1")
+		if len(components) == 0 {
+			continue
+		}
+		cardID := asString(row["price_card_id"])
+		if cardID == "" {
+			cardID = asString(row["priceCardId"])
+		}
+		if cardID == "" {
+			cardID = fmt.Sprintf("%s:%s:official-snapshot", provider, model)
+		}
+		sourceLabel := asString(row["source_label"])
+		if sourceLabel == "" {
+			sourceLabel = asString(row["sourceLabel"])
+		}
+		card := Object{
+			"schema_version": "0.1",
+			"id":             cardID,
+			"provider":       provider,
+			"model":          model,
+			"aliases":        asSlice(row["aliases"]),
+			"components":     components,
+			"source":         source,
+			"metadata": Object{"official_snapshot": Object{
+				"source_label": sourceLabel,
+				"notes":        row["notes"],
+				"capabilities": row["capabilities"],
+			}},
+		}
+		surface := asString(row["surface"])
+		if surface == "" {
+			surface = surfaceDefault
+		}
+		if surface != "" {
+			card["surface"] = surface
+		}
+		if serviceTier := asString(row["service_tier"]); serviceTier != "" {
+			card["service_tier"] = serviceTier
+		}
+		if region := asString(row["region"]); region != "" {
+			card["region"] = region
+		}
+		if effective, ok := row["effective"].(map[string]any); ok {
+			card["effective"] = effective
+		}
+		cards = append(cards, card)
+	}
+	return cards
 }
 
 // PriceCardsFromUserPricing maps user-owned compact pricing data into

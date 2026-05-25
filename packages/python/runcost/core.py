@@ -1954,6 +1954,8 @@ def price_cards_from_json_file(path: Any, source_type: str = "user-pricing", **o
         return price_cards_from_openrouter_models(data, **adapter_options)
     if source_type == "models-dev":
         return price_cards_from_models_dev(data, **adapter_options)
+    if source_type == "official-snapshot":
+        return price_cards_from_official_snapshot(data, **adapter_options)
     if source_type == "portkey":
         return price_cards_from_portkey(data, **adapter_options)
     if source_type == "source-cache":
@@ -1963,6 +1965,86 @@ def price_cards_from_json_file(path: Any, source_type: str = "user-pricing", **o
     if source_type == "helicone":
         return price_cards_from_helicone(data, **adapter_options)
     raise ValueError(f"Unsupported JSON price source type: {source_type}")
+
+
+def _official_snapshot_component(components: List[Dict[str, Any]], row: Dict[str, Any], component_name: str, unit: str, keys: Iterable[str], per: str) -> None:
+    _add_price_component(components, component_name, unit, _component_amount(row, *keys), per)
+
+
+def price_cards_from_official_snapshot(data: Any, **options: Any) -> List[Dict[str, Any]]:
+    if not isinstance(data, dict):
+        return []
+    for key in ("price_cards", "priceCards"):
+        if key in data:
+            return _price_cards_from_canonical_cards(data[key])
+
+    source = _source_info(data, "official-snapshot", "file://official-pricing-snapshot", **options)
+    provider_default = data.get("provider") or options.get("provider", "unknown")
+    surface_default = data.get("surface") or options.get("surface")
+    per_default = _number_string(data.get("per", "1000000"))
+    rows = data.get("rows") or data.get("models") or []
+    cards: List[Dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        model = row.get("model") or row.get("id")
+        provider = row.get("provider") or provider_default
+        if not model or not provider:
+            continue
+        per = _number_string(row.get("per", per_default))
+        components: List[Dict[str, Any]] = []
+        for raw_component in row.get("components", []):
+            if not isinstance(raw_component, dict):
+                continue
+            amount = raw_component.get("amount")
+            if amount is None and isinstance(raw_component.get("price"), dict):
+                amount = raw_component["price"].get("amount")
+            _add_price_component(
+                components,
+                raw_component.get("usage_component"),
+                raw_component.get("unit", "token"),
+                amount,
+                _number_string(raw_component.get("per") or raw_component.get("price", {}).get("per") or per),
+            )
+        _official_snapshot_component(components, row, "input_uncached_tokens", "token", ("input", "prompt", "input_uncached"), per)
+        _official_snapshot_component(components, row, "input_cache_read_tokens", "token", ("cache_read", "cached_input", "input_cache_read"), per)
+        _official_snapshot_component(components, row, "input_cache_write_tokens", "token", ("cache_write", "input_cache_write"), per)
+        _official_snapshot_component(components, row, "input_cache_write_1h_tokens", "token", ("cache_write_1h", "input_cache_write_1h"), per)
+        _official_snapshot_component(components, row, "output_text_tokens", "token", ("output", "completion", "output_text"), per)
+        _official_snapshot_component(components, row, "output_reasoning_tokens", "token", ("reasoning", "thinking", "output_reasoning"), per)
+        _official_snapshot_component(components, row, "input_audio_tokens", "token", ("input_audio", "audio_input"), per)
+        _official_snapshot_component(components, row, "output_audio_tokens", "token", ("output_audio", "audio_output"), per)
+        _official_snapshot_component(components, row, "request_units", "request", ("request", "per_request"), "1")
+        _official_snapshot_component(components, row, "web_search_units", "search", ("web_search", "search"), "1")
+        if not components:
+            continue
+        card = {
+            "schema_version": "0.1",
+            "id": row.get("price_card_id") or row.get("priceCardId") or f"{provider}:{model}:official-snapshot",
+            "provider": provider,
+            "model": model,
+            "aliases": row.get("aliases", []),
+            "components": components,
+            "source": source,
+        }
+        surface = row.get("surface") or surface_default
+        if surface:
+            card["surface"] = surface
+        for key in ("service_tier", "region"):
+            if row.get(key):
+                card[key] = row[key]
+        if isinstance(row.get("effective"), dict):
+            card["effective"] = row["effective"]
+        metadata = {
+            "official_snapshot": {
+                "source_label": row.get("source_label") or row.get("sourceLabel"),
+                "notes": row.get("notes"),
+                "capabilities": row.get("capabilities"),
+            }
+        }
+        card["metadata"] = metadata
+        cards.append(card)
+    return cards
 
 
 def price_cards_from_user_pricing(data: Any, **options: Any) -> List[Dict[str, Any]]:

@@ -110,6 +110,9 @@ PUBLIC_API_NAMES = [
     "price_cards_from_models_dev",
     "priceCardsFromModelsDev",
     "PriceCardsFromModelsDev",
+    "price_cards_from_official_snapshot",
+    "priceCardsFromOfficialSnapshot",
+    "PriceCardsFromOfficialSnapshot",
     "price_cards_from_openrouter_models",
     "priceCardsFromOpenRouterModels",
     "PriceCardsFromOpenRouterModels",
@@ -238,6 +241,7 @@ def check_public_api_artifacts() -> None:
         "priceCardsFromLlmPrices",
         "priceCardsFromLiteLLM",
         "priceCardsFromModelsDev",
+        "priceCardsFromOfficialSnapshot",
         "priceCardsFromOpenRouterModels",
         "priceCardsFromPortkey",
         "priceCardsFromSourceCache",
@@ -278,6 +282,7 @@ def check_public_api_artifacts() -> None:
         "from_ag2_usage_summary",
         "price_cards_from_litellm",
         "price_cards_from_models_dev",
+        "price_cards_from_official_snapshot",
         "price_cards_from_openrouter_models",
         "price_cards_from_portkey",
         "price_cards_from_source_cache",
@@ -304,6 +309,7 @@ def check_public_api_artifacts() -> None:
         "PriceCardsFromLlmPrices",
         "PriceCardsFromLiteLLM",
         "PriceCardsFromModelsDev",
+        "PriceCardsFromOfficialSnapshot",
         "PriceCardsFromOpenRouterModels",
         "PriceCardsFromPortkey",
         "PriceCardsFromSourceCache",
@@ -329,7 +335,7 @@ def check_public_api_artifacts() -> None:
 
 def check_fixture_floor() -> None:
     fixtures = sorted((ROOT / "fixtures").glob("*.json"))
-    assert_true(len(fixtures) >= 65, f"expected at least 65 fixtures, found {len(fixtures)}")
+    assert_true(len(fixtures) >= 66, f"expected at least 66 fixtures, found {len(fixtures)}")
     for path in fixtures:
         fixture = load_json(path)
         metadata = fixture.get("metadata")

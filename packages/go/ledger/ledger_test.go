@@ -275,6 +275,8 @@ func resolvePriceCards(t *testing.T, input Object) []any {
 		return PriceCardsFromOpenRouterModels(asObject(source["data"]))
 	case "models-dev":
 		return PriceCardsFromModelsDev(asObject(source["data"]))
+	case "official-snapshot":
+		return PriceCardsFromOfficialSnapshot(asObject(source["data"]))
 	case "portkey":
 		return PriceCardsFromPortkey(asObject(source["data"]))
 	case "source-cache":

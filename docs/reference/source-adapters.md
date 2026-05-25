@@ -17,6 +17,7 @@ Source adapters convert external pricing catalogs into RunCost price cards. They
 | LiteLLM model prices JSON | `price_cards_from_litellm` / `priceCardsFromLiteLLM` / `PriceCardsFromLiteLLM` | Handles token, cached token, and reasoning token fields that map cleanly to RunCost components. |
 | OpenRouter models API | `price_cards_from_openrouter_models` / `priceCardsFromOpenRouterModels` / `PriceCardsFromOpenRouterModels` | Handles prompt, completion, cache, reasoning, request, image, web search, and tiered context fields covered by fixtures. |
 | models.dev API catalog | `price_cards_from_models_dev` / `priceCardsFromModelsDev` / `PriceCardsFromModelsDev` | Handles per-million token prices, cache read/write, reasoning, audio token fields, context tiers, capabilities, limits, and MIT source metadata covered by fixtures. |
+| Reviewed official pricing snapshots | `price_cards_from_official_snapshot` / `priceCardsFromOfficialSnapshot` / `PriceCardsFromOfficialSnapshot` | Handles reviewed provider pricing page rows with source URL, retrieval time, version/license metadata, effective dates, aliases, token prices, and tool/search unit prices. |
 | Portkey pricing data | `price_cards_from_portkey` / `priceCardsFromPortkey` / `PriceCardsFromPortkey` | Handles token, cache, reasoning, and web-search price fields covered by fixtures. |
 | RunCost source-cache envelope | `price_cards_from_source_cache` / `priceCardsFromSourceCache` / `PriceCardsFromSourceCache` | Handles offline refresh/cache bundles that carry source URL, retrieval time, checksum, generated time, and canonical price cards. |
 | Local JSON price-source file | `price_cards_from_json_file` / `priceCardsFromJSONFile` / `PriceCardsFromJSONFile` | Reads a local JSON file and maps it through one of the supported source adapters, defaulting to user compact pricing data. |
@@ -44,7 +45,7 @@ npm run prices:refresh -- \
 
 The command records the source URL, retrieval time, SHA-256 checksum, generated time, and converted canonical price cards. Load the generated file with the source-cache adapter or with the local JSON file loader using `source_type="source-cache"` / `sourceType: "source-cache"`.
 
-Supported refresh presets are `llm-prices-current`, `llm-prices-historical`, `openrouter-models`, and `models-dev`.
+Supported refresh presets are `llm-prices-current`, `llm-prices-historical`, `openrouter-models`, and `models-dev`. Reviewed official snapshots are refreshed with `--source-type official-snapshot --input path/to/snapshot.json`.
 
 ## Adapter Contract
 
@@ -82,7 +83,6 @@ If two sources match and disagree, RunCost can emit `price_source_disagreement` 
 
 High-value next adapters:
 
-- Official provider page snapshots where license and terms permit.
 - Historical source bundles with effective dates.
 - More refresh presets for live or vendored source snapshots.
 
