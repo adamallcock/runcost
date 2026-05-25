@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import argparse
 import json
 import subprocess
 import sys
@@ -11,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON_PACKAGE = ROOT / "packages" / "python"
 JAVASCRIPT_CORE = ROOT / "packages" / "javascript" / "core" / "index.js"
-FIXTURES = sorted((ROOT / "fixtures").glob("*.json"))
+DEFAULT_FIXTURES = sorted((ROOT / "fixtures").glob("*.json"))
 
 sys.path.insert(0, str(PYTHON_PACKAGE))
 
@@ -361,8 +362,8 @@ def run_javascript_fixture(path: Path):
     return json.loads(completed.stdout)
 
 
-def main() -> int:
-    for path in FIXTURES:
+def check_fixture_paths(paths: list[Path]) -> None:
+    for path in paths:
         fixture = load_json(path)
         validate_schema(fixture, SCHEMAS["fixture"], path=f"{path.name}:fixture")
         if "error" in fixture["expected"]:
@@ -408,7 +409,23 @@ def main() -> int:
             assert_total_matches_components(javascript_result, f"{path.name}:javascript")
             assert_subset(javascript_result, expected, f"{path.name}:javascript")
 
-    print(f"Checked {len(FIXTURES)} fixtures against Python and JavaScript cores.")
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run shared RunCost fixture conformance checks.")
+    parser.add_argument(
+        "--fixture",
+        action="append",
+        default=[],
+        help="Specific fixture path to check. May be passed more than once. Defaults to fixtures/*.json.",
+    )
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    paths = [Path(value) for value in args.fixture] if args.fixture else DEFAULT_FIXTURES
+    check_fixture_paths(paths)
+    print(f"Checked {len(paths)} fixtures against Python and JavaScript cores.")
     return 0
 
 

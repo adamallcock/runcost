@@ -26,9 +26,9 @@ The tracker separates roadmap state from active work state:
 
 ## Active Focus
 
-Current active lane: tracker/status cleanup and roadmap alignment after the AutoGen/AG2 adapter slice.
+Current active lane: none selected after completing the Milestone 1 fixture generator helper slice.
 
-Why this is active: the previous milestone table used `In progress` for every incomplete roadmap milestone, which made the work appear more scattered than it is. This slice makes the tracker explicit before additional feature work resumes.
+Why no active lane is selected: fixture generator helpers were completed and verified in the latest slice. The next implementation lane should be selected after re-inspecting whether the pending Markdown rename pass has landed.
 
 Doc rename coordination: another agent may rename Markdown files to match repository naming rules. Until that lands, avoid broad documentation churn and re-inspect paths before changing cross-document links.
 
@@ -95,6 +95,7 @@ Status: complete for this pass.
 | Add Haystack and LiteLLM fixture-backed framework adapters | Done | `haystack-openai-chat-generator-meta.json`, `litellm-proxy-response-cost-metadata.json`; Python/JS fixture runner and Go tests pass | Adds one-call helpers and extractors across Python, JavaScript/TypeScript, and Go. |
 | Normalize documentation layout | Done | `docs/guides/`, `docs/reference/`, `docs/notes/`, `docs/decisions/`, `docs/reports/`, `docs/process/`; hygiene and release scripts use new paths | Preserves content while moving dated/uppercase docs into categorized lowercase paths. |
 | Add AutoGen/AG2 fixture-backed framework adapter | Done | `ag2-usage-summary-actual.json`, `ag2-usage-summary-total.json`; Python/JS fixture runner, Go tests, package install checks, release checks, examples, JSON parse, ASCII scan, and diff whitespace checks pass | Adds selected usage summary extraction and one-call helpers across Python, JavaScript/TypeScript, and Go. |
+| Add fixture generator helpers | Done | `scripts/create_fixture.py`, `scripts/check_fixture_generator.py`, `npm run fixture:new`; generator smoke checks and targeted fixture checks pass | Adds schema-shaped fixture scaffolding and single-fixture validation to reduce future fixture duplication. |
 
 ## Milestone Roadmap Status
 
@@ -103,7 +104,7 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 | Milestone | Roadmap state | Active now? | Evidence | Exit-gate remaining |
 |---|---|---:|---|---|
 | Milestone 0: Prototype Foundation | Complete for current scope | No | `npm test` passes; cores, examples, schemas, and broad shared fixtures exist. | Later type hardening moved into Milestones 1 and 1.5. |
-| Milestone 1: Contract Hardening | Partial | No | Schemas exist; fixture runner validates schemas including debug traces and fixture metadata; warning fixtures exist; coverage report and hygiene checks exist. | Fixture generator helpers, stronger Go-side schema validation, stronger Go component-total invariant checks, and final v0.1 schema naming/taxonomy lock. |
+| Milestone 1: Contract Hardening | Partial | No | Schemas exist; fixture runner validates schemas including debug traces and fixture metadata; warning fixtures exist; coverage report and hygiene checks exist; fixture generator helpers now create runnable normalized-usage fixture skeletons. | Stronger Go-side schema validation, stronger Go component-total invariant checks, and final v0.1 schema naming/taxonomy lock. |
 | Milestone 1.5: Polyglot Toolchain Foundation | Complete for current scope | No | Decision record, manual type artifacts, parity matrix, Go examples, hygiene checks, and CI workflow exist. | Generated/schema-derived type workflow remains a later hardening item, not a current active lane. |
 | Milestone 2: Core Calculator Correctness | Partial | No | Decimal-safe calculator, aliases, strict/compatibility modes, effective dates, service tiers, stale prices, provider-reported cost modes, source priority, source disagreement, debug traces, long-context thresholds, batch/priority/provisioned fixtures, and Python/JS component-total invariant checks exist. | More adversarial fixtures, typed warning payload maturity, stronger Go invariant validation, and production-like review of byte-stable output ordering. |
 | Milestone 3: Source Adapter Layer | Partial | No | `llm-prices`, LiteLLM, Portkey, OpenRouter models, user compact pricing, and Helicone prototype adapters exist. | Official pricing snapshots, models.dev enrichment, file-based YAML/JSON loaders, offline cache format, explicit refresh command, source capability warnings, and historical feed semantics. |
@@ -635,6 +636,35 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
   - `git diff --check` passed.
   - Tracker text scan showed no remaining milestone-table `In progress` status and no pending verification line after this update.
 
+### 2026-05-25 Fixture Generator Helper Slice
+
+- Selected a low-conflict Milestone 1 slice while another agent may rename Markdown files.
+- Added `scripts/create_fixture.py`:
+  - Emits a complete normalized-usage example fixture.
+  - Builds fixture JSON from metadata and optional JSON fragments for usage ledgers, raw responses, price cards, source data, discounts, options, extraction hints, helper names, expected ledgers, and expected errors.
+  - Enforces lowercase kebab-case fixture names and stable metadata fields.
+- Added `scripts/check_fixture_generator.py`:
+  - Generates a temporary normalized-usage fixture.
+  - Runs that generated fixture through `scripts/check_fixtures.py --fixture`.
+- Updated `scripts/check_fixtures.py` with `--fixture` so a single new fixture can be validated before running the full suite.
+- Added `npm run fixture:new` and wired the generator smoke check into `npm test`, project hygiene, and CI Python compilation.
+- Updated `fixtures/README.md` with generator usage.
+- Verification after fixture generator helper slice:
+  - `python3 scripts/check_fixture_generator.py` passed.
+  - `python3 scripts/check_fixtures.py --fixture fixtures/openai-responses-basic.json` passed.
+  - `npm --silent run fixture:new -- --example normalized_usage | python3 -m json.tool >/dev/null` passed.
+  - `npm test` passed: 61 fixtures, fixture generator smoke checks, fixture coverage, Go tests, and hygiene checks green.
+  - `python3 scripts/check_project_hygiene.py` passed.
+  - `python3 -m py_compile` passed for package modules, scripts including the new generator/checker, and examples.
+  - `python3 scripts/check_fixture_coverage.py` passed with 61 fixtures.
+  - `npm run check:coverage` passed.
+  - `npm run check:packages` passed with clean Python, npm, and Go install smoke checks.
+  - `npm run check:release` passed.
+  - `npm run example:js` and `npm run example:py` both ran and returned total `0.000228`.
+  - `jq empty package.json fixtures/*.json schemas/*.json` passed.
+  - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
+  - `git diff --check` passed.
+
 ## Gap Audit 2026-05-25
 
 Purpose: step back from feature slices and record what is actually done, what is partial, what is a stub, and what still needs completion before private alpha, public beta, and V1.
@@ -692,7 +722,7 @@ What is implemented and well covered:
 
 Partially implemented:
 
-- Contract hardening: schema validation, fixture metadata, debug trace fixtures, and fixture coverage reporting exist. Remaining gaps are fixture generator helpers and stronger Go-side schema validation/component-total invariant checks.
+- Contract hardening: schema validation, fixture metadata, debug trace fixtures, fixture coverage reporting, single-fixture validation, and fixture generator helpers exist. Remaining gaps are stronger Go-side schema validation/component-total invariant checks and final v0.1 schema naming/taxonomy lock.
 - Polyglot maintainability: parity matrix and hygiene checks exist, but generated type/docs workflows are not real yet. TypeScript and Python types are manual. Go uses object maps.
 - Go conformance: Go runs every fixture and checks expected subsets, but schema validation for generated Go outputs and component-total invariant checks are weaker than Python/JavaScript.
 - Source adapters: core adapters exist for six sources, including user compact pricing and Helicone model-registry data. Provider official pricing snapshots, models.dev enrichment, full file-reading YAML loaders, offline cache format, explicit refresh command, and source capability warnings are still missing.
@@ -721,17 +751,17 @@ Highest-risk gaps before private alpha:
 4. Hardened typed models and generated artifact workflow, especially for Go structs and generated docs.
 5. Broader framework integration ergonomics beyond the initial LangChain/Vercel helpers, especially turning remaining documented partial paths into fixture-backed adapters and examples.
 6. Deeper debug traces for extractor and framework adapter internals.
-7. Fixture generator helpers and stronger generated artifact drift detection.
+7. Stronger generated artifact drift detection and stronger Go-side schema/invariant checks.
 
 Recommended next sprint candidates:
 
-Only one candidate should become the active lane at a time. The current active lane is tracker/status cleanup; feature work should resume after the Markdown rename pass is inspected.
+Only one candidate should become the active lane at a time. No implementation lane is currently selected after the fixture generator helper slice; future feature work should re-inspect the Markdown rename pass before editing broad docs.
 
 1. Broader framework implementation slice: add fixtures and minimal adapters/examples for the next documented partial path, likely LangSmith export comparison or Semantic Kernel telemetry.
 2. Provider streaming expansion slice: add additional stream finalization fixtures for Vertex-specific SDK wrappers, Bedrock ConverseStream, Vercel AI SDK `streamText` finish parts, and any provider-specific tool streaming fields.
 3. Release hardening slice: configure trusted publishing outside the repo, decide registry README shape, and run a no-publish release workflow dry run.
 4. Source adapter hardening slice: add official snapshots, full file-reading YAML loaders, refresh/cache workflow, and historical feed semantics.
-5. Generated artifact slice: add fixture generator helpers and schema-derived type/doc checks.
+5. Generated artifact slice: add schema-derived type/doc checks.
 
 ## Backlog: Next Best Actions
 

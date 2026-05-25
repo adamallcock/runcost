@@ -26,8 +26,10 @@ REQUIRED_FILES = [
     "docs/notes/provider-extractor-notes.md",
     "docs/notes/framework-adapter-notes.md",
     "scripts/check_fixture_coverage.py",
+    "scripts/check_fixture_generator.py",
     "scripts/check_package_installs.py",
     "scripts/check_release_readiness.py",
+    "scripts/create_fixture.py",
     "LICENSE",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
@@ -147,6 +149,10 @@ def check_package_metadata() -> None:
     root_package = load_json(ROOT / "package.json")
     scripts = root_package.get("scripts", {})
     assert_true("check_fixtures.py" in scripts.get("test", ""), "root npm test must run fixture checks")
+    assert_true(
+        "check_fixture_generator.py" in scripts.get("test", ""),
+        "root npm test must run fixture generator checks",
+    )
     assert_true("check_fixture_coverage.py" in scripts.get("test", ""), "root npm test must run fixture coverage checks")
     assert_true(
         "check_fixture_coverage.py" in scripts.get("check:coverage", ""),
@@ -165,6 +171,7 @@ def check_package_metadata() -> None:
         "check_release_readiness.py" in scripts.get("check:release", ""),
         "root check:release must run release readiness checks",
     )
+    assert_true("create_fixture.py" in scripts.get("fixture:new", ""), "root fixture:new must run fixture generator")
 
     js_package_path = ROOT / "packages/javascript/core/package.json"
     js_package = load_json(js_package_path)
@@ -302,6 +309,7 @@ def check_ci_workflow() -> None:
     for command in [
         "npm test",
         "check_fixture_coverage.py",
+        "check_fixture_generator.py",
         "npm run check:packages",
         "npm run check:release",
         "npm run example:js",

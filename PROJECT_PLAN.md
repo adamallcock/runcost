@@ -196,6 +196,16 @@ Features:
 - Add exact total-sum invariant checks.
 - Add fixture generator helpers to reduce duplication.
 
+Delivered in current prototype:
+
+- Schema validation in the fixture runner.
+- Fixture metadata fields with requirement IDs, provider, surface, scenario, tags, and expected languages.
+- Warning fixtures for unknown model, unpriced component, unknown surface, stale price, alias inference, service tiers, long context, streaming usage, provider-reported cost comparison, and source disagreement.
+- Debug trace fixture shape.
+- Component-total invariant checks for Python and JavaScript fixture outputs.
+- Fixture coverage reporting.
+- Fixture generator helpers through `scripts/create_fixture.py`, `scripts/check_fixture_generator.py`, and `npm run fixture:new`.
+
 Progress criteria:
 
 - Every fixture validates against schemas before it runs.
@@ -1273,6 +1283,7 @@ Tasks:
 17. Done: add Helicone model-registry source adapter prototype.
 18. Done: add cost-ledger aggregation and missing final streaming usage warning fixtures.
 19. Done: add selected provider streaming final-usage extraction fixtures.
+20. Done: add fixture generator helpers and single-fixture validation.
 
 Sprint exit criteria:
 
