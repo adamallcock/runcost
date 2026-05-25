@@ -25,7 +25,7 @@ def check_python_install(workdir: Path) -> None:
         [
             str(python),
             "-c",
-            "from runcost import aggregate_cost_ledgers, calculate_cost, from_response, from_ag2_usage_summary, from_haystack_generator_result, from_litellm_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_user_pricing; print(aggregate_cost_ledgers, calculate_cost, from_response, from_ag2_usage_summary, from_haystack_generator_result, from_litellm_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_user_pricing)",
+            "from runcost import aggregate_cost_ledgers, calculate_cost, from_response, from_ag2_usage_summary, from_haystack_generator_result, from_litellm_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_source_cache, price_cards_from_user_pricing; print(aggregate_cost_ledgers, calculate_cost, from_response, from_ag2_usage_summary, from_haystack_generator_result, from_litellm_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_source_cache, price_cards_from_user_pricing)",
         ],
         workdir,
     )
@@ -50,7 +50,7 @@ def check_javascript_install(workdir: Path) -> None:
             "node",
             "--input-type=module",
             "-e",
-            'import { aggregateCostLedgers, calculateCost, fromResponse, fromAG2UsageSummary, fromHaystackGeneratorResult, fromLiteLLMResponse, createRunCostVercelMiddleware, priceCardsFromHelicone, priceCardsFromUserPricing } from "runcost"; console.log(typeof aggregateCostLedgers, typeof calculateCost, typeof fromResponse, typeof fromAG2UsageSummary, typeof fromHaystackGeneratorResult, typeof fromLiteLLMResponse, typeof createRunCostVercelMiddleware, typeof priceCardsFromHelicone, typeof priceCardsFromUserPricing);',
+            'import { aggregateCostLedgers, calculateCost, fromResponse, fromAG2UsageSummary, fromHaystackGeneratorResult, fromLiteLLMResponse, createRunCostVercelMiddleware, priceCardsFromHelicone, priceCardsFromSourceCache, priceCardsFromUserPricing } from "runcost"; console.log(typeof aggregateCostLedgers, typeof calculateCost, typeof fromResponse, typeof fromAG2UsageSummary, typeof fromHaystackGeneratorResult, typeof fromLiteLLMResponse, typeof createRunCostVercelMiddleware, typeof priceCardsFromHelicone, typeof priceCardsFromSourceCache, typeof priceCardsFromUserPricing);',
         ],
         project_dir,
     )
@@ -79,6 +79,23 @@ func TestImport(t *testing.T) {
     })
     if result["total"] != "0" {
         t.Fatalf("unexpected aggregate total: %#v", result["total"])
+    }
+    cards := ledger.PriceCardsFromSourceCache(ledger.Object{"price_cards": []any{
+        ledger.Object{
+            "schema_version": "0.1",
+            "id": "test:test:source-cache",
+            "provider": "test",
+            "model": "test",
+            "components": []any{ledger.Object{
+                "usage_component": "input_uncached_tokens",
+                "unit": "token",
+                "price": ledger.Object{"amount": "1", "currency": "USD", "per": "1000000"},
+            }},
+            "source": ledger.Object{"name": "test"},
+        },
+    }})
+    if len(cards) != 1 {
+        t.Fatalf("unexpected source-cache card count: %d", len(cards))
     }
 }
 """,

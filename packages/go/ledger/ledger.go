@@ -2346,6 +2346,143 @@ func componentAmount(entry Object, keys ...string) any {
 	return nil
 }
 
+func sourceCachePriceCards(entry Object) []any {
+	for _, key := range []string{"price_cards", "priceCards", "cards"} {
+		if cards, ok := entry[key].([]any); ok {
+			filtered := []any{}
+			for _, rawCard := range cards {
+				if _, ok := rawCard.(map[string]any); ok {
+					filtered = append(filtered, rawCard)
+				}
+			}
+			return filtered
+		}
+	}
+	return []any{}
+}
+
+func sourceCacheSource(entry Object) Object {
+	source := Object{}
+	if rawSource, ok := entry["source"].(map[string]any); ok {
+		source = rawSource
+	}
+	sourceType := asString(entry["type"])
+	if sourceType == "" {
+		sourceType = asString(entry["source_type"])
+	}
+	if sourceType == "" {
+		sourceType = asString(entry["sourceType"])
+	}
+	name := asString(entry["name"])
+	if name == "" {
+		name = asString(source["name"])
+	}
+	if name == "" {
+		name = sourceType
+	}
+	if name == "" {
+		name = "source-cache"
+	}
+	info := Object{"name": name}
+	url := asString(entry["url"])
+	if url == "" {
+		url = asString(source["url"])
+	}
+	if url != "" {
+		info["url"] = url
+	}
+	retrievedAt := asString(entry["retrieved_at"])
+	if retrievedAt == "" {
+		retrievedAt = asString(entry["retrievedAt"])
+	}
+	if retrievedAt == "" {
+		retrievedAt = asString(source["retrieved_at"])
+	}
+	if retrievedAt == "" {
+		retrievedAt = asString(source["retrievedAt"])
+	}
+	if retrievedAt != "" {
+		info["retrieved_at"] = retrievedAt
+	}
+	version := asString(entry["version"])
+	if version == "" {
+		version = asString(source["version"])
+	}
+	if version != "" {
+		info["version"] = version
+	}
+	license := asString(entry["license"])
+	if license == "" {
+		license = asString(source["license"])
+	}
+	if license != "" {
+		info["license"] = license
+	}
+	return info
+}
+
+func sourceCacheMetadata(data Object, entry Object, cardCount int) Object {
+	metadata := Object{"card_count": cardCount}
+	for outputKey, inputKeys := range map[string][]string{
+		"generated_at": {"generated_at", "generatedAt"},
+		"checksum":     {"checksum", "sha256"},
+		"source_type":  {"type", "source_type", "sourceType"},
+	} {
+		for _, inputKey := range inputKeys {
+			value := entry[inputKey]
+			if value == nil {
+				value = data[inputKey]
+			}
+			if asString(value) != "" {
+				metadata[outputKey] = value
+				break
+			}
+		}
+	}
+	return metadata
+}
+
+// PriceCardsFromSourceCache maps a RunCost source-cache envelope into
+// canonical price cards while preserving retrieval metadata on each card.
+func PriceCardsFromSourceCache(data Object) []any {
+	entries := []any{data}
+	if rawSources, ok := data["sources"].([]any); ok {
+		entries = rawSources
+	}
+	cards := []any{}
+	for _, rawEntry := range entries {
+		entry, ok := rawEntry.(map[string]any)
+		if !ok {
+			continue
+		}
+		rawCards := sourceCachePriceCards(entry)
+		source := sourceCacheSource(entry)
+		cacheMetadata := sourceCacheMetadata(data, entry, len(rawCards))
+		for _, rawCard := range rawCards {
+			card := Object{}
+			for key, value := range asObject(rawCard) {
+				card[key] = value
+			}
+			if card["schema_version"] == nil {
+				card["schema_version"] = "0.1"
+			}
+			if card["source"] == nil {
+				card["source"] = source
+			}
+			metadata := Object{}
+			if rawMetadata, ok := card["metadata"].(map[string]any); ok {
+				for key, value := range rawMetadata {
+					metadata[key] = value
+				}
+			}
+			metadata["source_cache"] = cacheMetadata
+			card["metadata"] = metadata
+			cards = append(cards, card)
+		}
+	}
+	return cards
+}
+
 // PriceCardsFromUserPricing maps user-owned compact pricing data into
 // canonical price cards. Already-canonical price_cards are returned unchanged.
 func PriceCardsFromUserPricing(data Object) []any {

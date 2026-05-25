@@ -32,6 +32,7 @@ from runcost import (  # noqa: E402
     price_cards_from_llm_prices,
     price_cards_from_openrouter_models,
     price_cards_from_portkey,
+    price_cards_from_source_cache,
     price_cards_from_user_pricing,
     track_langchain_costs,
 )
@@ -195,6 +196,8 @@ def resolve_python_price_cards(fixture):
         return price_cards_from_openrouter_models(source["data"])
     if source["type"] == "portkey":
         return price_cards_from_portkey(source["data"])
+    if source["type"] == "source-cache":
+        return price_cards_from_source_cache(source["data"])
     if source["type"] == "user-pricing":
         return price_cards_from_user_pricing(source["data"])
     if source["type"] == "helicone":
@@ -286,7 +289,7 @@ def run_python_fixture(fixture):
 def run_javascript_fixture(path: Path):
     script = f"""
       import {{ aggregateCostLedgers, calculateCost }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
-      import {{ fromResponse, fromLangChainMessage, fromVercelAISDKResult, fromLlamaIndexTokenCounter, fromHaystackGeneratorResult, fromLiteLLMResponse, fromAG2UsageSummary, createRunCostVercelMiddleware, priceCardsFromLlmPrices }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
+      import {{ fromResponse, fromLangChainMessage, fromVercelAISDKResult, fromLlamaIndexTokenCounter, fromHaystackGeneratorResult, fromLiteLLMResponse, fromAG2UsageSummary, createRunCostVercelMiddleware, priceCardsFromLlmPrices, priceCardsFromSourceCache }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
       import fs from "node:fs";
       const fixture = JSON.parse(fs.readFileSync({json.dumps(str(path))}, "utf8"));
       const input = fixture.input;
@@ -301,6 +304,7 @@ def run_javascript_fixture(path: Path):
         const module = await import({json.dumps(JAVASCRIPT_CORE.as_uri())});
         priceCards = module.priceCardsFromPortkey(priceSource.data);
       }}
+      if (!priceCards && priceSource && priceSource.type === "source-cache") priceCards = priceCardsFromSourceCache(priceSource.data);
       if (!priceCards && priceSource && priceSource.type === "openrouter-models") {{
         const module = await import({json.dumps(JAVASCRIPT_CORE.as_uri())});
         priceCards = module.priceCardsFromOpenRouterModels(priceSource.data);

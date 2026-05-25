@@ -1777,6 +1777,71 @@ def _price_cards_from_canonical_cards(raw_cards: Any) -> List[Dict[str, Any]]:
     return []
 
 
+def _source_cache_price_cards(entry: Dict[str, Any]) -> List[Dict[str, Any]]:
+    for key in ("price_cards", "priceCards", "cards"):
+        cards = entry.get(key)
+        if isinstance(cards, list):
+            return [card for card in cards if isinstance(card, dict)]
+    return []
+
+
+def _source_cache_source(entry: Dict[str, Any]) -> Dict[str, Any]:
+    source = entry.get("source") if isinstance(entry.get("source"), dict) else {}
+    source_type = entry.get("type") or entry.get("source_type") or entry.get("sourceType")
+    name = entry.get("name") or source.get("name") or source_type or "source-cache"
+    info: Dict[str, Any] = {"name": name}
+    url = entry.get("url") or source.get("url")
+    if url:
+        info["url"] = url
+    retrieved_at = entry.get("retrieved_at") or entry.get("retrievedAt") or source.get("retrieved_at") or source.get("retrievedAt")
+    if retrieved_at:
+        info["retrieved_at"] = retrieved_at
+    version = entry.get("version") or source.get("version")
+    if version:
+        info["version"] = version
+    license_value = entry.get("license") or source.get("license")
+    if license_value:
+        info["license"] = license_value
+    return info
+
+
+def _source_cache_metadata(data: Dict[str, Any], entry: Dict[str, Any], card_count: int) -> Dict[str, Any]:
+    metadata: Dict[str, Any] = {"card_count": card_count}
+    for output_key, *input_keys in (
+        ("generated_at", "generated_at", "generatedAt"),
+        ("checksum", "checksum", "sha256"),
+        ("source_type", "type", "source_type", "sourceType"),
+    ):
+        for input_key in input_keys:
+            value = entry.get(input_key) if input_key in entry else data.get(input_key)
+            if value:
+                metadata[output_key] = value
+                break
+    return metadata
+
+
+def price_cards_from_source_cache(data: Any, **_: Any) -> List[Dict[str, Any]]:
+    if not isinstance(data, dict):
+        return []
+    entries = data.get("sources") if isinstance(data.get("sources"), list) else [data]
+    cards: List[Dict[str, Any]] = []
+    for raw_entry in entries:
+        if not isinstance(raw_entry, dict):
+            continue
+        raw_cards = _source_cache_price_cards(raw_entry)
+        source = _source_cache_source(raw_entry)
+        cache_metadata = _source_cache_metadata(data, raw_entry, len(raw_cards))
+        for raw_card in raw_cards:
+            card = dict(raw_card)
+            card.setdefault("schema_version", "0.1")
+            card.setdefault("source", source)
+            metadata = dict(card.get("metadata")) if isinstance(card.get("metadata"), dict) else {}
+            metadata["source_cache"] = cache_metadata
+            card["metadata"] = metadata
+            cards.append(card)
+    return cards
+
+
 def price_cards_from_user_pricing(data: Any, **options: Any) -> List[Dict[str, Any]]:
     if isinstance(data, list):
         return _price_cards_from_canonical_cards(data)

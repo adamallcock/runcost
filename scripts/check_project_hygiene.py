@@ -111,6 +111,9 @@ PUBLIC_API_NAMES = [
     "price_cards_from_portkey",
     "priceCardsFromPortkey",
     "PriceCardsFromPortkey",
+    "price_cards_from_source_cache",
+    "priceCardsFromSourceCache",
+    "PriceCardsFromSourceCache",
     "price_cards_from_user_pricing",
     "priceCardsFromUserPricing",
     "PriceCardsFromUserPricing",
@@ -220,6 +223,7 @@ def check_public_api_artifacts() -> None:
         "priceCardsFromLiteLLM",
         "priceCardsFromOpenRouterModels",
         "priceCardsFromPortkey",
+        "priceCardsFromSourceCache",
         "priceCardsFromUserPricing",
         "priceCardsFromHelicone",
         "extractOpenAICompatibleChatCompletionsUsage",
@@ -257,6 +261,7 @@ def check_public_api_artifacts() -> None:
         "price_cards_from_litellm",
         "price_cards_from_openrouter_models",
         "price_cards_from_portkey",
+        "price_cards_from_source_cache",
         "price_cards_from_user_pricing",
         "price_cards_from_helicone",
         "extract_openai_compatible_chat_completions_usage",
@@ -280,6 +285,7 @@ def check_public_api_artifacts() -> None:
         "PriceCardsFromLiteLLM",
         "PriceCardsFromOpenRouterModels",
         "PriceCardsFromPortkey",
+        "PriceCardsFromSourceCache",
         "PriceCardsFromUserPricing",
         "PriceCardsFromHelicone",
         "FromResponse",
@@ -301,7 +307,7 @@ def check_public_api_artifacts() -> None:
 
 def check_fixture_floor() -> None:
     fixtures = sorted((ROOT / "fixtures").glob("*.json"))
-    assert_true(len(fixtures) >= 61, f"expected at least 61 fixtures, found {len(fixtures)}")
+    assert_true(len(fixtures) >= 62, f"expected at least 62 fixtures, found {len(fixtures)}")
     for path in fixtures:
         fixture = load_json(path)
         metadata = fixture.get("metadata")

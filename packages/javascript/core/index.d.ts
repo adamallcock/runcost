@@ -396,6 +396,7 @@ export function priceCardsFromLlmPrices(data: Record<string, unknown>, options?:
 export function priceCardsFromLiteLLM(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromOpenRouterModels(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromPortkey(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
+export function priceCardsFromSourceCache(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromUserPricing(data: Record<string, unknown> | PriceCard[], options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromHelicone(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function fromResponse(response: Record<string, unknown>, options: FromResponseOptions): CostLedger;

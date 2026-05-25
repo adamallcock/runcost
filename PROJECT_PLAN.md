@@ -8,7 +8,7 @@ status: draft
 # RunCost Project Plan
 
 Status: Draft
-Last updated: 2026-05-24
+Last updated: 2026-05-25
 
 ## 1. Mission
 
@@ -55,12 +55,13 @@ Current prototype capabilities:
 
 - Decimal-safe cost calculation.
 - Componentized output ledgers.
-- Raw extractors for OpenAI Responses, OpenAI Chat Completions, and Anthropic Messages.
+- Raw extractors for OpenAI Responses, OpenAI Chat Completions, Anthropic Messages, Cohere Chat, Google Gemini/Vertex `generateContent`, AWS Bedrock Converse, and selected OpenAI-compatible chat providers.
+- Final streaming usage extraction for selected OpenAI Responses, Anthropic Messages, and Gemini stream shapes.
 - Components for input, cached input, cache write, output, reasoning, tool units, and pass-through custom units.
 - Exact alias resolution through price-card aliases.
 - Component-aware discount policies.
 - Simon Willison `llm-prices` adapter.
-- LiteLLM, Portkey, OpenRouter models, user compact pricing, and Helicone model-registry adapter prototypes.
+- LiteLLM, Portkey, OpenRouter models, source-cache, user compact pricing, and Helicone model-registry adapter prototypes.
 - Strict mode and compatibility mode.
 - Effective-date price-card selection.
 - Service-tier and region price-card matching.
@@ -78,7 +79,8 @@ Current prototype capabilities:
 - TypeScript declarations and Python `TypedDict` contracts.
 - Go public API comments and examples.
 - CI and project hygiene checks.
-- Shared fixture conformance across Python, JavaScript, and Go.
+- Shared fixture conformance across Python, JavaScript/TypeScript, and Go.
+- Framework helpers for LangChain, Vercel AI SDK, LlamaIndex, Haystack, LiteLLM proxy metadata, and AutoGen/AG2 usage summaries.
 - MIT license metadata, contribution guide, security policy, changelog, release process, and guarded release workflow.
 
 Current verification command:
@@ -340,6 +342,7 @@ Progress criteria:
 - OpenRouter string prices map correctly.
 - User compact pricing data maps into canonical price cards.
 - Helicone endpoint/deployment pricing maps cache multipliers, reasoning, request, web-search, and modality token fields.
+- Source-cache envelopes preserve URL, retrieval time, checksum, generated time, and generated price-card count.
 
 Exit gate:
 

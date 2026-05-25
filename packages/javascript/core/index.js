@@ -1788,6 +1788,73 @@ function canonicalPriceCards(rawCards) {
   return Array.isArray(rawCards) ? rawCards.filter((card) => card && typeof card === "object") : [];
 }
 
+function sourceCachePriceCards(entry) {
+  for (const key of ["price_cards", "priceCards", "cards"]) {
+    if (Array.isArray(entry[key])) {
+      return canonicalPriceCards(entry[key]);
+    }
+  }
+  return [];
+}
+
+function sourceCacheSource(entry) {
+  const source = entry.source && typeof entry.source === "object" ? entry.source : {};
+  const sourceType = entry.type || entry.source_type || entry.sourceType;
+  const info = { name: entry.name || source.name || sourceType || "source-cache" };
+  const url = entry.url || source.url;
+  if (url) info.url = url;
+  const retrievedAt = entry.retrieved_at || entry.retrievedAt || source.retrieved_at || source.retrievedAt;
+  if (retrievedAt) info.retrieved_at = retrievedAt;
+  const version = entry.version || source.version;
+  if (version) info.version = version;
+  const license = entry.license || source.license;
+  if (license) info.license = license;
+  return info;
+}
+
+function sourceCacheMetadata(data, entry, cardCount) {
+  const metadata = { card_count: cardCount };
+  const fields = [
+    ["generated_at", ["generated_at", "generatedAt"]],
+    ["checksum", ["checksum", "sha256"]],
+    ["source_type", ["type", "source_type", "sourceType"]]
+  ];
+  for (const [outputKey, inputKeys] of fields) {
+    for (const inputKey of inputKeys) {
+      const value = entry[inputKey] ?? data[inputKey];
+      if (value) {
+        metadata[outputKey] = value;
+        break;
+      }
+    }
+  }
+  return metadata;
+}
+
+export function priceCardsFromSourceCache(data) {
+  if (!data || typeof data !== "object") {
+    return [];
+  }
+  const entries = Array.isArray(data.sources) ? data.sources : [data];
+  return entries.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") {
+      return [];
+    }
+    const rawCards = sourceCachePriceCards(entry);
+    const source = sourceCacheSource(entry);
+    const cacheMetadata = sourceCacheMetadata(data, entry, rawCards.length);
+    return rawCards.map((rawCard) => ({
+      ...rawCard,
+      schema_version: rawCard.schema_version || "0.1",
+      source: rawCard.source || source,
+      metadata: {
+        ...(rawCard.metadata && typeof rawCard.metadata === "object" ? rawCard.metadata : {}),
+        source_cache: cacheMetadata
+      }
+    }));
+  });
+}
+
 export function priceCardsFromUserPricing(data, options = {}) {
   if (Array.isArray(data)) {
     return canonicalPriceCards(data);
