@@ -5,6 +5,47 @@ Date: 2026-05-24
 
 This document records raw provider usage fields that the current extractors depend on. It is not a pricing source; it is a mapping note for usage normalization.
 
+## OpenAI Responses
+
+Surface:
+
+- `openai.responses`
+
+Source references:
+
+- OpenAI streaming docs list `response.completed` as a common lifecycle event and the API reference shows completed response events carrying a nested `response` object: https://platform.openai.com/docs/api-reference/streaming
+- OpenAI Responses reference documents `usage.input_tokens`, `usage.input_tokens_details.cached_tokens`, `usage.output_tokens`, `usage.output_tokens_details.reasoning_tokens`, and `usage.total_tokens`: https://developers.openai.com/api/reference/resources/responses/methods/create
+
+Mapping:
+
+- Non-streaming responses read usage from the top-level `usage` object.
+- Streaming final events with `type == "response.completed"` read usage from `response.usage`.
+- `usage.input_tokens` minus cached tokens -> `input_uncached_tokens`.
+- `usage.input_tokens_details.cached_tokens` -> `input_cache_read_tokens`.
+- `usage.output_tokens` minus reasoning tokens -> `output_text_tokens`.
+- `usage.output_tokens_details.reasoning_tokens` -> `output_reasoning_tokens`.
+
+## Anthropic Messages
+
+Surface:
+
+- `anthropic.messages`
+
+Source references:
+
+- Anthropic streaming docs state that `message_delta` usage token counts are cumulative and show `message_start`, `message_delta`, and `message_stop` event sequences: https://platform.claude.com/docs/en/build-with-claude/streaming
+- Anthropic streaming docs also describe SDK helpers that accumulate a stream into the final Message object: https://platform.claude.com/docs/en/build-with-claude/streaming
+
+Mapping:
+
+- Non-streaming responses read usage from the top-level `usage` object.
+- Streaming event collections read initial model and usage from `message_start.message`, then merge cumulative `message_delta.usage`.
+- `usage.input_tokens` -> `input_uncached_tokens`.
+- `usage.cache_creation_input_tokens` minus 1-hour creation tokens -> `input_cache_write_tokens`.
+- `usage.cache_creation_input_tokens_1h` -> `input_cache_write_1h_tokens`.
+- `usage.cache_read_input_tokens` -> `input_cache_read_tokens`.
+- `usage.output_tokens` -> `output_text_tokens`.
+
 ## OpenAI-Compatible Chat
 
 Surfaces:
@@ -80,9 +121,12 @@ Source reference:
 
 - Firebase AI Logic `GenerateContentResponse.UsageMetadata` documents `thoughtsTokenCount`, `totalTokenCount`, `promptTokensDetails`, cache token details, candidate token details, and tool prompt token details: https://firebase.google.com/docs/reference/swift/firebaseailogic/api/reference/Structs/GenerateContentResponse/UsageMetadata
 - Vertex AI REST `GenerateContentResponse` documents `usageMetadata` and `totalTokenCount`, where total is the sum of prompt, candidate, tool-use prompt, and thoughts token counts: https://cloud.google.com/vertex-ai/generative-ai/docs/reference/rest/v1/GenerateContentResponse
+- Gemini API text-generation docs state that `generate_content_stream` / `generateContentStream` returns `GenerateContentResponse` chunks incrementally: https://ai.google.dev/gemini-api/docs/text-generation
 
 Mapping:
 
+- Non-streaming responses read usage from top-level `usageMetadata`.
+- Streaming chunk collections read usage from the last chunk with `usageMetadata`.
 - Aggregate fallback: `usageMetadata.promptTokenCount` minus `usageMetadata.cachedContentTokenCount`, plus `usageMetadata.toolUsePromptTokenCount` when present, -> `input_uncached_tokens`.
 - Aggregate fallback: `usageMetadata.cachedContentTokenCount` -> `input_cache_read_tokens`.
 - Aggregate fallback: `usageMetadata.candidatesTokenCount` -> `output_text_tokens`.

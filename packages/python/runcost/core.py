@@ -798,7 +798,14 @@ def _base_usage_ledger(
     }
 
 
+def _openai_responses_payload(response: Dict[str, Any]) -> Dict[str, Any]:
+    if response.get("type") == "response.completed" and isinstance(response.get("response"), dict):
+        return response["response"]
+    return response
+
+
 def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    response = _openai_responses_payload(response)
     usage = response.get("usage", {})
     cached_input = usage.get("input_tokens_details", {}).get("cached_tokens", 0)
     reasoning = usage.get("output_tokens_details", {}).get("reasoning_tokens", 0)
@@ -903,7 +910,32 @@ def extract_openrouter_chat_completions_usage(response: Dict[str, Any], **option
     return extract_openai_compatible_chat_completions_usage(response, **merged_options)
 
 
+def _anthropic_messages_payload(response: Dict[str, Any]) -> Dict[str, Any]:
+    events = response.get("events")
+    if not isinstance(events, list):
+        return response
+
+    message: Dict[str, Any] = {}
+    usage: Dict[str, Any] = {}
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        if event.get("type") == "message_start" and isinstance(event.get("message"), dict):
+            message = dict(event["message"])
+            usage.update(message.get("usage") or {})
+        elif event.get("type") == "message_delta":
+            usage.update(event.get("usage") or {})
+            if isinstance(event.get("delta"), dict):
+                message.update(event["delta"])
+
+    if not message:
+        return response
+    message["usage"] = usage
+    return message
+
+
 def extract_anthropic_messages_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    response = _anthropic_messages_payload(response)
     usage = response.get("usage", {})
     input_tokens = usage.get("input_tokens", 0)
     cache_write = usage.get("cache_creation_input_tokens", 0)
@@ -1026,7 +1058,21 @@ def _gemini_ordered_components(
     ]
 
 
+def _gemini_generate_content_payload(response: Dict[str, Any]) -> Dict[str, Any]:
+    chunks = response.get("chunks") or response.get("stream")
+    if not isinstance(chunks, list) or not chunks:
+        return response
+    for chunk in reversed(chunks):
+        if isinstance(chunk, dict) and isinstance(chunk.get("usageMetadata"), dict):
+            return chunk
+    for chunk in reversed(chunks):
+        if isinstance(chunk, dict):
+            return chunk
+    return response
+
+
 def extract_gemini_generate_content_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    response = _gemini_generate_content_payload(response)
     usage = response.get("usageMetadata", {})
     cached_input = _decimal(usage.get("cachedContentTokenCount", 0))
     prompt_tokens = _decimal(usage.get("promptTokenCount", 0))

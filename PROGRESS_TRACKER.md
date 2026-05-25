@@ -13,7 +13,7 @@ Complete `PROJECT_PLAN.md` end to end, moving from prototype foundation toward p
 Evidence collected on 2026-05-25:
 
 - `npm test` passes.
-- Python and JavaScript fixture runner checks 54 shared fixtures, with fixture metadata allowing language-scoped framework ergonomics fixtures.
+- Python and JavaScript fixture runner checks 57 shared fixtures, with fixture metadata allowing language-scoped framework ergonomics fixtures.
 - Fixture metadata and checked-in coverage report pass through `python3 scripts/check_fixture_coverage.py`.
 - Go package passes `go test ./packages/go/...`.
 - Python compile check passes for package, scripts, and Python example.
@@ -66,6 +66,7 @@ Status: complete for this pass.
 | Add generated-artifact drift checks | Done | `scripts/check_project_hygiene.py`; `npm test` runs it | Starts as required-artifact, package metadata, parity, fixture floor, and CI command checks. |
 | Add CI workflow | Done | `.github/workflows/ci.yml`; hygiene check passes | CI runs conformance tests, examples, and Python compile checks. |
 | Add cost-ledger aggregation primitive | Done | `cost-ledger-aggregation-basic.json`, `stream-final-usage-missing-warning.json`; Python/JS/Go tests pass | Aggregates already-calculated ledgers and emits `stream_usage_missing` when expected final stream usage is absent. |
+| Add provider streaming final-usage extraction | Done | `openai-responses-stream-completed-event.json`, `anthropic-messages-stream-events.json`, `gemini-generate-content-stream-chunks.json`; Python/JS/Go tests pass | Handles selected final-usage stream event envelopes without estimating arbitrary partial deltas. |
 
 ## Milestone Status
 
@@ -76,7 +77,7 @@ Status: complete for this pass.
 | Milestone 1.5: Polyglot Toolchain Foundation | Complete for current prototype scope | Decision record, type artifacts, parity matrix, Go examples, hygiene checks, and CI workflow exist. |
 | Milestone 2: Core Calculator Correctness | In progress | Decimal-safe calculator, aliases, strict mode, compatibility warnings, effective dates, service tier/region matching, stale price warnings, provider-reported mismatch/use modes, source priority, source disagreement warnings, debug traces, long-context thresholds, batch/priority/provisioned service-mode fixture coverage, and component-total invariant checks exist. |
 | Milestone 3: Source Adapter Layer | In progress | `llm-prices`, LiteLLM, Portkey, OpenRouter models, user compact pricing, and Helicone prototype adapters exist. |
-| Milestone 4: Provider Extractors V0 | In progress | OpenAI, Anthropic, OpenRouter, Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Google Gemini/Vertex, and AWS Bedrock extractors exist; cache, reasoning, billed-unit, and basic raw response cases covered for the supported surfaces. |
+| Milestone 4: Provider Extractors V0 | In progress | OpenAI, Anthropic, OpenRouter, Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Google Gemini/Vertex, and AWS Bedrock extractors exist; cache, reasoning, billed-unit, basic raw response, and selected final streaming usage cases covered for supported surfaces. |
 | Milestone 5: Tool Call and Feature Pricing | In progress | Generic and raw OpenAI tool-call fixtures exist; Gemini/Vertex multimodal token detail fixture exists; provider-specific tool pricing coverage still sparse. |
 | Milestone 6: Framework Adapters | In progress | LangChain AIMessage, Vercel AI SDK generateText, LlamaIndex TokenCountingHandler helpers, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` middleware, and cross-language cost-ledger aggregation exist with fixtures; remaining frameworks still need documented adapter paths and streaming parsers. |
 | Milestone 7: Packaging and Developer Experience | In progress | Package metadata, type surfaces, examples, CI, clean install smoke checks, public alpha docs, license metadata, changelog, contributing/security docs, release process, release readiness checks, and guarded release workflow exist; first registry publishing remains incomplete. |
@@ -455,6 +456,36 @@ Status: complete for this pass.
   - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
   - `git diff --check` passed.
 
+### 2026-05-25 Provider Streaming Final-Usage Slice
+
+- Verified current primary docs for supported stream final-usage shapes:
+  - OpenAI Responses streaming emits lifecycle events including `response.completed`, with completed response objects carrying `usage`.
+  - Anthropic Messages streaming emits `message_start`, cumulative `message_delta.usage`, and `message_stop` events.
+  - Gemini `generateContentStream` returns `GenerateContentResponse` chunks; RunCost reads the final chunk carrying `usageMetadata`.
+- Added provider streaming fixtures:
+  - `openai-responses-stream-completed-event.json`
+  - `anthropic-messages-stream-events.json`
+  - `gemini-generate-content-stream-chunks.json`
+- Implemented stream final-usage normalization across Python, JavaScript/TypeScript, and Go:
+  - OpenAI Responses unwraps the nested `response` object from `response.completed`.
+  - Anthropic Messages accumulates a supplied `events` array into a final Message-like payload.
+  - Gemini generateContent selects the last chunk with `usageMetadata` from `chunks` or `stream`.
+- Updated provider extractor notes, API reference, supported surfaces, warnings/limitations, aggregation/streaming guide, README, API parity matrix, fixture coverage report, and hygiene fixture floor.
+- Verification after provider streaming slice:
+  - `python3 scripts/check_fixtures.py` passed with 57 fixtures across Python and JavaScript.
+  - `go test ./packages/go/...` passed.
+  - `python3 scripts/check_fixture_coverage.py --write-report` passed and regenerated coverage for 57 fixtures.
+  - `python3 scripts/check_project_hygiene.py` passed.
+  - `npm test` passed: 57 fixtures, fixture coverage, Go tests, and hygiene checks green.
+  - `npm run check:coverage` passed.
+  - `npm run check:packages` passed with clean Python, npm, and Go install smoke checks.
+  - `npm run check:release` passed.
+  - `python3 -m py_compile` passed for package modules, scripts, and examples.
+  - `npm run example:js` and `npm run example:py` both ran and returned total `0.000228`.
+  - `jq empty` parsed schemas, fixtures, and package JSON files.
+  - `LC_ALL=C rg -n "[^[:ascii:]]" .` found no non-ASCII text.
+  - `git diff --check` passed.
+
 ## Gap Audit 2026-05-25
 
 Purpose: step back from feature slices and record what is actually done, what is partial, what is a stub, and what still needs completion before private alpha, public beta, and V1.
@@ -469,8 +500,8 @@ Naming update:
 
 Audit evidence:
 
-- `python3 scripts/check_fixtures.py` passed with 54 fixtures across declared Python and JavaScript fixture coverage.
-- `python3 scripts/check_fixture_coverage.py` passed with metadata on all 54 fixtures and a current checked-in coverage report.
+- `python3 scripts/check_fixtures.py` passed with 57 fixtures across declared Python and JavaScript fixture coverage.
+- `python3 scripts/check_fixture_coverage.py` passed with metadata on all 57 fixtures and a current checked-in coverage report.
 - `npm test` passed: fixture checks, Go tests, and project hygiene checks green.
 - `npm run check:packages` passed: clean Python, npm, and Go install smoke checks green.
 - `npm run check:release` passed: release docs, license metadata, version sync, changelog, and release workflow guardrails are checked.
@@ -505,7 +536,7 @@ What is implemented and well covered:
 - Effective-date selection, service tier, region, batch, priority, provisioned, long-context conditions, stale-source warnings, provider-reported cost compare/use modes, price-source priority, and price-source disagreement warnings.
 - Optional debug traces for price-card candidates, component matches, model alias resolution, discount applications, and warnings.
 - Source adapters for `llm-prices`, LiteLLM, Portkey, OpenRouter models, user compact pricing, and Helicone model-registry data.
-- Provider extractors for OpenAI Responses, OpenAI Chat Completions, Anthropic Messages, OpenRouter chat completions, Groq, xAI chat, Mistral, DeepSeek, Azure OpenAI chat, Hugging Face Inference Providers chat, Cohere Chat, Gemini/Vertex generateContent, and Bedrock Converse.
+- Provider extractors for OpenAI Responses, OpenAI Chat Completions, Anthropic Messages, OpenRouter chat completions, Groq, xAI chat, Mistral, DeepSeek, Azure OpenAI chat, Hugging Face Inference Providers chat, Cohere Chat, Gemini/Vertex generateContent, and Bedrock Converse, including selected final streaming usage envelopes for OpenAI Responses, Anthropic Messages, and Gemini generateContent.
 - Framework metadata helpers for LangChain AIMessage, Vercel AI SDK generateText result objects, LlamaIndex TokenCountingHandler data, Python LangChain callback/context-manager usage, and JavaScript Vercel `wrapGenerate` middleware.
 - Cost-ledger aggregation for multi-call/session rollups, with fixture-backed `stream_usage_missing` warnings when final stream usage is expected but absent.
 - Docs for project plan, product requirements, architecture, market validation, live evaluation protocol, parity matrix, provider extractor notes, framework adapter notes, polyglot tooling decision, contribution, security, changelog, and release process.
@@ -517,17 +548,17 @@ Partially implemented:
 - Go conformance: Go runs every fixture and checks expected subsets, but schema validation for generated Go outputs and component-total invariant checks are weaker than Python/JavaScript.
 - Source adapters: core adapters exist for six sources, including user compact pricing and Helicone model-registry data. Provider official pricing snapshots, models.dev enrichment, full file-reading YAML loaders, offline cache format, explicit refresh command, and source capability warnings are still missing.
 - Historical pricing: effective dates and `llm-prices` date fields exist, but `llm-prices` historical feed semantics are not fixture-proven end to end.
-- Provider extractors: broad base coverage exists, but many surfaces are thin. xAI Responses, OpenAI Conversations, Bedrock non-Converse paths, provider-specific tool fields, streaming variants, embeddings, rerank, image/audio/video generation, and transcription paths are not covered.
+- Provider extractors: broad base coverage exists, but many surfaces are thin. OpenAI Responses, Anthropic Messages, and Gemini final stream usage shapes now have fixtures, but xAI Responses, OpenAI Conversations, Bedrock non-Converse paths, provider-specific tool fields, other streaming variants, embeddings, rerank, image/audio/video generation, and transcription paths are not covered.
 - Tool pricing: generic tool components, OpenAI raw tool calls, OpenRouter image/request/search source pricing, and custom units exist. Provider-specific tool pricing remains sparse.
 - Multimodal: Gemini/Vertex modality token details are covered. Other providers and generated-media billing are not.
-- Framework adapters: direct metadata/result objects are covered, initial Python LangChain callback/context-manager plus JavaScript Vercel middleware helpers exist, and generic multi-step cost-ledger aggregation now exists. Provider/framework streaming event parsers, LangSmith export compare, Semantic Kernel, Haystack, AutoGen/AG2, OpenAI Agents SDK, LiteLLM proxy metadata, and OpenRouter SDK paths are not implemented.
+- Framework adapters: direct metadata/result objects are covered, initial Python LangChain callback/context-manager plus JavaScript Vercel middleware helpers exist, and generic multi-step cost-ledger aggregation now exists. Framework-specific stream integrations, LangSmith export compare, Semantic Kernel, Haystack, AutoGen/AG2, OpenAI Agents SDK, LiteLLM proxy metadata, and OpenRouter SDK paths are not implemented.
 - Documentation: public quickstart, installation, API reference, aggregation/streaming, debug trace, custom pricing, discount, warning/strict-mode, source adapter, support-matrix docs, contribution guide, security/privacy note, changelog, and release process now exist. Deeper framework integration guides and automated release notes are still missing.
 - Packaging: clean local install checks now pass for Python, JavaScript/TypeScript, and Go. License metadata, PyPI/npm guarded release workflow, Go tag policy, changelog, provenance guidance, and release readiness checks exist. First real registry publication and trusted publisher configuration remain incomplete.
 
 Stubs or placeholders:
 
 - `DebugTrace` now has a schema, fixture, docs, and opt-in output across Python, JavaScript/TypeScript, and Go, but traces are still focused on calculator decisions rather than full extractor/framework middleware internals.
-- Provider-specific streaming parsers remain placeholders; the current streaming behavior is limited to aggregation warnings when expected final usage is absent.
+- Streaming parser coverage is intentionally narrow: selected final usage envelopes are supported, but arbitrary text-delta estimation and most provider/framework stream protocols remain out of scope.
 - Public API type surfaces are manually maintained placeholders for generated/schema-derived models.
 - `scripts/check_project_hygiene.py` and `scripts/check_release_readiness.py` are useful guards but still mostly check presence, API-name strings, fixture floor, fixture metadata presence, package metadata, CI commands, release docs, version sync, and release workflow snippets. They are not yet full drift detectors.
 - README now provides alpha package onboarding and links to public docs, but does not yet represent a production-ready package.
@@ -536,7 +567,7 @@ Stubs or placeholders:
 Highest-risk gaps before private alpha:
 
 1. First real registry release readiness: configure PyPI/npm trusted publishing, decide package README shape, cut a dry-run release, and verify Go tags.
-2. Provider-specific streaming support beyond generic cost-ledger aggregation, including final usage extraction from real stream event shapes.
+2. Broader provider/framework streaming support beyond the initial OpenAI, Anthropic, and Gemini final-usage fixtures.
 3. Source adapter completeness: official snapshots, full file-reading YAML loaders, refresh/cache workflow, and historical feed semantics.
 4. Hardened typed models and generated artifact workflow, especially for Go structs and generated docs.
 5. Broader framework integration ergonomics beyond the initial LangChain/Vercel helpers.
@@ -545,16 +576,16 @@ Highest-risk gaps before private alpha:
 
 Recommended next sprint:
 
-1. Provider-specific streaming slice: add real stream final-usage fixtures for OpenAI, Anthropic, Gemini/Vertex, and Vercel AI SDK where available.
-2. Broader framework slice: add documented partial adapter paths for Semantic Kernel, Haystack, AutoGen/AG2, LangSmith, LiteLLM proxy metadata, and OpenRouter SDK paths.
+1. Broader framework slice: add documented partial adapter paths for Semantic Kernel, Haystack, AutoGen/AG2, LangSmith, LiteLLM proxy metadata, and OpenRouter SDK paths.
+2. Provider streaming expansion slice: add additional stream finalization fixtures for Vertex-specific SDK wrappers, Bedrock ConverseStream, Vercel AI SDK `streamText` finish parts, and any provider-specific tool streaming fields.
 3. Release hardening slice: configure trusted publishing outside the repo, decide registry README shape, and run a no-publish release workflow dry run.
 4. Source adapter hardening slice: add official snapshots, full file-reading YAML loaders, refresh/cache workflow, and historical feed semantics.
 5. Generated artifact slice: add fixture generator helpers and schema-derived type/doc checks.
 
 ## Next Best Actions
 
-1. Add provider-specific streaming final-usage fixtures and parsers for major SDK stream shapes.
-2. Extend debug traces into source conflict reports, extractor internals, and framework middleware decisions.
-3. Add documented partial adapter paths for Semantic Kernel, Haystack, AutoGen/AG2, LangSmith export comparison, LiteLLM proxy metadata, and OpenRouter-compatible SDK paths.
+1. Add documented partial adapter paths for Semantic Kernel, Haystack, AutoGen/AG2, LangSmith export comparison, LiteLLM proxy metadata, and OpenRouter-compatible SDK paths.
+2. Add provider-specific fixtures for OpenAI-compatible tool, remaining multimodal providers, compound-routing, and service-tier fields beyond base token usage.
+3. Extend debug traces into source conflict reports, extractor internals, and framework middleware decisions.
 4. Add framework examples showing one- or two-line integration in Python and JavaScript.
 5. Harden release automation with registry README decisions, trusted-publisher setup notes, and a no-publish release workflow dry run.

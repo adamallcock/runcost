@@ -16,8 +16,10 @@ For mechanical coverage counts, see [Fixture Coverage](2026-05-25-fixture-covera
 | Provider | Surface | Status |
 |---|---|---|
 | OpenAI | Responses | Fixture-backed |
+| OpenAI | Responses streaming `response.completed` event | Fixture-backed |
 | OpenAI | Chat Completions | Fixture-backed |
 | Anthropic | Messages | Fixture-backed |
+| Anthropic | Messages SSE event sequence | Fixture-backed |
 | OpenRouter | Chat Completions | Fixture-backed |
 | Groq | Chat Completions through OpenAI-compatible usage | Fixture-backed |
 | xAI | Chat Completions through OpenAI-compatible usage | Fixture-backed |
@@ -27,6 +29,7 @@ For mechanical coverage counts, see [Fixture Coverage](2026-05-25-fixture-covera
 | Hugging Face Inference Providers | Chat Completions through OpenAI-compatible usage | Fixture-backed |
 | Cohere | Chat | Fixture-backed |
 | Google Gemini | `generateContent` | Fixture-backed |
+| Google Gemini | `generateContent` stream chunks with final `usageMetadata` | Fixture-backed |
 | Vertex AI Gemini | `generateContent` | Fixture-backed |
 | AWS Bedrock | Converse | Fixture-backed |
 

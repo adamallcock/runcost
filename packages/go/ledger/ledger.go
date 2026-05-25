@@ -1249,7 +1249,18 @@ func unsupportedSurfaceLedger(response Object, options Object) Object {
 	}
 }
 
+func openAIResponsesPayload(response Object) Object {
+	if asString(response["type"]) == "response.completed" {
+		nested := asObject(response["response"])
+		if len(nested) > 0 {
+			return nested
+		}
+	}
+	return response
+}
+
 func extractOpenAIResponsesUsage(response Object, options Object) Object {
+	response = openAIResponsesPayload(response)
 	usage := asObject(response["usage"])
 	cachedInput := getNumber(usage, "input_tokens_details", "cached_tokens")
 	reasoning := getNumber(usage, "output_tokens_details", "reasoning_tokens")
@@ -1328,7 +1339,44 @@ func extractOpenRouterChatCompletionsUsage(response Object, options Object) Obje
 	return extractOpenAICompatibleChatCompletionsUsage(response, options)
 }
 
+func anthropicMessagesPayload(response Object) Object {
+	events := asSlice(response["events"])
+	if len(events) == 0 {
+		return response
+	}
+	message := Object{}
+	usage := Object{}
+	for _, rawEvent := range events {
+		event := asObject(rawEvent)
+		switch asString(event["type"]) {
+		case "message_start":
+			startMessage := asObject(event["message"])
+			if len(startMessage) > 0 {
+				for key, value := range startMessage {
+					message[key] = value
+				}
+				for key, value := range asObject(startMessage["usage"]) {
+					usage[key] = value
+				}
+			}
+		case "message_delta":
+			for key, value := range asObject(event["usage"]) {
+				usage[key] = value
+			}
+			for key, value := range asObject(event["delta"]) {
+				message[key] = value
+			}
+		}
+	}
+	if len(message) == 0 {
+		return response
+	}
+	message["usage"] = usage
+	return message
+}
+
 func extractAnthropicMessagesUsage(response Object, options Object) Object {
+	response = anthropicMessagesPayload(response)
 	usage := asObject(response["usage"])
 	cacheWrite := getNumber(usage, "cache_creation_input_tokens")
 	cacheWrite1h := getNumber(usage, "cache_creation_input_tokens_1h")
@@ -1473,7 +1521,31 @@ func geminiOrderedComponents(quantities map[string]string, order []string, sourc
 	return components
 }
 
+func geminiGenerateContentPayload(response Object) Object {
+	chunks := asSlice(response["chunks"])
+	if len(chunks) == 0 {
+		chunks = asSlice(response["stream"])
+	}
+	if len(chunks) == 0 {
+		return response
+	}
+	for index := len(chunks) - 1; index >= 0; index-- {
+		chunk := asObject(chunks[index])
+		if len(asObject(chunk["usageMetadata"])) > 0 {
+			return chunk
+		}
+	}
+	for index := len(chunks) - 1; index >= 0; index-- {
+		chunk := asObject(chunks[index])
+		if len(chunk) > 0 {
+			return chunk
+		}
+	}
+	return response
+}
+
 func extractGeminiGenerateContentUsage(response Object, options Object) Object {
+	response = geminiGenerateContentPayload(response)
 	usage := asObject(response["usageMetadata"])
 	cachedInput := getNumber(usage, "cachedContentTokenCount")
 	prompt := getNumber(usage, "promptTokenCount")

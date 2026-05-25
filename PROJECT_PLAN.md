@@ -1260,6 +1260,7 @@ Tasks:
 16. Done: add user compact pricing source adapter prototype.
 17. Done: add Helicone model-registry source adapter prototype.
 18. Done: add cost-ledger aggregation and missing final streaming usage warning fixtures.
+19. Done: add selected provider streaming final-usage extraction fixtures.
 
 Sprint exit criteria:
 
@@ -1268,6 +1269,7 @@ Sprint exit criteria:
 - Strict mode and compatibility mode behavior is documented and tested.
 - Four real upstream price-source adapters beyond `llm-prices` exist in prototype form, plus a user compact pricing adapter.
 - Multi-call cost-ledger aggregation is fixture-backed across Python, JavaScript/TypeScript, and Go.
+- OpenAI Responses, Anthropic Messages, and Gemini generateContent final streaming usage shapes are fixture-backed across Python, JavaScript/TypeScript, and Go.
 - The plan for code generation, schema validation, and package release synchronization is documented and actionable.
 
 ## 13. Definition of Done

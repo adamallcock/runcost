@@ -85,6 +85,13 @@ Common one-call helper:
 
 The framework helpers route through the same cost calculator after extracting canonical usage.
 
+Streaming final usage:
+
+- OpenAI Responses accepts the final `response.completed` event envelope.
+- Anthropic Messages accepts an object with `events` containing `message_start`, `message_delta`, and `message_stop` SSE payloads, and accumulates the final usage.
+- Gemini / Vertex generateContent accepts an object with `chunks` or `stream` and uses the last chunk carrying `usageMetadata`.
+- These are final-usage extraction paths, not arbitrary partial-token estimation.
+
 ## Price Source Adapters
 
 | Source | Python | JavaScript/TypeScript | Go |

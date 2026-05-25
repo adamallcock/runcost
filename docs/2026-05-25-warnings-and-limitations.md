@@ -70,8 +70,8 @@ Warnings include a message, and may include a `path` and `metadata`.
 - Registry publishing is not complete.
 - Go types are still map-backed prototype types.
 - Source adapters are prototypes, not a comprehensive provider price database.
-- Aggregation is first-class only for already-calculated cost ledgers; provider-specific streaming event parsers are still pending.
-- Streaming support currently warns on missing final usage but does not reconstruct provider stream chunks.
+- Aggregation is first-class only for already-calculated cost ledgers.
+- Streaming support covers selected final-usage event envelopes for OpenAI Responses, Anthropic Messages, and Gemini generateContent, plus warnings for missing expected final usage. It does not estimate usage from arbitrary partial text chunks.
 - Debug trace exists for core calculator decisions, but provider extractor and framework middleware traces are still shallow.
 - Official price-page monitoring and pull-request automation are not implemented.
 - Tool-call pricing coverage exists only for selected fixtures and provider shapes.

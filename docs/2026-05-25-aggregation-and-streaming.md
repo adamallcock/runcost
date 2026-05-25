@@ -73,7 +73,13 @@ The returned ledger includes `stream_usage_missing`, which means the aggregate t
 
 ## Boundary
 
-This is not yet a provider-specific streaming parser. RunCost does not currently read OpenAI, Anthropic, Gemini, Bedrock, or framework stream chunks directly. The supported contract is:
+RunCost has initial provider-specific final-usage extraction for selected stream shapes:
+
+- OpenAI Responses `response.completed` event envelopes.
+- Anthropic Messages SSE event collections with `message_start` and cumulative `message_delta.usage`.
+- Gemini / Vertex generateContent stream chunk collections where a final chunk carries `usageMetadata`.
+
+RunCost does not estimate billing from arbitrary partial text deltas. The safest contract is still:
 
 1. Convert each completed call or final stream usage object into a `CostLedger`.
 2. Aggregate the ledgers.

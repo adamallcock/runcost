@@ -34,6 +34,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Price source priority for user overrides | Yes | Yes | Yes | `price-source-priority-user-override.json` |
 | Price source disagreement warning | Yes | Yes | Yes | `price-source-disagreement-warning.json` |
 | Streaming final-usage missing warning | Yes | Yes | Yes | `stream_usage_missing`; `stream-final-usage-missing-warning.json` |
+| Streaming final-usage event extraction | Yes | Yes | Yes | OpenAI `response.completed`, Anthropic Messages SSE events, and Gemini stream chunk fixtures |
 | Debug trace / explain mode | Yes | Yes | Yes | `debug-trace-explain-decisions.json`; optional `debug_trace` / `debugTrace` output |
 | Long-context threshold price component selection | Yes | Yes | Yes | `long-context-threshold-selection.json` |
 | Missing long-context rule warning | Yes | Yes | Yes | `long-context-rule-missing.json` |
@@ -48,11 +49,11 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 
 | Surface | Python | JavaScript/TypeScript | Go | Evidence |
 |---|---:|---:|---:|---|
-| OpenAI Responses | Yes | Yes | Yes | `openai-responses-raw-cached-reasoning.json`, `openai-responses-raw-tool-calls.json` |
+| OpenAI Responses | Yes | Yes | Yes | `openai-responses-raw-cached-reasoning.json`, `openai-responses-raw-tool-calls.json`, `openai-responses-stream-completed-event.json` |
 | OpenAI Chat Completions | Yes | Yes | Yes | `openai-chat-raw-cached-reasoning.json` |
 | Shared OpenAI-compatible chat helper | Yes | Yes | Yes | `extract_openai_compatible_chat_completions_usage`, `extractOpenAICompatibleChatCompletionsUsage`; Go routes through `ExtractUsageLedger` |
-| Anthropic Messages | Yes | Yes | Yes | `anthropic-messages-raw-cache.json`, `anthropic-messages-raw-cache-1h.json` |
-| Google Gemini / AI Studio | Yes | Yes | Yes | `extract_gemini_generate_content_usage`, `extractGeminiGenerateContentUsage`; `gemini-generate-content-raw-reasoning-cache.json` |
+| Anthropic Messages | Yes | Yes | Yes | `anthropic-messages-raw-cache.json`, `anthropic-messages-raw-cache-1h.json`, `anthropic-messages-stream-events.json` |
+| Google Gemini / AI Studio | Yes | Yes | Yes | `extract_gemini_generate_content_usage`, `extractGeminiGenerateContentUsage`; `gemini-generate-content-raw-reasoning-cache.json`, `gemini-generate-content-stream-chunks.json` |
 | Google Vertex AI | Yes | Yes | Yes | Uses Gemini generateContent extractor for `vertex.gemini.generate_content`; `vertex-gemini-generate-content-raw-basic.json` |
 | AWS Bedrock Converse | Yes | Yes | Yes | `extract_bedrock_converse_usage`, `extractBedrockConverseUsage`; `bedrock-converse-raw-cache.json` |
 | Azure OpenAI | Yes | Yes | Yes | `azure-openai-chat-raw-reasoning.json` |

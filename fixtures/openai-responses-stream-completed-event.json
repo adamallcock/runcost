@@ -1,0 +1,167 @@
+{
+  "name": "openai-responses-stream-completed-event",
+  "description": "Extracts usage from the final OpenAI Responses response.completed streaming event envelope.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "cache",
+      "component:input_cache_read_tokens",
+      "component:input_uncached_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_text_tokens",
+      "raw_provider_response",
+      "reasoning",
+      "streaming"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "extract": {
+      "provider": "openai",
+      "surface": "openai.responses"
+    },
+    "raw_response": {
+      "type": "response.completed",
+      "sequence_number": 42,
+      "response": {
+        "id": "resp_stream_fixture",
+        "object": "response",
+        "model": "gpt-5.4",
+        "status": "completed",
+        "usage": {
+          "input_tokens": 120,
+          "input_tokens_details": {
+            "cached_tokens": 20
+          },
+          "output_tokens": 50,
+          "output_tokens_details": {
+            "reasoning_tokens": 8
+          },
+          "total_tokens": 170
+        }
+      }
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-5.4:responses:stream-fixture",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-5.4",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000001",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.0000001",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000004",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000004",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-5.4",
+        "returned": "gpt-5.4",
+        "billed": "gpt-5.4",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.0001",
+          "price_card_id": "openai:gpt-5.4:responses:stream-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.000002",
+          "price_card_id": "openai:gpt-5.4:responses:stream-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "42",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.000168",
+          "price_card_id": "openai:gpt-5.4:responses:stream-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "8",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.000032",
+          "price_card_id": "openai:gpt-5.4:responses:stream-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.000302",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

@@ -819,7 +819,15 @@ function baseUsageLedger({ provider, surface, requestedModel, returnedModel, com
   };
 }
 
+function openAIResponsesPayload(response) {
+  if (response.type === "response.completed" && response.response) {
+    return response.response;
+  }
+  return response;
+}
+
 export function extractOpenAIResponsesUsage(response, options = {}) {
+  response = openAIResponsesPayload(response);
   const usage = response.usage || {};
   const cachedInput = usage.input_tokens_details?.cached_tokens || 0;
   const reasoning = usage.output_tokens_details?.reasoning_tokens || 0;
@@ -941,7 +949,35 @@ export function extractOpenRouterChatCompletionsUsage(response, options = {}) {
   });
 }
 
+function anthropicMessagesPayload(response) {
+  if (!Array.isArray(response.events)) {
+    return response;
+  }
+  const message = {};
+  const usage = {};
+  for (const event of response.events) {
+    if (!event || typeof event !== "object") {
+      continue;
+    }
+    if (event.type === "message_start" && event.message) {
+      Object.assign(message, event.message);
+      Object.assign(usage, event.message.usage || {});
+    } else if (event.type === "message_delta") {
+      Object.assign(usage, event.usage || {});
+      if (event.delta) {
+        Object.assign(message, event.delta);
+      }
+    }
+  }
+  if (Object.keys(message).length === 0) {
+    return response;
+  }
+  message.usage = usage;
+  return message;
+}
+
 export function extractAnthropicMessagesUsage(response, options = {}) {
+  response = anthropicMessagesPayload(response);
   const usage = response.usage || {};
   const input = usage.input_tokens || 0;
   const cacheWrite = usage.cache_creation_input_tokens || 0;
@@ -1059,7 +1095,26 @@ function geminiOrderedComponents(quantities, order, sourcePath) {
   ));
 }
 
+function geminiGenerateContentPayload(response) {
+  const chunks = response.chunks || response.stream;
+  if (!Array.isArray(chunks) || chunks.length === 0) {
+    return response;
+  }
+  for (const chunk of [...chunks].reverse()) {
+    if (chunk && typeof chunk === "object" && chunk.usageMetadata) {
+      return chunk;
+    }
+  }
+  for (const chunk of [...chunks].reverse()) {
+    if (chunk && typeof chunk === "object") {
+      return chunk;
+    }
+  }
+  return response;
+}
+
 export function extractGeminiGenerateContentUsage(response, options = {}) {
+  response = geminiGenerateContentPayload(response);
   const usage = response.usageMetadata || {};
   const cachedInput = usage.cachedContentTokenCount || 0;
   const prompt = usage.promptTokenCount || 0;

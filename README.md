@@ -84,6 +84,7 @@ The implementation is still pre-alpha. The current center of gravity is normaliz
 - Component ledgers for input, cached input, output, reasoning, tool units, and Gemini/Vertex multimodal token details.
 - Raw extractors for OpenAI Responses, OpenAI Chat Completions, and Anthropic Messages.
 - Raw extractors for OpenRouter Chat Completions, Cohere Chat, Google Gemini/Vertex generateContent, and AWS Bedrock Converse.
+- Final streaming usage extraction for OpenAI Responses `response.completed`, Anthropic Messages SSE event sequences, and Gemini stream chunks with `usageMetadata`.
 - Shared OpenAI-compatible chat extraction for Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face Inference Providers, and OpenRouter.
 - One-call framework helpers for LangChain AIMessage, Vercel AI SDK generateText, and LlamaIndex TokenCountingHandler outputs.
 - Framework-native helpers for Python LangChain callback/context-manager usage and JavaScript Vercel AI SDK `wrapGenerate` middleware.

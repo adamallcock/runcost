@@ -1,0 +1,177 @@
+{
+  "name": "gemini-generate-content-stream-chunks",
+  "description": "Extracts Gemini generateContent usage from the final stream chunk that carries usageMetadata.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "google",
+    "surface": "google.gemini.generate_content",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "cache",
+      "component:input_cache_read_tokens",
+      "component:input_uncached_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_text_tokens",
+      "raw_provider_response",
+      "reasoning",
+      "streaming"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "chunks": [
+        {
+          "modelVersion": "gemini-2.5-pro",
+          "responseId": "gemini-stream-response-123",
+          "candidates": [
+            {
+              "content": {
+                "parts": [
+                  {
+                    "text": "partial"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "modelVersion": "gemini-2.5-pro",
+          "responseId": "gemini-stream-response-123",
+          "usageMetadata": {
+            "promptTokenCount": 600,
+            "cachedContentTokenCount": 100,
+            "candidatesTokenCount": 150,
+            "thoughtsTokenCount": 25,
+            "totalTokenCount": 775
+          }
+        }
+      ]
+    },
+    "extract": {
+      "provider": "google",
+      "surface": "google.gemini.generate_content",
+      "model": "gemini-2.5-pro"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "google:gemini-2.5-pro:stream-fixture",
+        "provider": "google",
+        "surface": "google.gemini.generate_content",
+        "model": "gemini-2.5-pro",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.25",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "3",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "3",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "google",
+      "surface": "google.gemini.generate_content",
+      "model": {
+        "requested": "gemini-2.5-pro",
+        "returned": "gemini-2.5-pro",
+        "billed": "gemini-2.5-pro",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "500",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.0005",
+          "price_card_id": "google:gemini-2.5-pro:stream-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.00000025",
+          "cost": "0.000025",
+          "price_card_id": "google:gemini-2.5-pro:stream-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "150",
+          "unit": "token",
+          "unit_price": "0.000003",
+          "cost": "0.00045",
+          "price_card_id": "google:gemini-2.5-pro:stream-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "25",
+          "unit": "token",
+          "unit_price": "0.000003",
+          "cost": "0.000075",
+          "price_card_id": "google:gemini-2.5-pro:stream-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.00105",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}
