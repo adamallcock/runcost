@@ -34,6 +34,7 @@ For mechanical coverage counts, see [Fixture Coverage](../reports/fixture-covera
 | Google Gemini | `generateContent` stream chunks with final `usageMetadata` | Fixture-backed |
 | Vertex AI Gemini | `generateContent` | Fixture-backed |
 | AWS Bedrock | Converse | Fixture-backed |
+| AWS Bedrock | InvokeModel with Anthropic Messages body | Fixture-backed |
 
 ## Framework Adapters
 

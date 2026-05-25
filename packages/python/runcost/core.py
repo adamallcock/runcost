@@ -8,6 +8,40 @@ from typing import Any, Dict, Iterable, List, Optional
 
 getcontext().prec = 50
 
+_COMPONENT_ORDER_NAMES = [
+    "input_uncached_tokens",
+    "input_cache_read_tokens",
+    "input_cache_write_tokens",
+    "input_cache_write_1h_tokens",
+    "input_image_units",
+    "input_audio_tokens",
+    "input_image_tokens",
+    "input_video_tokens",
+    "output_text_tokens",
+    "output_reasoning_tokens",
+    "output_audio_tokens",
+    "output_image_tokens",
+    "output_video_tokens",
+    "embedding_tokens",
+    "request_units",
+    "web_search_units",
+    "file_search_units",
+    "code_interpreter_session_units",
+    "code_interpreter_call_units",
+    "computer_use_action_units",
+    "tool_call_units",
+    "tool_execution_seconds",
+    "rerank_search_units",
+    "image_generation_units",
+    "video_generation_units",
+    "audio_generation_units",
+    "transcription_seconds",
+    "endpoint_runtime_seconds",
+    "endpoint_instance_hours",
+    "custom_units",
+]
+_COMPONENT_ORDER = {name: index for index, name in enumerate(_COMPONENT_ORDER_NAMES)}
+
 
 def _plain_value(value: Any) -> Any:
     if isinstance(value, dict):
@@ -634,6 +668,10 @@ def calculate_cost(
     )
     if provider_warning:
         warnings.append(provider_warning)
+    components = _ordered_cost_components(components)
+    price_sources = _ordered_price_sources(sources_by_name.values())
+    applied_discounts = _ordered_applied_discounts(applied_discounts)
+    warnings = _ordered_warnings(warnings)
     if trace is not None:
         for warning in warnings:
             trace["decisions"].append(
@@ -658,7 +696,7 @@ def calculate_cost(
         "currency": "USD",
         "components": components,
         "total": total,
-        "price_sources": list(sources_by_name.values()),
+        "price_sources": price_sources,
         "applied_discounts": applied_discounts,
         "warnings": warnings,
     }
@@ -678,6 +716,53 @@ def _source_key(source: Dict[str, Any]) -> str:
             str(source.get("version", "")),
         ]
     )
+
+
+def _component_sort_key(component: Dict[str, Any]) -> tuple:
+    name = str(component.get("name", ""))
+    return (
+        _COMPONENT_ORDER.get(name, len(_COMPONENT_ORDER)),
+        name,
+        str(component.get("unit", "")),
+        str(component.get("unit_price", "")),
+        str(component.get("price_card_id", "")),
+        str(component.get("quantity", "")),
+        str(component.get("cost", "")),
+    )
+
+
+def _discount_sort_key(discount: Dict[str, Any]) -> tuple:
+    return (
+        str(discount.get("component", "")),
+        str(discount.get("policy_id", "")),
+        str(discount.get("amount", "")),
+    )
+
+
+def _warning_sort_key(warning: Dict[str, Any]) -> tuple:
+    metadata = json.dumps(warning.get("metadata", {}), sort_keys=True, separators=(",", ":"))
+    return (
+        str(warning.get("code", "")),
+        str(warning.get("path", "")),
+        str(warning.get("message", "")),
+        metadata,
+    )
+
+
+def _ordered_cost_components(components: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return sorted(components, key=_component_sort_key)
+
+
+def _ordered_price_sources(sources: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return sorted(sources, key=_source_key)
+
+
+def _ordered_applied_discounts(discounts: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return sorted(discounts, key=_discount_sort_key)
+
+
+def _ordered_warnings(warnings: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return sorted(warnings, key=_warning_sort_key)
 
 
 def _component_key(component: Dict[str, Any]) -> str:
@@ -773,15 +858,15 @@ def aggregate_cost_ledgers(
             "alias_resolution": "none",
         },
         "currency": "USD",
-        "components": list(components_by_key.values()),
+        "components": _ordered_cost_components(components_by_key.values()),
         "total": total,
-        "price_sources": list(price_sources_by_key.values()),
-        "applied_discounts": applied_discounts,
-        "warnings": warnings,
+        "price_sources": _ordered_price_sources(price_sources_by_key.values()),
+        "applied_discounts": _ordered_applied_discounts(applied_discounts),
+        "warnings": _ordered_warnings(warnings),
         "metadata": metadata,
     }
-    if mode == "strict" and warnings:
-        raise ValueError(f"strict mode cost aggregation failed: {warnings[0]['code']}")
+    if mode == "strict" and result["warnings"]:
+        raise ValueError(f"strict mode cost aggregation failed: {result['warnings'][0]['code']}")
     return result
 
 
@@ -1243,6 +1328,56 @@ def extract_bedrock_converse_usage(response: Dict[str, Any], **options: Any) -> 
     )
 
 
+def _bedrock_invoke_model_body(response: Dict[str, Any]) -> tuple[Dict[str, Any], str]:
+    body = response.get("body")
+    if body is None:
+        return response, "$"
+    if isinstance(body, dict):
+        return body, "$.body"
+    if isinstance(body, (bytes, bytearray)):
+        body = body.decode("utf-8")
+    elif hasattr(body, "read"):
+        body = body.read()
+        if isinstance(body, (bytes, bytearray)):
+            body = body.decode("utf-8")
+    if isinstance(body, str):
+        try:
+            decoded = json.loads(body)
+        except json.JSONDecodeError:
+            return {}, "$.body"
+        if isinstance(decoded, dict):
+            return decoded, "$.body"
+    return {}, "$.body"
+
+
+def extract_bedrock_invoke_model_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    body, source_root = _bedrock_invoke_model_body(response)
+    usage = body.get("usage", {})
+    input_tokens = usage.get("input_tokens", 0)
+    cache_write = usage.get("cache_creation_input_tokens", 0)
+    cache_write_1h = usage.get("cache_creation_input_tokens_1h", 0)
+    cache_read = usage.get("cache_read_input_tokens", 0)
+    output_tokens = usage.get("output_tokens", 0)
+    returned_model = response.get("modelId") or response.get("model_id") or options.get("model") or body.get("model")
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "bedrock"),
+        surface=options.get("surface", "aws.bedrock.invoke_model"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=usage,
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", input_tokens, "token", f"{source_root}.usage.input_tokens"),
+                _positive_component("input_cache_write_tokens", cache_write - cache_write_1h, "token", f"{source_root}.usage.cache_creation_input_tokens"),
+                _positive_component("input_cache_write_1h_tokens", cache_write_1h, "token", f"{source_root}.usage.cache_creation_input_tokens_1h"),
+                _positive_component("input_cache_read_tokens", cache_read, "token", f"{source_root}.usage.cache_read_input_tokens"),
+                _positive_component("output_text_tokens", output_tokens, "token", f"{source_root}.usage.output_tokens"),
+            ]
+        ),
+    )
+
+
 def _cohere_chat_usage_payload(response: Dict[str, Any]) -> tuple[Dict[str, Any], str]:
     usage = response.get("usage")
     if isinstance(usage, dict) and "billed_units" in usage:
@@ -1499,6 +1634,8 @@ def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, 
         return extract_gemini_generate_content_usage(response, **options)
     if surface == "aws.bedrock.converse":
         return extract_bedrock_converse_usage(response, **options)
+    if surface == "aws.bedrock.invoke_model":
+        return extract_bedrock_invoke_model_usage(response, **options)
     if surface == "cohere.chat":
         return extract_cohere_chat_usage(response, **options)
     raise ValueError(f"Unsupported surface: {surface}")

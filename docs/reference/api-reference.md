@@ -65,6 +65,7 @@ Output:
 | Anthropic Messages | `extract_anthropic_messages_usage` | `extractAnthropicMessagesUsage` | via dispatch |
 | Gemini or Vertex `generateContent` | `extract_gemini_generate_content_usage` | `extractGeminiGenerateContentUsage` | via dispatch |
 | AWS Bedrock Converse | `extract_bedrock_converse_usage` | `extractBedrockConverseUsage` | via dispatch |
+| AWS Bedrock InvokeModel | `extract_bedrock_invoke_model_usage` | `extractBedrockInvokeModelUsage` | via dispatch |
 | Cohere Chat | `extract_cohere_chat_usage` | `extractCohereChatUsage` | via dispatch |
 
 Common one-call helper:

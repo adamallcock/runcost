@@ -133,6 +133,15 @@
           "discount_eligible": true
         },
         {
+          "name": "input_image_units",
+          "quantity": "2",
+          "unit": "image",
+          "unit_price": "0.01",
+          "cost": "0.02",
+          "price_card_id": "openrouter:openai/gpt-4:openrouter-models",
+          "discount_eligible": true
+        },
+        {
           "name": "output_text_tokens",
           "quantity": "500",
           "unit": "token",
@@ -147,15 +156,6 @@
           "unit": "token",
           "unit_price": "0.00008",
           "cost": "0.004",
-          "price_card_id": "openrouter:openai/gpt-4:openrouter-models",
-          "discount_eligible": true
-        },
-        {
-          "name": "input_image_units",
-          "quantity": "2",
-          "unit": "image",
-          "unit_price": "0.01",
-          "cost": "0.02",
           "price_card_id": "openrouter:openai/gpt-4:openrouter-models",
           "discount_eligible": true
         },

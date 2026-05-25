@@ -114,20 +114,20 @@
           "discount_eligible": true
         },
         {
-          "name": "input_cache_write_tokens",
-          "quantity": "2000",
-          "unit": "token",
-          "unit_price": "0.00000375",
-          "cost": "0.0075",
-          "price_card_id": "anthropic:claude-sonnet-4.5:messages:raw-fixture",
-          "discount_eligible": true
-        },
-        {
           "name": "input_cache_read_tokens",
           "quantity": "4000",
           "unit": "token",
           "unit_price": "0.0000003",
           "cost": "0.0012",
+          "price_card_id": "anthropic:claude-sonnet-4.5:messages:raw-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "2000",
+          "unit": "token",
+          "unit_price": "0.00000375",
+          "cost": "0.0075",
           "price_card_id": "anthropic:claude-sonnet-4.5:messages:raw-fixture",
           "discount_eligible": true
         },

@@ -49,7 +49,8 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Batch service-mode pricing through service tier | Yes | Yes | Yes | `service-mode-batch-selection.json` |
 | Priority service-mode pricing through service tier | Yes | Yes | Yes | `service-mode-priority-selection.json` |
 | Provisioned endpoint-hour pricing through service tier and region | Yes | Yes | Yes | `service-mode-provisioned-selection.json` |
-| Component-total invariant in conformance tests | Yes | Yes | Partial | Python fixture runner validates Python/JS ledgers; Go fixture test validates expected subsets |
+| Component-total invariant in conformance tests | Yes | Yes | Yes | Python/JS fixture runner and Go fixture tests validate generated cost-ledger component totals |
+| Byte-stable cost-ledger output ordering | Yes | Yes | Yes | `byte-stable-component-ordering.json`; Python/JS fixture runner checks expected and actual ledgers; Go fixture validation checks components, sources, discounts, and warnings |
 | Componentized cost ledger output | Yes | Yes | Yes | all cost fixtures |
 | Multi-call/session ledger aggregation | Yes | Yes | Yes | Aggregates totals, matching components, price sources, discounts, and warnings from existing ledgers |
 
@@ -65,6 +66,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Google Gemini / AI Studio | Yes | Yes | Yes | `extract_gemini_generate_content_usage`, `extractGeminiGenerateContentUsage`; `gemini-generate-content-raw-reasoning-cache.json`, `gemini-generate-content-stream-chunks.json` |
 | Google Vertex AI | Yes | Yes | Yes | Uses Gemini generateContent extractor for `vertex.gemini.generate_content`; `vertex-gemini-generate-content-raw-basic.json` |
 | AWS Bedrock Converse | Yes | Yes | Yes | `extract_bedrock_converse_usage`, `extractBedrockConverseUsage`; `bedrock-converse-raw-cache.json` |
+| AWS Bedrock InvokeModel | Yes | Yes | Yes | `extract_bedrock_invoke_model_usage`, `extractBedrockInvokeModelUsage`; `bedrock-invoke-model-anthropic-messages.json` |
 | Azure OpenAI | Yes | Yes | Yes | `azure-openai-chat-raw-reasoning.json` |
 | Groq | Yes | Yes | Yes | `groq-chat-raw-cache.json` |
 | xAI / Grok Chat Completions | Yes | Yes | Yes | `xai-chat-raw-cache-reasoning.json` |
@@ -116,7 +118,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Public typed contract models | Partial | Partial | Partial | `types.py`, `index.d.ts`, Go docs/examples; `DebugTrace` typed for Python and TypeScript |
 | Package-level API docs | Partial | Partial | Partial | README, package examples, alpha docs, debug trace docs |
 | Public example for basic cost calculation | Yes | Yes | Yes | Python and JS examples; Go example test |
-| Schema validation in conformance tests | Yes | Yes | Partial | Python runner validates schemas for Python/JS outputs; Go now validates generated cost-ledger structure and component-total invariants in fixture tests |
+| Schema validation in conformance tests | Yes | Yes | Partial | Python runner validates schemas for Python/JS outputs; Go validates generated cost-ledger structure, component-total invariants, and output ordering in fixture tests |
 | Fixture metadata and coverage report | Yes | Yes | Yes | `schemas/fixture.schema.json`, fixture metadata, `scripts/check_fixture_coverage.py`, `docs/reports/fixture-coverage.md` |
 | Generated artifact drift check | Yes | Yes | Yes | `scripts/check_project_hygiene.py` |
 

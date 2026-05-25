@@ -143,6 +143,15 @@
           "discount_eligible": true
         },
         {
+          "name": "input_cache_read_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.00001",
+          "price_card_id": "bedrock:anthropic.claude-example:fixture",
+          "discount_eligible": true
+        },
+        {
           "name": "input_cache_write_tokens",
           "quantity": "30",
           "unit": "token",
@@ -157,15 +166,6 @@
           "unit": "token",
           "unit_price": "0.000002",
           "cost": "0.00004",
-          "price_card_id": "bedrock:anthropic.claude-example:fixture",
-          "discount_eligible": true
-        },
-        {
-          "name": "input_cache_read_tokens",
-          "quantity": "100",
-          "unit": "token",
-          "unit_price": "0.0000001",
-          "cost": "0.00001",
           "price_card_id": "bedrock:anthropic.claude-example:fixture",
           "discount_eligible": true
         },

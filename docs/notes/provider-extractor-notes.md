@@ -212,3 +212,28 @@ Mapping:
 Notes:
 
 - Bedrock model-specific reasoning, guardrail, tool, and multimodal fields should get separate fixtures before being treated as supported.
+
+## AWS Bedrock InvokeModel
+
+Surface:
+
+- `aws.bedrock.invoke_model`
+
+Source references:
+
+- Boto3 `invoke_model` documents that the operation invokes a Bedrock model for inference, requires a `modelId`, and returns an inference `body`: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/bedrock-runtime/client/invoke_model.html
+- AWS Bedrock Anthropic Claude Messages request/response docs show the `InvokeModel` body shape and response `usage.input_tokens` / `usage.output_tokens` fields: https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages-request-response.html
+
+Mapping:
+
+- `response.modelId` -> returned and billed model when present.
+- `body.usage.input_tokens` -> `input_uncached_tokens`.
+- `body.usage.cache_creation_input_tokens` minus `cache_creation_input_tokens_1h` -> `input_cache_write_tokens` when present.
+- `body.usage.cache_creation_input_tokens_1h` -> `input_cache_write_1h_tokens` when present.
+- `body.usage.cache_read_input_tokens` -> `input_cache_read_tokens` when present.
+- `body.usage.output_tokens` -> `output_text_tokens`.
+- Any aggregate or provider-specific total field is preserved in raw usage but is never priced directly.
+
+Notes:
+
+- Current fixture coverage targets Anthropic Messages-compatible bodies inside `InvokeModel`. Other Bedrock native body formats, image generation, embeddings, streaming chunks, and guardrail/tool fields need separate fixtures before being treated as supported.

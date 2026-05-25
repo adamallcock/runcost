@@ -293,7 +293,8 @@ Delivered in current prototype:
 - Long-context threshold component selection through `conditions.min_total_input_tokens` and `conditions.max_total_input_tokens`.
 - Long-context missing-rule warnings.
 - Batch, priority, and provisioned service-mode fixture coverage through service tier and region matching.
-- Component-total invariant checks for Python and JavaScript conformance results.
+- Component-total invariant checks for Python, JavaScript, and Go conformance results.
+- Canonical cost-ledger output ordering for components, price sources, applied discounts, and warnings, enforced by shared fixtures and Go validation.
 
 Progress criteria:
 
@@ -396,10 +397,11 @@ Delivered in current prototype:
 - Google Gemini API `generateContent`.
 - Vertex AI Gemini `generateContent` through the same usage metadata extractor.
 - AWS Bedrock Converse.
+- AWS Bedrock InvokeModel with Anthropic Messages response bodies.
 
 Current mapping notes:
 
-- `docs/notes/provider-extractor-notes.md` records the official source references and raw usage field mappings for OpenAI Responses, OpenAI Embeddings, xAI Responses, OpenAI-compatible chat providers, Cohere, Gemini, and Bedrock.
+- `docs/notes/provider-extractor-notes.md` records the official source references and raw usage field mappings for OpenAI Responses, OpenAI Embeddings, xAI Responses, OpenAI-compatible chat providers, Cohere, Gemini, Bedrock Converse, and Bedrock InvokeModel.
 - xAI Responses is currently mapped through the OpenAI-compatible Responses usage envelope, with provider defaulting to `xai` for `surface: "xai.responses"`.
 - Gemini/Vertex `promptTokensDetails`, `cacheTokensDetails`, `toolUsePromptTokensDetails`, and `candidatesTokensDetails` are now mapped into modality-aware image, audio, video, text, cache-read, and thinking components in the shared conformance suite.
 - OpenRouter `/api/v1/models` pricing is now mapped into canonical price cards for prompt, completion, cache read/write, internal reasoning, request, image-input, and web-search prices.
@@ -1355,6 +1357,7 @@ Tasks:
 20. Done: add fixture generator helpers and single-fixture validation.
 21. Done: add Go-side cost-ledger structure and component-total invariant validation.
 22. Done: add v0.1 schema naming and component taxonomy lock.
+23. Done: add byte-stable cost-ledger output ordering checks across Python, JavaScript/TypeScript, and Go.
 
 Sprint exit criteria:
 

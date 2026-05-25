@@ -1,0 +1,172 @@
+{
+  "name": "byte-stable-component-ordering",
+  "description": "Returns cost-ledger components in canonical taxonomy order even when usage and price-card components arrive in a different order.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-CALC-CORE",
+      "RC-FIXTURE-CONFORMANCE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "normalized_usage",
+    "tags": [
+      "byte_stable_ordering",
+      "component:input_uncached_tokens",
+      "component:input_cache_read_tokens",
+      "component:input_cache_write_tokens",
+      "component:output_text_tokens"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-byte-stable",
+        "returned": "gpt-byte-stable",
+        "billed": "gpt-byte-stable",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "output_text_tokens",
+          "quantity": "4000",
+          "unit": "token"
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "3000",
+          "unit": "token"
+        },
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token"
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "2000",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-byte-stable:component-ordering",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-byte-stable",
+        "components": [
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "3",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_write_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-byte-stable",
+        "returned": "gpt-byte-stable",
+        "billed": "gpt-byte-stable",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.001",
+          "price_card_id": "openai:gpt-byte-stable:component-ordering",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "2000",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.0002",
+          "price_card_id": "openai:gpt-byte-stable:component-ordering",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "3000",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.006",
+          "price_card_id": "openai:gpt-byte-stable:component-ordering",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "4000",
+          "unit": "token",
+          "unit_price": "0.000003",
+          "cost": "0.012",
+          "price_card_id": "openai:gpt-byte-stable:component-ordering",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0192",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

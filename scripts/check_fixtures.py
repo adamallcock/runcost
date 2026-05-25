@@ -55,6 +55,8 @@ SCHEMA_PATHS = {
     "fixture": ROOT / "schemas" / "fixture.schema.json",
 }
 SCHEMAS = {name: load_json(path) for name, path in SCHEMA_PATHS.items()}
+TAXONOMY = load_json(ROOT / "schemas" / "taxonomy.json")
+COMPONENT_ORDER = {name: index for index, name in enumerate(TAXONOMY["component_names"])}
 
 
 def expected_languages(fixture):
@@ -184,6 +186,58 @@ def assert_total_matches_components(cost_ledger, path):
         raise AssertionError(f"{path}: component costs sum to {total}, total is {expected}")
 
 
+def component_sort_key(component):
+    name = component.get("name", "")
+    return (
+        COMPONENT_ORDER.get(name, len(COMPONENT_ORDER)),
+        name,
+        component.get("unit", ""),
+        component.get("unit_price", ""),
+        component.get("price_card_id", ""),
+        component.get("quantity", ""),
+        component.get("cost", ""),
+    )
+
+
+def source_sort_key(source):
+    return (
+        source.get("name", ""),
+        source.get("url", ""),
+        source.get("retrieved_at", ""),
+        source.get("version", ""),
+    )
+
+
+def discount_sort_key(discount):
+    return (
+        discount.get("component", ""),
+        discount.get("policy_id", ""),
+        discount.get("amount", ""),
+    )
+
+
+def warning_sort_key(warning):
+    return (
+        warning.get("code", ""),
+        warning.get("path", ""),
+        warning.get("message", ""),
+        json.dumps(warning.get("metadata", {}), sort_keys=True, separators=(",", ":")),
+    )
+
+
+def assert_ordered(values, key, path):
+    expected = sorted(values, key=key)
+    if values != expected:
+        raise AssertionError(f"{path}: output order is not byte-stable")
+
+
+def assert_cost_ledger_ordering(cost_ledger, path):
+    assert_ordered(cost_ledger.get("components", []), component_sort_key, f"{path}.components")
+    assert_ordered(cost_ledger.get("price_sources", []), source_sort_key, f"{path}.price_sources")
+    assert_ordered(cost_ledger.get("applied_discounts", []), discount_sort_key, f"{path}.applied_discounts")
+    assert_ordered(cost_ledger.get("warnings", []), warning_sort_key, f"{path}.warnings")
+
+
 def resolve_python_price_cards(fixture):
     input_data = fixture["input"]
     if "cost_ledgers" in input_data:
@@ -255,6 +309,7 @@ def run_python_fixture(fixture):
                 "google.gemini.generate_content",
                 "vertex.gemini.generate_content",
                 "aws.bedrock.converse",
+                "aws.bedrock.invoke_model",
                 "cohere.chat",
             }
         ):
@@ -418,6 +473,7 @@ def check_fixture_paths(paths: list[Path]) -> None:
 
         expected = fixture["expected"]["cost_ledger"]
         validate_schema(expected, SCHEMAS["cost_ledger"], path=f"{path.name}:expected")
+        assert_cost_ledger_ordering(expected, f"{path.name}:expected")
         if "debug_trace" in expected:
             validate_schema(expected["debug_trace"], SCHEMAS["debug_trace"], path=f"{path.name}:expected.debug_trace")
 
@@ -428,6 +484,7 @@ def check_fixture_paths(paths: list[Path]) -> None:
             if "debug_trace" in python_result:
                 validate_schema(python_result["debug_trace"], SCHEMAS["debug_trace"], path=f"{path.name}:python.debug_trace")
             assert_total_matches_components(python_result, f"{path.name}:python")
+            assert_cost_ledger_ordering(python_result, f"{path.name}:python")
             assert_subset(python_result, expected, f"{path.name}:python")
 
         if "javascript" in languages:
@@ -436,6 +493,7 @@ def check_fixture_paths(paths: list[Path]) -> None:
             if "debug_trace" in javascript_result:
                 validate_schema(javascript_result["debug_trace"], SCHEMAS["debug_trace"], path=f"{path.name}:javascript.debug_trace")
             assert_total_matches_components(javascript_result, f"{path.name}:javascript")
+            assert_cost_ledger_ordering(javascript_result, f"{path.name}:javascript")
             assert_subset(javascript_result, expected, f"{path.name}:javascript")
 
 

@@ -13,6 +13,47 @@ import (
 	"time"
 )
 
+var componentOrderNames = []string{
+	"input_uncached_tokens",
+	"input_cache_read_tokens",
+	"input_cache_write_tokens",
+	"input_cache_write_1h_tokens",
+	"input_image_units",
+	"input_audio_tokens",
+	"input_image_tokens",
+	"input_video_tokens",
+	"output_text_tokens",
+	"output_reasoning_tokens",
+	"output_audio_tokens",
+	"output_image_tokens",
+	"output_video_tokens",
+	"embedding_tokens",
+	"request_units",
+	"web_search_units",
+	"file_search_units",
+	"code_interpreter_session_units",
+	"code_interpreter_call_units",
+	"computer_use_action_units",
+	"tool_call_units",
+	"tool_execution_seconds",
+	"rerank_search_units",
+	"image_generation_units",
+	"video_generation_units",
+	"audio_generation_units",
+	"transcription_seconds",
+	"endpoint_runtime_seconds",
+	"endpoint_instance_hours",
+	"custom_units",
+}
+
+var componentOrder = func() map[string]int {
+	orders := map[string]int{}
+	for index, name := range componentOrderNames {
+		orders[name] = index
+	}
+	return orders
+}()
+
 // Object is the prototype map-backed representation for canonical ledgers,
 // price cards, discount policies, provider responses, and adapter inputs.
 type Object = map[string]any
@@ -895,6 +936,10 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 	if warning, ok := providerReportedWarning(total, options); ok {
 		warnings = append(warnings, warning)
 	}
+	components = orderedCostComponents(components)
+	priceSources = orderedPriceSources(priceSources)
+	appliedDiscounts = orderedAppliedDiscounts(appliedDiscounts)
+	warnings = orderedWarnings(warnings)
 	if trace != nil {
 		for _, rawWarning := range warnings {
 			warning := asObject(rawWarning)
@@ -942,6 +987,96 @@ func sourceKey(source Object) string {
 		asString(source["retrieved_at"]),
 		asString(source["version"]),
 	}, "|")
+}
+
+func componentRank(name string) int {
+	if rank, ok := componentOrder[name]; ok {
+		return rank
+	}
+	return len(componentOrder)
+}
+
+func orderedCostComponents(components []any) []any {
+	ordered := append([]any{}, components...)
+	sort.SliceStable(ordered, func(left int, right int) bool {
+		leftComponent := asObject(ordered[left])
+		rightComponent := asObject(ordered[right])
+		leftRank := componentRank(asString(leftComponent["name"]))
+		rightRank := componentRank(asString(rightComponent["name"]))
+		if leftRank != rightRank {
+			return leftRank < rightRank
+		}
+		leftKey := strings.Join([]string{
+			asString(leftComponent["name"]),
+			asString(leftComponent["unit"]),
+			asString(leftComponent["unit_price"]),
+			asString(leftComponent["price_card_id"]),
+			numberString(leftComponent["quantity"]),
+			numberString(leftComponent["cost"]),
+		}, "|")
+		rightKey := strings.Join([]string{
+			asString(rightComponent["name"]),
+			asString(rightComponent["unit"]),
+			asString(rightComponent["unit_price"]),
+			asString(rightComponent["price_card_id"]),
+			numberString(rightComponent["quantity"]),
+			numberString(rightComponent["cost"]),
+		}, "|")
+		return leftKey < rightKey
+	})
+	return ordered
+}
+
+func orderedPriceSources(sources []any) []any {
+	ordered := append([]any{}, sources...)
+	sort.SliceStable(ordered, func(left int, right int) bool {
+		return sourceKey(asObject(ordered[left])) < sourceKey(asObject(ordered[right]))
+	})
+	return ordered
+}
+
+func orderedAppliedDiscounts(discounts []any) []any {
+	ordered := append([]any{}, discounts...)
+	sort.SliceStable(ordered, func(left int, right int) bool {
+		leftDiscount := asObject(ordered[left])
+		rightDiscount := asObject(ordered[right])
+		leftKey := strings.Join([]string{
+			asString(leftDiscount["component"]),
+			asString(leftDiscount["policy_id"]),
+			numberString(leftDiscount["amount"]),
+		}, "|")
+		rightKey := strings.Join([]string{
+			asString(rightDiscount["component"]),
+			asString(rightDiscount["policy_id"]),
+			numberString(rightDiscount["amount"]),
+		}, "|")
+		return leftKey < rightKey
+	})
+	return ordered
+}
+
+func orderedWarnings(warnings []any) []any {
+	ordered := append([]any{}, warnings...)
+	sort.SliceStable(ordered, func(left int, right int) bool {
+		leftWarning := asObject(ordered[left])
+		rightWarning := asObject(ordered[right])
+		leftMetadata, _ := json.Marshal(leftWarning["metadata"])
+		rightMetadata, _ := json.Marshal(rightWarning["metadata"])
+		leftKey := strings.Join([]string{
+			asString(leftWarning["code"]),
+			asString(leftWarning["path"]),
+			asString(leftWarning["message"]),
+			string(leftMetadata),
+		}, "|")
+		rightKey := strings.Join([]string{
+			asString(rightWarning["code"]),
+			asString(rightWarning["path"]),
+			asString(rightWarning["message"]),
+			string(rightMetadata),
+		}, "|")
+		return leftKey < rightKey
+	})
+	return ordered
 }
 
 func componentKey(component Object) string {
@@ -1082,6 +1217,10 @@ func AggregateCostLedgers(costLedgers []any, options Object) Object {
 	for _, key := range sourceKeys {
 		priceSources = append(priceSources, sourcesByKey[key])
 	}
+	components = orderedCostComponents(components)
+	priceSources = orderedPriceSources(priceSources)
+	appliedDiscounts = orderedAppliedDiscounts(appliedDiscounts)
+	warnings = orderedWarnings(warnings)
 	metadata := Object{
 		"ledger_count": len(costLedgers),
 		"aggregation":  "cost_ledgers",
@@ -1220,8 +1359,8 @@ func openAICompatibleReasoningOutput(usage Object) (any, string) {
 // ledger shape for supported surfaces.
 //
 // Supported prototype surfaces include OpenAI Responses, OpenAI-compatible chat
-// completions, Anthropic Messages, Cohere Chat, Gemini generateContent, and
-// AWS Bedrock Converse.
+// completions, Anthropic Messages, Cohere Chat, Gemini generateContent, AWS
+// Bedrock Converse, and AWS Bedrock InvokeModel.
 func ExtractUsageLedger(response Object, options Object) Object {
 	adapter := asString(options["adapter"])
 	if adapter == "" {
@@ -1256,6 +1395,8 @@ func ExtractUsageLedger(response Object, options Object) Object {
 		return extractGeminiGenerateContentUsage(response, options)
 	case "aws.bedrock.converse":
 		return extractBedrockConverseUsage(response, options)
+	case "aws.bedrock.invoke_model":
+		return extractBedrockInvokeModelUsage(response, options)
 	case "cohere.chat":
 		return extractCohereChatUsage(response, options)
 	default:
@@ -1748,6 +1889,69 @@ func extractBedrockConverseUsage(response Object, options Object) Object {
 		positiveComponent("input_cache_write_1h_tokens", cacheWrite1h, "token", "$.usage.cacheDetails"),
 		positiveComponent("input_cache_read_tokens", cacheRead, "token", "$.usage.cacheReadInputTokens"),
 		positiveComponent("output_text_tokens", getNumber(usage, "outputTokens"), "token", "$.usage.outputTokens"),
+	}), usage)
+}
+
+func bedrockInvokeModelBody(response Object) (Object, string) {
+	rawBody, ok := response["body"]
+	if !ok {
+		return response, "$"
+	}
+	switch body := rawBody.(type) {
+	case map[string]any:
+		return body, "$.body"
+	case string:
+		decoder := json.NewDecoder(strings.NewReader(body))
+		decoder.UseNumber()
+		var decoded Object
+		if err := decoder.Decode(&decoded); err == nil {
+			return decoded, "$.body"
+		}
+	case []byte:
+		decoder := json.NewDecoder(strings.NewReader(string(body)))
+		decoder.UseNumber()
+		var decoded Object
+		if err := decoder.Decode(&decoded); err == nil {
+			return decoded, "$.body"
+		}
+	}
+	return Object{}, "$.body"
+}
+
+func extractBedrockInvokeModelUsage(response Object, options Object) Object {
+	body, sourceRoot := bedrockInvokeModelBody(response)
+	usage := asObject(body["usage"])
+	cacheWrite := getNumber(usage, "cache_creation_input_tokens")
+	cacheWrite1h := getNumber(usage, "cache_creation_input_tokens_1h")
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "bedrock"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "aws.bedrock.invoke_model"
+	}
+	returnedModel := asString(response["modelId"])
+	if returnedModel == "" {
+		returnedModel = asString(response["model_id"])
+	}
+	if returnedModel == "" {
+		returnedModel = asString(options["model"])
+	}
+	if returnedModel == "" {
+		returnedModel = asString(body["model"])
+	}
+	requestedModel := asString(options["model"])
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("input_uncached_tokens", getNumber(usage, "input_tokens"), "token", sourceRoot+".usage.input_tokens"),
+		positiveComponent("input_cache_write_tokens", subtract(cacheWrite, cacheWrite1h), "token", sourceRoot+".usage.cache_creation_input_tokens"),
+		positiveComponent("input_cache_write_1h_tokens", cacheWrite1h, "token", sourceRoot+".usage.cache_creation_input_tokens_1h"),
+		positiveComponent("input_cache_read_tokens", getNumber(usage, "cache_read_input_tokens"), "token", sourceRoot+".usage.cache_read_input_tokens"),
+		positiveComponent("output_text_tokens", getNumber(usage, "output_tokens"), "token", sourceRoot+".usage.output_tokens"),
 	}), usage)
 }
 
@@ -3329,6 +3533,7 @@ func FromResponse(response Object, options Object, priceCards []any, discountPol
 		surface != "google.gemini.generate_content" &&
 		surface != "vertex.gemini.generate_content" &&
 		surface != "aws.bedrock.converse" &&
+		surface != "aws.bedrock.invoke_model" &&
 		surface != "cohere.chat" &&
 		!isOpenAICompatibleChatSurface(surface) {
 		if mode == "strict" {

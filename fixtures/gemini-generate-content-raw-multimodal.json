@@ -233,20 +233,20 @@
           "discount_eligible": true
         },
         {
-          "name": "input_image_tokens",
-          "quantity": "600",
-          "unit": "token",
-          "unit_price": "0.000002",
-          "cost": "0.0012",
-          "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
-          "discount_eligible": true
-        },
-        {
           "name": "input_audio_tokens",
           "quantity": "200",
           "unit": "token",
           "unit_price": "0.000003",
           "cost": "0.0006",
+          "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_image_tokens",
+          "quantity": "600",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.0012",
           "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
           "discount_eligible": true
         },
@@ -278,20 +278,20 @@
           "discount_eligible": true
         },
         {
-          "name": "output_image_tokens",
-          "quantity": "20",
-          "unit": "token",
-          "unit_price": "0.000006",
-          "cost": "0.00012",
-          "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
-          "discount_eligible": true
-        },
-        {
           "name": "output_audio_tokens",
           "quantity": "5",
           "unit": "token",
           "unit_price": "0.000007",
           "cost": "0.000035",
+          "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_image_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.000006",
+          "cost": "0.00012",
           "price_card_id": "google:gemini-2.5-pro:multimodal-fixture",
           "discount_eligible": true
         },

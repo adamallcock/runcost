@@ -153,6 +153,15 @@
           "discount_eligible": true
         },
         {
+          "name": "input_image_tokens",
+          "quantity": "50",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.0001",
+          "price_card_id": "openai:gpt-helicone:helicone",
+          "discount_eligible": true
+        },
+        {
           "name": "output_text_tokens",
           "quantity": "500",
           "unit": "token",
@@ -167,15 +176,6 @@
           "unit": "token",
           "unit_price": "0.000006",
           "cost": "0.0006",
-          "price_card_id": "openai:gpt-helicone:helicone",
-          "discount_eligible": true
-        },
-        {
-          "name": "input_image_tokens",
-          "quantity": "50",
-          "unit": "token",
-          "unit_price": "0.000002",
-          "cost": "0.0001",
           "price_card_id": "openai:gpt-helicone:helicone",
           "discount_eligible": true
         },

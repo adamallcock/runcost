@@ -3,6 +3,39 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const MONEY_PRECISION = 18n;
+const COMPONENT_ORDER_NAMES = [
+  "input_uncached_tokens",
+  "input_cache_read_tokens",
+  "input_cache_write_tokens",
+  "input_cache_write_1h_tokens",
+  "input_image_units",
+  "input_audio_tokens",
+  "input_image_tokens",
+  "input_video_tokens",
+  "output_text_tokens",
+  "output_reasoning_tokens",
+  "output_audio_tokens",
+  "output_image_tokens",
+  "output_video_tokens",
+  "embedding_tokens",
+  "request_units",
+  "web_search_units",
+  "file_search_units",
+  "code_interpreter_session_units",
+  "code_interpreter_call_units",
+  "computer_use_action_units",
+  "tool_call_units",
+  "tool_execution_seconds",
+  "rerank_search_units",
+  "image_generation_units",
+  "video_generation_units",
+  "audio_generation_units",
+  "transcription_seconds",
+  "endpoint_runtime_seconds",
+  "endpoint_instance_hours",
+  "custom_units"
+];
+const COMPONENT_ORDER = new Map(COMPONENT_ORDER_NAMES.map((name, index) => [name, index]));
 
 function parseDecimal(value) {
   const text = String(value);
@@ -102,6 +135,79 @@ function compareText(left, right) {
   if (left < right) return -1;
   if (left > right) return 1;
   return 0;
+}
+
+function compareTuple(left, right) {
+  for (let index = 0; index < left.length; index += 1) {
+    const compared = compareText(String(left[index] ?? ""), String(right[index] ?? ""));
+    if (compared !== 0) return compared;
+  }
+  return 0;
+}
+
+function stableStringify(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function componentSortKey(component) {
+  const name = String(component.name || "");
+  return [
+    String(COMPONENT_ORDER.has(name) ? COMPONENT_ORDER.get(name) : COMPONENT_ORDER.size).padStart(4, "0"),
+    name,
+    component.unit || "",
+    component.unit_price || "",
+    component.price_card_id || "",
+    component.quantity || "",
+    component.cost || ""
+  ];
+}
+
+function sourceSortKey(source) {
+  return [
+    source.name || "",
+    source.url || "",
+    source.retrieved_at || "",
+    source.version || ""
+  ];
+}
+
+function discountSortKey(discount) {
+  return [
+    discount.component || "",
+    discount.policy_id || "",
+    discount.amount || ""
+  ];
+}
+
+function warningSortKey(warning) {
+  return [
+    warning.code || "",
+    warning.path || "",
+    warning.message || "",
+    stableStringify(warning.metadata || {})
+  ];
+}
+
+function orderedCostComponents(components) {
+  return [...components].sort((left, right) => compareTuple(componentSortKey(left), componentSortKey(right)));
+}
+
+function orderedPriceSources(sources) {
+  return [...sources].sort((left, right) => compareTuple(sourceSortKey(left), sourceSortKey(right)));
+}
+
+function orderedAppliedDiscounts(discounts) {
+  return [...discounts].sort((left, right) => compareTuple(discountSortKey(left), discountSortKey(right)));
+}
+
+function orderedWarnings(warnings) {
+  return [...warnings].sort((left, right) => compareTuple(warningSortKey(left), warningSortKey(right)));
 }
 
 function cardIdentityMatches(usageLedger, card) {
@@ -659,8 +765,12 @@ export function calculateCost({
   if (reportedWarning) {
     warnings.push(reportedWarning);
   }
+  const orderedComponents = orderedCostComponents(components);
+  const orderedSources = orderedPriceSources([...sourceByName.values()]);
+  const orderedDiscounts = orderedAppliedDiscounts(appliedDiscounts);
+  const orderedWarningList = orderedWarnings(warnings);
   if (trace) {
-    for (const warning of warnings) {
+    for (const warning of orderedWarningList) {
       trace.decisions.push({
         type: "warning",
         warning_code: warning.code,
@@ -682,17 +792,17 @@ export function calculateCost({
       alias_resolution: aliasResolution
     },
     currency: "USD",
-    components,
+    components: orderedComponents,
     total,
-    price_sources: [...sourceByName.values()],
-    applied_discounts: appliedDiscounts,
-    warnings
+    price_sources: orderedSources,
+    applied_discounts: orderedDiscounts,
+    warnings: orderedWarningList
   };
   if (trace) {
     result.debug_trace = trace;
   }
-  if (mode === "strict" && warnings.length > 0) {
-    throw new Error(`strict mode cost calculation failed: ${warnings[0].code}`);
+  if (mode === "strict" && orderedWarningList.length > 0) {
+    throw new Error(`strict mode cost calculation failed: ${orderedWarningList[0].code}`);
   }
   return result;
 }
@@ -800,6 +910,7 @@ export function aggregateCostLedgers({
     metadata.expected_ledger_count = expectedCount;
   }
 
+  const orderedWarningList = orderedWarnings(warnings);
   const result = {
     schema_version: "0.1",
     provider,
@@ -811,15 +922,15 @@ export function aggregateCostLedgers({
       alias_resolution: "none"
     },
     currency: "USD",
-    components: [...componentsByKey.values()],
+    components: orderedCostComponents([...componentsByKey.values()]),
     total,
-    price_sources: [...sourceByKey.values()],
-    applied_discounts: appliedDiscounts,
-    warnings,
+    price_sources: orderedPriceSources([...sourceByKey.values()]),
+    applied_discounts: orderedAppliedDiscounts(appliedDiscounts),
+    warnings: orderedWarningList,
     metadata
   };
-  if (mode === "strict" && warnings.length > 0) {
-    throw new Error(`strict mode cost aggregation failed: ${warnings[0].code}`);
+  if (mode === "strict" && orderedWarningList.length > 0) {
+    throw new Error(`strict mode cost aggregation failed: ${orderedWarningList[0].code}`);
   }
   return result;
 }
@@ -1282,6 +1393,71 @@ export function extractBedrockConverseUsage(response, options = {}) {
   });
 }
 
+function bedrockInvokeModelBody(response) {
+  if (!hasOwn(response, "body")) {
+    return {
+      body: response,
+      sourceRoot: "$"
+    };
+  }
+  let body = response.body;
+  if (body && typeof body === "object" && !(body instanceof Uint8Array)) {
+    return {
+      body,
+      sourceRoot: "$.body"
+    };
+  }
+  if (body instanceof Uint8Array) {
+    body = new TextDecoder().decode(body);
+  }
+  if (typeof body === "string") {
+    try {
+      const decoded = JSON.parse(body);
+      if (decoded && typeof decoded === "object" && !Array.isArray(decoded)) {
+        return {
+          body: decoded,
+          sourceRoot: "$.body"
+        };
+      }
+    } catch {
+      return {
+        body: {},
+        sourceRoot: "$.body"
+      };
+    }
+  }
+  return {
+    body: {},
+    sourceRoot: "$.body"
+  };
+}
+
+export function extractBedrockInvokeModelUsage(response, options = {}) {
+  const { body, sourceRoot } = bedrockInvokeModelBody(response);
+  const usage = body.usage || {};
+  const input = usage.input_tokens || 0;
+  const cacheWrite = usage.cache_creation_input_tokens || 0;
+  const cacheWrite1h = usage.cache_creation_input_tokens_1h || 0;
+  const cacheRead = usage.cache_read_input_tokens || 0;
+  const output = usage.output_tokens || 0;
+  const returnedModel = response.modelId || response.model_id || options.model || body.model;
+
+  return baseUsageLedger({
+    provider: options.provider || "bedrock",
+    surface: options.surface || "aws.bedrock.invoke_model",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage: usage,
+    components: compactComponents([
+      positiveComponent("input_uncached_tokens", input, "token", `${sourceRoot}.usage.input_tokens`),
+      positiveComponent("input_cache_write_tokens", cacheWrite - cacheWrite1h, "token", `${sourceRoot}.usage.cache_creation_input_tokens`),
+      positiveComponent("input_cache_write_1h_tokens", cacheWrite1h, "token", `${sourceRoot}.usage.cache_creation_input_tokens_1h`),
+      positiveComponent("input_cache_read_tokens", cacheRead, "token", `${sourceRoot}.usage.cache_read_input_tokens`),
+      positiveComponent("output_text_tokens", output, "token", `${sourceRoot}.usage.output_tokens`)
+    ])
+  });
+}
+
 function cohereChatUsagePayload(response) {
   if (response.usage && hasOwn(response.usage, "billed_units")) {
     return {
@@ -1581,6 +1757,9 @@ export function extractUsageLedger(response, options = {}) {
   }
   if (surface === "aws.bedrock.converse") {
     return extractBedrockConverseUsage(response, options);
+  }
+  if (surface === "aws.bedrock.invoke_model") {
+    return extractBedrockInvokeModelUsage(response, options);
   }
   if (surface === "cohere.chat") {
     return extractCohereChatUsage(response, options);

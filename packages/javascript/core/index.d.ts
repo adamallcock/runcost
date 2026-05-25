@@ -387,6 +387,7 @@ export function extractOpenRouterChatCompletionsUsage(response: Record<string, u
 export function extractAnthropicMessagesUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractGeminiGenerateContentUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractBedrockConverseUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractBedrockInvokeModelUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractCohereChatUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractLangChainChatUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractVercelAISDKUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;

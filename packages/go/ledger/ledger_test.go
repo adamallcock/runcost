@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -155,6 +156,59 @@ func requireDecimal(t *testing.T, value any, path string) *big.Rat {
 	return parsed
 }
 
+func orderedKeys(values []any, key func(Object) string) []string {
+	keys := []string{}
+	for _, value := range values {
+		keys = append(keys, key(asObject(value)))
+	}
+	return keys
+}
+
+func assertOrdered(t *testing.T, values []any, key func(Object) string, path string) {
+	t.Helper()
+	keys := orderedKeys(values, key)
+	expected := append([]string{}, keys...)
+	sort.Strings(expected)
+	if !reflect.DeepEqual(keys, expected) {
+		t.Fatalf("%s: output order is not byte-stable", path)
+	}
+}
+
+func componentOrderKey(component Object) string {
+	return fmt.Sprintf(
+		"%04d|%s|%s|%s|%s|%s|%s",
+		componentRank(asString(component["name"])),
+		asString(component["name"]),
+		asString(component["unit"]),
+		asString(component["unit_price"]),
+		asString(component["price_card_id"]),
+		numberString(component["quantity"]),
+		numberString(component["cost"]),
+	)
+}
+
+func sourceOrderKey(source Object) string {
+	return sourceKey(source)
+}
+
+func discountOrderKey(discount Object) string {
+	return strings.Join([]string{
+		asString(discount["component"]),
+		asString(discount["policy_id"]),
+		numberString(discount["amount"]),
+	}, "|")
+}
+
+func warningOrderKey(warning Object) string {
+	metadata, _ := json.Marshal(warning["metadata"])
+	return strings.Join([]string{
+		asString(warning["code"]),
+		asString(warning["path"]),
+		asString(warning["message"]),
+		string(metadata),
+	}, "|")
+}
+
 func validateCostLedger(t *testing.T, ledger Object, path string) {
 	t.Helper()
 	assertAllowedKeys(t, ledger, map[string]bool{
@@ -192,7 +246,9 @@ func validateCostLedger(t *testing.T, ledger Object, path string) {
 	requireOptionalString(t, model["alias_resolution"], path+".model.alias_resolution")
 
 	componentTotal := new(big.Rat)
-	for index, value := range requireSlice(t, ledger["components"], path+".components") {
+	components := requireSlice(t, ledger["components"], path+".components")
+	assertOrdered(t, components, componentOrderKey, path+".components")
+	for index, value := range components {
 		componentPath := fmt.Sprintf("%s.components[%d]", path, index)
 		component := requireObject(t, value, componentPath)
 		assertAllowedKeys(t, component, map[string]bool{
@@ -220,7 +276,9 @@ func validateCostLedger(t *testing.T, ledger Object, path string) {
 		t.Fatalf("%s: component costs sum to %s, total is %s", path, componentTotal.String(), requireDecimal(t, ledger["total"], path+".total").String())
 	}
 
-	for index, value := range asSlice(ledger["price_sources"]) {
+	priceSources := asSlice(ledger["price_sources"])
+	assertOrdered(t, priceSources, sourceOrderKey, path+".price_sources")
+	for index, value := range priceSources {
 		sourcePath := fmt.Sprintf("%s.price_sources[%d]", path, index)
 		source := requireObject(t, value, sourcePath)
 		assertAllowedKeys(t, source, map[string]bool{"name": true, "url": true, "retrieved_at": true, "version": true, "license": true}, sourcePath)
@@ -230,7 +288,9 @@ func validateCostLedger(t *testing.T, ledger Object, path string) {
 		requireOptionalString(t, source["version"], sourcePath+".version")
 		requireOptionalString(t, source["license"], sourcePath+".license")
 	}
-	for index, value := range asSlice(ledger["applied_discounts"]) {
+	appliedDiscounts := asSlice(ledger["applied_discounts"])
+	assertOrdered(t, appliedDiscounts, discountOrderKey, path+".applied_discounts")
+	for index, value := range appliedDiscounts {
 		discountPath := fmt.Sprintf("%s.applied_discounts[%d]", path, index)
 		discount := requireObject(t, value, discountPath)
 		assertAllowedKeys(t, discount, map[string]bool{"policy_id": true, "component": true, "amount": true}, discountPath)
@@ -238,7 +298,9 @@ func validateCostLedger(t *testing.T, ledger Object, path string) {
 		requireString(t, discount["component"], discountPath+".component")
 		requireDecimal(t, discount["amount"], discountPath+".amount")
 	}
-	for index, value := range requireSlice(t, ledger["warnings"], path+".warnings") {
+	warnings := requireSlice(t, ledger["warnings"], path+".warnings")
+	assertOrdered(t, warnings, warningOrderKey, path+".warnings")
+	for index, value := range warnings {
 		warningPath := fmt.Sprintf("%s.warnings[%d]", path, index)
 		warning := requireObject(t, value, warningPath)
 		assertAllowedKeys(t, warning, map[string]bool{"code": true, "message": true, "path": true, "metadata": true}, warningPath)
