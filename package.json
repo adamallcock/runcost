@@ -1,0 +1,15 @@
+{
+  "name": "runcost-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "python3 scripts/check_fixtures.py && go test ./packages/go/... && python3 scripts/check_project_hygiene.py",
+    "check:hygiene": "python3 scripts/check_project_hygiene.py",
+    "example:js": "node examples/javascript_basic.mjs",
+    "example:py": "python3 examples/python_basic.py"
+  },
+  "workspaces": [
+    "packages/javascript/core"
+  ]
+}
