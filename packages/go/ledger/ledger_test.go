@@ -295,6 +295,16 @@ func resolvePriceCards(t *testing.T, input Object) []any {
 			t.Fatal(err)
 		}
 		return cards
+	case "yaml-file":
+		path := asString(source["path"])
+		if !filepath.IsAbs(path) {
+			path = filepath.Join("../../../", path)
+		}
+		cards, err := PriceCardsFromYAMLFile(path, asString(source["source_type"]))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cards
 	default:
 		t.Fatalf("unsupported price source: %s", asString(source["type"]))
 	}

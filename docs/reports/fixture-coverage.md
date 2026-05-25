@@ -13,7 +13,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 67
+- Fixtures: 68
 - Providers: 15
 - Provider surfaces: 16
 - Usage components covered: 20
@@ -24,9 +24,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 65 |
-| `javascript` | 66 |
-| `python` | 66 |
+| `go` | 66 |
+| `javascript` | 67 |
+| `python` | 67 |
 
 ## Scenarios
 
@@ -42,7 +42,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `raw_provider_response` | 23 |
 | `service_mode` | 3 |
 | `service_tier` | 2 |
-| `source_adapter` | 12 |
+| `source_adapter` | 13 |
 | `source_priority` | 2 |
 | `strict_error` | 1 |
 | `warning` | 4 |
@@ -63,7 +63,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `huggingface` | `huggingface.chat_completions` | 1 |
 | `mistral` | `mistral.chat_completions` | 1 |
 | `openai` | `openai.chat_completions` | 8 |
-| `openai` | `openai.responses` | 34 |
+| `openai` | `openai.responses` | 35 |
 | `openrouter` | `openrouter.chat_completions` | 5 |
 | `vertex` | `vertex.gemini.generate_content` | 1 |
 | `xai` | `xai.chat_completions` | 1 |
@@ -83,12 +83,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `input_cache_write_tokens` | 12 |
 | `input_image_tokens` | 2 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 60 |
+| `input_uncached_tokens` | 61 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 2 |
 | `output_image_tokens` | 2 |
 | `output_reasoning_tokens` | 24 |
-| `output_text_tokens` | 50 |
+| `output_text_tokens` | 51 |
 | `output_video_tokens` | 1 |
 | `request_units` | 3 |
 | `web_search_units` | 8 |
@@ -123,6 +123,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `portkey` | 1 |
 | `source-cache` | 1 |
 | `user-pricing` | 1 |
+| `yaml-file` | 1 |
 
 ## Framework Adapters
 
@@ -146,7 +147,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-CUSTOM-PRICING` | 1 |
 | `RC-DEBUG-TRACE` | 1 |
 | `RC-DISCOUNT-POLICY` | 1 |
-| `RC-FIXTURE-CONFORMANCE` | 67 |
+| `RC-FIXTURE-CONFORMANCE` | 68 |
 | `RC-FRAMEWORK-ADAPTER` | 7 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
 | `RC-LONG-CONTEXT` | 2 |
@@ -154,7 +155,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-RAW-EXTRACTOR` | 23 |
 | `RC-SERVICE-MODE` | 3 |
 | `RC-SERVICE-TIER` | 2 |
-| `RC-SOURCE-ADAPTER` | 13 |
+| `RC-SOURCE-ADAPTER` | 14 |
 | `RC-SOURCE-PRIORITY` | 2 |
 | `RC-STRICT-MODE` | 1 |
 | `RC-WARNING-MODE` | 5 |
@@ -183,12 +184,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:input_cache_write_tokens` | 12 |
 | `component:input_image_tokens` | 2 |
 | `component:input_image_units` | 1 |
-| `component:input_uncached_tokens` | 60 |
+| `component:input_uncached_tokens` | 61 |
 | `component:input_video_tokens` | 1 |
 | `component:output_audio_tokens` | 2 |
 | `component:output_image_tokens` | 2 |
 | `component:output_reasoning_tokens` | 24 |
-| `component:output_text_tokens` | 50 |
+| `component:output_text_tokens` | 51 |
 | `component:output_video_tokens` | 1 |
 | `component:request_units` | 3 |
 | `component:web_search_units` | 8 |
@@ -226,8 +227,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `source:openrouter-models` | 2 |
 | `source:portkey` | 1 |
 | `source:source-cache` | 1 |
-| `source:user-pricing` | 2 |
-| `source_adapter` | 12 |
+| `source:user-pricing` | 3 |
+| `source:yaml-file` | 1 |
+| `source_adapter` | 13 |
 | `source_priority` | 2 |
 | `stale_price` | 1 |
 | `streaming` | 4 |

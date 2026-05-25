@@ -85,9 +85,9 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Reviewed official pricing snapshots | Yes | Yes | Yes | `price_cards_from_official_snapshot`, `priceCardsFromOfficialSnapshot`, `PriceCardsFromOfficialSnapshot`; `official-snapshot-adapter-basic.json` |
 | RunCost source-cache envelope | Yes | Yes | Yes | `price_cards_from_source_cache`, `priceCardsFromSourceCache`, `PriceCardsFromSourceCache`; `source-cache-adapter-basic.json` |
 | Local JSON price-source file | Yes | Yes | Yes | `price_cards_from_json_file`, `priceCardsFromJSONFile`, `PriceCardsFromJSONFile`; `user-pricing-json-file-loader.json` |
+| Local YAML price-source file | Yes | Yes | Yes | `price_cards_from_yaml_file`, `priceCardsFromYAMLFile`, `PriceCardsFromYAMLFile`; `user-pricing-yaml-file-loader.json` |
 | User compact pricing data | Yes | Yes | Yes | `price_cards_from_user_pricing`, `priceCardsFromUserPricing`, `PriceCardsFromUserPricing`; `user-pricing-adapter-compact.json` |
 | Helicone cost package data | Yes | Yes | Yes | `price_cards_from_helicone`, `priceCardsFromHelicone`, `PriceCardsFromHelicone`; `helicone-adapter-basic.json` |
-| Provider official pricing snapshots | Planned | Planned | Planned | Milestone 3 |
 
 ## Usage Components
 

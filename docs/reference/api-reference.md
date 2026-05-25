@@ -106,6 +106,7 @@ Streaming final usage:
 | Reviewed official pricing snapshots | `price_cards_from_official_snapshot` | `priceCardsFromOfficialSnapshot` | `PriceCardsFromOfficialSnapshot` |
 | Portkey pricing data | `price_cards_from_portkey` | `priceCardsFromPortkey` | `PriceCardsFromPortkey` |
 | Local JSON price-source file | `price_cards_from_json_file` | `priceCardsFromJSONFile` | `PriceCardsFromJSONFile` |
+| Local YAML price-source file | `price_cards_from_yaml_file` | `priceCardsFromYAMLFile` | `PriceCardsFromYAMLFile` |
 | User compact pricing data | `price_cards_from_user_pricing` | `priceCardsFromUserPricing` | `PriceCardsFromUserPricing` |
 | Helicone model-registry data | `price_cards_from_helicone` | `priceCardsFromHelicone` | `PriceCardsFromHelicone` |
 

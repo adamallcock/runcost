@@ -37,6 +37,7 @@ from runcost import (  # noqa: E402
     price_cards_from_portkey,
     price_cards_from_source_cache,
     price_cards_from_user_pricing,
+    price_cards_from_yaml_file,
     track_langchain_costs,
 )
 
@@ -211,6 +212,8 @@ def resolve_python_price_cards(fixture):
         return price_cards_from_helicone(source["data"])
     if source["type"] == "json-file":
         return price_cards_from_json_file(ROOT / source["path"], source.get("source_type", "user-pricing"))
+    if source["type"] == "yaml-file":
+        return price_cards_from_yaml_file(ROOT / source["path"], source.get("source_type", "user-pricing"))
     raise AssertionError(f"Unsupported price source: {source['type']}")
 
 
@@ -298,7 +301,7 @@ def run_python_fixture(fixture):
 def run_javascript_fixture(path: Path):
     script = f"""
       import {{ aggregateCostLedgers, calculateCost }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
-      import {{ fromResponse, fromLangChainMessage, fromVercelAISDKResult, fromLlamaIndexTokenCounter, fromHaystackGeneratorResult, fromLiteLLMResponse, fromAG2UsageSummary, createRunCostVercelMiddleware, priceCardsFromLlmPrices, priceCardsFromSourceCache, priceCardsFromJSONFile, priceCardsFromModelsDev, priceCardsFromOfficialSnapshot }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
+      import {{ fromResponse, fromLangChainMessage, fromVercelAISDKResult, fromLlamaIndexTokenCounter, fromHaystackGeneratorResult, fromLiteLLMResponse, fromAG2UsageSummary, createRunCostVercelMiddleware, priceCardsFromLlmPrices, priceCardsFromSourceCache, priceCardsFromJSONFile, priceCardsFromYAMLFile, priceCardsFromModelsDev, priceCardsFromOfficialSnapshot }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
       import fs from "node:fs";
       const fixture = JSON.parse(fs.readFileSync({json.dumps(str(path))}, "utf8"));
       const input = fixture.input;
@@ -332,6 +335,10 @@ def run_javascript_fixture(path: Path):
       if (!priceCards && priceSource && priceSource.type === "json-file") {{
         const filePath = priceSource.path.startsWith("/") ? priceSource.path : `${{root}}/${{priceSource.path}}`;
         priceCards = priceCardsFromJSONFile(filePath, {{ sourceType: priceSource.source_type || "user-pricing" }});
+      }}
+      if (!priceCards && priceSource && priceSource.type === "yaml-file") {{
+        const filePath = priceSource.path.startsWith("/") ? priceSource.path : `${{root}}/${{priceSource.path}}`;
+        priceCards = priceCardsFromYAMLFile(filePath, {{ sourceType: priceSource.source_type || "user-pricing" }});
       }}
       const responseOptions = {{
             ...input.extract,

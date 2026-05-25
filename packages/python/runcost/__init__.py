@@ -33,6 +33,7 @@ from .core import (
     price_cards_from_portkey,
     price_cards_from_source_cache,
     price_cards_from_user_pricing,
+    price_cards_from_yaml_file,
     RunCostLangChainCallback,
     track_langchain_costs,
 )
@@ -118,6 +119,7 @@ __all__ = [
     "price_cards_from_portkey",
     "price_cards_from_source_cache",
     "price_cards_from_user_pricing",
+    "price_cards_from_yaml_file",
     "RunCostLangChainCallback",
     "track_langchain_costs",
 ]

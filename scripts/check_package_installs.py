@@ -25,7 +25,7 @@ def check_python_install(workdir: Path) -> None:
         [
             str(python),
             "-c",
-            "from pathlib import Path; from runcost import aggregate_cost_ledgers, calculate_cost, from_response, from_ag2_usage_summary, from_haystack_generator_result, from_litellm_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_json_file, price_cards_from_models_dev, price_cards_from_official_snapshot, price_cards_from_source_cache, price_cards_from_user_pricing; p=Path('prices.json'); p.write_text('{\"provider\":\"test\",\"models\":[{\"id\":\"test\",\"prices\":{\"input\":\"1\"}}]}'); print(aggregate_cost_ledgers, calculate_cost, from_response, from_ag2_usage_summary, from_haystack_generator_result, from_litellm_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_json_file(p), price_cards_from_models_dev, price_cards_from_official_snapshot, price_cards_from_source_cache, price_cards_from_user_pricing)",
+            "from pathlib import Path; from runcost import aggregate_cost_ledgers, calculate_cost, from_response, from_ag2_usage_summary, from_haystack_generator_result, from_litellm_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_json_file, price_cards_from_yaml_file, price_cards_from_models_dev, price_cards_from_official_snapshot, price_cards_from_source_cache, price_cards_from_user_pricing; p=Path('prices.json'); p.write_text('{\"provider\":\"test\",\"models\":[{\"id\":\"test\",\"prices\":{\"input\":\"1\"}}]}'); y=Path('prices.yaml'); y.write_text('provider: test\\nmodels:\\n  - id: test\\n    prices:\\n      input: \"1\"\\n'); print(aggregate_cost_ledgers, calculate_cost, from_response, from_ag2_usage_summary, from_haystack_generator_result, from_litellm_response, track_langchain_costs, price_cards_from_helicone, price_cards_from_json_file(p), price_cards_from_yaml_file(y), price_cards_from_models_dev, price_cards_from_official_snapshot, price_cards_from_source_cache, price_cards_from_user_pricing)",
         ],
         workdir,
     )
@@ -50,7 +50,7 @@ def check_javascript_install(workdir: Path) -> None:
             "node",
             "--input-type=module",
             "-e",
-            'import fs from "node:fs"; import { aggregateCostLedgers, calculateCost, fromResponse, fromAG2UsageSummary, fromHaystackGeneratorResult, fromLiteLLMResponse, createRunCostVercelMiddleware, priceCardsFromHelicone, priceCardsFromJSONFile, priceCardsFromModelsDev, priceCardsFromOfficialSnapshot, priceCardsFromSourceCache, priceCardsFromUserPricing } from "runcost"; fs.writeFileSync("prices.json", JSON.stringify({ provider: "test", models: [{ id: "test", prices: { input: "1" } }] })); console.log(typeof aggregateCostLedgers, typeof calculateCost, typeof fromResponse, typeof fromAG2UsageSummary, typeof fromHaystackGeneratorResult, typeof fromLiteLLMResponse, typeof createRunCostVercelMiddleware, typeof priceCardsFromHelicone, priceCardsFromJSONFile("prices.json").length, typeof priceCardsFromModelsDev, typeof priceCardsFromOfficialSnapshot, typeof priceCardsFromSourceCache, typeof priceCardsFromUserPricing);',
+            'import fs from "node:fs"; import { aggregateCostLedgers, calculateCost, fromResponse, fromAG2UsageSummary, fromHaystackGeneratorResult, fromLiteLLMResponse, createRunCostVercelMiddleware, priceCardsFromHelicone, priceCardsFromJSONFile, priceCardsFromYAMLFile, priceCardsFromModelsDev, priceCardsFromOfficialSnapshot, priceCardsFromSourceCache, priceCardsFromUserPricing } from "runcost"; fs.writeFileSync("prices.json", JSON.stringify({ provider: "test", models: [{ id: "test", prices: { input: "1" } }] })); fs.writeFileSync("prices.yaml", "provider: test\\nmodels:\\n  - id: test\\n    prices:\\n      input: \\"1\\"\\n"); console.log(typeof aggregateCostLedgers, typeof calculateCost, typeof fromResponse, typeof fromAG2UsageSummary, typeof fromHaystackGeneratorResult, typeof fromLiteLLMResponse, typeof createRunCostVercelMiddleware, typeof priceCardsFromHelicone, priceCardsFromJSONFile("prices.json").length, priceCardsFromYAMLFile("prices.yaml").length, typeof priceCardsFromModelsDev, typeof priceCardsFromOfficialSnapshot, typeof priceCardsFromSourceCache, typeof priceCardsFromUserPricing);',
         ],
         project_dir,
     )
@@ -107,6 +107,21 @@ func TestImport(t *testing.T) {
     }
     if len(fileCards) != 1 {
         t.Fatalf("unexpected file card count: %d", len(fileCards))
+    }
+    if err := os.WriteFile("prices.yaml", []byte(`provider: test
+models:
+  - id: test
+    prices:
+      input: "1"
+`), 0o600); err != nil {
+        t.Fatal(err)
+    }
+    yamlCards, err := ledger.PriceCardsFromYAMLFile("prices.yaml", "user-pricing")
+    if err != nil {
+        t.Fatal(err)
+    }
+    if len(yamlCards) != 1 {
+        t.Fatalf("unexpected YAML file card count: %d", len(yamlCards))
     }
     modelsDevCards := ledger.PriceCardsFromModelsDev(ledger.Object{
         "test": ledger.Object{

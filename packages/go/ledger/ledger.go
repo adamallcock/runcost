@@ -2664,17 +2664,176 @@ func withFileSourceURL(data Object, path string) Object {
 	return copyData
 }
 
-// PriceCardsFromJSONFile reads a local JSON price-source file and maps it
-// through the requested source adapter.
-func PriceCardsFromJSONFile(path string, sourceType string) ([]any, error) {
-	raw, err := os.ReadFile(path)
+type yamlLine struct {
+	indent  int
+	content string
+}
+
+func stripYAMLComment(line string) string {
+	quote := rune(0)
+	for index, char := range line {
+		if (char == '\'' || char == '"') && quote == 0 {
+			quote = char
+		} else if char == quote {
+			quote = 0
+		}
+		if char == '#' && quote == 0 && (index == 0 || line[index-1] == ' ' || line[index-1] == '\t') {
+			return strings.TrimRight(line[:index], " \t")
+		}
+	}
+	return strings.TrimRight(line, " \t")
+}
+
+func yamlScalar(value string) any {
+	trimmed := strings.TrimSpace(value)
+	switch trimmed {
+	case "", "null", "Null", "NULL", "~":
+		return nil
+	case "true", "True", "TRUE":
+		return true
+	case "false", "False", "FALSE":
+		return false
+	}
+	if len(trimmed) >= 2 {
+		if (trimmed[0] == '"' && trimmed[len(trimmed)-1] == '"') || (trimmed[0] == '\'' && trimmed[len(trimmed)-1] == '\'') {
+			return trimmed[1 : len(trimmed)-1]
+		}
+	}
+	if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+		inner := strings.TrimSpace(trimmed[1 : len(trimmed)-1])
+		values := []any{}
+		if inner == "" {
+			return values
+		}
+		for _, part := range strings.Split(inner, ",") {
+			values = append(values, yamlScalar(strings.TrimSpace(part)))
+		}
+		return values
+	}
+	return trimmed
+}
+
+func yamlKeyValue(content string) (string, string, error) {
+	index := strings.Index(content, ":")
+	if index < 0 {
+		return "", "", fmt.Errorf("unsupported YAML line: %s", content)
+	}
+	return strings.TrimSpace(content[:index]), strings.TrimSpace(content[index+1:]), nil
+}
+
+func yamlLines(text string) []yamlLine {
+	lines := []yamlLine{}
+	for _, rawLine := range strings.Split(text, "\n") {
+		cleaned := stripYAMLComment(strings.TrimRight(rawLine, "\r"))
+		if strings.TrimSpace(cleaned) == "" {
+			continue
+		}
+		indent := len(cleaned) - len(strings.TrimLeft(cleaned, " "))
+		lines = append(lines, yamlLine{indent: indent, content: strings.TrimSpace(cleaned)})
+	}
+	return lines
+}
+
+func parseYAMLBlock(lines []yamlLine, start int, indent int) (any, int, error) {
+	index := start
+	if index >= len(lines) || lines[index].indent < indent {
+		return Object{}, index, nil
+	}
+	if strings.HasPrefix(lines[index].content, "- ") {
+		values := []any{}
+		for index < len(lines) && lines[index].indent == indent && strings.HasPrefix(lines[index].content, "- ") {
+			rest := strings.TrimSpace(strings.TrimPrefix(lines[index].content, "- "))
+			index++
+			if rest == "" {
+				value, next, err := parseYAMLBlock(lines, index, indent+2)
+				if err != nil {
+					return nil, index, err
+				}
+				values = append(values, value)
+				index = next
+			} else if strings.Contains(rest, ":") {
+				key, rawValue, err := yamlKeyValue(rest)
+				if err != nil {
+					return nil, index, err
+				}
+				item := Object{}
+				if rawValue != "" {
+					item[key] = yamlScalar(rawValue)
+				} else {
+					value, next, err := parseYAMLBlock(lines, index, indent+2)
+					if err != nil {
+						return nil, index, err
+					}
+					item[key] = value
+					index = next
+				}
+				if index < len(lines) && lines[index].indent >= indent+2 {
+					extra, next, err := parseYAMLBlock(lines, index, indent+2)
+					if err != nil {
+						return nil, index, err
+					}
+					if extraMap, ok := extra.(map[string]any); ok {
+						for extraKey, extraValue := range extraMap {
+							item[extraKey] = extraValue
+						}
+					}
+					index = next
+				}
+				values = append(values, item)
+			} else {
+				values = append(values, yamlScalar(rest))
+			}
+		}
+		return values, index, nil
+	}
+	mapping := Object{}
+	for index < len(lines) {
+		line := lines[index]
+		if line.indent < indent {
+			break
+		}
+		if line.indent > indent || strings.HasPrefix(line.content, "- ") {
+			break
+		}
+		key, rawValue, err := yamlKeyValue(line.content)
+		if err != nil {
+			return nil, index, err
+		}
+		index++
+		if rawValue != "" {
+			mapping[key] = yamlScalar(rawValue)
+		} else {
+			value, next, err := parseYAMLBlock(lines, index, indent+2)
+			if err != nil {
+				return nil, index, err
+			}
+			mapping[key] = value
+			index = next
+		}
+	}
+	return mapping, index, nil
+}
+
+func parseSimpleYAML(text string) (Object, error) {
+	lines := yamlLines(text)
+	if len(lines) == 0 {
+		return Object{}, nil
+	}
+	data, index, err := parseYAMLBlock(lines, 0, lines[0].indent)
 	if err != nil {
 		return nil, err
 	}
-	var data Object
-	if err := json.Unmarshal(raw, &data); err != nil {
-		return nil, err
+	if index != len(lines) {
+		return nil, fmt.Errorf("unsupported YAML structure")
 	}
+	result, ok := data.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("YAML root must be a mapping")
+	}
+	return result, nil
+}
+
+func priceCardsFromSourceData(data Object, sourceType string, path string) ([]any, error) {
 	if sourceType == "" {
 		sourceType = "user-pricing"
 	}
@@ -2694,12 +2853,43 @@ func PriceCardsFromJSONFile(path string, sourceType string) ([]any, error) {
 	case "source-cache":
 		return PriceCardsFromSourceCache(data), nil
 	case "user-pricing":
-		return PriceCardsFromUserPricing(withFileSourceURL(data, path)), nil
+		if path != "" {
+			return PriceCardsFromUserPricing(withFileSourceURL(data, path)), nil
+		}
+		return PriceCardsFromUserPricing(data), nil
 	case "helicone":
 		return PriceCardsFromHelicone(data), nil
 	default:
-		return nil, fmt.Errorf("unsupported JSON price source type: %s", sourceType)
+		return nil, fmt.Errorf("unsupported price source type: %s", sourceType)
 	}
+}
+
+// PriceCardsFromJSONFile reads a local JSON price-source file and maps it
+// through the requested source adapter.
+func PriceCardsFromJSONFile(path string, sourceType string) ([]any, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var data Object
+	if err := json.Unmarshal(raw, &data); err != nil {
+		return nil, err
+	}
+	return priceCardsFromSourceData(data, sourceType, path)
+}
+
+// PriceCardsFromYAMLFile reads a local YAML price-source file and maps it
+// through the requested source adapter.
+func PriceCardsFromYAMLFile(path string, sourceType string) ([]any, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	data, err := parseSimpleYAML(string(raw))
+	if err != nil {
+		return nil, err
+	}
+	return priceCardsFromSourceData(data, sourceType, path)
 }
 
 func addOfficialSnapshotComponent(components *[]any, row Object, componentName string, unit string, keys []string, per string) {

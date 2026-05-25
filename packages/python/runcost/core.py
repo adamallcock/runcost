@@ -1995,6 +1995,136 @@ def price_cards_from_json_file(path: Any, source_type: str = "user-pricing", **o
     raise ValueError(f"Unsupported JSON price source type: {source_type}")
 
 
+def _strip_yaml_comment(line: str) -> str:
+    in_quote: Optional[str] = None
+    for index, char in enumerate(line):
+        if char in {"'", '"'}:
+            in_quote = None if in_quote == char else char if in_quote is None else in_quote
+        if char == "#" and in_quote is None and (index == 0 or line[index - 1].isspace()):
+            return line[:index].rstrip()
+    return line.rstrip()
+
+
+def _yaml_scalar(value: str) -> Any:
+    value = value.strip()
+    if value in {"", "null", "Null", "NULL", "~"}:
+        return None
+    if value in {"true", "True", "TRUE"}:
+        return True
+    if value in {"false", "False", "FALSE"}:
+        return False
+    if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+        return value[1:-1]
+    if value.startswith("[") and value.endswith("]"):
+        inner = value[1:-1].strip()
+        if not inner:
+            return []
+        return [_yaml_scalar(part.strip()) for part in inner.split(",")]
+    return value
+
+
+def _yaml_key_value(content: str) -> tuple[str, str]:
+    if ":" not in content:
+        raise ValueError(f"Unsupported YAML line: {content}")
+    key, value = content.split(":", 1)
+    return key.strip(), value.strip()
+
+
+def _yaml_lines(text: str) -> List[tuple[int, str]]:
+    lines: List[tuple[int, str]] = []
+    for raw_line in text.splitlines():
+        cleaned = _strip_yaml_comment(raw_line.rstrip())
+        if not cleaned.strip():
+            continue
+        indent = len(cleaned) - len(cleaned.lstrip(" "))
+        lines.append((indent, cleaned.strip()))
+    return lines
+
+
+def _parse_yaml_block(lines: List[tuple[int, str]], index: int, indent: int) -> tuple[Any, int]:
+    if index >= len(lines) or lines[index][0] < indent:
+        return {}, index
+    if lines[index][1].startswith("- "):
+        values: List[Any] = []
+        while index < len(lines) and lines[index][0] == indent and lines[index][1].startswith("- "):
+            rest = lines[index][1][2:].strip()
+            index += 1
+            if not rest:
+                value, index = _parse_yaml_block(lines, index, indent + 2)
+                values.append(value)
+            elif ":" in rest:
+                key, raw_value = _yaml_key_value(rest)
+                item: Dict[str, Any] = {}
+                if raw_value:
+                    item[key] = _yaml_scalar(raw_value)
+                else:
+                    item[key], index = _parse_yaml_block(lines, index, indent + 2)
+                if index < len(lines) and lines[index][0] >= indent + 2:
+                    extra, index = _parse_yaml_block(lines, index, indent + 2)
+                    if isinstance(extra, dict):
+                        item.update(extra)
+                values.append(item)
+            else:
+                values.append(_yaml_scalar(rest))
+        return values, index
+
+    mapping: Dict[str, Any] = {}
+    while index < len(lines):
+        line_indent, content = lines[index]
+        if line_indent < indent:
+            break
+        if line_indent > indent or content.startswith("- "):
+            break
+        key, raw_value = _yaml_key_value(content)
+        index += 1
+        if raw_value:
+            mapping[key] = _yaml_scalar(raw_value)
+        else:
+            mapping[key], index = _parse_yaml_block(lines, index, indent + 2)
+    return mapping, index
+
+
+def _parse_simple_yaml(text: str) -> Any:
+    lines = _yaml_lines(text)
+    if not lines:
+        return {}
+    data, index = _parse_yaml_block(lines, 0, lines[0][0])
+    if index != len(lines):
+        raise ValueError("Unsupported YAML structure")
+    return data
+
+
+def price_cards_from_yaml_file(path: Any, source_type: str = "user-pricing", **options: Any) -> List[Dict[str, Any]]:
+    file_path = Path(path)
+    data = _parse_simple_yaml(file_path.read_text(encoding="utf-8"))
+    adapter_options = dict(options)
+    adapter_options.setdefault("source_url", file_path.resolve().as_uri())
+    adapter_options.setdefault("sourceUrl", file_path.resolve().as_uri())
+    return _price_cards_from_source_data(data, source_type, **adapter_options)
+
+
+def _price_cards_from_source_data(data: Any, source_type: str, **adapter_options: Any) -> List[Dict[str, Any]]:
+    if source_type == "llm-prices":
+        return price_cards_from_llm_prices(data, **adapter_options)
+    if source_type == "litellm":
+        return price_cards_from_litellm(data, **adapter_options)
+    if source_type == "openrouter-models":
+        return price_cards_from_openrouter_models(data, **adapter_options)
+    if source_type == "models-dev":
+        return price_cards_from_models_dev(data, **adapter_options)
+    if source_type == "official-snapshot":
+        return price_cards_from_official_snapshot(data, **adapter_options)
+    if source_type == "portkey":
+        return price_cards_from_portkey(data, **adapter_options)
+    if source_type == "source-cache":
+        return price_cards_from_source_cache(data, **adapter_options)
+    if source_type == "user-pricing":
+        return price_cards_from_user_pricing(data, **adapter_options)
+    if source_type == "helicone":
+        return price_cards_from_helicone(data, **adapter_options)
+    raise ValueError(f"Unsupported price source type: {source_type}")
+
+
 def _official_snapshot_component(components: List[Dict[str, Any]], row: Dict[str, Any], component_name: str, unit: str, keys: Iterable[str], per: str) -> None:
     _add_price_component(components, component_name, unit, _component_amount(row, *keys), per)
 

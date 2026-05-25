@@ -21,6 +21,7 @@ Source adapters convert external pricing catalogs into RunCost price cards. They
 | Portkey pricing data | `price_cards_from_portkey` / `priceCardsFromPortkey` / `PriceCardsFromPortkey` | Handles token, cache, reasoning, and web-search price fields covered by fixtures. |
 | RunCost source-cache envelope | `price_cards_from_source_cache` / `priceCardsFromSourceCache` / `PriceCardsFromSourceCache` | Handles offline refresh/cache bundles that carry source URL, retrieval time, checksum, generated time, and canonical price cards. |
 | Local JSON price-source file | `price_cards_from_json_file` / `priceCardsFromJSONFile` / `PriceCardsFromJSONFile` | Reads a local JSON file and maps it through one of the supported source adapters, defaulting to user compact pricing data. |
+| Local YAML price-source file | `price_cards_from_yaml_file` / `priceCardsFromYAMLFile` / `PriceCardsFromYAMLFile` | Reads a strict YAML mapping/list/scalar price-source file and maps it through one of the supported source adapters, defaulting to user compact pricing data. |
 | User compact pricing data | `price_cards_from_user_pricing` / `priceCardsFromUserPricing` / `PriceCardsFromUserPricing` | Handles compact JSON/YAML-shaped model records after callers parse them into objects. |
 | Helicone model-registry endpoint data | `price_cards_from_helicone` / `priceCardsFromHelicone` / `PriceCardsFromHelicone` | Handles endpoint pricing arrays, cache multipliers, reasoning, request, web-search, and image/audio/video token modality prices covered by fixtures. |
 
@@ -104,6 +105,6 @@ Recommended pipeline:
 - Not every field in external catalogs has a direct pricing meaning.
 - Some providers publish prices by marketing family, API surface, region, or tier rather than exact model ID.
 - Tool-call pricing is often spread across product docs instead of model catalogs.
-- Local JSON file loading is supported; YAML still requires callers to parse data before passing it to an adapter.
+- Local JSON and strict YAML file loading are supported. YAML anchors, tags, multi-document streams, block scalars, and other advanced YAML features are intentionally out of scope for the core package.
 - The refresh command supports JSON snapshots only.
 - The current adapters are prototypes; source coverage must be expanded fixture by fixture.

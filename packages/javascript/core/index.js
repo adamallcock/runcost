@@ -2006,6 +2006,140 @@ export function priceCardsFromJSONFile(filePath, options = {}) {
   throw new Error(`Unsupported JSON price source type: ${sourceType}`);
 }
 
+function stripYAMLComment(line) {
+  let quote = null;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if ((char === "'" || char === "\"") && !quote) quote = char;
+    else if (char === quote) quote = null;
+    if (char === "#" && !quote && (index === 0 || /\s/.test(line[index - 1]))) {
+      return line.slice(0, index).trimEnd();
+    }
+  }
+  return line.trimEnd();
+}
+
+function yamlScalar(value) {
+  const trimmed = value.trim();
+  if (["", "null", "Null", "NULL", "~"].includes(trimmed)) return null;
+  if (["true", "True", "TRUE"].includes(trimmed)) return true;
+  if (["false", "False", "FALSE"].includes(trimmed)) return false;
+  if ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1);
+  }
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    const inner = trimmed.slice(1, -1).trim();
+    if (!inner) return [];
+    return inner.split(",").map((part) => yamlScalar(part.trim()));
+  }
+  return trimmed;
+}
+
+function yamlKeyValue(content) {
+  const index = content.indexOf(":");
+  if (index < 0) {
+    throw new Error(`Unsupported YAML line: ${content}`);
+  }
+  return [content.slice(0, index).trim(), content.slice(index + 1).trim()];
+}
+
+function yamlLines(text) {
+  return text.split(/\r?\n/).flatMap((line) => {
+    const cleaned = stripYAMLComment(line);
+    if (!cleaned.trim()) return [];
+    const indent = cleaned.length - cleaned.trimStart().length;
+    return [{ indent, content: cleaned.trim() }];
+  });
+}
+
+function parseYAMLBlock(lines, start, indent) {
+  let index = start;
+  if (index >= lines.length || lines[index].indent < indent) {
+    return [{}, index];
+  }
+  if (lines[index].content.startsWith("- ")) {
+    const values = [];
+    while (index < lines.length && lines[index].indent === indent && lines[index].content.startsWith("- ")) {
+      const rest = lines[index].content.slice(2).trim();
+      index += 1;
+      if (!rest) {
+        const [value, next] = parseYAMLBlock(lines, index, indent + 2);
+        values.push(value);
+        index = next;
+      } else if (rest.includes(":")) {
+        const [key, rawValue] = yamlKeyValue(rest);
+        const item = {};
+        if (rawValue) {
+          item[key] = yamlScalar(rawValue);
+        } else {
+          const [value, next] = parseYAMLBlock(lines, index, indent + 2);
+          item[key] = value;
+          index = next;
+        }
+        if (index < lines.length && lines[index].indent >= indent + 2) {
+          const [extra, next] = parseYAMLBlock(lines, index, indent + 2);
+          if (extra && typeof extra === "object" && !Array.isArray(extra)) Object.assign(item, extra);
+          index = next;
+        }
+        values.push(item);
+      } else {
+        values.push(yamlScalar(rest));
+      }
+    }
+    return [values, index];
+  }
+  const mapping = {};
+  while (index < lines.length) {
+    const line = lines[index];
+    if (line.indent < indent) break;
+    if (line.indent > indent || line.content.startsWith("- ")) break;
+    const [key, rawValue] = yamlKeyValue(line.content);
+    index += 1;
+    if (rawValue) {
+      mapping[key] = yamlScalar(rawValue);
+    } else {
+      const [value, next] = parseYAMLBlock(lines, index, indent + 2);
+      mapping[key] = value;
+      index = next;
+    }
+  }
+  return [mapping, index];
+}
+
+function parseSimpleYAML(text) {
+  const lines = yamlLines(text);
+  if (lines.length === 0) return {};
+  const [data, index] = parseYAMLBlock(lines, 0, lines[0].indent);
+  if (index !== lines.length) {
+    throw new Error("Unsupported YAML structure");
+  }
+  return data;
+}
+
+function priceCardsFromSourceData(data, sourceType, options = {}) {
+  if (sourceType === "llm-prices") return priceCardsFromLlmPrices(data, options);
+  if (sourceType === "litellm") return priceCardsFromLiteLLM(data, options);
+  if (sourceType === "openrouter-models") return priceCardsFromOpenRouterModels(data, options);
+  if (sourceType === "models-dev") return priceCardsFromModelsDev(data, options);
+  if (sourceType === "official-snapshot") return priceCardsFromOfficialSnapshot(data, options);
+  if (sourceType === "portkey") return priceCardsFromPortkey(data, options);
+  if (sourceType === "source-cache") return priceCardsFromSourceCache(data, options);
+  if (sourceType === "user-pricing") return priceCardsFromUserPricing(data, options);
+  if (sourceType === "helicone") return priceCardsFromHelicone(data, options);
+  throw new Error(`Unsupported price source type: ${sourceType}`);
+}
+
+export function priceCardsFromYAMLFile(filePath, options = {}) {
+  const data = parseSimpleYAML(fs.readFileSync(filePath, "utf8"));
+  const sourceType = options.sourceType || options.source_type || "user-pricing";
+  const adapterOptions = {
+    ...options,
+    sourceUrl: options.sourceUrl || options.source_url || pathToFileURL(path.resolve(filePath)).href,
+    source_url: options.source_url || options.sourceUrl || pathToFileURL(path.resolve(filePath)).href
+  };
+  return priceCardsFromSourceData(data, sourceType, adapterOptions);
+}
+
 function addOfficialSnapshotComponent(components, row, componentName, unit, keys, per) {
   addPriceComponent(components, componentName, unit, componentAmount(row, keys), per);
 }
