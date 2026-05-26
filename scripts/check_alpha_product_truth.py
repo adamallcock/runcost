@@ -138,6 +138,17 @@ def validate_report(report: dict[str, Any], register: dict[str, Any]) -> None:
     if not isinstance(scenarios, list) or not scenarios:
         raise AssertionError("alpha smoke report must contain scenarios")
 
+    has_live_pass = any(
+        item.get("status") == "passed" and (item.get("evidence") or {}).get("source") == "live"
+        for item in scenarios
+    )
+    if has_live_pass:
+        discount_item = next((item for item in scenarios if item.get("scenario") == "multi_provider_discount"), None)
+        if discount_item is None:
+            raise AssertionError("credentialed live smoke reports must include multi_provider_discount in the same review set")
+        if discount_item.get("status") != "passed":
+            raise AssertionError("credentialed live smoke reports must include a passing multi_provider_discount scenario")
+
     for item in scenarios:
         scenario = item.get("scenario")
         status = item.get("status")
@@ -161,6 +172,44 @@ def validate_report(report: dict[str, Any], register: dict[str, Any]) -> None:
             raise AssertionError(f"{scenario}/{status} must be classified as product truth")
 
 
+def self_check_live_discount_requirement(register: dict[str, Any]) -> None:
+    base_report = {
+        "schema_version": "0.1",
+        "mode": "live",
+        "sanitized": True,
+        "safe_to_attach_to_issue": True,
+        "scenarios": [
+            {
+                "scenario": "openai_responses",
+                "status": "passed",
+                "evidence": {"source": "live"},
+                "next_action": {"type": "none", "reason": "synthetic passed live scenario"},
+            }
+        ],
+    }
+    try:
+        validate_report(base_report, register)
+    except AssertionError as exc:
+        if "multi_provider_discount" not in str(exc):
+            raise
+    else:
+        raise AssertionError("live product-truth check must require multi_provider_discount beside live passes")
+
+    valid_report = {
+        **base_report,
+        "scenarios": [
+            *base_report["scenarios"],
+            {
+                "scenario": "multi_provider_discount",
+                "status": "passed",
+                "evidence": {"source": "sample"},
+                "next_action": {"type": "none", "reason": "synthetic discount scenario"},
+            },
+        ],
+    }
+    validate_report(valid_report, register)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate alpha smoke findings against product-truth artifacts.")
     parser.add_argument("--smoke-report", help="Validate this live smoke JSON report instead of generating a no-credential report.")
@@ -169,6 +218,7 @@ def main() -> int:
 
     register = load_json(Path(args.register))
     report = load_json(Path(args.smoke_report)) if args.smoke_report else generated_no_credentials_report()
+    self_check_live_discount_requirement(register)
     validate_report(report, register)
     print("Alpha smoke product-truth checks passed.")
     return 0

@@ -65,6 +65,11 @@ Current live-capable Python scenarios:
 | `openrouter_cost_compare` | `OPENROUTER_API_KEY` | Calls OpenRouter chat completions and verifies provider-reported usage/cost comparison shape when present. |
 | `multi_provider_discount` | none | Runs a local multi-provider discount ledger using the same sanitized report shape. |
 
+When live mode runs the full scenario set, `multi_provider_discount` must stay
+in the same reviewed report as any passed live provider or framework scenario.
+`scripts/check_alpha_product_truth.py` enforces this so discount behavior is
+reviewed beside real provider evidence rather than only in isolated samples.
+
 Framework live smoke scripts are separate so optional dependencies do not become
 core package dependencies:
 

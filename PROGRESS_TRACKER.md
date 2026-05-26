@@ -160,6 +160,7 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 - Sample mode is no-network and checks OpenAI Responses, Anthropic prompt caching, Vercel AI SDK streamText final usage, LangChain agent metadata, OpenRouter cost comparison, and multi-provider discount scenarios.
 - Preflight mode reports credential and optional SDK dependency readiness without emitting API-key values; in the current environment it reports only the local multi-provider discount scenario as ready.
 - Live mode is explicit, API-key-gated, and currently supports selected direct API paths for OpenAI Responses, Anthropic Messages, and OpenRouter chat completions.
+- Product-truth validation now requires any credentialed live smoke report with a passed live provider or framework scenario to include a passing `multi_provider_discount` scenario in the same review set.
 - Added optional framework-specific smoke scripts:
   - `scripts/run_vercel_alpha_smoke.mjs`
   - `scripts/run_langchain_alpha_smoke.py`

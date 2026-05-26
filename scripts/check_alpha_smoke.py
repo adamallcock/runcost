@@ -162,10 +162,13 @@ def main() -> int:
         walk(framework_report)
 
     live_by_scenario = {item["scenario"]: item for item in live_report["scenarios"]}
+    assert sorted(live_by_scenario) == sorted(EXPECTED_SCENARIOS)
     assert live_by_scenario["vercel_ai_sdk_stream_text"]["status"] == "skipped"
     assert live_by_scenario["vercel_ai_sdk_stream_text"]["next_action"]["reason"] == "OPENAI_API_KEY is not set."
     assert live_by_scenario["langchain_agent_run"]["status"] == "skipped"
     assert live_by_scenario["langchain_agent_run"]["next_action"]["reason"] == "OPENAI_API_KEY is not set."
+    assert live_by_scenario["multi_provider_discount"]["status"] == "passed"
+    assert live_by_scenario["multi_provider_discount"]["evidence"]["source"] == "sample"
     walk(live_report)
 
     print("Alpha smoke sample checks passed.")

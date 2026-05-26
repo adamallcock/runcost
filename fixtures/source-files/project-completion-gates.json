@@ -179,6 +179,11 @@
           "kind": "script",
           "path": "scripts/check_alpha_smoke.py",
           "proves": "CI verifies the sample multi-provider discount smoke shape."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_alpha_product_truth.py",
+          "proves": "Credentialed live smoke reports with any passed live provider/framework scenario must include a passing multi-provider discount scenario in the same review set."
         }
       ],
       "completion_check": "python3 scripts/check_alpha_smoke.py",
