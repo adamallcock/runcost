@@ -1,6 +1,6 @@
 {
   "name": "runcost",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "description": "Prototype cost calculator for LLM and agent API responses.",
   "license": "MIT",

@@ -14,6 +14,10 @@ limitations.
 
 ## Unreleased
 
+- No unreleased changes yet.
+
+## 0.1.0
+
 - Add package publish-readiness artifacts: MIT license, contribution guide,
   security policy, release process, release-readiness checks, and a guarded
   GitHub Actions release workflow.
