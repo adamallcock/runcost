@@ -1,0 +1,102 @@
+{
+  "name": "historical-price-missing-warning",
+  "description": "Emits historical_price_missing when a model has price cards, but none are effective for context priced_at.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-CALC-CORE",
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-WARNING-MODE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "warning",
+    "tags": [
+      "component:input_uncached_tokens",
+      "effective_date",
+      "historical_pricing",
+      "warning:historical_price_missing"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-historical",
+        "billed": "gpt-historical",
+        "alias_resolution": "none"
+      },
+      "context": {
+        "priced_at": "2026-01-15T12:00:00Z"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-historical:2025",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-historical",
+        "effective": {
+          "from": "2025-01-01",
+          "to": "2025-12-31"
+        },
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2025-01-01T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-historical",
+        "billed": "gpt-historical",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "historical_price_missing",
+          "message": "No price card effective for 2026-01-15.",
+          "metadata": {
+            "model": "gpt-historical",
+            "priced_at": "2026-01-15"
+          }
+        }
+      ]
+    }
+  }
+}

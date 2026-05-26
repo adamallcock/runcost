@@ -1,0 +1,99 @@
+{
+  "name": "price-not-found-context-mismatch",
+  "description": "Emits price_not_found when a model price card exists but no card matches the requested context.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-CALC-CORE",
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-WARNING-MODE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "warning",
+    "tags": [
+      "component:input_uncached_tokens",
+      "context:region",
+      "warning:price_not_found"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-context",
+        "billed": "gpt-context",
+        "alias_resolution": "none"
+      },
+      "context": {
+        "region": "eu-west-1"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-context:us-east-1",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-context",
+        "region": "us-east-1",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-context",
+        "billed": "gpt-context",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "price_not_found",
+          "message": "No price card matched provider, surface, model, and context for gpt-context.",
+          "metadata": {
+            "provider": "openai",
+            "surface": "openai.responses",
+            "model": "gpt-context"
+          }
+        }
+      ]
+    }
+  }
+}

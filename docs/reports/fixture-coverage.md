@@ -13,20 +13,20 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 86
+- Fixtures: 88
 - Providers: 16
 - Provider surfaces: 20
 - Usage components covered: 31
-- Warning/error codes covered: 12
+- Warning/error codes covered: 14
 - Requirement IDs covered: 19
 
 ## Expected Languages
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 84 |
-| `javascript` | 85 |
-| `python` | 85 |
+| `go` | 86 |
+| `javascript` | 87 |
+| `python` | 87 |
 
 ## Scenarios
 
@@ -45,7 +45,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `source_adapter` | 13 |
 | `source_priority` | 2 |
 | `strict_error` | 1 |
-| `warning` | 6 |
+| `warning` | 8 |
 
 ## Provider Surfaces
 
@@ -66,7 +66,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `multi` | `normalized.feature_pricing` | 2 |
 | `openai` | `openai.chat_completions` | 11 |
 | `openai` | `openai.embeddings` | 1 |
-| `openai` | `openai.responses` | 43 |
+| `openai` | `openai.responses` | 45 |
 | `openrouter` | `openrouter.chat_completions` | 7 |
 | `vertex` | `vertex.gemini.generate_content` | 1 |
 | `xai` | `xai.chat_completions` | 1 |
@@ -92,7 +92,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `input_cache_write_tokens` | 14 |
 | `input_image_tokens` | 2 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 76 |
+| `input_uncached_tokens` | 78 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 2 |
 | `output_image_tokens` | 2 |
@@ -113,7 +113,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | Code | Fixtures |
 |---|---:|
 | `component_unpriced` | 1 |
+| `historical_price_missing` | 1 |
 | `long_context_rule_missing` | 1 |
+| `price_not_found` | 1 |
 | `price_source_disagreement` | 1 |
 | `price_stale` | 1 |
 | `provider_reported_cost_mismatch` | 3 |
@@ -164,12 +166,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | Requirement | Fixtures |
 |---|---:|
 | `RC-AGGREGATION` | 2 |
-| `RC-CALC-CORE` | 6 |
+| `RC-CALC-CORE` | 8 |
 | `RC-CUSTOM-PRICING` | 1 |
 | `RC-DEBUG-TRACE` | 1 |
 | `RC-DISCOUNT-POLICY` | 1 |
 | `RC-FEATURE-PRICING` | 3 |
-| `RC-FIXTURE-CONFORMANCE` | 86 |
+| `RC-FIXTURE-CONFORMANCE` | 88 |
 | `RC-FRAMEWORK-ADAPTER` | 14 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
 | `RC-LONG-CONTEXT` | 2 |
@@ -181,7 +183,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-SOURCE-PRIORITY` | 2 |
 | `RC-STRICT-MODE` | 1 |
 | `RC-TOOL-PRICING` | 2 |
-| `RC-WARNING-MODE` | 7 |
+| `RC-WARNING-MODE` | 9 |
 
 ## Tags
 
@@ -218,7 +220,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:input_cache_write_tokens` | 14 |
 | `component:input_image_tokens` | 2 |
 | `component:input_image_units` | 1 |
-| `component:input_uncached_tokens` | 74 |
+| `component:input_uncached_tokens` | 76 |
 | `component:input_video_tokens` | 1 |
 | `component:output_audio_tokens` | 2 |
 | `component:output_image_tokens` | 2 |
@@ -233,10 +235,11 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:transcription_seconds` | 1 |
 | `component:video_generation_units` | 1 |
 | `component:web_search_units` | 8 |
+| `context:region` | 1 |
 | `debug_trace` | 1 |
 | `decimal_precision` | 1 |
 | `discount` | 1 |
-| `effective_date` | 2 |
+| `effective_date` | 3 |
 | `embeddings` | 1 |
 | `feature_pricing` | 3 |
 | `framework:ag2` | 2 |
@@ -262,7 +265,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `helper:from_vercel_ai_sdk_stream_finish` | 1 |
 | `helper:langchain_callback` | 1 |
 | `helper:vercel_ai_sdk_middleware` | 1 |
-| `historical_pricing` | 1 |
+| `historical_pricing` | 2 |
 | `invoke_model` | 1 |
 | `long_context` | 2 |
 | `mode:total` | 1 |
@@ -295,7 +298,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `transcription` | 1 |
 | `warning` | 3 |
 | `warning:component_unpriced` | 1 |
+| `warning:historical_price_missing` | 1 |
 | `warning:long_context_rule_missing` | 1 |
+| `warning:price_not_found` | 1 |
 | `warning:price_source_disagreement` | 1 |
 | `warning:price_stale` | 1 |
 | `warning:provider_reported_cost_mismatch` | 3 |

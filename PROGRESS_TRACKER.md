@@ -38,7 +38,7 @@ Evidence collected on 2026-05-26:
 
 - `npm test` passes.
 - Python and JavaScript fixture runner checks 86 shared fixtures, with fixture metadata allowing language-scoped framework ergonomics fixtures.
-- Fixture metadata and checked-in coverage report pass through `python3 scripts/check_fixture_coverage.py` with 86 fixtures.
+- Fixture metadata and checked-in coverage report pass through `python3 scripts/check_fixture_coverage.py` with 88 fixtures.
 - Source refresh command smoke check passes through `python3 scripts/check_source_refresh.py`.
 - Alpha smoke harness sample-mode check passes through `python3 scripts/check_alpha_smoke.py`; live API-key-gated runs are implemented for selected direct API paths but have not been executed in this repo evidence yet.
 - Alpha smoke product-truth classification checks pass through `python3 scripts/check_alpha_product_truth.py`; the current no-credential live report is tied to machine-readable documented-limitation entries in `fixtures/source-files/alpha-smoke-product-truth-register.json`.
@@ -101,7 +101,7 @@ Status: complete for this pass.
 | Add Go public API docs and typed examples | Done | Go doc comments in `ledger.go`; `packages/go/ledger/example_test.go`; Go tests pass | Examples cover `CalculateCost` and `FromResponse`. |
 | Add public API parity matrix | Done | `docs/notes/api-parity-matrix.md`; hygiene check validates public API names | Tracks Python, JS/TS, and Go support by capability. |
 | Add debug trace fixture shape | Done | `schemas/debug-trace.schema.json`, `debug-trace-explain-decisions.json`; `npm test` passes | Optional `debug_trace` / `debugTrace` explains price-card, component, alias, discount, and warning decisions. |
-| Add fixture metadata fields | Done | `schemas/fixture.schema.json`; all 86 fixtures include `metadata` | Metadata covers requirement IDs, provider, surface, scenario, tags, and expected languages. |
+| Add fixture metadata fields | Done | `schemas/fixture.schema.json`; all 88 fixtures include `metadata` | Metadata covers requirement IDs, provider, surface, scenario, tags, and expected languages. |
 | Add fixture coverage report | Done | `docs/reports/fixture-coverage.md`; `scripts/check_fixture_coverage.py`; `npm test` passes | Reports scenarios, provider surfaces, components, warning codes, source adapters, framework adapters, requirements, tags, and expected languages. |
 | Add generated-artifact drift checks | Done | `scripts/check_project_hygiene.py`; `npm test` runs it | Starts as required-artifact, package metadata, parity, fixture floor, and CI command checks. |
 | Add CI workflow | Done | `.github/workflows/ci.yml`; hygiene check passes | CI runs conformance tests, examples, and Python compile checks. |
@@ -179,7 +179,7 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
   - `scripts/generate_contract_docs.py` generates `docs/generated/contract-taxonomy.md` from `schemas/taxonomy.json`;
   - `scripts/generate_contract_docs.py` also generates `docs/generated/schema-fields.md` from `schemas/*.schema.json`;
   - `scripts/generate_contract_docs.py` also generates `docs/generated/fixture-support-matrix.md` from `fixtures/*.json` metadata;
-  - `scripts/generate_contract_docs.py` also generates `docs/generated/warning-coverage.md` from `schemas/taxonomy.json` and fixture warning metadata, currently showing 12 of 19 warning codes fixture-backed;
+  - `scripts/generate_contract_docs.py` also generates `docs/generated/warning-coverage.md` from `schemas/taxonomy.json` and fixture warning metadata, currently showing 14 of 19 warning codes fixture-backed;
   - `scripts/check_generated_contract_docs.py` fails on generated contract-doc, schema-field-doc, fixture-support-matrix, and warning-coverage drift;
   - `scripts/check_type_taxonomy_parity.py` fails when Python, TypeScript, or Go public taxonomy-bearing type surfaces drift from `schemas/taxonomy.json`;
   - `npm run generate:contracts` refreshes the checked-in generated docs.
@@ -192,7 +192,8 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
   - added `fixtures/storage-gb-day-pricing.json` to prove normalized GB-day storage pricing across Python, JavaScript/TypeScript, and Go;
   - added `fixtures/feature-pricing-generated-media-rerank-transcription.json` to prove normalized generated image, video, audio, rerank, transcription, tool-execution-second, and endpoint-runtime-second pricing across Python, JavaScript/TypeScript, and Go;
   - added `fixtures/feature-component-unpriced-warning.json` to prove unpriced runtime-second feature usage emits `tool_component_unpriced`;
-  - regenerated contract taxonomy docs and fixture coverage; fixture count is now 86.
+  - regenerated contract taxonomy docs and fixture coverage; fixture count is now 88.
+  - added warning fixtures for `price_not_found` and `historical_price_missing`, reducing uncovered warning codes from 7 to 5.
 - Advanced public-beta source-data process hardening:
   - added `docs/process/2026-05-26-source-data-update-process.md` with owner, cadence, review checklist, and product-truth loop for source refreshes;
   - linked the process from README, source-adapter docs, release process, beta/V1 roadmap, and contributing guide;
