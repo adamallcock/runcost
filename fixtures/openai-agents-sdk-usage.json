@@ -17,7 +17,9 @@
       "component:output_text_tokens",
       "framework:openai_agents",
       "framework_adapter",
-      "helper:from_openai_agents_usage"
+      "helper:from_openai_agents_usage",
+      "warning:alias_inferred",
+      "alias"
     ],
     "expected_languages": [
       "python",
@@ -167,7 +169,16 @@
         }
       ],
       "applied_discounts": [],
-      "warnings": []
+      "warnings": [
+        {
+          "code": "alias_inferred",
+          "message": "Resolved model alias gpt-5-nano-2026-05-24 to billed model gpt-5-nano.",
+          "metadata": {
+            "requested_model": "gpt-5-nano-2026-05-24",
+            "billed_model": "gpt-5-nano"
+          }
+        }
+      ]
     }
   }
 }

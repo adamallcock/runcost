@@ -16,7 +16,9 @@
       "component:output_text_tokens",
       "component:tool_call_units",
       "raw_provider_response",
-      "tool_pricing"
+      "tool_pricing",
+      "warning:alias_inferred",
+      "alias"
     ],
     "expected_languages": [
       "python",
@@ -180,7 +182,16 @@
         }
       ],
       "applied_discounts": [],
-      "warnings": []
+      "warnings": [
+        {
+          "code": "alias_inferred",
+          "message": "Resolved model alias computer-use-preview-2025-03-11 to billed model computer-use-preview.",
+          "metadata": {
+            "requested_model": "computer-use-preview-2025-03-11",
+            "billed_model": "computer-use-preview"
+          }
+        }
+      ]
     }
   }
 }

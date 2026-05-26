@@ -11,7 +11,9 @@
     "scenario": "debug_trace",
     "tags": [
       "component:input_uncached_tokens",
-      "debug_trace"
+      "debug_trace",
+      "warning:alias_inferred",
+      "alias"
     ],
     "expected_languages": [
       "python",
@@ -149,7 +151,16 @@
           "amount": "0.00005"
         }
       ],
-      "warnings": [],
+      "warnings": [
+        {
+          "code": "alias_inferred",
+          "message": "Resolved model alias gpt-trace-2026 to billed model gpt-trace.",
+          "metadata": {
+            "requested_model": "gpt-trace-2026",
+            "billed_model": "gpt-trace"
+          }
+        }
+      ],
       "debug_trace": {
         "schema_version": "0.1",
         "decisions": [
@@ -187,12 +198,17 @@
             "component": "input_uncached_tokens",
             "policy_id": "trace-discount",
             "amount": "0.00005"
+          },
+          {
+            "type": "warning",
+            "warning_code": "alias_inferred",
+            "message": "Resolved model alias gpt-trace-2026 to billed model gpt-trace."
           }
         ],
         "summary": {
           "priced_components": 1,
           "unpriced_components": 0,
-          "warnings": 0,
+          "warnings": 1,
           "applied_discounts": 1
         }
       }

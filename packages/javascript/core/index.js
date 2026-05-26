@@ -374,6 +374,17 @@ function warningIdentityMetadata(usageLedger) {
   };
 }
 
+function aliasInferredWarning(requestedModel, billedModelValue) {
+  return {
+    code: "alias_inferred",
+    message: `Resolved model alias ${requestedModel} to billed model ${billedModelValue}.`,
+    metadata: {
+      requested_model: requestedModel,
+      billed_model: billedModelValue
+    }
+  };
+}
+
 function unpricedComponentMetadata(usageLedger, component) {
   return {
     component: component.name,
@@ -701,6 +712,7 @@ export function calculateCost({
   const candidateCards = matchingCards(usageLedger, priceCards, sourcePriority);
   let warnedUnknownModel = false;
   let warnedNoMatchingCard = false;
+  let warnedAliasInferred = false;
   const warnedStaleCards = new Set();
   const staleThreshold = staleAfterDays ?? stale_after_days;
   const reportedCost = providerReportedCost ?? provider_reported_cost;
@@ -781,6 +793,10 @@ export function calculateCost({
       resolvedBilledModel = card.model;
       if (aliasResolution === "none") {
         aliasResolution = "source_exact";
+        if (!warnedAliasInferred) {
+          warnings.push(aliasInferredWarning(previousBilledModel, resolvedBilledModel));
+          warnedAliasInferred = true;
+        }
       }
       if (trace) {
         trace.decisions.push({

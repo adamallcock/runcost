@@ -847,6 +847,17 @@ func warningIdentityMetadata(usageLedger Object) Object {
 	}
 }
 
+func aliasInferredWarning(requestedModel string, billedModelValue string) Object {
+	return Object{
+		"code":    "alias_inferred",
+		"message": fmt.Sprintf("Resolved model alias %s to billed model %s.", requestedModel, billedModelValue),
+		"metadata": Object{
+			"requested_model": requestedModel,
+			"billed_model":    billedModelValue,
+		},
+	}
+}
+
 func unpricedComponentMetadata(usageLedger Object, component Object) Object {
 	return Object{
 		"component": asString(component["name"]),
@@ -1364,6 +1375,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 	}
 	warnedUnknownModel := false
 	warnedNoMatchingCard := false
+	warnedAliasInferred := false
 	warnedStaleCards := map[string]bool{}
 
 	for _, rawComponent := range asSlice(usageLedger["components"]) {
@@ -1426,6 +1438,10 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 			resolvedBilledModel = asString(card["model"])
 			if aliasResolution == "none" {
 				aliasResolution = "source_exact"
+				if !warnedAliasInferred {
+					warnings = append(warnings, aliasInferredWarning(previousBilledModel, resolvedBilledModel))
+					warnedAliasInferred = true
+				}
 			}
 			appendTraceDecision(trace, Object{
 				"type":          "model_alias_resolution",

@@ -179,7 +179,7 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
   - `scripts/generate_contract_docs.py` generates `docs/generated/contract-taxonomy.md` from `schemas/taxonomy.json`;
   - `scripts/generate_contract_docs.py` also generates `docs/generated/schema-fields.md` from `schemas/*.schema.json`;
   - `scripts/generate_contract_docs.py` also generates `docs/generated/fixture-support-matrix.md` from `fixtures/*.json` metadata;
-  - `scripts/generate_contract_docs.py` also generates `docs/generated/warning-coverage.md` from `schemas/taxonomy.json` and fixture warning metadata, currently showing 14 of 19 warning codes fixture-backed;
+  - `scripts/generate_contract_docs.py` also generates `docs/generated/warning-coverage.md` from `schemas/taxonomy.json` and fixture warning metadata, currently showing 15 of 19 warning codes fixture-backed;
   - `scripts/check_generated_contract_docs.py` fails on generated contract-doc, schema-field-doc, fixture-support-matrix, and warning-coverage drift;
   - `scripts/check_type_taxonomy_parity.py` fails when Python, TypeScript, or Go public taxonomy-bearing type surfaces drift from `schemas/taxonomy.json`;
   - `npm run generate:contracts` refreshes the checked-in generated docs.
@@ -194,6 +194,7 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
   - added `fixtures/feature-component-unpriced-warning.json` to prove unpriced runtime-second feature usage emits `tool_component_unpriced`;
   - regenerated contract taxonomy docs and fixture coverage; fixture count is now 88.
   - added warning fixtures for `price_not_found` and `historical_price_missing`, reducing uncovered warning codes from 7 to 5.
+  - added calculator-level `alias_inferred` warnings across Python, JavaScript, and Go, and updated 17 alias fixtures to cover the warning, reducing uncovered warning codes from 5 to 4.
 - Advanced public-beta source-data process hardening:
   - added `docs/process/2026-05-26-source-data-update-process.md` with owner, cadence, review checklist, and product-truth loop for source refreshes;
   - linked the process from README, source-adapter docs, release process, beta/V1 roadmap, and contributing guide;

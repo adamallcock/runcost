@@ -260,6 +260,17 @@ def _warning_identity_metadata(usage_ledger: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _alias_inferred_warning(requested_model: str, billed_model: str) -> Dict[str, Any]:
+    return {
+        "code": "alias_inferred",
+        "message": f"Resolved model alias {requested_model} to billed model {billed_model}.",
+        "metadata": {
+            "requested_model": requested_model,
+            "billed_model": billed_model,
+        },
+    }
+
+
 def _unpriced_component_metadata(usage_ledger: Dict[str, Any], component: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "component": component.get("name"),
@@ -616,6 +627,7 @@ def calculate_cost(
         )
     warned_unknown_model = False
     warned_no_matching_card = False
+    warned_alias_inferred = False
     warned_stale_cards = set()
 
     for component in usage_ledger["components"]:
@@ -681,6 +693,9 @@ def calculate_cost(
             resolved_billed_model = card["model"]
             if alias_resolution == "none":
                 alias_resolution = "source_exact"
+                if not warned_alias_inferred:
+                    warnings.append(_alias_inferred_warning(previous_billed_model, resolved_billed_model))
+                    warned_alias_inferred = True
             if trace is not None:
                 trace["decisions"].append(
                     {

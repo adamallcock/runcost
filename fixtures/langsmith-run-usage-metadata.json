@@ -18,7 +18,9 @@
       "component:output_text_tokens",
       "framework:langsmith",
       "framework_adapter",
-      "helper:from_langsmith_run"
+      "helper:from_langsmith_run",
+      "warning:alias_inferred",
+      "alias"
     ],
     "expected_languages": [
       "python",
@@ -185,7 +187,16 @@
         }
       ],
       "applied_discounts": [],
-      "warnings": []
+      "warnings": [
+        {
+          "code": "alias_inferred",
+          "message": "Resolved model alias gpt-5-nano-2026-05-24 to billed model gpt-5-nano.",
+          "metadata": {
+            "requested_model": "gpt-5-nano-2026-05-24",
+            "billed_model": "gpt-5-nano"
+          }
+        }
+      ]
     }
   }
 }

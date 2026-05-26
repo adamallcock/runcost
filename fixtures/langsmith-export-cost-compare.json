@@ -18,7 +18,9 @@
       "framework_adapter",
       "helper:from_langsmith_run",
       "provider_reported",
-      "warning:provider_reported_cost_mismatch"
+      "warning:provider_reported_cost_mismatch",
+      "warning:alias_inferred",
+      "alias"
     ],
     "expected_languages": [
       "python",
@@ -122,6 +124,14 @@
       ],
       "applied_discounts": [],
       "warnings": [
+        {
+          "code": "alias_inferred",
+          "message": "Resolved model alias gpt-5-nano-2026-05-24 to billed model gpt-5-nano.",
+          "metadata": {
+            "requested_model": "gpt-5-nano-2026-05-24",
+            "billed_model": "gpt-5-nano"
+          }
+        },
         {
           "code": "provider_reported_cost_mismatch",
           "message": "Provider reported cost 0.000123 differs from calculated total 0.0003.",

@@ -13,7 +13,8 @@
       "alias",
       "component:input_uncached_tokens",
       "component:output_text_tokens",
-      "raw_provider_response"
+      "raw_provider_response",
+      "warning:alias_inferred"
     ],
     "expected_languages": [
       "python",
@@ -114,7 +115,16 @@
         }
       ],
       "applied_discounts": [],
-      "warnings": []
+      "warnings": [
+        {
+          "code": "alias_inferred",
+          "message": "Resolved model alias gpt-5.4-2026-05-24 to billed model gpt-5.4.",
+          "metadata": {
+            "requested_model": "gpt-5.4-2026-05-24",
+            "billed_model": "gpt-5.4"
+          }
+        }
+      ]
     }
   }
 }

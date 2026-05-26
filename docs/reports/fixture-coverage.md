@@ -17,7 +17,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 - Providers: 16
 - Provider surfaces: 20
 - Usage components covered: 31
-- Warning/error codes covered: 14
+- Warning/error codes covered: 15
 - Requirement IDs covered: 19
 
 ## Expected Languages
@@ -112,6 +112,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Code | Fixtures |
 |---|---:|
+| `alias_inferred` | 17 |
 | `component_unpriced` | 1 |
 | `historical_price_missing` | 1 |
 | `long_context_rule_missing` | 1 |
@@ -201,7 +202,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `adapter:vercel_ai_sdk.generate_text` | 2 |
 | `adapter:vercel_ai_sdk.stream_text` | 1 |
 | `aggregation` | 2 |
-| `alias` | 1 |
+| `alias` | 17 |
 | `byte_stable_ordering` | 2 |
 | `cache` | 14 |
 | `component:audio_generation_units` | 1 |
@@ -297,6 +298,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `tool_pricing` | 4 |
 | `transcription` | 1 |
 | `warning` | 3 |
+| `warning:alias_inferred` | 17 |
 | `warning:component_unpriced` | 1 |
 | `warning:historical_price_missing` | 1 |
 | `warning:long_context_rule_missing` | 1 |
