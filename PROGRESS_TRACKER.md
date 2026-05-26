@@ -1020,7 +1020,7 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 - Chose not to add an `openai.conversations` extractor in v0.x because pricing belongs to the associated Responses calls.
 - Updated provider extractor notes, supported surfaces, API parity matrix, project plan, and this tracker.
 - Reclassified Milestone 4 as complete for current scope. Remaining generated-media, rerank, transcription, provider-specific tool fields, and deeper stream variants move to Milestone 5+ or beta/V1 hardening.
-- Active focus now moves to the remaining Milestone 2 warning payload and adversarial-calculator hardening.
+- Follow-up focus then moved to the remaining Milestone 2 warning metadata and adversarial-calculator hardening, which is closed in the next work-log entry.
 - Verification after the OpenAI Conversations decision:
   - `python3 scripts/check_project_hygiene.py` passed.
   - `git diff --check` passed.
