@@ -354,7 +354,7 @@
       "id": "polyglot_schema_derived_type_hardening",
       "area": "polyglot",
       "requirement": "Mature schema-derived types, generated docs tables, drift checks, and Go APIs beyond map-backed prototype paths.",
-      "status": "partial",
+      "status": "satisfied",
       "required_for": ["public_beta", "v1"],
       "required_evidence": [
         "Schema-derived or schema-checked type surfaces exist for the supported languages where practical.",
@@ -364,8 +364,28 @@
       "current_evidence": [
         {
           "kind": "script",
+          "path": "scripts/generate_language_types.py",
+          "proves": "Python, TypeScript, and Go taxonomy-bearing type artifacts are generated from the locked taxonomy."
+        },
+        {
+          "kind": "code",
+          "path": "packages/python/runcost/generated/taxonomy.py",
+          "proves": "Python taxonomy literal aliases are generated and imported by the public type surface."
+        },
+        {
+          "kind": "code",
+          "path": "packages/javascript/core/generated/taxonomy.d.ts",
+          "proves": "TypeScript taxonomy literal unions are generated and imported by the public declaration file."
+        },
+        {
+          "kind": "code",
+          "path": "packages/go/ledger/generated_taxonomy.go",
+          "proves": "Go taxonomy slices are generated and used by the typed core package."
+        },
+        {
+          "kind": "script",
           "path": "scripts/check_type_taxonomy_parity.py",
-          "proves": "Python, TypeScript, and Go taxonomy-bearing type surfaces are checked against schemas."
+          "proves": "Generated taxonomy type artifacts and public type surfaces are checked against schemas."
         },
         {
           "kind": "docs",
@@ -379,7 +399,7 @@
         }
       ],
       "completion_check": "npm run generate:contracts && npm test",
-      "remaining_action": "Choose and implement schema-derived language type generation where it improves maintainability."
+      "remaining_action": "Keep generated taxonomy type artifacts and public type imports current as schemas evolve."
     },
     {
       "id": "v1_warning_code_fixture_coverage",

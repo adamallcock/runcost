@@ -1,64 +1,23 @@
+import type {
+  AliasResolution,
+  DebugDecisionType,
+  UsageComponentName,
+  UsageUnit,
+  WarningCode
+} from "./generated/taxonomy";
+
+export type {
+  AliasResolution,
+  DebugDecisionType,
+  UsageComponentName,
+  UsageUnit,
+  WarningCode
+} from "./generated/taxonomy";
+
 export type MoneyString = string;
 export type DecimalString = string;
 export type SchemaVersion = "0.1";
 export type CalculationMode = "compatibility" | "strict";
-
-export type UsageUnit =
-  | "token"
-  | "request"
-  | "call"
-  | "session"
-  | "search"
-  | "file"
-  | "image"
-  | "video"
-  | "audio"
-  | "second"
-  | "hour"
-  | "gb_day"
-  | "usd"
-  | "custom";
-
-export type UsageComponentName =
-  | "input_uncached_tokens"
-  | "input_cache_read_tokens"
-  | "input_cache_write_tokens"
-  | "input_cache_write_1h_tokens"
-  | "input_image_units"
-  | "input_audio_tokens"
-  | "input_image_tokens"
-  | "input_video_tokens"
-  | "output_text_tokens"
-  | "output_reasoning_tokens"
-  | "output_audio_tokens"
-  | "output_image_tokens"
-  | "output_video_tokens"
-  | "embedding_tokens"
-  | "request_units"
-  | "web_search_units"
-  | "file_search_units"
-  | "code_interpreter_session_units"
-  | "code_interpreter_call_units"
-  | "computer_use_action_units"
-  | "tool_call_units"
-  | "tool_execution_seconds"
-  | "rerank_search_units"
-  | "image_generation_units"
-  | "video_generation_units"
-  | "audio_generation_units"
-  | "transcription_seconds"
-  | "endpoint_runtime_seconds"
-  | "endpoint_instance_hours"
-  | "storage_gb_days"
-  | "custom_units";
-
-export type AliasResolution =
-  | "none"
-  | "user_exact"
-  | "source_exact"
-  | "package_exact"
-  | "provider_heuristic"
-  | "unknown";
 
 export interface UsageModel {
   requested: string;
@@ -204,27 +163,6 @@ export interface AppliedDiscount {
   amount: MoneyString;
 }
 
-export type WarningCode =
-  | "unknown_provider"
-  | "unknown_surface"
-  | "unknown_model"
-  | "alias_inferred"
-  | "price_not_found"
-  | "price_stale"
-  | "price_source_disagreement"
-  | "usage_field_ignored"
-  | "inclusive_usage_ambiguous"
-  | "component_unpriced"
-  | "source_capability_unsupported"
-  | "service_tier_unsupported"
-  | "long_context_rule_missing"
-  | "discount_not_applied"
-  | "stream_usage_missing"
-  | "historical_price_missing"
-  | "tool_component_unpriced"
-  | "provider_reported_cost_used"
-  | "provider_reported_cost_mismatch";
-
 export interface WarningIdentityMetadata {
   provider: string;
   surface: string;
@@ -351,13 +289,6 @@ export type CostWarning =
   | BaseCostWarning<"historical_price_missing", HistoricalPriceMissingWarningMetadata>
   | BaseCostWarning<"provider_reported_cost_used", ProviderReportedCostWarningMetadata>
   | BaseCostWarning<"provider_reported_cost_mismatch", ProviderReportedCostWarningMetadata>;
-
-export type DebugDecisionType =
-  | "price_card_candidates"
-  | "price_component_match"
-  | "model_alias_resolution"
-  | "discount_application"
-  | "warning";
 
 export interface DebugDecision {
   type: DebugDecisionType;

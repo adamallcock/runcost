@@ -10,8 +10,10 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 TAXONOMY = ROOT / "schemas" / "taxonomy.json"
 PYTHON_TYPES = ROOT / "packages" / "python" / "runcost" / "types.py"
+PYTHON_GENERATED = ROOT / "packages" / "python" / "runcost" / "generated" / "taxonomy.py"
 TYPESCRIPT_TYPES = ROOT / "packages" / "javascript" / "core" / "index.d.ts"
-GO_CORE = ROOT / "packages" / "go" / "ledger" / "ledger.go"
+TYPESCRIPT_GENERATED = ROOT / "packages" / "javascript" / "core" / "generated" / "taxonomy.d.ts"
+GO_GENERATED = ROOT / "packages" / "go" / "ledger" / "generated_taxonomy.go"
 
 
 def load_taxonomy() -> dict[str, Any]:
@@ -41,7 +43,7 @@ def string_literals(node: ast.AST) -> list[str]:
 
 
 def python_literal_values(type_name: str) -> list[str]:
-    tree = ast.parse(PYTHON_TYPES.read_text(encoding="utf-8"), filename=str(PYTHON_TYPES))
+    tree = ast.parse(PYTHON_GENERATED.read_text(encoding="utf-8"), filename=str(PYTHON_GENERATED))
     for statement in tree.body:
         if not isinstance(statement, ast.Assign):
             continue
@@ -52,7 +54,7 @@ def python_literal_values(type_name: str) -> list[str]:
 
 
 def typescript_literal_values(type_name: str) -> list[str]:
-    source = TYPESCRIPT_TYPES.read_text(encoding="utf-8")
+    source = TYPESCRIPT_GENERATED.read_text(encoding="utf-8")
     pattern = re.compile(rf"export type {re.escape(type_name)}\s*=([\s\S]*?);", re.MULTILINE)
     match = pattern.search(source)
     if not match:
@@ -61,7 +63,7 @@ def typescript_literal_values(type_name: str) -> list[str]:
 
 
 def go_string_slice(var_name: str) -> list[str]:
-    source = GO_CORE.read_text(encoding="utf-8")
+    source = GO_GENERATED.read_text(encoding="utf-8")
     pattern = re.compile(rf"var {re.escape(var_name)}\s*=\s*\[\]string\s*\{{([\s\S]*?)\}}", re.MULTILINE)
     match = pattern.search(source)
     if not match:
@@ -71,6 +73,16 @@ def go_string_slice(var_name: str) -> list[str]:
 
 def main() -> int:
     taxonomy = load_taxonomy()
+    import_checks = {
+        PYTHON_TYPES: ["from .generated.taxonomy import", "UsageComponentName", "WarningCode", "DebugDecisionType"],
+        TYPESCRIPT_TYPES: ['from "./generated/taxonomy"', "UsageComponentName", "WarningCode", "DebugDecisionType"],
+    }
+    for path, needles in import_checks.items():
+        source = path.read_text(encoding="utf-8")
+        for needle in needles:
+            if needle not in source:
+                raise AssertionError(f"{path.relative_to(ROOT)} does not reference generated taxonomy type {needle!r}")
+
     checks = [
         ("component_names", "UsageComponentName"),
         ("units", "UsageUnit"),
@@ -83,7 +95,15 @@ def main() -> int:
         assert_equal(python_literal_values(type_name), expected, f"Python {type_name}")
         assert_equal(typescript_literal_values(type_name), expected, f"TypeScript {type_name}")
 
-    assert_equal(go_string_slice("componentOrderNames"), taxonomy["component_names"], "Go componentOrderNames")
+    go_checks = [
+        ("component_names", "componentOrderNames"),
+        ("units", "usageUnitNames"),
+        ("warning_codes", "warningCodeNames"),
+        ("alias_resolution_values", "aliasResolutionNames"),
+        ("debug_decision_types", "debugDecisionTypeNames"),
+    ]
+    for taxonomy_key, var_name in go_checks:
+        assert_equal(go_string_slice(var_name), taxonomy[taxonomy_key], f"Go {var_name}")
 
     print("Type taxonomy parity checks passed.")
     return 0

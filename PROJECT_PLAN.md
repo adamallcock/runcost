@@ -762,10 +762,12 @@ Polyglot hardening progress:
 - `scripts/check_generated_contract_docs.py` fails when the checked-in
   generated contract, schema-field, fixture-support, or warning-coverage docs
   drift from the locked taxonomy, JSON Schemas, or fixture metadata.
-- `scripts/check_type_taxonomy_parity.py` fails when Python `TypedDict`
-  literal aliases, TypeScript declaration literal unions, or Go component
-  ordering drift from `schemas/taxonomy.json`.
-- Schema-derived language types remain future hardening.
+- `scripts/generate_language_types.py` generates taxonomy-bearing type
+  artifacts for Python, TypeScript, and Go from `schemas/taxonomy.json`;
+  Python and TypeScript public type surfaces import those generated aliases,
+  and Go component ordering comes from generated taxonomy slices.
+- `scripts/check_type_taxonomy_parity.py` fails when generated taxonomy type
+  artifacts or public type imports drift from `schemas/taxonomy.json`.
 - Go now has typed struct wrappers for the normalized usage, price-card,
   discount-policy, and core calculation path through `UsageLedger`,
   `PriceCard`, `DiscountPolicy`, `CostOptions`, and `CalculateCostTyped`.

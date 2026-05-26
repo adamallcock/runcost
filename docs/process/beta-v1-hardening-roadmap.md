@@ -61,7 +61,9 @@ The current polyglot strategy remains:
 
 Hardening work:
 
-- Choose schema-derived type generation tools for TypeScript, Python, and Go.
+- Keep taxonomy-bearing type artifacts generated for TypeScript, Python, and Go
+  with `scripts/generate_language_types.py`; broader full-contract generation
+  can be added later if raw JSON Schema editing becomes the maintenance pain.
 - Generate docs tables for components, units, warning codes, providers, source
   adapters, framework adapters, and support matrices.
 - Keep the fixture-backed support matrix generated from fixture metadata in
@@ -70,7 +72,9 @@ Hardening work:
 - Keep warning-code fixture coverage generated in
   `docs/generated/warning-coverage.md`; warning codes must stay
   fixture-backed before they are treated as V1-supported behavior.
-- Add a single command that regenerates artifacts and fails on diff.
+- Keep `npm run generate:contracts` as the single command that regenerates
+  generated docs and language type artifacts; normal tests fail on generated
+  language type or generated-doc drift.
 - Continue hardening Go's typed struct wrappers for the normalized usage,
   price-card, discount, and core calculation path; raw provider and framework
   adapter paths still use map-backed objects.

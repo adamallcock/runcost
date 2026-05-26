@@ -13,40 +13,6 @@ import (
 	"time"
 )
 
-var componentOrderNames = []string{
-	"input_uncached_tokens",
-	"input_cache_read_tokens",
-	"input_cache_write_tokens",
-	"input_cache_write_1h_tokens",
-	"input_image_units",
-	"input_audio_tokens",
-	"input_image_tokens",
-	"input_video_tokens",
-	"output_text_tokens",
-	"output_reasoning_tokens",
-	"output_audio_tokens",
-	"output_image_tokens",
-	"output_video_tokens",
-	"embedding_tokens",
-	"request_units",
-	"web_search_units",
-	"file_search_units",
-	"code_interpreter_session_units",
-	"code_interpreter_call_units",
-	"computer_use_action_units",
-	"tool_call_units",
-	"tool_execution_seconds",
-	"rerank_search_units",
-	"image_generation_units",
-	"video_generation_units",
-	"audio_generation_units",
-	"transcription_seconds",
-	"endpoint_runtime_seconds",
-	"endpoint_instance_hours",
-	"storage_gb_days",
-	"custom_units",
-}
-
 var componentOrder = func() map[string]int {
 	orders := map[string]int{}
 	for index, name := range componentOrderNames {

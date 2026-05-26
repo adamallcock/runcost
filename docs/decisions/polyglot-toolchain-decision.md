@@ -85,7 +85,9 @@ Near-term expectations:
 - Keep runtime dependencies at zero for the core calculator.
 - Keep money math decimal-safe through string and `BigInt` arithmetic.
 - Export the same public functions as Python and Go where practical.
-- Maintain TypeScript declarations by schema alignment and hygiene checks until generation is introduced.
+- Keep taxonomy-bearing TypeScript unions generated from `schemas/taxonomy.json`;
+  maintain the handwritten interfaces around those generated aliases until full
+  contract generation proves worth the complexity.
 
 Generation candidates:
 
@@ -102,6 +104,10 @@ Near-term expectations:
 - Keep the core calculator dependency-free.
 - Use `Decimal` for money arithmetic.
 - Export typed dictionaries from `runcost.types`.
+- Keep taxonomy-bearing Python literal aliases generated from
+  `schemas/taxonomy.json`; maintain the handwritten `TypedDict` models around
+  those generated aliases until full contract generation proves worth the
+  complexity.
 - Keep runtime input validation in tests and optional developer tooling, not mandatory calculator dependencies.
 
 Generation candidates:
@@ -120,6 +126,8 @@ Near-term expectations:
 - Use `math/big.Rat` for decimal-safe arithmetic.
 - Provide public doc comments and examples for exported APIs.
 - Continue running the same fixture suite through Go tests.
+- Keep taxonomy-bearing Go slices generated from `schemas/taxonomy.json`; keep
+  typed core wrappers handwritten around the conformance-tested calculator.
 
 Generation candidates:
 
@@ -135,6 +143,8 @@ Generation candidates:
 - Package-level TypeScript declarations.
 - Python `TypedDict` contracts.
 - Go exported function docs and examples.
+- Generated taxonomy-bearing language type artifacts for Python,
+  TypeScript, and Go.
 - CI that runs fixture tests, Go tests, examples, JSON parsing, and hygiene checks.
 - A public API parity matrix.
 
