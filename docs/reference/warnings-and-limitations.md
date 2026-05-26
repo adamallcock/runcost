@@ -53,6 +53,8 @@ Warning metadata is intentionally required so downstream billing, reconciliation
 and alerting code can group warnings without parsing human-readable messages.
 The current metadata contract is locked in `schemas/taxonomy.json` under
 `warning_metadata_required_keys` and enforced by the shared fixture runner.
+For fixture-backed warning coverage and uncovered V1 warning-code gaps, see
+[Generated Warning Coverage](../generated/warning-coverage.md).
 
 | Warning code | Required metadata keys |
 |---|---|

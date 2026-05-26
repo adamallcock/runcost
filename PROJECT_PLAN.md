@@ -756,9 +756,12 @@ Polyglot hardening progress:
 - The same generator produces `docs/generated/fixture-support-matrix.md` from
   fixture metadata, covering provider, surface, scenario, fixture, language,
   and tag coverage.
+- The same generator produces `docs/generated/warning-coverage.md` from the
+  warning taxonomy and fixture metadata, making uncovered warning-code behavior
+  visible before V1.
 - `scripts/check_generated_contract_docs.py` fails when the checked-in
-  generated contract, schema-field, or fixture-support docs drift from the
-  locked taxonomy, JSON Schemas, or fixture metadata.
+  generated contract, schema-field, fixture-support, or warning-coverage docs
+  drift from the locked taxonomy, JSON Schemas, or fixture metadata.
 - `scripts/check_type_taxonomy_parity.py` fails when Python `TypedDict`
   literal aliases, TypeScript declaration literal unions, or Go component
   ordering drift from `schemas/taxonomy.json`.

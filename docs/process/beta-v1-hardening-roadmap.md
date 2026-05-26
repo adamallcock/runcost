@@ -67,6 +67,10 @@ Hardening work:
 - Keep the fixture-backed support matrix generated from fixture metadata in
   `docs/generated/fixture-support-matrix.md`; `npm run generate:contracts` and
   `scripts/check_generated_contract_docs.py` guard it against drift.
+- Keep warning-code fixture coverage generated in
+  `docs/generated/warning-coverage.md`; uncovered warning codes are valid
+  contract values but must not be treated as V1-supported behavior until they
+  have shared fixtures.
 - Add a single command that regenerates artifacts and fails on diff.
 - Continue hardening Go's typed struct wrappers for the normalized usage,
   price-card, discount, and core calculation path; raw provider and framework

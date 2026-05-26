@@ -17,6 +17,7 @@ REQUIRED_FILES = [
     "docs/reports/fixture-coverage.md",
     "docs/generated/contract-taxonomy.md",
     "docs/generated/fixture-support-matrix.md",
+    "docs/generated/warning-coverage.md",
     "docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md",
     "docs/reports/2026-05-26-release-workflow-no-publish-blocked.md",
     "docs/guides/package-installation.md",
@@ -459,6 +460,7 @@ def check_packaging_docs() -> None:
     api_reference = (ROOT / "docs/reference/api-reference.md").read_text(encoding="utf-8")
     release_process = (ROOT / "docs/process/release-process.md").read_text(encoding="utf-8")
     source_update = (ROOT / "docs/process/2026-05-26-source-data-update-process.md").read_text(encoding="utf-8")
+    warnings = (ROOT / "docs/reference/warnings-and-limitations.md").read_text(encoding="utf-8")
 
     assert_true(
         "2026-05-26-migration-from-hand-written-formulas.md" in root_readme,
@@ -482,6 +484,10 @@ def check_packaging_docs() -> None:
     assert_true(
         "2026-05-26-source-data-update-process.md" in release_process,
         "release process must link to source data update process",
+    )
+    assert_true(
+        "warning-coverage.md" in warnings,
+        "warnings and limitations docs must link generated warning coverage",
     )
 
 
