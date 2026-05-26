@@ -16,6 +16,7 @@ REQUIRED_FILES = [
     "docs/reference/debug-trace.md",
     "docs/reports/fixture-coverage.md",
     "docs/generated/contract-taxonomy.md",
+    "docs/generated/fixture-support-matrix.md",
     "docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md",
     "docs/reports/2026-05-26-release-workflow-no-publish-blocked.md",
     "docs/guides/package-installation.md",
@@ -514,6 +515,11 @@ def check_framework_adapter_paths() -> None:
     ]:
         assert_true(term in supported_surfaces, f"supported surfaces missing framework path: {term}")
         assert_true(term in parity, f"API parity matrix missing framework path: {term}")
+
+    assert_true(
+        "fixture-support-matrix.md" in supported_surfaces,
+        "supported surfaces must link generated fixture support matrix",
+    )
 
     for term in [
         "openai-agents-sdk-usage.json",

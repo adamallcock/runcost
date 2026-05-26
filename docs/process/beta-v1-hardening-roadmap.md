@@ -64,6 +64,9 @@ Hardening work:
 - Choose schema-derived type generation tools for TypeScript, Python, and Go.
 - Generate docs tables for components, units, warning codes, providers, source
   adapters, framework adapters, and support matrices.
+- Keep the fixture-backed support matrix generated from fixture metadata in
+  `docs/generated/fixture-support-matrix.md`; `npm run generate:contracts` and
+  `scripts/check_generated_contract_docs.py` guard it against drift.
 - Add a single command that regenerates artifacts and fails on diff.
 - Continue hardening Go's typed struct wrappers for the normalized usage,
   price-card, discount, and core calculation path; raw provider and framework

@@ -10,6 +10,8 @@ status: draft
 This support matrix describes the current fixture-backed prototype. A provider or framework is considered supported only when it has shared conformance fixtures.
 
 For mechanical coverage counts, see [Fixture Coverage](../reports/fixture-coverage.md).
+For the full fixture-derived provider/surface/language matrix, see
+[Generated Fixture Support Matrix](../generated/fixture-support-matrix.md).
 
 ## Provider Extractors
 

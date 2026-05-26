@@ -178,7 +178,8 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 - Advanced polyglot generated-artifact hardening:
   - `scripts/generate_contract_docs.py` generates `docs/generated/contract-taxonomy.md` from `schemas/taxonomy.json`;
   - `scripts/generate_contract_docs.py` also generates `docs/generated/schema-fields.md` from `schemas/*.schema.json`;
-  - `scripts/check_generated_contract_docs.py` fails on generated contract-doc and schema-field-doc drift;
+  - `scripts/generate_contract_docs.py` also generates `docs/generated/fixture-support-matrix.md` from `fixtures/*.json` metadata;
+  - `scripts/check_generated_contract_docs.py` fails on generated contract-doc, schema-field-doc, and fixture-support-matrix drift;
   - `scripts/check_type_taxonomy_parity.py` fails when Python, TypeScript, or Go public taxonomy-bearing type surfaces drift from `schemas/taxonomy.json`;
   - `npm run generate:contracts` refreshes the checked-in generated docs.
 - Advanced Go API hardening:

@@ -753,9 +753,12 @@ Polyglot hardening progress:
 - The same generator produces `docs/generated/schema-fields.md` from
   `schemas/*.schema.json`, covering top-level and `$defs` fields,
   requiredness, types, and constraints.
+- The same generator produces `docs/generated/fixture-support-matrix.md` from
+  fixture metadata, covering provider, surface, scenario, fixture, language,
+  and tag coverage.
 - `scripts/check_generated_contract_docs.py` fails when the checked-in
-  generated contract and schema-field docs drift from the locked taxonomy or
-  JSON Schemas.
+  generated contract, schema-field, or fixture-support docs drift from the
+  locked taxonomy, JSON Schemas, or fixture metadata.
 - `scripts/check_type_taxonomy_parity.py` fails when Python `TypedDict`
   literal aliases, TypeScript declaration literal unions, or Go component
   ordering drift from `schemas/taxonomy.json`.
