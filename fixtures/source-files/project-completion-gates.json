@@ -313,7 +313,7 @@
       "id": "milestone9_real_go_tag_verification",
       "area": "milestone9",
       "requirement": "Verify the Go module from a real semantic version tag without a local replace.",
-      "status": "pending_external_evidence",
+      "status": "satisfied",
       "required_for": ["public_beta", "v1"],
       "required_evidence": [
         "A pushed semantic version tag exists.",
@@ -329,10 +329,15 @@
           "kind": "workflow",
           "path": ".github/workflows/release.yml",
           "proves": "The release workflow verifies the real tag path when the tag exists."
+        },
+        {
+          "kind": "report",
+          "path": "docs/reports/2026-05-26-go-tag-verification-0-1-0.md",
+          "proves": "Remote tag v0.1.0 was verified from a clean Go module without a local replace in guarded release workflow run 26467656634."
         }
       ],
       "completion_check": "go get github.com/adamallcock/runcost/packages/go/ledger@v<version>",
-      "remaining_action": "Create/push the real version tag and verify from a clean external module."
+      "remaining_action": "Keep using real tag verification for future release versions."
     },
     {
       "id": "milestone9_actual_registry_publish",
