@@ -26,6 +26,18 @@ Result:
 - Artifact URL:
   `https://github.com/adamallcock/runcost/actions/runs/26430180080/artifacts/7208232301`
 
+Follow-up hardened workflow run:
+
+- Workflow run: `https://github.com/adamallcock/runcost/actions/runs/26430290844`
+- Head SHA: `606bfcd7e835358ebb0ea66d265ece21f2a6ea7f`
+- Conclusion: success
+- Publishing: disabled
+- Artifact: `runcost-release-artifacts`
+- Artifact URL:
+  `https://github.com/adamallcock/runcost/actions/runs/26430290844/artifacts/7208277521`
+- Related `main` CI run:
+  `https://github.com/adamallcock/runcost/actions/runs/26430288699`
+
 Artifacts downloaded and reviewed locally:
 
 | Artifact | SHA-256 |
@@ -62,11 +74,13 @@ Warnings observed:
   release if newer action versions or Node 24 migration guidance is available.
   Follow-up: CI and release workflows now set
   `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` to opt into the upcoming runner
-  behavior early.
+  behavior early. The hardened follow-up run succeeded; GitHub now reports that
+  Node 20-targeting actions are being forced to run on Node.js 24.
 - `actions/setup-go` warned that no `go.sum` file exists for cache restore.
   This did not fail the rehearsal and is expected while the Go package has no
   external module dependencies. Follow-up: CI and release workflows now disable
-  Go module caching for this dependency-free module.
+  Go module caching for this dependency-free module, and the hardened follow-up
+  run no longer emits the cache-restore warning.
 
 Remaining release gates:
 

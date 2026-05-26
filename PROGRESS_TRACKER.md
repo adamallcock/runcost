@@ -50,8 +50,10 @@ Evidence collected on 2026-05-26:
 - No-publish release dry-run checks pass through `npm run check:release-dry-run`.
 - Guarded GitHub release workflow passed from `main` with
   `publish=false` in run
-  `https://github.com/adamallcock/runcost/actions/runs/26430180080`; artifact
-  review is recorded in
+  `https://github.com/adamallcock/runcost/actions/runs/26430180080`, then
+  passed again after workflow-warning hardening in
+  `https://github.com/adamallcock/runcost/actions/runs/26430290844`; artifact
+  review and warning follow-up are recorded in
   `docs/reports/2026-05-26-release-workflow-no-publish-rehearsal.md`.
 - Real-life live SDK/API smoke tests are implemented as optional API-key-gated harnesses, but credentialed provider evidence has not been captured yet; current completed runs use synthetic responses, fixtures, local package installs, no-network sample smoke, or local/live price-source refresh commands.
 - Project hygiene check passes.
@@ -197,6 +199,15 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
     `docs/reports/2026-05-26-release-workflow-no-publish-rehearsal.md`;
   - real Go tag verification was skipped as expected because tag `v0.0.0` does
     not exist.
+- Hardened release workflow warnings:
+  - CI and release workflows now opt Actions into Node 24 early with
+    `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`;
+  - Go module caching is disabled because the dependency-free Go module has no
+    `go.sum`;
+  - `main` CI passed at
+    `https://github.com/adamallcock/runcost/actions/runs/26430288699`;
+  - hardened no-publish release rehearsal passed at
+    `https://github.com/adamallcock/runcost/actions/runs/26430290844`.
 - Added docs:
   - `docs/process/alpha-smoke-runbook.md`
   - `docs/process/invoice-dashboard-comparison.md`
