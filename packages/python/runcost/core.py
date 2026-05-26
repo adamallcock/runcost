@@ -1602,6 +1602,26 @@ def extract_cohere_chat_usage(response: Dict[str, Any], **options: Any) -> Dict[
     )
 
 
+def extract_cohere_rerank_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    meta = response.get("meta") if isinstance(response.get("meta"), dict) else {}
+    billed_units = meta.get("billed_units") if isinstance(meta.get("billed_units"), dict) else {}
+    search_units = billed_units.get("search_units", 0)
+    returned_model = response.get("model") or options.get("model")
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "cohere"),
+        surface=options.get("surface", "cohere.rerank"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=meta,
+        components=_compact_components(
+            [
+                _positive_component("rerank_search_units", search_units, "search", "$.meta.billed_units.search_units"),
+            ]
+        ),
+    )
+
+
 def extract_langchain_chat_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     usage = response.get("usage_metadata") or response.get("usageMetadata") or {}
     input_details = usage.get("input_token_details", {})
@@ -2026,6 +2046,8 @@ def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, 
         return extract_bedrock_invoke_model_usage(response, **options)
     if surface == "cohere.chat":
         return extract_cohere_chat_usage(response, **options)
+    if surface == "cohere.rerank":
+        return extract_cohere_rerank_usage(response, **options)
     raise ValueError(f"Unsupported surface: {surface}")
 
 

@@ -2037,6 +2037,8 @@ func ExtractUsageLedger(response Object, options Object) Object {
 		return extractBedrockInvokeModelUsage(response, options)
 	case "cohere.chat":
 		return extractCohereChatUsage(response, options)
+	case "cohere.rerank":
+		return extractCohereRerankUsage(response, options)
 	default:
 		if isOpenAICompatibleChatSurface(surface) {
 			return extractOpenAICompatibleChatCompletionsUsage(response, options)
@@ -2636,6 +2638,31 @@ func extractCohereChatUsage(response Object, options Object) Object {
 		positiveComponent("input_uncached_tokens", getNumber(billedUnits, "input_tokens"), "token", sourceRoot+".billed_units.input_tokens"),
 		positiveComponent("output_text_tokens", getNumber(billedUnits, "output_tokens"), "token", sourceRoot+".billed_units.output_tokens"),
 	}), usage)
+}
+
+func extractCohereRerankUsage(response Object, options Object) Object {
+	meta := asObject(response["meta"])
+	billedUnits := asObject(meta["billed_units"])
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "cohere"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "cohere.rerank"
+	}
+	requestedModel := asString(options["model"])
+	if requestedModel == "" {
+		requestedModel = asString(response["model"])
+	}
+	returnedModel := asString(response["model"])
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("rerank_search_units", getNumber(billedUnits, "search_units"), "search", "$.meta.billed_units.search_units"),
+	}), meta)
 }
 
 func extractLangChainChatUsage(response Object, options Object) Object {
@@ -4447,6 +4474,7 @@ func FromResponse(response Object, options Object, priceCards []any, discountPol
 		surface != "aws.bedrock.converse" &&
 		surface != "aws.bedrock.invoke_model" &&
 		surface != "cohere.chat" &&
+		surface != "cohere.rerank" &&
 		!isOpenAICompatibleChatSurface(surface) {
 		if mode == "strict" {
 			panic(fmt.Sprintf("unsupported surface: %s", surface))

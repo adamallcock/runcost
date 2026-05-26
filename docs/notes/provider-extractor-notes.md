@@ -171,6 +171,25 @@ Notes:
 
 - Cohere can report raw token counts that differ from billed token counts. The extractor intentionally prices billed units.
 
+## Cohere Rerank
+
+Surface:
+
+- `cohere.rerank`
+
+Source reference:
+
+- Cohere Rerank overview documents the response `meta.billed_units.search_units` field for v2 Rerank responses: https://docs.cohere.com/v2/docs/rerank-overview
+
+Mapping:
+
+- `meta.billed_units.search_units` -> `rerank_search_units`.
+
+Notes:
+
+- Rerank result counts, relevance scores, and returned documents are preserved in raw usage but are not priced directly.
+- The extractor prices Cohere's billed search units and leaves broader provider-specific rerank/search surfaces for beta hardening.
+
 ## Google Gemini Generate Content
 
 Surfaces:

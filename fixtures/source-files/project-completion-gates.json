@@ -459,6 +459,11 @@
         },
         {
           "kind": "fixture",
+          "path": "fixtures/cohere-rerank-raw-billed-units.json",
+          "proves": "Provider-specific Cohere Rerank search-unit extraction exists."
+        },
+        {
+          "kind": "fixture",
           "path": "fixtures/storage-gb-day-pricing.json",
           "proves": "Normalized GB-day storage pricing exists."
         },

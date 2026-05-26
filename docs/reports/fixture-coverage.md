@@ -13,9 +13,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 92
+- Fixtures: 93
 - Providers: 17
-- Provider surfaces: 21
+- Provider surfaces: 22
 - Usage components covered: 31
 - Warning/error codes covered: 19
 - Requirement IDs covered: 19
@@ -24,9 +24,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 90 |
-| `javascript` | 91 |
-| `python` | 91 |
+| `go` | 91 |
+| `javascript` | 92 |
+| `python` | 92 |
 
 ## Scenarios
 
@@ -39,7 +39,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `long_context` | 2 |
 | `normalized_usage` | 8 |
 | `provider_reported` | 2 |
-| `raw_provider_response` | 27 |
+| `raw_provider_response` | 28 |
 | `service_mode` | 3 |
 | `service_tier` | 2 |
 | `source_adapter` | 13 |
@@ -57,6 +57,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `bedrock` | `aws.bedrock.converse` | 2 |
 | `bedrock` | `aws.bedrock.invoke_model` | 1 |
 | `cohere` | `cohere.chat` | 2 |
+| `cohere` | `cohere.rerank` | 1 |
 | `custom` | `custom.unknown` | 1 |
 | `custom-provider` | `openai.responses` | 1 |
 | `deepseek` | `deepseek.chat_completions` | 1 |
@@ -101,7 +102,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `output_text_tokens` | 64 |
 | `output_video_tokens` | 1 |
 | `request_units` | 3 |
-| `rerank_search_units` | 1 |
+| `rerank_search_units` | 2 |
 | `storage_gb_days` | 1 |
 | `tool_call_units` | 1 |
 | `tool_execution_seconds` | 1 |
@@ -176,13 +177,13 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-CUSTOM-PRICING` | 1 |
 | `RC-DEBUG-TRACE` | 1 |
 | `RC-DISCOUNT-POLICY` | 2 |
-| `RC-FEATURE-PRICING` | 3 |
-| `RC-FIXTURE-CONFORMANCE` | 92 |
+| `RC-FEATURE-PRICING` | 4 |
+| `RC-FIXTURE-CONFORMANCE` | 93 |
 | `RC-FRAMEWORK-ADAPTER` | 14 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
 | `RC-LONG-CONTEXT` | 2 |
 | `RC-PROVIDER-REPORTED-COST` | 8 |
-| `RC-RAW-EXTRACTOR` | 27 |
+| `RC-RAW-EXTRACTOR` | 28 |
 | `RC-SERVICE-MODE` | 3 |
 | `RC-SERVICE-TIER` | 2 |
 | `RC-SOURCE-ADAPTER` | 14 |
@@ -234,7 +235,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:output_text_tokens` | 64 |
 | `component:output_video_tokens` | 1 |
 | `component:request_units` | 3 |
-| `component:rerank_search_units` | 1 |
+| `component:rerank_search_units` | 2 |
 | `component:storage_gb_days` | 1 |
 | `component:tool_call_units` | 1 |
 | `component:tool_execution_seconds` | 1 |
@@ -247,7 +248,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `discount` | 2 |
 | `effective_date` | 3 |
 | `embeddings` | 1 |
-| `feature_pricing` | 3 |
+| `feature_pricing` | 4 |
 | `framework:ag2` | 2 |
 | `framework:haystack` | 1 |
 | `framework:langsmith` | 2 |
@@ -278,9 +279,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `multimodal` | 1 |
 | `normalized_usage` | 3 |
 | `provider_reported` | 7 |
-| `raw_provider_response` | 27 |
+| `raw_provider_response` | 28 |
 | `reasoning` | 9 |
-| `rerank` | 1 |
+| `rerank` | 2 |
 | `service_mode` | 3 |
 | `service_tier` | 2 |
 | `source:file` | 1 |

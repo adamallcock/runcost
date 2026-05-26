@@ -336,6 +336,7 @@ def run_python_fixture(fixture):
                 "aws.bedrock.converse",
                 "aws.bedrock.invoke_model",
                 "cohere.chat",
+                "cohere.rerank",
             }
         ):
             usage_ledger = extract_usage_ledger(input_data["raw_response"], **input_data["extract"])

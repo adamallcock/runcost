@@ -1671,6 +1671,23 @@ export function extractCohereChatUsage(response, options = {}) {
   });
 }
 
+export function extractCohereRerankUsage(response, options = {}) {
+  const meta = response.meta && typeof response.meta === "object" ? response.meta : {};
+  const billedUnits = meta.billed_units || {};
+  const returnedModel = response.model || options.model;
+
+  return baseUsageLedger({
+    provider: options.provider || "cohere",
+    surface: options.surface || "cohere.rerank",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage: meta,
+    components: compactComponents([
+      positiveComponent("rerank_search_units", billedUnits.search_units || 0, "search", "$.meta.billed_units.search_units")
+    ])
+  });
+}
+
 export function extractLangChainChatUsage(response, options = {}) {
   const usage = response.usage_metadata || response.usageMetadata || {};
   const inputDetails = usage.input_token_details || {};
@@ -2150,6 +2167,9 @@ export function extractUsageLedger(response, options = {}) {
   }
   if (surface === "cohere.chat") {
     return extractCohereChatUsage(response, options);
+  }
+  if (surface === "cohere.rerank") {
+    return extractCohereRerankUsage(response, options);
   }
   throw new Error(`Unsupported surface: ${surface}`);
 }

@@ -97,7 +97,7 @@ The implementation is still pre-alpha. The current center of gravity is normaliz
 - Decimal-safe cost calculation.
 - Component ledgers for input, cached input, output, reasoning, tool units, normalized generated media, rerank, transcription, runtime seconds, GB-day storage, and Gemini/Vertex multimodal token details.
 - Raw extractors for OpenAI Responses, OpenAI Chat Completions, and Anthropic Messages.
-- Raw extractors for OpenRouter Chat Completions, Cohere Chat, Google Gemini/Vertex generateContent, and AWS Bedrock Converse.
+- Raw extractors for OpenRouter Chat Completions, Cohere Chat and Rerank, Google Gemini/Vertex generateContent, and AWS Bedrock Converse.
 - Final streaming usage extraction for OpenAI Responses `response.completed`, Anthropic Messages SSE event sequences, and Gemini stream chunks with `usageMetadata`.
 - Shared OpenAI-compatible chat extraction for Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face Inference Providers, and OpenRouter.
 - One-call framework helpers for LangChain AIMessage, OpenAI Agents SDK usage, Vercel AI SDK generateText and streamText finish objects, LlamaIndex TokenCountingHandler, Haystack generator metadata, LiteLLM proxy response metadata, AutoGen/AG2 usage summary outputs, LangSmith run/export usage, Semantic Kernel telemetry, and OpenRouter SDK response objects.

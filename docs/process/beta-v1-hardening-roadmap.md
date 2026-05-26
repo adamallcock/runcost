@@ -90,8 +90,8 @@ filling. Priority areas:
   `video_generation_units`;
 - provider-specific transcription and speech billing beyond normalized
   `transcription_seconds`;
-- provider-specific rerank/search billing beyond normalized
-  `rerank_search_units`;
+- provider-specific rerank/search billing beyond fixture-backed Cohere Rerank
+  and normalized `rerank_search_units`;
 - provider-specific storage/session billing beyond the normalized
   `storage_gb_days` component;
 - additional final stream usage protocols;

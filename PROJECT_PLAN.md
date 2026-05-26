@@ -55,7 +55,7 @@ Current prototype capabilities:
 
 - Decimal-safe cost calculation.
 - Componentized output ledgers.
-- Raw extractors for OpenAI Responses, OpenAI Chat Completions, OpenAI Embeddings, Anthropic Messages, Cohere Chat, Google Gemini/Vertex `generateContent`, AWS Bedrock Converse, and selected OpenAI-compatible chat providers.
+- Raw extractors for OpenAI Responses, OpenAI Chat Completions, OpenAI Embeddings, Anthropic Messages, Cohere Chat and Rerank, Google Gemini/Vertex `generateContent`, AWS Bedrock Converse, and selected OpenAI-compatible chat providers.
 - Final streaming usage extraction for selected OpenAI Responses, Anthropic Messages, and Gemini stream shapes.
 - Components for input, cached input, cache write, output, reasoning, tool units, and pass-through custom units.
 - Exact alias resolution through price-card aliases.
@@ -391,7 +391,7 @@ Provider surfaces:
 - xAI Chat Completions and Responses.
 - Groq OpenAI-compatible chat.
 - Mistral chat completions.
-- Cohere chat.
+- Cohere chat and rerank.
 - OpenRouter chat completions.
 - Azure OpenAI chat completions.
 - Hugging Face Inference Providers OpenAI-compatible chat.
@@ -409,7 +409,7 @@ Delivered in current prototype:
 - DeepSeek Chat Completions.
 - Azure OpenAI Chat Completions.
 - Hugging Face Inference Providers Chat Completions.
-- Cohere Chat.
+- Cohere Chat and Rerank.
 - Google Gemini API `generateContent`.
 - Vertex AI Gemini `generateContent` through the same usage metadata extractor.
 - AWS Bedrock Converse.
@@ -1109,7 +1109,7 @@ Scenarios:
 - xAI cached input and reasoning.
 - Groq service tier and cached input.
 - Mistral cached input.
-- Cohere `billed_units`.
+- Cohere `billed_units`, including Chat token units and Rerank search units.
 - OpenRouter provider-reported cost.
 - Hugging Face OpenAI-compatible usage.
 

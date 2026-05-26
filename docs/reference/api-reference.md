@@ -74,6 +74,7 @@ Output:
 | AWS Bedrock Converse | `extract_bedrock_converse_usage` | `extractBedrockConverseUsage` | via dispatch |
 | AWS Bedrock InvokeModel | `extract_bedrock_invoke_model_usage` | `extractBedrockInvokeModelUsage` | via dispatch |
 | Cohere Chat | `extract_cohere_chat_usage` | `extractCohereChatUsage` | via dispatch |
+| Cohere Rerank | `extract_cohere_rerank_usage` | `extractCohereRerankUsage` | via dispatch |
 
 Common one-call helper:
 

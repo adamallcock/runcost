@@ -33,6 +33,7 @@ For the full fixture-derived provider/surface/language matrix, see
 | Azure OpenAI | Chat Completions through OpenAI-compatible usage | Fixture-backed |
 | Hugging Face Inference Providers | Chat Completions through OpenAI-compatible usage | Fixture-backed |
 | Cohere | Chat | Fixture-backed |
+| Cohere | Rerank | Fixture-backed |
 | Google Gemini | `generateContent` | Fixture-backed |
 | Google Gemini | `generateContent` stream chunks with final `usageMetadata` | Fixture-backed |
 | Vertex AI Gemini | `generateContent` | Fixture-backed |
@@ -82,6 +83,6 @@ For the full fixture-derived provider/surface/language matrix, see
 - Support does not mean every model, region, service tier, tool, or historical price is present.
 - OpenAI Conversations are documented as state resources, not standalone usage-bearing model responses. Price Responses calls that attach to Conversations through the fixture-backed OpenAI Responses extractor.
 - OpenAI Responses hosted tool extraction is fixture-backed for web search, file search, code interpreter calls, computer-use action counts, and function-call counts.
-- Tool/feature pricing is complete for the current exit gate: OpenAI-style hosted tools, OpenRouter/provider-reported costs, custom internal tools, normalized generated media, rerank, transcription, runtime-second, and GB-day storage pricing. Broader provider-specific generated-media, transcription, rerank, storage/session extraction, and live validation remain beta hardening.
+- Tool/feature pricing is complete for the current exit gate: OpenAI-style hosted tools, OpenRouter/provider-reported costs, custom internal tools, normalized generated media, Cohere Rerank search units, transcription, runtime-second, and GB-day storage pricing. Broader provider-specific generated-media, transcription, storage/session extraction, and live validation remain beta hardening.
 - Milestone 6 framework paths are fixture-backed for dependency-free plain-object shapes. Milestone 8 now has a sanitized sample/live smoke harness, but live run evidence and real application validation are not complete yet.
 - The next support expansion should prioritize live smoke, provider-specific feature breadth, broader streaming usage, and framework findings from real app runs.

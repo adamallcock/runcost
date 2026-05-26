@@ -76,7 +76,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Groq | Yes | Yes | Yes | `groq-chat-raw-cache.json` |
 | xAI / Grok Chat Completions | Yes | Yes | Yes | `xai-chat-raw-cache-reasoning.json` |
 | xAI / Grok Responses | Yes | Yes | Yes | `xai-responses-raw-cache-reasoning.json` |
-| Cohere | Yes | Yes | Yes | `extract_cohere_chat_usage`, `extractCohereChatUsage`; `cohere-chat-raw-usage-billed-units.json`, `cohere-chat-raw-meta-billed-units.json` |
+| Cohere | Yes | Yes | Yes | `extract_cohere_chat_usage`, `extractCohereChatUsage`, `extract_cohere_rerank_usage`, `extractCohereRerankUsage`; `cohere-chat-raw-usage-billed-units.json`, `cohere-chat-raw-meta-billed-units.json`, `cohere-rerank-raw-billed-units.json` |
 | Mistral | Yes | Yes | Yes | `mistral-chat-raw-cache.json` |
 | Hugging Face Inference Providers | Yes | Yes | Yes | `huggingface-chat-raw-basic.json` |
 | OpenRouter chat completions | Yes | Yes | Yes | `extract_openrouter_chat_completions_usage`, `extractOpenRouterChatCompletionsUsage`; `openrouter-chat-raw-basic.json` |
@@ -116,7 +116,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | `computer_use_action_units` | Yes | Yes | Yes | OpenAI computer-use raw fixture |
 | `tool_call_units` | Yes | Yes | Yes | OpenAI function-call raw fixture |
 | `tool_execution_seconds` | Yes | Yes | Yes | `feature-pricing-generated-media-rerank-transcription.json` |
-| `rerank_search_units` | Yes | Yes | Yes | `feature-pricing-generated-media-rerank-transcription.json` |
+| `rerank_search_units` | Yes | Yes | Yes | `feature-pricing-generated-media-rerank-transcription.json`, `cohere-rerank-raw-billed-units.json` |
 | `image_generation_units` | Yes | Yes | Yes | `feature-pricing-generated-media-rerank-transcription.json` |
 | `video_generation_units` | Yes | Yes | Yes | `feature-pricing-generated-media-rerank-transcription.json` |
 | `audio_generation_units` | Yes | Yes | Yes | `feature-pricing-generated-media-rerank-transcription.json` |
