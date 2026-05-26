@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import argparse
 import subprocess
 import sys
 import tempfile
@@ -25,11 +26,9 @@ EXPECTED_FIELDS = {
 }
 
 
-def main() -> int:
+def generated_sample_comparison() -> dict[str, object]:
     assert COMMAND.exists(), "missing invoice/dashboard comparison command"
     assert SAMPLE.exists(), "missing sanitized invoice/dashboard comparison sample"
-    assert REPORT.exists(), "missing dated invoice/dashboard comparison report"
-
     with tempfile.TemporaryDirectory() as temp_dir:
         output = Path(temp_dir) / "comparison.json"
         subprocess.run(
@@ -47,10 +46,21 @@ def main() -> int:
             stderr=subprocess.PIPE,
             text=True,
         )
-        comparison = json.loads(output.read_text(encoding="utf-8"))
+        return json.loads(output.read_text(encoding="utf-8"))
+
+
+def validate_comparison(comparison: dict[str, object], *, require_real: bool) -> None:
+    if require_real:
+        assert comparison["milestone8_real_evidence"] is True, "comparison is not real Milestone 8 dashboard/invoice evidence"
+        assert comparison["evidence_type"] == "real_provider_export"
+        assert comparison["contains_private_billing_export"] is False
+        assert comparison["safe_to_commit"] is True
+        return
 
     assert comparison["schema_version"] == "0.1"
     assert comparison["comparison_id"] == "openai-alpha-smoke-sample-2026-05-26"
+    assert comparison["evidence_type"] == "sanitized_sample"
+    assert comparison["milestone8_real_evidence"] is False
     assert comparison["safe_to_commit"] is True
     assert comparison["contains_private_billing_export"] is False
     assert comparison["summary"]["exact"] >= 6
@@ -69,6 +79,23 @@ def main() -> int:
             "extractor_or_source_fix",
             "price_source_update",
         }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Check invoice/dashboard comparison mechanics or a real comparison artifact.")
+    parser.add_argument("--comparison", help="Existing comparison JSON to validate instead of generating the checked-in sample.")
+    parser.add_argument("--require-real", action="store_true", help="Require the comparison to be real sanitized provider evidence.")
+    args = parser.parse_args()
+
+    assert REPORT.exists(), "missing dated invoice/dashboard comparison report"
+    if args.comparison:
+        comparison = json.loads(Path(args.comparison).read_text(encoding="utf-8"))
+    else:
+        comparison = generated_sample_comparison()
+    validate_comparison(comparison, require_real=args.require_real)
+    if args.require_real:
+        print("Real invoice/dashboard comparison checks passed.")
+        return 0
 
     report_text = REPORT.read_text(encoding="utf-8")
     assert "openai-alpha-smoke-sample-2026-05-26" in report_text

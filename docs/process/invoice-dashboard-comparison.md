@@ -23,6 +23,9 @@ actually billed.
 - Price source used by RunCost for the comparison.
 - Notes about provider-side rounding, minimum billable units, credits, taxes,
   committed-use discounts, batch/flex/priority tiering, and regional modifiers.
+- `evidence_type` in the sanitized comparison input. Use
+  `real_provider_export` only for a reviewed provider dashboard, invoice, or
+  usage export. Use `sanitized_sample` for checked-in mechanical samples.
 
 Do not commit private invoice exports, account IDs, organization IDs, project
 IDs, user prompts, message content, or raw provider responses.
@@ -77,8 +80,17 @@ npm run compare:invoice -- \
 python3 scripts/check_invoice_comparison.py
 ```
 
+To validate a real sanitized comparison artifact as Milestone 8 evidence:
+
+```bash
+python3 scripts/check_invoice_comparison.py \
+  --comparison /tmp/invoice-comparison.json \
+  --require-real
+```
+
 The checked-in sample report is
 `docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md`.
 It proves the comparison workflow and classification shape, but Milestone 8
 still needs at least one real provider dashboard, invoice export, or usage export
-review before invoice/dashboard validation is complete.
+review before invoice/dashboard validation is complete. The sample comparison
+sets `milestone8_real_evidence` to `false` by design.

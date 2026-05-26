@@ -15,6 +15,8 @@ Source data:
 - Surface: `openai.responses`
 - Model: `gpt-alpha-smoke`
 - Provider source: sanitized dashboard-style sample
+- Evidence type: `sanitized_sample`
+- Milestone 8 real evidence: `false`
 - RunCost source: sample alpha smoke ledger
 - Input artifact: `fixtures/source-files/invoice-dashboard-comparison-sample.json`
 - Comparison command:

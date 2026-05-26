@@ -2,6 +2,7 @@
   "schema_version": "0.1",
   "comparison_id": "openai-alpha-smoke-sample-2026-05-26",
   "description": "Sanitized reviewed dashboard-style sample for validating RunCost invoice/dashboard comparison mechanics without private billing exports.",
+  "evidence_type": "sanitized_sample",
   "safe_to_commit": true,
   "contains_private_billing_export": false,
   "provider": {

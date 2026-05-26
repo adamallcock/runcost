@@ -87,9 +87,13 @@ def build_comparison(data: dict[str, Any]) -> dict[str, Any]:
                 "product_truth_action": product_truth_action(status, mapping),
             }
         )
+    evidence_type = data.get("evidence_type", "unspecified")
+    is_real_evidence = evidence_type == "real_provider_export" and data["contains_private_billing_export"] is False
     return {
         "schema_version": "0.1",
         "comparison_id": data["comparison_id"],
+        "evidence_type": evidence_type,
+        "milestone8_real_evidence": is_real_evidence,
         "safe_to_commit": data["safe_to_commit"],
         "contains_private_billing_export": data["contains_private_billing_export"],
         "provider": data["provider"]["name"],

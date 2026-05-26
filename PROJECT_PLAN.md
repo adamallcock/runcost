@@ -670,6 +670,11 @@ Delivered so far:
   `docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md` provide a
   sanitized comparison sample with exact, estimated, and unsupported
   classifications.
+- Invoice comparison outputs include `evidence_type` and
+  `milestone8_real_evidence`; `python3 scripts/check_invoice_comparison.py
+  --comparison <path> --require-real` validates future real provider
+  dashboard/export comparisons and rejects the checked-in sample as completion
+  evidence.
 - `docs/process/beta-v1-hardening-roadmap.md` keeps public beta, polyglot
   hardening, provider breadth, and V1 stabilization gates explicit.
 - `scripts/run_vercel_alpha_smoke.mjs` and
