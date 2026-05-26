@@ -421,6 +421,8 @@ func runFixture(t *testing.T, fixture Object) Object {
 			return FromLangChainMessage(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
 		case "from_vercel_ai_sdk_result":
 			return FromVercelAISDKResult(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
+		case "from_vercel_ai_sdk_stream_finish":
+			return FromVercelAISDKStreamFinish(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
 		case "from_llamaindex_token_counter":
 			return FromLlamaIndexTokenCounter(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
 		case "from_haystack_generator_result":
@@ -429,6 +431,14 @@ func runFixture(t *testing.T, fixture Object) Object {
 			return FromLiteLLMResponse(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
 		case "from_ag2_usage_summary":
 			return FromAG2UsageSummary(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
+		case "from_openai_agents_usage":
+			return FromOpenAIAgentsUsage(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
+		case "from_langsmith_run":
+			return FromLangSmithRun(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
+		case "from_semantic_kernel_telemetry":
+			return FromSemanticKernelTelemetry(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
+		case "from_openrouter_sdk_response":
+			return FromOpenRouterSDKResponse(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
 		default:
 			return FromResponse(asObject(rawResponse), extractOptions, priceCards, discountPolicies)
 		}

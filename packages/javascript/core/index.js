@@ -1765,12 +1765,205 @@ export function extractAG2UsageSummaryUsage(response, options = {}) {
   });
 }
 
+function firstPresent(object, keys, defaultValue = 0) {
+  for (const key of keys) {
+    if (object && object[key] !== undefined && object[key] !== null) {
+      return object[key];
+    }
+  }
+  return defaultValue;
+}
+
+function nestedObject(object, keys) {
+  for (const key of keys) {
+    if (object && object[key] && typeof object[key] === "object") {
+      return object[key];
+    }
+  }
+  return {};
+}
+
+function openAIAgentsUsagePayload(response) {
+  if (response.usage && typeof response.usage === "object") {
+    return { usage: response.usage, sourceRoot: "$.usage", sourceRootValue: response };
+  }
+  for (const rootKey of ["context_wrapper", "context"]) {
+    const root = response[rootKey];
+    if (root && typeof root === "object" && root.usage && typeof root.usage === "object") {
+      return { usage: root.usage, sourceRoot: `$.${rootKey}.usage`, sourceRootValue: root };
+    }
+  }
+  return { usage: response, sourceRoot: "$", sourceRootValue: response };
+}
+
+export function extractOpenAIAgentsUsage(response, options = {}) {
+  const { usage, sourceRoot, sourceRootValue } = openAIAgentsUsagePayload(response);
+  const cachedInput = nestedObject(usage, ["input_tokens_details"]).cached_tokens || 0;
+  const reasoning = nestedObject(usage, ["output_tokens_details"]).reasoning_tokens || 0;
+  const inputTokens = usage.input_tokens || 0;
+  const outputTokens = usage.output_tokens || 0;
+  const returnedModel = usage.model || sourceRootValue.model || response.model || options.model;
+
+  return baseUsageLedger({
+    provider: options.provider || "openai",
+    surface: options.surface || "openai.responses",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage: usage,
+    components: compactComponents([
+      positiveComponent("input_uncached_tokens", inputTokens - cachedInput, "token", `${sourceRoot}.input_tokens`),
+      positiveComponent("input_cache_read_tokens", cachedInput, "token", `${sourceRoot}.input_tokens_details.cached_tokens`),
+      positiveComponent("output_text_tokens", outputTokens - reasoning, "token", `${sourceRoot}.output_tokens`),
+      positiveComponent("output_reasoning_tokens", reasoning, "token", `${sourceRoot}.output_tokens_details.reasoning_tokens`)
+    ])
+  });
+}
+
+function langSmithUsagePayload(response) {
+  if (response.usage_metadata && typeof response.usage_metadata === "object") {
+    return { usage: response.usage_metadata, sourceRoot: "$.usage_metadata" };
+  }
+  if (response.usageMetadata && typeof response.usageMetadata === "object") {
+    return { usage: response.usageMetadata, sourceRoot: "$.usageMetadata" };
+  }
+  const outputs = response.outputs || {};
+  if (outputs.usage_metadata && typeof outputs.usage_metadata === "object") {
+    return { usage: outputs.usage_metadata, sourceRoot: "$.outputs.usage_metadata" };
+  }
+  if (outputs.usageMetadata && typeof outputs.usageMetadata === "object") {
+    return { usage: outputs.usageMetadata, sourceRoot: "$.outputs.usageMetadata" };
+  }
+  if (outputs.llm_output && outputs.llm_output.usage && typeof outputs.llm_output.usage === "object") {
+    return { usage: outputs.llm_output.usage, sourceRoot: "$.outputs.llm_output.usage" };
+  }
+  if (["input_tokens", "inputTokens", "prompt_tokens", "promptTokens"].some((key) => hasOwn(response, key))) {
+    return { usage: response, sourceRoot: "$" };
+  }
+  return { usage: {}, sourceRoot: "$.usage_metadata" };
+}
+
+function langSmithModel(response, usage, options) {
+  const serializedKwargs = response.serialized?.kwargs || {};
+  return usage.model
+    || usage.model_name
+    || response.model
+    || response.model_name
+    || serializedKwargs.model
+    || serializedKwargs.model_name
+    || options.model;
+}
+
+export function extractLangSmithRunUsage(response, options = {}) {
+  const { usage, sourceRoot } = langSmithUsagePayload(response);
+  const inputDetails = nestedObject(usage, ["input_token_details", "inputTokenDetails"]);
+  const outputDetails = nestedObject(usage, ["output_token_details", "outputTokenDetails"]);
+  const cacheRead = firstPresent(inputDetails, ["cache_read", "cacheReadTokens", "cache_read_tokens"]);
+  const cacheWrite = firstPresent(inputDetails, ["cache_creation", "cacheWriteTokens", "cache_write_tokens"]);
+  const inputTokens = firstPresent(usage, ["input_tokens", "inputTokens", "prompt_tokens", "promptTokens"]);
+  const outputTokens = firstPresent(usage, ["output_tokens", "outputTokens", "completion_tokens", "completionTokens"]);
+  const reasoning = firstPresent(outputDetails, ["reasoning", "reasoningTokens", "reasoning_tokens"]);
+  const returnedModel = langSmithModel(response, usage, options);
+
+  return baseUsageLedger({
+    provider: options.provider || "unknown",
+    surface: options.surface || "framework.langsmith.run_usage",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage: usage,
+    components: compactComponents([
+      positiveComponent("input_uncached_tokens", inputTokens - cacheRead - cacheWrite, "token", `${sourceRoot}.input_tokens`),
+      positiveComponent("input_cache_read_tokens", cacheRead, "token", `${sourceRoot}.input_token_details.cache_read`),
+      positiveComponent("input_cache_write_tokens", cacheWrite, "token", `${sourceRoot}.input_token_details.cache_creation`),
+      positiveComponent("output_text_tokens", outputTokens - reasoning, "token", `${sourceRoot}.output_tokens`),
+      positiveComponent("output_reasoning_tokens", reasoning, "token", `${sourceRoot}.output_token_details.reasoning`)
+    ])
+  });
+}
+
+function semanticKernelUsagePayload(response) {
+  for (const key of ["usage", "token_usage", "tokenUsage"]) {
+    if (response[key] && typeof response[key] === "object") {
+      return { usage: response[key], sourceRoot: `$.${key}` };
+    }
+  }
+  const metadata = response.metadata || {};
+  for (const key of ["usage", "token_usage", "tokenUsage"]) {
+    if (metadata[key] && typeof metadata[key] === "object") {
+      return { usage: metadata[key], sourceRoot: `$.metadata.${key}` };
+    }
+  }
+  return { usage: response, sourceRoot: "$" };
+}
+
+export function extractSemanticKernelTelemetryUsage(response, options = {}) {
+  const { usage, sourceRoot } = semanticKernelUsagePayload(response);
+  const inputTokens = firstPresent(usage, ["prompt_tokens", "promptTokens", "input_tokens", "inputTokens"]);
+  const outputTokens = firstPresent(usage, ["completion_tokens", "completionTokens", "output_tokens", "outputTokens"]);
+  const metadata = response.metadata || {};
+  const returnedModel = usage.model || metadata.model || response.model || options.model;
+  const rawUsage = { ...usage };
+  for (const key of ["plugin_name", "function_name", "pluginName", "functionName"]) {
+    if (hasOwn(response, key)) rawUsage[key] = response[key];
+  }
+
+  return baseUsageLedger({
+    provider: options.provider || "unknown",
+    surface: options.surface || "framework.semantic_kernel.telemetry",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage,
+    components: compactComponents([
+      positiveComponent("input_uncached_tokens", inputTokens, "token", `${sourceRoot}.prompt_tokens`),
+      positiveComponent("output_text_tokens", outputTokens, "token", `${sourceRoot}.completion_tokens`)
+    ])
+  });
+}
+
+function openRouterSDKResponsePayload(response) {
+  if (response.response && response.response.usage && typeof response.response.usage === "object") {
+    return response.response;
+  }
+  return response;
+}
+
+export function extractOpenRouterSDKResponseUsage(response, options = {}) {
+  const payload = openRouterSDKResponsePayload(response);
+  const usage = payload.usage || {};
+  if (["inputTokens", "outputTokens", "cachedTokens", "reasoningTokens"].some((key) => hasOwn(usage, key))) {
+    const inputTokens = firstPresent(usage, ["inputTokens", "promptTokens"]);
+    const cachedInput = firstPresent(usage, ["cachedTokens", "cachedInputTokens"]);
+    const outputTokens = firstPresent(usage, ["outputTokens", "completionTokens"]);
+    const reasoning = firstPresent(usage, ["reasoningTokens"]);
+    return baseUsageLedger({
+      provider: options.provider || "openrouter",
+      surface: options.surface || "openrouter.chat_completions",
+      requestedModel: options.model || payload.model,
+      returnedModel: payload.model,
+      rawUsage: usage,
+      components: compactComponents([
+        positiveComponent("input_uncached_tokens", inputTokens - cachedInput, "token", "$.usage.inputTokens"),
+        positiveComponent("input_cache_read_tokens", cachedInput, "token", "$.usage.cachedTokens"),
+        positiveComponent("output_text_tokens", outputTokens - reasoning, "token", "$.usage.outputTokens"),
+        positiveComponent("output_reasoning_tokens", reasoning, "token", "$.usage.reasoningTokens")
+      ])
+    });
+  }
+  return extractOpenAICompatibleChatCompletionsUsage(payload, {
+    provider: "openrouter",
+    surface: "openrouter.chat_completions",
+    ...options
+  });
+}
+
 export function extractUsageLedger(response, options = {}) {
   const adapter = options.adapter || options.framework;
   if (adapter === "langchain.chat_message") {
     return extractLangChainChatUsage(response, options);
   }
   if (adapter === "vercel_ai_sdk.generate_text") {
+    return extractVercelAISDKUsage(response, options);
+  }
+  if (adapter === "vercel_ai_sdk.stream_text") {
     return extractVercelAISDKUsage(response, options);
   }
   if (adapter === "llamaindex.token_counter") {
@@ -1784,6 +1977,18 @@ export function extractUsageLedger(response, options = {}) {
   }
   if (adapter === "ag2.usage_summary") {
     return extractAG2UsageSummaryUsage(response, options);
+  }
+  if (adapter === "openai_agents.usage") {
+    return extractOpenAIAgentsUsage(response, options);
+  }
+  if (adapter === "langsmith.run_usage") {
+    return extractLangSmithRunUsage(response, options);
+  }
+  if (adapter === "semantic_kernel.telemetry") {
+    return extractSemanticKernelTelemetryUsage(response, options);
+  }
+  if (adapter === "openrouter.sdk_response") {
+    return extractOpenRouterSDKResponseUsage(response, options);
   }
 
   const surface = options.surface;
@@ -2673,6 +2878,13 @@ export function fromVercelAISDKResult(result, options) {
   });
 }
 
+export function fromVercelAISDKStreamFinish(result, options = {}) {
+  return fromResponse(result, {
+    ...options,
+    adapter: "vercel_ai_sdk.stream_text"
+  });
+}
+
 export function fromLlamaIndexTokenCounter(counter, options) {
   return fromResponse(counter, {
     ...options,
@@ -2708,6 +2920,86 @@ export function fromAG2UsageSummary(summary, options = {}) {
     providerReportedCostMode: options.providerReportedCostMode ?? options.provider_reported_cost_mode ?? "compare",
     adapter: "ag2.usage_summary"
   });
+}
+
+export function fromOpenAIAgentsUsage(usage, options = {}) {
+  return fromResponse(usage, {
+    ...options,
+    adapter: "openai_agents.usage"
+  });
+}
+
+function langSmithReportedCost(run) {
+  const usage = run.usage_metadata && typeof run.usage_metadata === "object" ? run.usage_metadata : {};
+  return run.total_cost ?? run.totalCost ?? run.cost ?? usage.total_cost ?? usage.totalCost;
+}
+
+export function fromLangSmithRun(run, options = {}) {
+  const reportedCost = langSmithReportedCost(run);
+  return fromResponse(run, {
+    ...options,
+    providerReportedCost: options.providerReportedCost ?? options.provider_reported_cost ?? reportedCost,
+    providerReportedCostMode: options.providerReportedCostMode ?? options.provider_reported_cost_mode ?? "compare",
+    adapter: "langsmith.run_usage"
+  });
+}
+
+export function fromSemanticKernelTelemetry(telemetry, options = {}) {
+  return fromResponse(telemetry, {
+    ...options,
+    adapter: "semantic_kernel.telemetry"
+  });
+}
+
+function openRouterReportedCost(response) {
+  const payload = openRouterSDKResponsePayload(response);
+  const usage = payload.usage && typeof payload.usage === "object" ? payload.usage : {};
+  return usage.cost ?? usage.totalCost ?? payload.cost ?? payload.totalCost;
+}
+
+export function fromOpenRouterSDKResponse(response, options = {}) {
+  const reportedCost = openRouterReportedCost(response);
+  return fromResponse(response, {
+    ...options,
+    providerReportedCost: options.providerReportedCost ?? options.provider_reported_cost ?? reportedCost,
+    providerReportedCostMode: options.providerReportedCostMode ?? options.provider_reported_cost_mode ?? "compare",
+    adapter: "openrouter.sdk_response"
+  });
+}
+
+export async function fromOpenRouterAgentResult(result, options = {}) {
+  const response = result && typeof result.getResponse === "function"
+    ? await result.getResponse()
+    : (result && result.response ? result.response : result);
+  return fromOpenRouterSDKResponse(response, options);
+}
+
+export function createRunCostVercelOnFinish(options = {}) {
+  const ledgers = [];
+  const onCostLedger = options.onCostLedger;
+  const onFinish = options.onFinish;
+  const costOptions = { ...options };
+  delete costOptions.onCostLedger;
+  delete costOptions.onFinish;
+
+  const handler = async (result) => {
+    const ledger = fromVercelAISDKStreamFinish(result, costOptions);
+    ledgers.push(ledger);
+    if (typeof onCostLedger === "function") {
+      onCostLedger(ledger, { result });
+    }
+    if (typeof onFinish === "function") {
+      await onFinish(result);
+    }
+    return ledger;
+  };
+  handler.ledgers = ledgers;
+  Object.defineProperty(handler, "latest", {
+    get() {
+      return ledgers.length > 0 ? ledgers[ledgers.length - 1] : null;
+    }
+  });
+  return handler;
 }
 
 export function createRunCostVercelMiddleware(options = {}) {

@@ -485,6 +485,22 @@ export interface RunCostVercelMiddleware {
   }): Promise<Record<string, unknown>>;
 }
 
+export interface RunCostVercelOnFinishOptions extends FromResponseOptions {
+  onCostLedger?: (
+    ledger: CostLedger,
+    context: {
+      result: Record<string, unknown>;
+    }
+  ) => void;
+  onFinish?: (result: Record<string, unknown>) => void | Promise<void>;
+}
+
+export interface RunCostVercelOnFinish {
+  (result: Record<string, unknown>): Promise<CostLedger>;
+  ledgers: CostLedger[];
+  readonly latest: CostLedger | null;
+}
+
 export interface SourceAdapterOptions {
   retrievedAt?: string;
   retrieved_at?: string;
@@ -515,6 +531,10 @@ export function extractLlamaIndexTokenCounterUsage(response: Record<string, unkn
 export function extractHaystackGeneratorUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractLiteLLMProxyResponseUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractAG2UsageSummaryUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAIAgentsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractLangSmithRunUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractSemanticKernelTelemetryUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenRouterSDKResponseUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function priceCardsFromLlmPrices(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromLiteLLM(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromOpenRouterModels(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
@@ -529,8 +549,15 @@ export function priceCardsFromHelicone(data: Record<string, unknown>, options?: 
 export function fromResponse(response: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromLangChainMessage(message: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromVercelAISDKResult(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromVercelAISDKStreamFinish(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromLlamaIndexTokenCounter(counter: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromHaystackGeneratorResult(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromLiteLLMResponse(response: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromAG2UsageSummary(summary: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromOpenAIAgentsUsage(usage: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromLangSmithRun(run: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromSemanticKernelTelemetry(telemetry: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromOpenRouterSDKResponse(response: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromOpenRouterAgentResult(result: Record<string, unknown> & { getResponse?: () => Promise<Record<string, unknown>> | Record<string, unknown> }, options: FromResponseOptions): Promise<CostLedger>;
 export function createRunCostVercelMiddleware(options: RunCostVercelMiddlewareOptions): RunCostVercelMiddleware;
+export function createRunCostVercelOnFinish(options: RunCostVercelOnFinishOptions): RunCostVercelOnFinish;

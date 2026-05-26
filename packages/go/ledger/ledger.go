@@ -1424,6 +1424,8 @@ func ExtractUsageLedger(response Object, options Object) Object {
 		return extractLangChainChatUsage(response, options)
 	case "vercel_ai_sdk.generate_text":
 		return extractVercelAISDKUsage(response, options)
+	case "vercel_ai_sdk.stream_text":
+		return extractVercelAISDKUsage(response, options)
 	case "llamaindex.token_counter":
 		return extractLlamaIndexTokenCounterUsage(response, options)
 	case "haystack.generator_result":
@@ -1432,6 +1434,14 @@ func ExtractUsageLedger(response Object, options Object) Object {
 		return extractLiteLLMProxyResponseUsage(response, options)
 	case "ag2.usage_summary":
 		return extractAG2UsageSummaryUsage(response, options)
+	case "openai_agents.usage":
+		return extractOpenAIAgentsUsage(response, options)
+	case "langsmith.run_usage":
+		return extractLangSmithRunUsage(response, options)
+	case "semantic_kernel.telemetry":
+		return extractSemanticKernelTelemetryUsage(response, options)
+	case "openrouter.sdk_response":
+		return extractOpenRouterSDKResponseUsage(response, options)
 	}
 
 	surface := asString(options["surface"])
@@ -2337,6 +2347,265 @@ func extractAG2UsageSummaryUsage(response Object, options Object) Object {
 		"summary":     summary,
 		"model_usage": modelUsage,
 	})
+}
+
+func firstPresent(object Object, keys ...string) any {
+	for _, key := range keys {
+		if value, ok := object[key]; ok && value != nil {
+			return value
+		}
+	}
+	return json.Number("0")
+}
+
+func nestedObject(object Object, keys ...string) Object {
+	for _, key := range keys {
+		value := asObject(object[key])
+		if len(value) > 0 {
+			return value
+		}
+	}
+	return Object{}
+}
+
+func openAIAgentsUsagePayload(response Object) (Object, string, Object) {
+	usage := asObject(response["usage"])
+	if len(usage) > 0 {
+		return usage, "$.usage", response
+	}
+	for _, rootKey := range []string{"context_wrapper", "context"} {
+		root := asObject(response[rootKey])
+		usage := asObject(root["usage"])
+		if len(usage) > 0 {
+			return usage, "$." + rootKey + ".usage", root
+		}
+	}
+	return response, "$", response
+}
+
+func extractOpenAIAgentsUsage(response Object, options Object) Object {
+	usage, sourceRoot, sourceRootValue := openAIAgentsUsagePayload(response)
+	cachedInput := getNumber(nestedObject(usage, "input_tokens_details"), "cached_tokens")
+	reasoning := getNumber(nestedObject(usage, "output_tokens_details"), "reasoning_tokens")
+	inputTokens := getNumber(usage, "input_tokens")
+	outputTokens := getNumber(usage, "output_tokens")
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "openai"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.responses"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(usage["model"])
+	if returnedModel == "" {
+		returnedModel = asString(sourceRootValue["model"])
+	}
+	if returnedModel == "" {
+		returnedModel = asString(response["model"])
+	}
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("input_uncached_tokens", subtract(inputTokens, cachedInput), "token", sourceRoot+".input_tokens"),
+		positiveComponent("input_cache_read_tokens", cachedInput, "token", sourceRoot+".input_tokens_details.cached_tokens"),
+		positiveComponent("output_text_tokens", subtract(outputTokens, reasoning), "token", sourceRoot+".output_tokens"),
+		positiveComponent("output_reasoning_tokens", reasoning, "token", sourceRoot+".output_tokens_details.reasoning_tokens"),
+	}), usage)
+}
+
+func langSmithUsagePayload(response Object) (Object, string) {
+	usage := asObject(response["usage_metadata"])
+	if len(usage) > 0 {
+		return usage, "$.usage_metadata"
+	}
+	usage = asObject(response["usageMetadata"])
+	if len(usage) > 0 {
+		return usage, "$.usageMetadata"
+	}
+	outputs := asObject(response["outputs"])
+	usage = asObject(outputs["usage_metadata"])
+	if len(usage) > 0 {
+		return usage, "$.outputs.usage_metadata"
+	}
+	usage = asObject(outputs["usageMetadata"])
+	if len(usage) > 0 {
+		return usage, "$.outputs.usageMetadata"
+	}
+	llmOutput := asObject(outputs["llm_output"])
+	usage = asObject(llmOutput["usage"])
+	if len(usage) > 0 {
+		return usage, "$.outputs.llm_output.usage"
+	}
+	for _, key := range []string{"input_tokens", "inputTokens", "prompt_tokens", "promptTokens"} {
+		if _, ok := response[key]; ok {
+			return response, "$"
+		}
+	}
+	return Object{}, "$.usage_metadata"
+}
+
+func langSmithModel(response Object, usage Object, options Object) string {
+	serialized := asObject(response["serialized"])
+	serializedKwargs := asObject(serialized["kwargs"])
+	for _, value := range []any{
+		usage["model"],
+		usage["model_name"],
+		response["model"],
+		response["model_name"],
+		serializedKwargs["model"],
+		serializedKwargs["model_name"],
+		options["model"],
+	} {
+		if text := asString(value); text != "" {
+			return text
+		}
+	}
+	return ""
+}
+
+func extractLangSmithRunUsage(response Object, options Object) Object {
+	usage, sourceRoot := langSmithUsagePayload(response)
+	inputDetails := nestedObject(usage, "input_token_details", "inputTokenDetails")
+	outputDetails := nestedObject(usage, "output_token_details", "outputTokenDetails")
+	cacheRead := firstPresent(inputDetails, "cache_read", "cacheReadTokens", "cache_read_tokens")
+	cacheWrite := firstPresent(inputDetails, "cache_creation", "cacheWriteTokens", "cache_write_tokens")
+	inputTokens := firstPresent(usage, "input_tokens", "inputTokens", "prompt_tokens", "promptTokens")
+	outputTokens := firstPresent(usage, "output_tokens", "outputTokens", "completion_tokens", "completionTokens")
+	reasoning := firstPresent(outputDetails, "reasoning", "reasoningTokens", "reasoning_tokens")
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "unknown"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "framework.langsmith.run_usage"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := langSmithModel(response, usage, options)
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("input_uncached_tokens", subtract(subtract(inputTokens, cacheRead), cacheWrite), "token", sourceRoot+".input_tokens"),
+		positiveComponent("input_cache_read_tokens", cacheRead, "token", sourceRoot+".input_token_details.cache_read"),
+		positiveComponent("input_cache_write_tokens", cacheWrite, "token", sourceRoot+".input_token_details.cache_creation"),
+		positiveComponent("output_text_tokens", subtract(outputTokens, reasoning), "token", sourceRoot+".output_tokens"),
+		positiveComponent("output_reasoning_tokens", reasoning, "token", sourceRoot+".output_token_details.reasoning"),
+	}), usage)
+}
+
+func semanticKernelUsagePayload(response Object) (Object, string) {
+	for _, key := range []string{"usage", "token_usage", "tokenUsage"} {
+		usage := asObject(response[key])
+		if len(usage) > 0 {
+			return usage, "$." + key
+		}
+	}
+	metadata := asObject(response["metadata"])
+	for _, key := range []string{"usage", "token_usage", "tokenUsage"} {
+		usage := asObject(metadata[key])
+		if len(usage) > 0 {
+			return usage, "$.metadata." + key
+		}
+	}
+	return response, "$"
+}
+
+func extractSemanticKernelTelemetryUsage(response Object, options Object) Object {
+	usage, sourceRoot := semanticKernelUsagePayload(response)
+	inputTokens := firstPresent(usage, "prompt_tokens", "promptTokens", "input_tokens", "inputTokens")
+	outputTokens := firstPresent(usage, "completion_tokens", "completionTokens", "output_tokens", "outputTokens")
+	metadata := asObject(response["metadata"])
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "unknown"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "framework.semantic_kernel.telemetry"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(usage["model"])
+	if returnedModel == "" {
+		returnedModel = asString(metadata["model"])
+	}
+	if returnedModel == "" {
+		returnedModel = asString(response["model"])
+	}
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+	rawUsage := Object{}
+	for key, value := range usage {
+		rawUsage[key] = value
+	}
+	for _, key := range []string{"plugin_name", "function_name", "pluginName", "functionName"} {
+		if value, ok := response[key]; ok {
+			rawUsage[key] = value
+		}
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("input_uncached_tokens", inputTokens, "token", sourceRoot+".prompt_tokens"),
+		positiveComponent("output_text_tokens", outputTokens, "token", sourceRoot+".completion_tokens"),
+	}), rawUsage)
+}
+
+func openRouterSDKResponsePayload(response Object) Object {
+	nested := asObject(response["response"])
+	if len(asObject(nested["usage"])) > 0 {
+		return nested
+	}
+	return response
+}
+
+func extractOpenRouterSDKResponseUsage(response Object, options Object) Object {
+	payload := openRouterSDKResponsePayload(response)
+	usage := asObject(payload["usage"])
+	for _, key := range []string{"inputTokens", "outputTokens", "cachedTokens", "reasoningTokens"} {
+		if _, ok := usage[key]; ok {
+			inputTokens := firstPresent(usage, "inputTokens", "promptTokens")
+			cachedInput := firstPresent(usage, "cachedTokens", "cachedInputTokens")
+			outputTokens := firstPresent(usage, "outputTokens", "completionTokens")
+			reasoning := firstPresent(usage, "reasoningTokens")
+			provider := asString(options["provider"])
+			if provider == "" {
+				provider = "openrouter"
+			}
+			surface := asString(options["surface"])
+			if surface == "" {
+				surface = "openrouter.chat_completions"
+			}
+			requestedModel := asString(options["model"])
+			returnedModel := asString(payload["model"])
+			if returnedModel == "" {
+				returnedModel = requestedModel
+			}
+			if requestedModel == "" {
+				requestedModel = returnedModel
+			}
+			return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+				positiveComponent("input_uncached_tokens", subtract(inputTokens, cachedInput), "token", "$.usage.inputTokens"),
+				positiveComponent("input_cache_read_tokens", cachedInput, "token", "$.usage.cachedTokens"),
+				positiveComponent("output_text_tokens", subtract(outputTokens, reasoning), "token", "$.usage.outputTokens"),
+				positiveComponent("output_reasoning_tokens", reasoning, "token", "$.usage.reasoningTokens"),
+			}), usage)
+		}
+	}
+	options["provider"] = "openrouter"
+	options["surface"] = "openrouter.chat_completions"
+	return extractOpenAICompatibleChatCompletionsUsage(payload, options)
 }
 
 func addPriceComponent(components *[]any, usageComponent string, unit string, amount any, per string, extra Object) {
@@ -3618,6 +3887,13 @@ func FromVercelAISDKResult(result Object, options Object, priceCards []any, disc
 	return FromResponse(result, options, priceCards, discountPolicies)
 }
 
+// FromVercelAISDKStreamFinish prices a Vercel AI SDK streamText finish/onFinish
+// object by reading usage or totalUsage and applying provider price cards.
+func FromVercelAISDKStreamFinish(result Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options["adapter"] = "vercel_ai_sdk.stream_text"
+	return FromResponse(result, options, priceCards, discountPolicies)
+}
+
 // FromLlamaIndexTokenCounter prices a LlamaIndex TokenCountingHandler-like
 // object by reading its LLM token counters and applying provider price cards.
 func FromLlamaIndexTokenCounter(counter Object, options Object, priceCards []any, discountPolicies []any) Object {
@@ -3670,4 +3946,80 @@ func FromAG2UsageSummary(summary Object, options Object, priceCards []any, disco
 	}
 	options["adapter"] = "ag2.usage_summary"
 	return FromResponse(summary, options, priceCards, discountPolicies)
+}
+
+// FromOpenAIAgentsUsage prices an OpenAI Agents SDK usage or result-like object
+// without importing the Agents SDK.
+func FromOpenAIAgentsUsage(usage Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options["adapter"] = "openai_agents.usage"
+	return FromResponse(usage, options, priceCards, discountPolicies)
+}
+
+func langSmithReportedCost(run Object) (any, bool) {
+	usage := asObject(run["usage_metadata"])
+	for _, value := range []any{
+		run["total_cost"],
+		run["totalCost"],
+		run["cost"],
+		usage["total_cost"],
+		usage["totalCost"],
+	} {
+		if value != nil {
+			return value, true
+		}
+	}
+	return nil, false
+}
+
+// FromLangSmithRun prices a LangSmith run/export object and compares
+// total_cost as framework-reported cost when present.
+func FromLangSmithRun(run Object, options Object, priceCards []any, discountPolicies []any) Object {
+	if _, exists := options["provider_reported_cost"]; !exists {
+		if reportedCost, ok := langSmithReportedCost(run); ok {
+			options["provider_reported_cost"] = reportedCost
+			if asString(options["provider_reported_cost_mode"]) == "" {
+				options["provider_reported_cost_mode"] = "compare"
+			}
+		}
+	}
+	options["adapter"] = "langsmith.run_usage"
+	return FromResponse(run, options, priceCards, discountPolicies)
+}
+
+// FromSemanticKernelTelemetry prices Semantic Kernel telemetry/filter metadata
+// without importing Semantic Kernel.
+func FromSemanticKernelTelemetry(telemetry Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options["adapter"] = "semantic_kernel.telemetry"
+	return FromResponse(telemetry, options, priceCards, discountPolicies)
+}
+
+func openRouterReportedCost(response Object) (any, bool) {
+	payload := openRouterSDKResponsePayload(response)
+	usage := asObject(payload["usage"])
+	for _, value := range []any{
+		usage["cost"],
+		usage["totalCost"],
+		payload["cost"],
+		payload["totalCost"],
+	} {
+		if value != nil {
+			return value, true
+		}
+	}
+	return nil, false
+}
+
+// FromOpenRouterSDKResponse prices OpenRouter-compatible SDK responses,
+// including OpenAI SDK-routed chat responses and resolved Agent SDK responses.
+func FromOpenRouterSDKResponse(response Object, options Object, priceCards []any, discountPolicies []any) Object {
+	if _, exists := options["provider_reported_cost"]; !exists {
+		if reportedCost, ok := openRouterReportedCost(response); ok {
+			options["provider_reported_cost"] = reportedCost
+			if asString(options["provider_reported_cost_mode"]) == "" {
+				options["provider_reported_cost_mode"] = "compare"
+			}
+		}
+	}
+	options["adapter"] = "openrouter.sdk_response"
+	return FromResponse(response, options, priceCards, discountPolicies)
 }

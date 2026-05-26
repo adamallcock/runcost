@@ -1656,11 +1656,197 @@ def extract_ag2_usage_summary_usage(response: Dict[str, Any], **options: Any) ->
     )
 
 
+def _first_present(mapping: Dict[str, Any], *keys: str, default: Any = 0) -> Any:
+    for key in keys:
+        if key in mapping and mapping[key] is not None:
+            return mapping[key]
+    return default
+
+
+def _nested_dict(mapping: Dict[str, Any], *keys: str) -> Dict[str, Any]:
+    for key in keys:
+        value = mapping.get(key)
+        if isinstance(value, dict):
+            return value
+    return {}
+
+
+def _openai_agents_usage_payload(response: Dict[str, Any]) -> tuple[Dict[str, Any], str, Dict[str, Any]]:
+    if isinstance(response.get("usage"), dict):
+        return response["usage"], "$.usage", response
+    for root_key in ("context_wrapper", "context"):
+        root = response.get(root_key)
+        if isinstance(root, dict) and isinstance(root.get("usage"), dict):
+            return root["usage"], f"$.{root_key}.usage", root
+    return response, "$", response
+
+
+def extract_openai_agents_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage, source_root, source_root_value = _openai_agents_usage_payload(response)
+    cached_input = _nested_dict(usage, "input_tokens_details").get("cached_tokens", 0)
+    reasoning = _nested_dict(usage, "output_tokens_details").get("reasoning_tokens", 0)
+    input_tokens = usage.get("input_tokens", 0)
+    output_tokens = usage.get("output_tokens", 0)
+    returned_model = usage.get("model") or source_root_value.get("model") or response.get("model") or options.get("model")
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "openai"),
+        surface=options.get("surface", "openai.responses"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=usage,
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", input_tokens - cached_input, "token", f"{source_root}.input_tokens"),
+                _positive_component("input_cache_read_tokens", cached_input, "token", f"{source_root}.input_tokens_details.cached_tokens"),
+                _positive_component("output_text_tokens", output_tokens - reasoning, "token", f"{source_root}.output_tokens"),
+                _positive_component("output_reasoning_tokens", reasoning, "token", f"{source_root}.output_tokens_details.reasoning_tokens"),
+            ]
+        ),
+    )
+
+
+def _langsmith_usage_payload(response: Dict[str, Any]) -> tuple[Dict[str, Any], str]:
+    if isinstance(response.get("usage_metadata"), dict):
+        return response["usage_metadata"], "$.usage_metadata"
+    if isinstance(response.get("usageMetadata"), dict):
+        return response["usageMetadata"], "$.usageMetadata"
+    outputs = response.get("outputs")
+    if isinstance(outputs, dict):
+        if isinstance(outputs.get("usage_metadata"), dict):
+            return outputs["usage_metadata"], "$.outputs.usage_metadata"
+        if isinstance(outputs.get("usageMetadata"), dict):
+            return outputs["usageMetadata"], "$.outputs.usageMetadata"
+        llm_output = outputs.get("llm_output")
+        if isinstance(llm_output, dict) and isinstance(llm_output.get("usage"), dict):
+            return llm_output["usage"], "$.outputs.llm_output.usage"
+    if any(key in response for key in ("input_tokens", "inputTokens", "prompt_tokens", "promptTokens")):
+        return response, "$"
+    return {}, "$.usage_metadata"
+
+
+def _langsmith_model(response: Dict[str, Any], usage: Dict[str, Any], options: Dict[str, Any]) -> Optional[str]:
+    serialized = response.get("serialized")
+    serialized_kwargs = serialized.get("kwargs", {}) if isinstance(serialized, dict) else {}
+    return (
+        usage.get("model")
+        or usage.get("model_name")
+        or response.get("model")
+        or response.get("model_name")
+        or serialized_kwargs.get("model")
+        or serialized_kwargs.get("model_name")
+        or options.get("model")
+    )
+
+
+def extract_langsmith_run_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage, source_root = _langsmith_usage_payload(response)
+    input_details = _nested_dict(usage, "input_token_details", "inputTokenDetails")
+    output_details = _nested_dict(usage, "output_token_details", "outputTokenDetails")
+    cache_read = _first_present(input_details, "cache_read", "cacheReadTokens", "cache_read_tokens", default=0)
+    cache_write = _first_present(input_details, "cache_creation", "cacheWriteTokens", "cache_write_tokens", default=0)
+    input_tokens = _first_present(usage, "input_tokens", "inputTokens", "prompt_tokens", "promptTokens", default=0)
+    output_tokens = _first_present(usage, "output_tokens", "outputTokens", "completion_tokens", "completionTokens", default=0)
+    reasoning = _first_present(output_details, "reasoning", "reasoningTokens", "reasoning_tokens", default=0)
+    returned_model = _langsmith_model(response, usage, options)
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "unknown"),
+        surface=options.get("surface", "framework.langsmith.run_usage"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=usage,
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", input_tokens - cache_read - cache_write, "token", f"{source_root}.input_tokens"),
+                _positive_component("input_cache_read_tokens", cache_read, "token", f"{source_root}.input_token_details.cache_read"),
+                _positive_component("input_cache_write_tokens", cache_write, "token", f"{source_root}.input_token_details.cache_creation"),
+                _positive_component("output_text_tokens", output_tokens - reasoning, "token", f"{source_root}.output_tokens"),
+                _positive_component("output_reasoning_tokens", reasoning, "token", f"{source_root}.output_token_details.reasoning"),
+            ]
+        ),
+    )
+
+
+def _semantic_kernel_usage_payload(response: Dict[str, Any]) -> tuple[Dict[str, Any], str]:
+    for key in ("usage", "token_usage", "tokenUsage"):
+        if isinstance(response.get(key), dict):
+            return response[key], f"$.{key}"
+    metadata = response.get("metadata")
+    if isinstance(metadata, dict):
+        for key in ("usage", "token_usage", "tokenUsage"):
+            if isinstance(metadata.get(key), dict):
+                return metadata[key], f"$.metadata.{key}"
+    return response, "$"
+
+
+def extract_semantic_kernel_telemetry_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage, source_root = _semantic_kernel_usage_payload(response)
+    input_tokens = _first_present(usage, "prompt_tokens", "promptTokens", "input_tokens", "inputTokens", default=0)
+    output_tokens = _first_present(usage, "completion_tokens", "completionTokens", "output_tokens", "outputTokens", default=0)
+    metadata = response.get("metadata") if isinstance(response.get("metadata"), dict) else {}
+    returned_model = usage.get("model") or metadata.get("model") or response.get("model") or options.get("model")
+    raw_usage = dict(usage)
+    for key in ("plugin_name", "function_name", "pluginName", "functionName"):
+        if key in response:
+            raw_usage[key] = response[key]
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "unknown"),
+        surface=options.get("surface", "framework.semantic_kernel.telemetry"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=raw_usage,
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", input_tokens, "token", f"{source_root}.prompt_tokens"),
+                _positive_component("output_text_tokens", output_tokens, "token", f"{source_root}.completion_tokens"),
+            ]
+        ),
+    )
+
+
+def _openrouter_sdk_response_payload(response: Dict[str, Any]) -> Dict[str, Any]:
+    if isinstance(response.get("response"), dict) and isinstance(response["response"].get("usage"), dict):
+        return response["response"]
+    return response
+
+
+def extract_openrouter_sdk_response_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    payload = _openrouter_sdk_response_payload(response)
+    usage = payload.get("usage", {})
+    if any(key in usage for key in ("inputTokens", "outputTokens", "cachedTokens", "reasoningTokens")):
+        input_tokens = _first_present(usage, "inputTokens", "promptTokens", default=0)
+        cached_input = _first_present(usage, "cachedTokens", "cachedInputTokens", default=0)
+        output_tokens = _first_present(usage, "outputTokens", "completionTokens", default=0)
+        reasoning = _first_present(usage, "reasoningTokens", default=0)
+        return _base_usage_ledger(
+            provider=options.get("provider", "openrouter"),
+            surface=options.get("surface", "openrouter.chat_completions"),
+            requested_model=options.get("model", payload.get("model")),
+            returned_model=payload.get("model"),
+            raw_usage=usage,
+            components=_compact_components(
+                [
+                    _positive_component("input_uncached_tokens", input_tokens - cached_input, "token", "$.usage.inputTokens"),
+                    _positive_component("input_cache_read_tokens", cached_input, "token", "$.usage.cachedTokens"),
+                    _positive_component("output_text_tokens", output_tokens - reasoning, "token", "$.usage.outputTokens"),
+                    _positive_component("output_reasoning_tokens", reasoning, "token", "$.usage.reasoningTokens"),
+                ]
+            ),
+        )
+    merged_options = {"provider": "openrouter", "surface": "openrouter.chat_completions"}
+    merged_options.update(options)
+    return extract_openai_compatible_chat_completions_usage(payload, **merged_options)
+
+
 def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     adapter = options.get("adapter") or options.get("framework")
     if adapter == "langchain.chat_message":
         return extract_langchain_chat_usage(response, **options)
     if adapter == "vercel_ai_sdk.generate_text":
+        return extract_vercel_ai_sdk_usage(response, **options)
+    if adapter == "vercel_ai_sdk.stream_text":
         return extract_vercel_ai_sdk_usage(response, **options)
     if adapter == "llamaindex.token_counter":
         return extract_llamaindex_token_counter_usage(response, **options)
@@ -1670,6 +1856,14 @@ def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, 
         return extract_litellm_proxy_response_usage(response, **options)
     if adapter == "ag2.usage_summary":
         return extract_ag2_usage_summary_usage(response, **options)
+    if adapter == "openai_agents.usage":
+        return extract_openai_agents_usage(response, **options)
+    if adapter == "langsmith.run_usage":
+        return extract_langsmith_run_usage(response, **options)
+    if adapter == "semantic_kernel.telemetry":
+        return extract_semantic_kernel_telemetry_usage(response, **options)
+    if adapter == "openrouter.sdk_response":
+        return extract_openrouter_sdk_response_usage(response, **options)
 
     surface = options.get("surface")
     if surface in {"openai.responses", "xai.responses"}:
@@ -2638,6 +2832,12 @@ def from_vercel_ai_sdk_result(result: Dict[str, Any], **options: Any) -> Dict[st
     return from_response(result, **merged_options)
 
 
+def from_vercel_ai_sdk_stream_finish(result: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = dict(options)
+    merged_options["adapter"] = "vercel_ai_sdk.stream_text"
+    return from_response(result, **merged_options)
+
+
 def from_llamaindex_token_counter(counter: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     merged_options = dict(options)
     merged_options["adapter"] = "llamaindex.token_counter"
@@ -2673,6 +2873,57 @@ def from_ag2_usage_summary(summary: Dict[str, Any], **options: Any) -> Dict[str,
             merged_options.setdefault("provider_reported_cost_mode", "compare")
     merged_options["adapter"] = "ag2.usage_summary"
     return from_response(summary, **merged_options)
+
+
+def from_openai_agents_usage(usage: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = dict(options)
+    merged_options["adapter"] = "openai_agents.usage"
+    return from_response(usage, **merged_options)
+
+
+def _langsmith_reported_cost(run: Dict[str, Any]) -> Any:
+    usage = run.get("usage_metadata") if isinstance(run.get("usage_metadata"), dict) else {}
+    return (
+        run.get("total_cost")
+        or run.get("totalCost")
+        or run.get("cost")
+        or usage.get("total_cost")
+        or usage.get("totalCost")
+    )
+
+
+def from_langsmith_run(run: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = dict(options)
+    if "provider_reported_cost" not in merged_options:
+        reported_cost = _langsmith_reported_cost(run)
+        if reported_cost is not None:
+            merged_options["provider_reported_cost"] = reported_cost
+            merged_options.setdefault("provider_reported_cost_mode", "compare")
+    merged_options["adapter"] = "langsmith.run_usage"
+    return from_response(run, **merged_options)
+
+
+def from_semantic_kernel_telemetry(telemetry: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = dict(options)
+    merged_options["adapter"] = "semantic_kernel.telemetry"
+    return from_response(telemetry, **merged_options)
+
+
+def _openrouter_reported_cost(response: Dict[str, Any]) -> Any:
+    payload = _openrouter_sdk_response_payload(response)
+    usage = payload.get("usage") if isinstance(payload.get("usage"), dict) else {}
+    return usage.get("cost") or usage.get("totalCost") or payload.get("cost") or payload.get("totalCost")
+
+
+def from_openrouter_sdk_response(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = dict(options)
+    if "provider_reported_cost" not in merged_options:
+        reported_cost = _openrouter_reported_cost(response)
+        if reported_cost is not None:
+            merged_options["provider_reported_cost"] = reported_cost
+            merged_options.setdefault("provider_reported_cost_mode", "compare")
+    merged_options["adapter"] = "openrouter.sdk_response"
+    return from_response(response, **merged_options)
 
 
 def _langchain_message_from_generation(generation: Any) -> Optional[Dict[str, Any]]:

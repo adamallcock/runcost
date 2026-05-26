@@ -1,0 +1,163 @@
+{
+  "name": "openrouter-agent-sdk-response",
+  "description": "Extracts a resolved OpenRouter Agent SDK getResponse object with camelCase token usage.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-FRAMEWORK-ADAPTER",
+      "RC-PROVIDER-REPORTED-COST"
+    ],
+    "provider": "openrouter",
+    "surface": "openrouter.chat_completions",
+    "scenario": "framework_adapter",
+    "tags": [
+      "adapter:openrouter.sdk_response",
+      "component:input_cache_read_tokens",
+      "component:input_uncached_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_text_tokens",
+      "framework:openrouter",
+      "framework_adapter",
+      "helper:from_openrouter_sdk_response",
+      "provider_reported"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "id": "or-agent-response-123",
+      "model": "openai/gpt-5-nano",
+      "usage": {
+        "inputTokens": 160,
+        "cachedTokens": 40,
+        "outputTokens": 100,
+        "reasoningTokens": 20,
+        "totalTokens": 260,
+        "cost": "0.000524"
+      }
+    },
+    "helper": "from_openrouter_sdk_response",
+    "extract": {
+      "adapter": "openrouter.sdk_response",
+      "provider": "openrouter",
+      "surface": "openrouter.chat_completions",
+      "model": "openai/gpt-5-nano"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openrouter:openai/gpt-5-nano:agent-fixture",
+        "provider": "openrouter",
+        "surface": "openrouter.chat_completions",
+        "model": "openai/gpt-5-nano",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openrouter",
+      "surface": "openrouter.chat_completions",
+      "model": {
+        "requested": "openai/gpt-5-nano",
+        "returned": "openai/gpt-5-nano",
+        "billed": "openai/gpt-5-nano",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "120",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.00012",
+          "price_card_id": "openrouter:openai/gpt-5-nano:agent-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "40",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.000004",
+          "price_card_id": "openrouter:openai/gpt-5-nano:agent-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "80",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.00032",
+          "price_card_id": "openrouter:openai/gpt-5-nano:agent-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.00008",
+          "price_card_id": "openrouter:openai/gpt-5-nano:agent-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.000524",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

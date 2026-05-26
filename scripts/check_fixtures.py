@@ -23,10 +23,15 @@ from runcost import (  # noqa: E402
     from_ag2_usage_summary,
     from_haystack_generator_result,
     from_langchain_message,
+    from_langsmith_run,
     from_litellm_response,
     from_llamaindex_token_counter,
+    from_openai_agents_usage,
+    from_openrouter_sdk_response,
     from_response,
+    from_semantic_kernel_telemetry,
     from_vercel_ai_sdk_result,
+    from_vercel_ai_sdk_stream_finish,
     price_cards_from_helicone,
     price_cards_from_json_file,
     price_cards_from_litellm,
@@ -308,6 +313,11 @@ def run_python_fixture(fixture):
                 "haystack.generator_result",
                 "litellm.proxy_response",
                 "ag2.usage_summary",
+                "openai_agents.usage",
+                "vercel_ai_sdk.stream_text",
+                "langsmith.run_usage",
+                "semantic_kernel.telemetry",
+                "openrouter.sdk_response",
             } or input_data["extract"].get("surface") in {
                 "openai.responses",
                 "xai.responses",
@@ -341,6 +351,8 @@ def run_python_fixture(fixture):
             return from_langchain_message(input_data["raw_response"], **helper_options)
         if helper == "from_vercel_ai_sdk_result":
             return from_vercel_ai_sdk_result(input_data["raw_response"], **helper_options)
+        if helper == "from_vercel_ai_sdk_stream_finish":
+            return from_vercel_ai_sdk_stream_finish(input_data["raw_response"], **helper_options)
         if helper == "from_llamaindex_token_counter":
             return from_llamaindex_token_counter(input_data["raw_response"], **helper_options)
         if helper == "from_haystack_generator_result":
@@ -349,6 +361,14 @@ def run_python_fixture(fixture):
             return from_litellm_response(input_data["raw_response"], **helper_options)
         if helper == "from_ag2_usage_summary":
             return from_ag2_usage_summary(input_data["raw_response"], **helper_options)
+        if helper == "from_openai_agents_usage":
+            return from_openai_agents_usage(input_data["raw_response"], **helper_options)
+        if helper == "from_langsmith_run":
+            return from_langsmith_run(input_data["raw_response"], **helper_options)
+        if helper == "from_semantic_kernel_telemetry":
+            return from_semantic_kernel_telemetry(input_data["raw_response"], **helper_options)
+        if helper == "from_openrouter_sdk_response":
+            return from_openrouter_sdk_response(input_data["raw_response"], **helper_options)
         if helper == "langchain_callback":
             with track_langchain_costs(**helper_options) as callback:
                 callback.on_llm_end(input_data["raw_response"])
@@ -373,7 +393,7 @@ def run_python_fixture(fixture):
 def run_javascript_fixture(path: Path):
     script = f"""
       import {{ aggregateCostLedgers, calculateCost }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
-      import {{ fromResponse, fromLangChainMessage, fromVercelAISDKResult, fromLlamaIndexTokenCounter, fromHaystackGeneratorResult, fromLiteLLMResponse, fromAG2UsageSummary, createRunCostVercelMiddleware, priceCardsFromLlmPrices, priceCardsFromSourceCache, priceCardsFromJSONFile, priceCardsFromYAMLFile, priceCardsFromModelsDev, priceCardsFromOfficialSnapshot }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
+      import {{ fromResponse, fromLangChainMessage, fromVercelAISDKResult, fromVercelAISDKStreamFinish, fromLlamaIndexTokenCounter, fromHaystackGeneratorResult, fromLiteLLMResponse, fromAG2UsageSummary, fromOpenAIAgentsUsage, fromLangSmithRun, fromSemanticKernelTelemetry, fromOpenRouterSDKResponse, createRunCostVercelMiddleware, createRunCostVercelOnFinish, priceCardsFromLlmPrices, priceCardsFromSourceCache, priceCardsFromJSONFile, priceCardsFromYAMLFile, priceCardsFromModelsDev, priceCardsFromOfficialSnapshot }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
       import fs from "node:fs";
       const fixture = JSON.parse(fs.readFileSync({json.dumps(str(path))}, "utf8"));
       const input = fixture.input;
@@ -430,17 +450,29 @@ def run_javascript_fixture(path: Path):
           ? fromLangChainMessage(input.raw_response, responseOptions)
           : input.helper === "from_vercel_ai_sdk_result"
             ? fromVercelAISDKResult(input.raw_response, responseOptions)
-            : input.helper === "from_llamaindex_token_counter"
-              ? fromLlamaIndexTokenCounter(input.raw_response, responseOptions)
-              : input.helper === "from_haystack_generator_result"
-                ? fromHaystackGeneratorResult(input.raw_response, responseOptions)
-                : input.helper === "from_litellm_response"
-                  ? fromLiteLLMResponse(input.raw_response, responseOptions)
-                  : input.helper === "from_ag2_usage_summary"
-                    ? fromAG2UsageSummary(input.raw_response, responseOptions)
-                    : input.helper === "vercel_ai_sdk_middleware"
-                      ? (await createRunCostVercelMiddleware(responseOptions).wrapGenerate({{ doGenerate: async () => input.raw_response }})).runCost
-                      : fromResponse(input.raw_response, responseOptions)
+            : input.helper === "from_vercel_ai_sdk_stream_finish"
+              ? fromVercelAISDKStreamFinish(input.raw_response, responseOptions)
+              : input.helper === "from_llamaindex_token_counter"
+                ? fromLlamaIndexTokenCounter(input.raw_response, responseOptions)
+                : input.helper === "from_haystack_generator_result"
+                  ? fromHaystackGeneratorResult(input.raw_response, responseOptions)
+                  : input.helper === "from_litellm_response"
+                    ? fromLiteLLMResponse(input.raw_response, responseOptions)
+                    : input.helper === "from_ag2_usage_summary"
+                      ? fromAG2UsageSummary(input.raw_response, responseOptions)
+                      : input.helper === "from_openai_agents_usage"
+                        ? fromOpenAIAgentsUsage(input.raw_response, responseOptions)
+                        : input.helper === "from_langsmith_run"
+                          ? fromLangSmithRun(input.raw_response, responseOptions)
+                          : input.helper === "from_semantic_kernel_telemetry"
+                            ? fromSemanticKernelTelemetry(input.raw_response, responseOptions)
+                            : input.helper === "from_openrouter_sdk_response"
+                              ? fromOpenRouterSDKResponse(input.raw_response, responseOptions)
+                              : input.helper === "vercel_ai_sdk_on_finish"
+                                ? await createRunCostVercelOnFinish(responseOptions)(input.raw_response)
+                                : input.helper === "vercel_ai_sdk_middleware"
+                                  ? (await createRunCostVercelMiddleware(responseOptions).wrapGenerate({{ doGenerate: async () => input.raw_response }})).runCost
+                                  : fromResponse(input.raw_response, responseOptions)
         : calculateCost({{
             usageLedger: input.usage_ledger,
             priceCards,
