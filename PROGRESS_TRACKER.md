@@ -253,6 +253,13 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
   `docs/reports/2026-05-26-release-workflow-0-1-0-no-publish-rehearsal.md`.
   The workflow explicitly skipped real Go tag verification because remote tag
   `v0.1.0` does not yet exist, so the real Go tag gate remains open.
+- Pushed real semantic version tag `v0.1.0` and attempted the guarded
+  no-publish workflow again in run
+  `https://github.com/adamallcock/runcost/actions/runs/26467505077`.
+  The run proved the tag exists but failed real Go module verification because
+  the private repository cannot be fetched anonymously through `go get`;
+  release workflow follow-up now configures authenticated private-module
+  fetching with `GITHUB_TOKEN` and `GOPRIVATE`.
 - Added docs:
   - `docs/process/alpha-smoke-runbook.md`
   - `docs/process/invoice-dashboard-comparison.md`

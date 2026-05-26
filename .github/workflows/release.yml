@@ -65,9 +65,13 @@ jobs:
           npm pack ./packages/javascript/core --pack-destination dist/npm
 
       - name: Verify Go module from published tag
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GOPRIVATE: github.com/adamallcock/runcost
         run: |
           set -euo pipefail
           if git ls-remote --exit-code --tags origin "refs/tags/v${{ inputs.version }}" >/dev/null 2>&1; then
+            git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
             tmpdir="$(mktemp -d)"
             cd "$tmpdir"
             go mod init runcost-release-tag-check

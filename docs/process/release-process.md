@@ -151,6 +151,11 @@ still uses `replace` because unpublished commits are not available through the
 Go proxy, but the guarded release workflow verifies the published tag path when
 the tag exists.
 
+For a private repository, the guarded workflow configures Git to fetch
+`github.com/adamallcock/runcost` with the workflow's read token and sets
+`GOPRIVATE=github.com/adamallcock/runcost`. That keeps the verification on the
+real semantic version tag while avoiding a local `replace`.
+
 ## Rollback
 
 - npm supports deprecating a broken version; do not rely on unpublish.
