@@ -60,9 +60,13 @@ Warnings observed:
   actions currently run on Node.js 20, which GitHub has scheduled for removal.
   This did not fail the rehearsal but should be tracked before a production
   release if newer action versions or Node 24 migration guidance is available.
+  Follow-up: CI and release workflows now set
+  `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` to opt into the upcoming runner
+  behavior early.
 - `actions/setup-go` warned that no `go.sum` file exists for cache restore.
   This did not fail the rehearsal and is expected while the Go package has no
-  external module dependencies.
+  external module dependencies. Follow-up: CI and release workflows now disable
+  Go module caching for this dependency-free module.
 
 Remaining release gates:
 
