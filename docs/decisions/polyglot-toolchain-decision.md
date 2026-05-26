@@ -164,9 +164,12 @@ Every supported language follows the same change sequence:
 4. Update type declarations or typed contract models.
 5. Regenerate `docs/generated/contract-taxonomy.md` and
    `docs/generated/schema-fields.md` when schemas or taxonomy change.
-6. Update `docs/notes/api-parity-matrix.md` if public APIs changed.
-7. Run the full verification battery.
-8. Release all language packages together or explicitly mark a language as unsupported for that feature.
+6. Keep Python, TypeScript, and Go taxonomy-bearing type surfaces aligned with
+   `schemas/taxonomy.json`; `scripts/check_type_taxonomy_parity.py` enforces
+   this for the current manual type surfaces.
+7. Update `docs/notes/api-parity-matrix.md` if public APIs changed.
+8. Run the full verification battery.
+9. Release all language packages together or explicitly mark a language as unsupported for that feature.
 
 This sequence is intentionally mechanical. The project should make drift obvious, boring to fix, and difficult to publish by accident.
 
