@@ -42,6 +42,7 @@ the release mechanism. Do not use subdirectory tags for the current layout.
 ```bash
 npm test
 npm run check:coverage
+npm run check:gates
 npm run check:packages
 npm run check:release
 npm run check:release-dry-run
@@ -51,13 +52,17 @@ npm run example:py
 
 4. Confirm the package CLI smoke in `npm run check:packages` covered both
    `runcost price-cards` and `runcost fixture-check`.
-5. Confirm source-data updates, if any, followed
+5. Confirm `npm run check:gates` passes, then use the stricter completion gate
+   checks only when the external evidence is actually available:
+   `python3 scripts/check_project_completion_gates.py --require-milestone8`,
+   `--require-public-beta`, or `--require-v1`.
+6. Confirm source-data updates, if any, followed
    `docs/process/2026-05-26-source-data-update-process.md`.
-6. Confirm `git diff --check` is clean.
-7. Create and push a semantic version tag, for example `v0.1.0`.
-8. Run the manual `release` workflow with publishing disabled first.
-9. Review the no-publish artifact review checklist in the workflow summary.
-10. Enable publishing only after the dry run artifacts look correct.
+7. Confirm `git diff --check` is clean.
+8. Create and push a semantic version tag, for example `v0.1.0`.
+9. Run the manual `release` workflow with publishing disabled first.
+10. Review the no-publish artifact review checklist in the workflow summary.
+11. Enable publishing only after the dry run artifacts look correct.
 
 `npm run check:release-dry-run` is local and does not publish. It builds the
 Python wheel and source distribution, packs the npm package, and verifies the

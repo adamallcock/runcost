@@ -27,6 +27,27 @@ Public beta requires:
 - Source-data refresh/update process has an owner, cadence, and review path in
   `docs/process/2026-05-26-source-data-update-process.md`.
 
+The machine-readable gate register lives at
+`fixtures/source-files/project-completion-gates.json`. Normal CI validates that
+the register is well-formed and that referenced evidence exists:
+
+```bash
+npm run check:gates
+```
+
+When the external evidence exists, use the strict checks before calling a gate
+complete:
+
+```bash
+python3 scripts/check_project_completion_gates.py --require-milestone8
+python3 scripts/check_project_completion_gates.py --require-public-beta
+python3 scripts/check_project_completion_gates.py --require-v1
+```
+
+Those strict checks are expected to fail until the live smoke, real invoice or
+dashboard comparison, registry configuration, real-version no-publish
+rehearsal, and real Go tag verification have actually happened.
+
 ## Polyglot Hardening Gate
 
 The current polyglot strategy remains:

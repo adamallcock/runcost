@@ -24,6 +24,7 @@ REQUIRED_FILES = [
     "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     ".github/workflows/release.yml",
     "scripts/check_release_dry_run.py",
+    "scripts/check_project_completion_gates.py",
     "packages/javascript/core/README.md",
 ]
 
@@ -128,6 +129,7 @@ def check_release_docs() -> None:
         "runcost fixture-check",
         "provenance",
         "check:release-dry-run",
+        "check:gates",
         "Registry README Policy",
         "Workflow filename",
         "Allowed action",

@@ -675,6 +675,12 @@ Delivered so far:
   --comparison <path> --require-real` validates future real provider
   dashboard/export comparisons and rejects the checked-in sample as completion
   evidence.
+- `fixtures/source-files/project-completion-gates.json` and
+  `scripts/check_project_completion_gates.py` make the remaining Milestone 8,
+  public beta, polyglot, provider breadth, and V1 gates explicit. Normal CI
+  validates that the register is well-formed and referenced evidence exists;
+  strict flags such as `--require-milestone8`, `--require-public-beta`, and
+  `--require-v1` intentionally fail until the external evidence exists.
 - `docs/process/beta-v1-hardening-roadmap.md` keeps public beta, polyglot
   hardening, provider breadth, and V1 stabilization gates explicit.
 - `scripts/run_vercel_alpha_smoke.mjs` and
@@ -714,10 +720,14 @@ The finalization path is:
    `fixtures/source-files/alpha-smoke-product-truth-register.json`.
 3. Run one invoice/dashboard comparison sample and document exact versus
    estimated cases.
-4. Configure PyPI and npm trusted publishers outside the repo.
-5. Cut the first registry release with the guarded workflow, first with
+4. Keep `fixtures/source-files/project-completion-gates.json` current as the
+   external evidence ledger for Milestone 8, public beta, and V1; use
+   `python3 scripts/check_project_completion_gates.py --require-milestone8`
+   before marking Milestone 8 complete.
+5. Configure PyPI and npm trusted publishers outside the repo.
+6. Cut the first registry release with the guarded workflow, first with
    publishing disabled and then with publishing enabled after artifact review.
-6. Use private-alpha feedback to choose the beta hardening lane: schema-derived
+7. Use private-alpha feedback to choose the beta hardening lane: schema-derived
    type generation and drift checks if language maintenance is the largest
    risk, or provider/framework breadth if real integrations fail on coverage.
 

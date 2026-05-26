@@ -41,6 +41,7 @@ REQUIRED_FILES = [
     "scripts/check_source_refresh.py",
     "scripts/check_alpha_smoke.py",
     "scripts/check_invoice_comparison.py",
+    "scripts/check_project_completion_gates.py",
     "scripts/check_generated_contract_docs.py",
     "scripts/compare_invoice_dashboard.py",
     "scripts/create_fixture.py",
@@ -51,6 +52,7 @@ REQUIRED_FILES = [
     "scripts/refresh_price_sources.py",
     "fixtures/source-files/alpha-smoke-samples.json",
     "fixtures/source-files/invoice-dashboard-comparison-sample.json",
+    "fixtures/source-files/project-completion-gates.json",
     "packages/python/runcost/cli.py",
     "LICENSE",
     "CHANGELOG.md",
@@ -214,6 +216,10 @@ def check_package_metadata() -> None:
         "root npm test must run invoice/dashboard comparison checks",
     )
     assert_true(
+        "check_project_completion_gates.py" in scripts.get("test", ""),
+        "root npm test must run project completion gate checks",
+    )
+    assert_true(
         "check_generated_contract_docs.py" in scripts.get("test", ""),
         "root npm test must run generated contract docs drift checks",
     )
@@ -251,6 +257,10 @@ def check_package_metadata() -> None:
     assert_true(
         "compare_invoice_dashboard.py" in scripts.get("compare:invoice", ""),
         "root compare:invoice must run invoice/dashboard comparison command",
+    )
+    assert_true(
+        "check_project_completion_gates.py" in scripts.get("check:gates", ""),
+        "root check:gates must run project completion gate checks",
     )
     assert_true(
         "generate_contract_docs.py --write" in scripts.get("generate:contracts", ""),
@@ -423,6 +433,7 @@ def check_ci_workflow() -> None:
         "check_source_refresh.py",
         "check_alpha_smoke.py",
         "check_invoice_comparison.py",
+        "check_project_completion_gates.py",
         "check_generated_contract_docs.py",
         "compare_invoice_dashboard.py",
         "generate_contract_docs.py",

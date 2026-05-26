@@ -1,0 +1,431 @@
+{
+  "schema_version": "0.1",
+  "updated_at": "2026-05-26",
+  "status_scale": {
+    "satisfied": "Completion evidence exists and is machine-checkable where practical.",
+    "partial": "Useful repo-side work exists, but the final requirement is not proven.",
+    "pending_external_evidence": "The repo has the harness or process, but real external evidence is still required.",
+    "deferred_by_user": "The requirement is intentionally held until explicit user approval.",
+    "not_started": "No meaningful implementation or validation evidence exists yet."
+  },
+  "gates": [
+    {
+      "id": "milestone8_live_smoke_openai_responses",
+      "area": "milestone8",
+      "requirement": "Run an API-key-gated OpenAI Responses live smoke and keep only sanitized evidence.",
+      "status": "pending_external_evidence",
+      "required_for": ["milestone8", "public_beta", "v1"],
+      "required_evidence": [
+        "Sanitized live smoke JSON with scenario openai_responses and status passed.",
+        "Product-truth register entries for any non-passing OpenAI Responses findings."
+      ],
+      "current_evidence": [
+        {
+          "kind": "report",
+          "path": "docs/reports/2026-05-26-alpha-smoke-live-no-credentials.md",
+          "proves": "The live harness skips safely when OPENAI_API_KEY is absent; it does not prove live provider behavior."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/run_alpha_smoke.py",
+          "proves": "The optional live smoke entrypoint exists."
+        }
+      ],
+      "completion_check": "python3 scripts/check_alpha_product_truth.py --smoke-report <sanitized-live-report.json>",
+      "remaining_action": "Run live mode with OPENAI_API_KEY, review sanitized output, and convert any finding into product truth."
+    },
+    {
+      "id": "milestone8_live_smoke_anthropic_caching",
+      "area": "milestone8",
+      "requirement": "Run an API-key-gated Anthropic prompt-caching live smoke and keep only sanitized evidence.",
+      "status": "pending_external_evidence",
+      "required_for": ["milestone8", "public_beta", "v1"],
+      "required_evidence": [
+        "Sanitized live smoke JSON with scenario anthropic_prompt_caching and status passed.",
+        "Product-truth register entries for any non-passing Anthropic caching findings."
+      ],
+      "current_evidence": [
+        {
+          "kind": "report",
+          "path": "docs/reports/2026-05-26-alpha-smoke-live-no-credentials.md",
+          "proves": "The live harness skips safely when ANTHROPIC_API_KEY is absent; it does not prove live provider behavior."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/anthropic-messages-raw-cache.json",
+          "proves": "The extractor has fixture-backed cache-token coverage."
+        }
+      ],
+      "completion_check": "python3 scripts/check_alpha_product_truth.py --smoke-report <sanitized-live-report.json>",
+      "remaining_action": "Run live mode with ANTHROPIC_API_KEY, review sanitized output, and convert any finding into product truth."
+    },
+    {
+      "id": "milestone8_live_smoke_vercel_streaming",
+      "area": "milestone8",
+      "requirement": "Run a Vercel AI SDK streamText smoke beside a real SDK flow without making the SDK a core dependency.",
+      "status": "pending_external_evidence",
+      "required_for": ["milestone8", "public_beta", "v1"],
+      "required_evidence": [
+        "Sanitized framework smoke JSON with scenario vercel_ai_sdk_stream_text and status passed.",
+        "Product-truth register entries for any non-passing Vercel streaming findings."
+      ],
+      "current_evidence": [
+        {
+          "kind": "script",
+          "path": "scripts/run_vercel_alpha_smoke.mjs",
+          "proves": "A dependency-optional Vercel sample/live smoke entrypoint exists."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/vercel-ai-sdk-stream-text-finish.json",
+          "proves": "The streamText finish object shape is fixture-backed."
+        }
+      ],
+      "completion_check": "node scripts/run_vercel_alpha_smoke.mjs --mode live --output <sanitized-report.json> --allow-sample-prices",
+      "remaining_action": "Run the Vercel live smoke with required SDK dependencies and credentials, then classify any finding."
+    },
+    {
+      "id": "milestone8_live_smoke_langchain_agent",
+      "area": "milestone8",
+      "requirement": "Run a LangChain agent or callback smoke beside a real SDK/framework flow.",
+      "status": "pending_external_evidence",
+      "required_for": ["milestone8", "public_beta", "v1"],
+      "required_evidence": [
+        "Sanitized framework smoke JSON with scenario langchain_agent_run and status passed.",
+        "Product-truth register entries for any non-passing LangChain findings."
+      ],
+      "current_evidence": [
+        {
+          "kind": "script",
+          "path": "scripts/run_langchain_alpha_smoke.py",
+          "proves": "A dependency-optional LangChain sample/live smoke entrypoint exists."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/langchain-callback-context-manager.json",
+          "proves": "The LangChain callback/context-manager path is fixture-backed."
+        }
+      ],
+      "completion_check": "python3 scripts/run_langchain_alpha_smoke.py --mode live --output <sanitized-report.json> --allow-sample-prices",
+      "remaining_action": "Run the LangChain live smoke with required framework dependencies and credentials, then classify any finding."
+    },
+    {
+      "id": "milestone8_live_smoke_openrouter_cost_compare",
+      "area": "milestone8",
+      "requirement": "Run an OpenRouter live smoke and compare RunCost output to provider-reported cost where present.",
+      "status": "pending_external_evidence",
+      "required_for": ["milestone8", "public_beta", "v1"],
+      "required_evidence": [
+        "Sanitized live smoke JSON with scenario openrouter_cost_compare and status passed.",
+        "Documented exact, estimated, or mismatch classification for provider-reported cost."
+      ],
+      "current_evidence": [
+        {
+          "kind": "report",
+          "path": "docs/reports/2026-05-26-alpha-smoke-live-no-credentials.md",
+          "proves": "The live harness skips safely when OPENROUTER_API_KEY is absent; it does not prove live provider behavior."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/provider-reported-cost-used.json",
+          "proves": "Provider-reported cost modes are fixture-backed."
+        }
+      ],
+      "completion_check": "python3 scripts/check_alpha_product_truth.py --smoke-report <sanitized-live-report.json>",
+      "remaining_action": "Run live mode with OPENROUTER_API_KEY and classify any provider-reported cost delta."
+    },
+    {
+      "id": "milestone8_multi_provider_discount_case",
+      "area": "milestone8",
+      "requirement": "Validate a multi-provider custom-discount case in the alpha smoke harness.",
+      "status": "partial",
+      "required_for": ["milestone8", "public_beta", "v1"],
+      "required_evidence": [
+        "Smoke evidence showing a multi-provider discount case in the same review set as at least one live provider run.",
+        "Fixture or documented limitation for any discount behavior discrepancy."
+      ],
+      "current_evidence": [
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/alpha-smoke-samples.json",
+          "proves": "The deterministic no-network sample covers the multi-provider discount scenario."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_alpha_smoke.py",
+          "proves": "CI verifies the sample multi-provider discount smoke shape."
+        }
+      ],
+      "completion_check": "python3 scripts/check_alpha_smoke.py",
+      "remaining_action": "Include the discount scenario in the reviewed live smoke report and classify any issues discovered beside live provider evidence."
+    },
+    {
+      "id": "milestone8_product_truth_loop",
+      "area": "milestone8",
+      "requirement": "Every live smoke finding becomes a fixture, structured warning, documented limitation, extractor/source fix, or price-source update.",
+      "status": "partial",
+      "required_for": ["milestone8", "public_beta", "v1"],
+      "required_evidence": [
+        "Product-truth register entries matching every non-passing item in the reviewed live smoke report.",
+        "Referenced artifacts exist for every non-none classification."
+      ],
+      "current_evidence": [
+        {
+          "kind": "register",
+          "path": "fixtures/source-files/alpha-smoke-product-truth-register.json",
+          "proves": "The product-truth loop is machine-checkable for current no-credential findings."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_alpha_product_truth.py",
+          "proves": "Live smoke reports can be checked against the register."
+        }
+      ],
+      "completion_check": "python3 scripts/check_alpha_product_truth.py --smoke-report <sanitized-live-report.json>",
+      "remaining_action": "After real live smoke runs, update the register and artifacts for any non-passing findings."
+    },
+    {
+      "id": "milestone8_invoice_dashboard_real_comparison",
+      "area": "milestone8",
+      "requirement": "Compare at least one real provider dashboard, invoice, or usage export against RunCost output.",
+      "status": "pending_external_evidence",
+      "required_for": ["milestone8", "public_beta", "v1"],
+      "required_evidence": [
+        "Sanitized comparison JSON with evidence_type real_provider_export.",
+        "Comparison passes the --require-real check and documents exact, estimated, and unsupported fields."
+      ],
+      "current_evidence": [
+        {
+          "kind": "script",
+          "path": "scripts/check_invoice_comparison.py",
+          "proves": "The real-evidence check exists and rejects sanitized samples as completion evidence."
+        },
+        {
+          "kind": "report",
+          "path": "docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md",
+          "proves": "A sanitized sample proves the workflow shape, not real invoice completion."
+        }
+      ],
+      "completion_check": "python3 scripts/check_invoice_comparison.py --comparison <sanitized-real-comparison.json> --require-real",
+      "remaining_action": "Run the comparison against a sanitized real provider dashboard, invoice, or usage export."
+    },
+    {
+      "id": "milestone9_pypi_trusted_publishing",
+      "area": "milestone9",
+      "requirement": "Configure PyPI trusted publishing for adamallcock/runcost and the release environment.",
+      "status": "pending_external_evidence",
+      "required_for": ["public_beta", "v1"],
+      "required_evidence": [
+        "Registry-side PyPI trusted-publisher settings are configured for .github/workflows/release.yml and environment release.",
+        "A release workflow run reaches the PyPI publish step without requiring a stored API token when publishing is approved."
+      ],
+      "current_evidence": [
+        {
+          "kind": "docs",
+          "path": "docs/process/release-process.md",
+          "proves": "The required PyPI trusted-publisher settings are documented."
+        },
+        {
+          "kind": "workflow",
+          "path": ".github/workflows/release.yml",
+          "proves": "The workflow requests id-token permissions and uses PyPI trusted publishing."
+        }
+      ],
+      "completion_check": "Manual registry setting verification plus guarded release workflow evidence.",
+      "remaining_action": "Configure and verify the PyPI trusted publisher outside the repository."
+    },
+    {
+      "id": "milestone9_npm_trusted_publishing",
+      "area": "milestone9",
+      "requirement": "Configure npm trusted publishing/provenance for the JavaScript package.",
+      "status": "pending_external_evidence",
+      "required_for": ["public_beta", "v1"],
+      "required_evidence": [
+        "Registry-side npm trusted-publisher settings are configured for release.yml and environment release.",
+        "A release workflow run can publish with provenance when publishing is explicitly approved."
+      ],
+      "current_evidence": [
+        {
+          "kind": "docs",
+          "path": "docs/process/release-process.md",
+          "proves": "The required npm trusted-publisher settings are documented."
+        },
+        {
+          "kind": "workflow",
+          "path": ".github/workflows/release.yml",
+          "proves": "The workflow publishes npm with provenance when publishing is enabled."
+        }
+      ],
+      "completion_check": "Manual registry setting verification plus guarded release workflow evidence.",
+      "remaining_action": "Configure and verify npm trusted publishing outside the repository."
+    },
+    {
+      "id": "milestone9_real_version_no_publish_rehearsal",
+      "area": "milestone9",
+      "requirement": "Run the guarded release workflow with publishing disabled for the real intended beta version.",
+      "status": "partial",
+      "required_for": ["public_beta", "v1"],
+      "required_evidence": [
+        "Successful GitHub release workflow run for the intended beta version with publish=false.",
+        "Artifact review checklist has been reviewed for that run."
+      ],
+      "current_evidence": [
+        {
+          "kind": "report",
+          "path": "docs/reports/2026-05-26-release-workflow-no-publish-rehearsal.md",
+          "proves": "A publish=false rehearsal succeeded for version 0.0.0, but not for the real intended beta version."
+        }
+      ],
+      "completion_check": "gh workflow run release.yml --ref main -f version=<real-version> -f publish=false",
+      "remaining_action": "Select the beta version, run publish=false from main, review artifacts, and record the real-version evidence."
+    },
+    {
+      "id": "milestone9_real_go_tag_verification",
+      "area": "milestone9",
+      "requirement": "Verify the Go module from a real semantic version tag without a local replace.",
+      "status": "pending_external_evidence",
+      "required_for": ["public_beta", "v1"],
+      "required_evidence": [
+        "A pushed semantic version tag exists.",
+        "Clean external module can run go get github.com/adamallcock/runcost/packages/go/ledger@v<version> without replace."
+      ],
+      "current_evidence": [
+        {
+          "kind": "docs",
+          "path": "docs/process/release-process.md",
+          "proves": "The real Go tag verification command is documented."
+        },
+        {
+          "kind": "workflow",
+          "path": ".github/workflows/release.yml",
+          "proves": "The release workflow verifies the real tag path when the tag exists."
+        }
+      ],
+      "completion_check": "go get github.com/adamallcock/runcost/packages/go/ledger@v<version>",
+      "remaining_action": "Create/push the real version tag and verify from a clean external module."
+    },
+    {
+      "id": "milestone9_actual_registry_publish",
+      "area": "milestone9",
+      "requirement": "Publish Python and JavaScript packages after explicit artifact review and approval.",
+      "status": "deferred_by_user",
+      "required_for": ["public_beta", "v1"],
+      "required_evidence": [
+        "Explicit user approval to publish.",
+        "PyPI and npm package pages for the released version.",
+        "Post-publish install smoke evidence."
+      ],
+      "current_evidence": [],
+      "completion_check": "Guarded release workflow with publish=true after explicit approval.",
+      "deferred_reason": "The current objective says to leave packages unpublished for now.",
+      "remaining_action": "Do not publish until the user explicitly approves publication."
+    },
+    {
+      "id": "public_beta_hardening_docs",
+      "area": "public_beta",
+      "requirement": "Tighten schemas, source update process, contribution docs, caveats, public support matrix, and dependency/publishing story.",
+      "status": "partial",
+      "required_for": ["public_beta", "v1"],
+      "required_evidence": [
+        "Generated schema docs and taxonomy drift checks pass.",
+        "Source-data process, contribution docs, caveats, support matrix, and release docs are current after live smoke findings."
+      ],
+      "current_evidence": [
+        {
+          "kind": "docs",
+          "path": "docs/process/beta-v1-hardening-roadmap.md",
+          "proves": "The beta/V1 hardening gates are documented."
+        },
+        {
+          "kind": "docs",
+          "path": "docs/reference/supported-surfaces.md",
+          "proves": "A public support matrix exists."
+        },
+        {
+          "kind": "docs",
+          "path": "docs/reference/warnings-and-limitations.md",
+          "proves": "Known caveats are documented."
+        }
+      ],
+      "completion_check": "npm test && npm run check:release",
+      "remaining_action": "Refresh public caveats and support docs after live smoke and invoice comparison findings."
+    },
+    {
+      "id": "polyglot_schema_derived_type_hardening",
+      "area": "polyglot",
+      "requirement": "Mature schema-derived types, generated docs tables, drift checks, and Go APIs beyond map-backed prototype paths.",
+      "status": "partial",
+      "required_for": ["public_beta", "v1"],
+      "required_evidence": [
+        "Schema-derived or schema-checked type surfaces exist for the supported languages where practical.",
+        "Generated docs and API parity checks cover support matrices, warning codes, and component registries.",
+        "Go has stable typed APIs for core user-facing paths."
+      ],
+      "current_evidence": [
+        {
+          "kind": "script",
+          "path": "scripts/check_type_taxonomy_parity.py",
+          "proves": "Python, TypeScript, and Go taxonomy-bearing type surfaces are checked against schemas."
+        },
+        {
+          "kind": "docs",
+          "path": "docs/generated/schema-fields.md",
+          "proves": "Schema-field reference docs are generated from JSON schemas."
+        },
+        {
+          "kind": "code",
+          "path": "packages/go/ledger/ledger.go",
+          "proves": "Go typed wrappers exist for core calculation paths."
+        }
+      ],
+      "completion_check": "npm run generate:contracts && npm test",
+      "remaining_action": "Choose and implement schema-derived language type generation where it improves maintainability."
+    },
+    {
+      "id": "provider_framework_breadth_live_examples",
+      "area": "provider_framework_breadth",
+      "requirement": "Broaden real-world coverage for generated media, transcription, rerank, storage/session pricing, stream variants, and framework examples.",
+      "status": "partial",
+      "required_for": ["v1"],
+      "required_evidence": [
+        "Live or fixture-backed provider-specific coverage for prioritized media, transcription, rerank, storage/session, and stream variants.",
+        "Smoke-derived framework examples for top integrations."
+      ],
+      "current_evidence": [
+        {
+          "kind": "fixture",
+          "path": "fixtures/feature-pricing-generated-media-rerank-transcription.json",
+          "proves": "Normalized feature-pricing components exist for generated media, rerank, and transcription."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/storage-gb-day-pricing.json",
+          "proves": "Normalized GB-day storage pricing exists."
+        },
+        {
+          "kind": "docs",
+          "path": "docs/notes/framework-adapter-notes.md",
+          "proves": "Framework adapter coverage and remaining limitations are documented."
+        }
+      ],
+      "completion_check": "python3 scripts/check_fixtures.py && python3 scripts/check_fixture_coverage.py",
+      "remaining_action": "Use live smoke and provider docs to choose the next provider-specific feature surfaces."
+    },
+    {
+      "id": "v1_stabilization",
+      "area": "v1",
+      "requirement": "Stabilize schemas, warning codes, APIs, provider/source coverage, historical pricing, and top framework integrations with no known correctness holes.",
+      "status": "not_started",
+      "required_for": ["v1"],
+      "required_evidence": [
+        "Stable schema and warning-code compatibility policy.",
+        "Production-ready Python and JavaScript packages and stable Go core APIs.",
+        "Historical-pricing path and strong coverage for every surface marked supported.",
+        "No known correctness holes in supported surfaces."
+      ],
+      "current_evidence": [],
+      "completion_check": "Future V1 release checklist.",
+      "remaining_action": "Finish Milestone 8 and public beta first, then promote stable APIs and contracts toward V1."
+    }
+  ]
+}

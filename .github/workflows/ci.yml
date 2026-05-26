@@ -64,6 +64,7 @@ jobs:
             scripts/check_alpha_smoke.py \
             scripts/check_alpha_product_truth.py \
             scripts/check_invoice_comparison.py \
+            scripts/check_project_completion_gates.py \
             scripts/check_generated_contract_docs.py \
             scripts/check_type_taxonomy_parity.py \
             scripts/check_project_hygiene.py \
