@@ -54,6 +54,7 @@ npm run example:py
 - API reference: `docs/reference/api-reference.md`
 - Debug trace: `docs/reference/debug-trace.md`
 - Generated contract taxonomy: `docs/generated/contract-taxonomy.md`
+- Generated schema field reference: `docs/generated/schema-fields.md`
 - Fixture coverage: `docs/reports/fixture-coverage.md`
 - Supported surfaces: `docs/reference/supported-surfaces.md`
 - Custom pricing and discounts: `docs/reference/custom-pricing-and-discounts.md`

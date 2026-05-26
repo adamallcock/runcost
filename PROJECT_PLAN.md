@@ -729,10 +729,13 @@ Polyglot hardening progress:
 
 - `scripts/generate_contract_docs.py` generates
   `docs/generated/contract-taxonomy.md` from `schemas/taxonomy.json`.
+- The same generator produces `docs/generated/schema-fields.md` from
+  `schemas/*.schema.json`, covering top-level and `$defs` fields,
+  requiredness, types, and constraints.
 - `scripts/check_generated_contract_docs.py` fails when the checked-in
-  generated contract docs drift from the locked taxonomy.
-- This is the first generated documentation artifact beyond fixture coverage;
-  schema-derived language types remain future hardening.
+  generated contract and schema-field docs drift from the locked taxonomy or
+  JSON Schemas.
+- Schema-derived language types remain future hardening.
 - Go now has typed struct wrappers for the normalized usage, price-card,
   discount-policy, and core calculation path through `UsageLedger`,
   `PriceCard`, `DiscountPolicy`, `CostOptions`, and `CalculateCostTyped`.

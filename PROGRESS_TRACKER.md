@@ -123,7 +123,7 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 |---|---|---:|---|---|
 | Milestone 0: Prototype Foundation | Complete for current scope | No | `npm test` passes; cores, examples, schemas, and broad shared fixtures exist. | Later type hardening moved into Milestones 1 and 1.5. |
 | Milestone 1: Contract Hardening | Complete for current scope | No | Schemas exist; fixture runner validates schemas including debug traces and fixture metadata; warning fixtures exist; coverage report and hygiene checks exist; fixture generator helpers now create runnable normalized-usage fixture skeletons; Go fixture tests validate generated cost-ledger structure and exact component totals; v0.1 taxonomy lock is checked by `scripts/check_schema_taxonomy.py`. | Future schema-derived type generation is tracked under Milestone 1.5. |
-| Milestone 1.5: Polyglot Toolchain Foundation | Complete for current scope | No | Decision record, manual type artifacts, parity matrix, Go examples, generated taxonomy docs, generated-doc drift checks, hygiene checks, and CI workflow exist. | Schema-derived language type workflow remains a later hardening item, not a current active lane. |
+| Milestone 1.5: Polyglot Toolchain Foundation | Complete for current scope | No | Decision record, manual type artifacts, parity matrix, Go examples, generated taxonomy docs, generated schema-field docs, generated-doc drift checks, hygiene checks, and CI workflow exist. | Schema-derived language type workflow remains a later hardening item, not a current active lane. |
 | Milestone 2: Core Calculator Correctness | Complete for current scope | No | Decimal-safe calculator, aliases, strict/compatibility modes, effective dates, service tiers, stale prices, provider-reported cost modes, source priority, deterministic price-card tie-breaking, source disagreement, debug traces, long-context thresholds, batch/priority/provisioned fixtures, typed warning metadata payloads, adversarial decimal precision coverage, cross-language component-total invariant checks, and byte-stable component/source/discount/warning ordering checks exist. | Later beta/V1 hardening can add more edge-case fixtures as real smoke tests find them. |
 | Milestone 3: Source Adapter Layer | Complete for current scope | No | `llm-prices` current and historical feeds, LiteLLM, Portkey, OpenRouter models, models.dev, reviewed official snapshots, source-cache envelopes, local JSON/YAML file loading, explicit refresh command, source capability warnings, user compact pricing, and Helicone prototype adapters exist. | Later source expansion moves to beta/V1 hardening. |
 | Milestone 4: Provider Extractors V0 | Complete for current scope | No | OpenAI Responses, OpenAI Chat Completions, OpenAI Embeddings, Anthropic, OpenRouter, Groq, xAI Chat Completions and xAI Responses, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Gemini/Vertex, Bedrock Converse, and Bedrock InvokeModel extractors exist for selected surfaces; selected final streaming usage cases are fixture-backed; OpenAI Conversations are documented as non-cost-bearing state resources whose costs attach to Responses. | Additional stream protocols, provider-specific generated media, rerank, transcription, and deeper provider-specific feature fields move to beta/V1 hardening. |
@@ -163,7 +163,8 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
   - release process docs distinguish local dry-run `replace` checks from real Go tag verification.
 - Advanced polyglot generated-artifact hardening:
   - `scripts/generate_contract_docs.py` generates `docs/generated/contract-taxonomy.md` from `schemas/taxonomy.json`;
-  - `scripts/check_generated_contract_docs.py` fails on generated contract-doc drift;
+  - `scripts/generate_contract_docs.py` also generates `docs/generated/schema-fields.md` from `schemas/*.schema.json`;
+  - `scripts/check_generated_contract_docs.py` fails on generated contract-doc and schema-field-doc drift;
   - `npm run generate:contracts` refreshes the checked-in generated docs.
 - Advanced Go API hardening:
   - added typed structs for normalized usage, model identity, usage components, price cards, price components, prices, sources, effective ranges, discount policies, discount matches, discount adjustments, and calculator options;
@@ -1307,7 +1308,7 @@ What is implemented and well covered:
 Partially implemented:
 
 - Contract hardening is complete for the current prototype scope: schema validation, fixture metadata, debug trace fixtures, fixture coverage reporting, single-fixture validation, fixture generator helpers, Go-side cost-ledger structure/component-total/output-order validation, and a machine-checked v0.1 taxonomy lock exist. Broader schema-derived type generation is tracked under Milestone 1.5.
-- Polyglot maintainability: parity matrix and hygiene checks exist, and generated taxonomy docs now have drift checks. TypeScript and Python types are manual. Go has typed wrappers for the core normalized usage/price-card/discount path, but provider/framework/source APIs still use object maps.
+- Polyglot maintainability: parity matrix and hygiene checks exist, and generated taxonomy plus schema-field docs now have drift checks. TypeScript and Python types are manual. Go has typed wrappers for the core normalized usage/price-card/discount path, but provider/framework/source APIs still use object maps.
 - Go conformance: Go runs every fixture, validates generated cost-ledger structure, enforces exact component-total invariants, checks byte-stable output ordering and warning metadata keys, and checks expected subsets. Full JSON Schema validation and schema-derived structs remain future hardening work.
 - Source adapters: complete for the current prototype scope. Core adapters exist for nine source families plus local JSON/YAML file loading and an explicit source refresh command, including source-cache envelopes, models.dev enrichment, reviewed official pricing snapshots, source capability warnings, user compact pricing, and Helicone model-registry data. Later source expansion moves to beta/V1 hardening.
 - Historical pricing: effective dates and `llm-prices` historical feed date windows are fixture-proven, but broader provider historical catalogs and migration semantics remain future hardening.
@@ -1331,10 +1332,10 @@ Highest-risk gaps before private alpha:
 
 1. First real registry release readiness: configure PyPI/npm trusted publishing and verify Go tags after a real tag is pushed.
 2. Broader provider/framework streaming support beyond the initial OpenAI, Anthropic, and Gemini final-usage fixtures.
-3. Schema-derived typed models and generated artifact workflow, especially for Go structs and generated docs.
+3. Schema-derived typed models and generated artifact workflow, especially for Go structs and generated language types.
 4. Broader framework integration ergonomics from live smoke findings, especially real SDK examples, deeper callback variants, and sanitized fixture conversion.
 5. Deeper debug traces for extractor and framework adapter internals.
-6. Stronger generated artifact drift detection and schema-derived type/doc checks.
+6. Stronger generated artifact drift detection and schema-derived type checks.
 
 Recommended next sprint candidates:
 
@@ -1342,7 +1343,7 @@ Only one candidate should become the active lane at a time. The Milestones 0-4 c
 
 1. Alpha smoke harness slice: add an optional API-key-gated smoke runner with a no-network sample mode and sanitized output for fixture conversion.
 2. Invoice/dashboard comparison slice: add one reviewed sample comparison and document exact, estimated, and unsupported fields.
-3. Generated artifact slice: add schema-derived type/doc checks.
+3. Generated artifact slice: add schema-derived type checks.
 4. Provider/framework streaming slice: broaden final-usage stream fixtures and wrapper examples based on smoke-test findings.
 
 ## Backlog: Next Best Actions
@@ -1353,4 +1354,4 @@ These are ranked backlog items, not simultaneous active work.
 2. Convert smoke findings into fixtures, warnings, or documented limitations.
 3. Add one invoice/dashboard comparison sample and document exact versus estimated behavior.
 4. Harden release automation with first registry publication and first-tag verification.
-5. Add schema-derived type/doc checks once alpha smoke findings stop changing core contract shapes.
+5. Add schema-derived type checks once alpha smoke findings stop changing core contract shapes.

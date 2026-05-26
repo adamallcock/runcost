@@ -162,9 +162,11 @@ Every supported language follows the same change sequence:
 2. Add or update fixtures that prove the behavior.
 3. Update the Python, JavaScript/TypeScript, and Go implementations.
 4. Update type declarations or typed contract models.
-5. Update `docs/notes/api-parity-matrix.md` if public APIs changed.
-6. Run the full verification battery.
-7. Release all language packages together or explicitly mark a language as unsupported for that feature.
+5. Regenerate `docs/generated/contract-taxonomy.md` and
+   `docs/generated/schema-fields.md` when schemas or taxonomy change.
+6. Update `docs/notes/api-parity-matrix.md` if public APIs changed.
+7. Run the full verification battery.
+8. Release all language packages together or explicitly mark a language as unsupported for that feature.
 
 This sequence is intentionally mechanical. The project should make drift obvious, boring to fix, and difficult to publish by accident.
 
