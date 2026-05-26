@@ -714,11 +714,16 @@ Release rehearsal progress:
 
 - The guarded release workflow can run with publishing disabled.
 - No-publish runs write an artifact review checklist to the workflow summary.
+- A `publish=false` GitHub release rehearsal was run from `main` for version
+  `0.0.0`, passed, and produced reviewed Python wheel, Python source
+  distribution, and npm tarball artifacts. Evidence is recorded in
+  `docs/reports/2026-05-26-release-workflow-no-publish-rehearsal.md`.
 - When a remote `v<version>` tag exists, the workflow verifies the Go package
   from `github.com/adamallcock/runcost/packages/go/ledger@v<version>` without a
   local `replace`.
-- Actual trusted-publisher configuration, no-publish workflow execution,
-  artifact review, and publishing remain external release operations.
+- Actual trusted-publisher configuration, a real-version no-publish workflow
+  execution, real Go tag verification, and publishing remain release
+  operations.
 
 Polyglot hardening progress:
 
@@ -761,6 +766,9 @@ Delivered so far:
 - Guarded release workflow and local release dry-run checks exist.
 - PyPI/npm trusted-publishing setup instructions exist, but external registry
   configuration is not verified yet.
+- A guarded `publish=false` GitHub release rehearsal from `main` has passed for
+  version `0.0.0`; this proves workflow dispatch, build, package artifact, and
+  upload mechanics, but it is not a real release-version rehearsal.
 - Real Go tag verification exists in the guarded release workflow when a remote
   `v<version>` tag is present; no real tag verification evidence has been
   captured yet.

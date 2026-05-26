@@ -48,6 +48,11 @@ Evidence collected on 2026-05-26:
 - Clean package install checks pass for Python, JavaScript/TypeScript, and Go through `npm run check:packages`, including the typed Go core wrapper from a clean temporary module.
 - Release readiness checks pass through `npm run check:release`.
 - No-publish release dry-run checks pass through `npm run check:release-dry-run`.
+- Guarded GitHub release workflow passed from `main` with
+  `publish=false` in run
+  `https://github.com/adamallcock/runcost/actions/runs/26430180080`; artifact
+  review is recorded in
+  `docs/reports/2026-05-26-release-workflow-no-publish-rehearsal.md`.
 - Real-life live SDK/API smoke tests are implemented as optional API-key-gated harnesses, but credentialed provider evidence has not been captured yet; current completed runs use synthetic responses, fixtures, local package installs, no-network sample smoke, or local/live price-source refresh commands.
 - Project hygiene check passes.
 - JSON files parse through `jq`.
@@ -124,7 +129,7 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 | Milestone 6: Framework Adapters | Complete for current scope | No | LangChain AIMessage, OpenAI Agents SDK usage objects, Vercel AI SDK generateText and streamText finish objects, LlamaIndex TokenCountingHandler, Haystack metadata, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, LangSmith run/export usage, Semantic Kernel telemetry, OpenRouter SDK responses, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` and `onFinish` helpers, and aggregation exist with fixtures. | Live SDK/API-key smoke, real application validation, deeper framework callback variants, and smoke-derived examples move to Milestone 8/beta hardening. |
 | Milestone 7: Packaging and Developer Experience | Complete for current scope | No | Package metadata, types, examples, CI, clean install checks, Python package CLI, migration guide, alpha docs, license metadata, changelog, contributing/security docs, registry README policy, release process, release readiness checks, guarded release workflow, and local no-publish release dry run exist. | First registry publication, external trusted publisher configuration, and real post-tag Go module verification remain release operations outside the repo-side private-alpha gate. |
 | Milestone 8: Alpha Quality and Feedback | Partial | Yes | `scripts/run_alpha_smoke.py`, `scripts/run_vercel_alpha_smoke.mjs`, `scripts/run_langchain_alpha_smoke.py`, `scripts/check_alpha_smoke.py`, `fixtures/source-files/alpha-smoke-samples.json`, and `docs/process/alpha-smoke-runbook.md` exist; sample mode covers OpenAI Responses, Anthropic prompt caching, Vercel stream finish, LangChain metadata, OpenRouter cost comparison, and multi-provider discounts without credentials. Sanitized invoice/dashboard comparison mechanics exist through `scripts/compare_invoice_dashboard.py`, `scripts/check_invoice_comparison.py`, `fixtures/source-files/invoice-dashboard-comparison-sample.json`, and `docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md`. | Execute at least one credentialed live SDK/API run, classify all live findings, and run a real provider dashboard/invoice/usage-export comparison. |
-| Milestone 9: Public Beta | Partial | No | Guarded release workflow, trusted-publishing docs, no-publish artifact review checklist, local release dry run, real Go tag verification path, source-data update owner/cadence/review process, and blocked no-publish workflow dispatch evidence exist. | External PyPI/npm trusted publisher configuration, actual no-publish workflow run review after workflow is on default branch, real tag Go verification, and beta caveat review remain. |
+| Milestone 9: Public Beta | Partial | No | Guarded release workflow, trusted-publishing docs, no-publish artifact review checklist, local release dry run, successful `publish=false` GitHub release rehearsal from `main`, reviewed rehearsal artifacts, real Go tag verification path, source-data update owner/cadence/review process, and historical no-publish dispatch-blocker evidence exist. | External PyPI/npm trusted publisher configuration, no-publish workflow rehearsal against the real release version, real tag Go verification, and beta caveat review remain. |
 | Milestone 10: V1 | Not started | No | None. | Stable schemas/warning codes/package APIs, production-ready packages, strong provider/source coverage, historical-pricing path, and top framework integrations. |
 
 ## Work Log
@@ -181,14 +186,24 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
   - `https://github.com/adamallcock/runcost/pull/1`;
   - fixed the first GitHub CI failure by making the YAML file-source fixture portable across checkout paths;
   - latest PR CI `test` check passed at `https://github.com/adamallcock/runcost/actions/runs/26430029924/job/77801179229`;
-  - PR is ready for review, mergeable, and no longer draft;
-  - this is the next GitHub-side step before retrying the guarded no-publish workflow dispatch.
+  - PR was merged to `main` as merge commit
+    `13ccb8e953056d2e4c9bd718bd5eef2277776c83`.
+- Retried guarded no-publish release workflow dispatch from `main`:
+  - `gh workflow run release.yml --ref main -f version=0.0.0 -f publish=false`;
+  - workflow run `https://github.com/adamallcock/runcost/actions/runs/26430180080` passed;
+  - artifact `runcost-release-artifacts` contained a Python wheel, Python
+    source distribution, and npm tarball;
+  - artifact review was captured as
+    `docs/reports/2026-05-26-release-workflow-no-publish-rehearsal.md`;
+  - real Go tag verification was skipped as expected because tag `v0.0.0` does
+    not exist.
 - Added docs:
   - `docs/process/alpha-smoke-runbook.md`
   - `docs/process/invoice-dashboard-comparison.md`
   - `docs/process/2026-05-26-source-data-update-process.md`
   - `docs/process/beta-v1-hardening-roadmap.md`
   - `docs/reports/2026-05-26-release-workflow-no-publish-blocked.md`
+  - `docs/reports/2026-05-26-release-workflow-no-publish-rehearsal.md`
 
 - Completed Milestone 5 for the current tool-call and feature-pricing scope.
 - Added `openai-responses-raw-computer-and-function-tools.json` to fixture OpenAI Responses `computer_call` action counts and `function_call` counts as first-class tool/feature components across Python, JavaScript/TypeScript, and Go.
@@ -1290,7 +1305,7 @@ Partially implemented:
 - Multimodal: Gemini/Vertex modality token details are covered. Other providers and generated-media billing are not.
 - Framework adapters: complete for the current no-live-smoke scope. Direct metadata/result objects are fixture-backed for LangChain, OpenAI Agents SDK usage, Vercel AI SDK generateText and streamText finish results, LlamaIndex, Haystack, LiteLLM proxy responses, AutoGen/AG2 usage summaries, LangSmith run/export usage, Semantic Kernel telemetry, and OpenRouter-compatible SDK responses. Initial Python LangChain callback/context-manager plus JavaScript Vercel middleware/onFinish helpers exist, and generic multi-step cost-ledger aggregation exists. Live SDK/API-key smoke, real app validation, and deeper callback/stream variants move to Milestone 8/beta hardening.
 - Documentation: public quickstart, installation, API reference, aggregation/streaming, debug trace, custom pricing, discount, warning/strict-mode, source adapter, support-matrix docs, contribution guide, security/privacy note, changelog, registry README policy, and release process now exist. Deeper framework integration guides and automated release notes are still missing.
-- Packaging: clean local install checks now pass for Python, JavaScript/TypeScript, and Go. License metadata, PyPI/npm guarded release workflow, Go tag policy, changelog, provenance guidance, release readiness checks, registry README checks, and a no-publish release dry run exist. First real registry publication, external trusted publisher configuration, and real post-tag Go module verification remain incomplete.
+- Packaging: clean local install checks now pass for Python, JavaScript/TypeScript, and Go. License metadata, PyPI/npm guarded release workflow, Go tag policy, changelog, provenance guidance, release readiness checks, registry README checks, local no-publish release dry run, and a successful `publish=false` GitHub release rehearsal from `main` exist. First real registry publication, external trusted publisher configuration, real-version no-publish rehearsal, and real post-tag Go module verification remain incomplete.
 
 Stubs or placeholders:
 
