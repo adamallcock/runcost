@@ -58,6 +58,11 @@ Evidence collected on 2026-05-26:
   `https://github.com/adamallcock/runcost/actions/runs/26430290844`; artifact
   review and warning follow-up are recorded in
   `docs/reports/2026-05-26-release-workflow-no-publish-rehearsal.md`.
+- Guarded GitHub release workflow passed from `main` for intended beta
+  rehearsal version `0.1.0` with `publish=false` in run
+  `https://github.com/adamallcock/runcost/actions/runs/26467232834`; artifacts
+  were downloaded and reviewed in
+  `docs/reports/2026-05-26-release-workflow-0-1-0-no-publish-rehearsal.md`.
 - Real-life live SDK/API smoke tests are implemented as optional API-key-gated harnesses, but credentialed provider evidence has not been captured yet; current completed runs use synthetic responses, fixtures, local package installs, no-network sample smoke, or local/live price-source refresh commands.
 - Project hygiene check passes.
 - JSON files parse through `jq`.
@@ -134,7 +139,7 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 | Milestone 6: Framework Adapters | Complete for current scope | No | LangChain AIMessage, OpenAI Agents SDK usage objects, Vercel AI SDK generateText and streamText finish objects, LlamaIndex TokenCountingHandler, Haystack metadata, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, LangSmith run/export usage, Semantic Kernel telemetry, OpenRouter SDK responses, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` and `onFinish` helpers, and aggregation exist with fixtures. | Live SDK/API-key smoke, real application validation, deeper framework callback variants, and smoke-derived examples move to Milestone 8/beta hardening. |
 | Milestone 7: Packaging and Developer Experience | Complete for current scope | No | Package metadata, types, examples, CI, clean install checks, Python package CLI, migration guide, alpha docs, license metadata, changelog, contributing/security docs, registry README policy, release process, release readiness checks, guarded release workflow, and local no-publish release dry run exist. | First registry publication, external trusted publisher configuration, and real post-tag Go module verification remain release operations outside the repo-side private-alpha gate. |
 | Milestone 8: Alpha Quality and Feedback | Partial | Yes | `scripts/run_alpha_smoke.py`, `scripts/run_vercel_alpha_smoke.mjs`, `scripts/run_langchain_alpha_smoke.py`, `scripts/check_alpha_smoke.py`, `scripts/check_alpha_product_truth.py`, `fixtures/source-files/alpha-smoke-samples.json`, `fixtures/source-files/alpha-smoke-product-truth-register.json`, and `docs/process/alpha-smoke-runbook.md` exist; sample mode covers OpenAI Responses, Anthropic prompt caching, Vercel stream finish, LangChain metadata, OpenRouter cost comparison, and multi-provider discounts without credentials. Sanitized invoice/dashboard comparison mechanics exist through `scripts/compare_invoice_dashboard.py`, `scripts/check_invoice_comparison.py`, `fixtures/source-files/invoice-dashboard-comparison-sample.json`, and `docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md`; sample comparison output is explicitly marked as not real Milestone 8 evidence. `fixtures/source-files/project-completion-gates.json` and `scripts/check_project_completion_gates.py` now make each remaining live-smoke and invoice evidence gate explicit. | Execute credentialed live SDK/API runs, classify any new live findings in the product-truth register, and run a real provider dashboard/invoice/usage-export comparison validated with `python3 scripts/check_invoice_comparison.py --comparison <path> --require-real`; then pass `python3 scripts/check_project_completion_gates.py --require-milestone8`. |
-| Milestone 9: Public Beta | Partial | No | Guarded release workflow, trusted-publishing docs, no-publish artifact review checklist, local release dry run, successful `publish=false` GitHub release rehearsal from `main`, reviewed rehearsal artifacts, real Go tag verification path, source-data update owner/cadence/review process, generated language type artifacts, historical no-publish dispatch-blocker evidence, and project completion gate register/checker exist. | External PyPI/npm trusted publisher configuration, no-publish workflow rehearsal against the real release version, real tag Go verification, and beta caveat review remain; then pass `python3 scripts/check_project_completion_gates.py --require-public-beta`. |
+| Milestone 9: Public Beta | Partial | No | Guarded release workflow, trusted-publishing docs, no-publish artifact review checklist, local release dry run, successful `publish=false` GitHub release rehearsal from `main` for intended beta version `0.1.0`, reviewed rehearsal artifacts, real Go tag verification path, source-data update owner/cadence/review process, generated language type artifacts, historical no-publish dispatch-blocker evidence, and project completion gate register/checker exist. | External PyPI/npm trusted publisher configuration, real tag Go verification, actual registry publishing after explicit approval, and beta caveat review remain; then pass `python3 scripts/check_project_completion_gates.py --require-public-beta`. |
 | Milestone 10: V1 | Partial | No | All 19 stable warning codes now have shared fixture coverage and generated warning coverage reports zero uncovered codes; taxonomy-bearing Python, TypeScript, and Go type artifacts are generated and drift-checked. | Stable schemas/package APIs, production-ready packages, strong provider/source coverage, historical-pricing path, top framework integrations, and live-evidence closure. |
 
 ## Work Log
@@ -239,6 +244,15 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
     `https://github.com/adamallcock/runcost/actions/runs/26430288699`;
   - hardened no-publish release rehearsal passed at
     `https://github.com/adamallcock/runcost/actions/runs/26430290844`.
+- Prepared intended beta rehearsal version `0.1.0` across root, Python, and npm
+  package metadata and moved accumulated changelog entries under `## 0.1.0`.
+- Ran guarded release workflow from `main` with `version=0.1.0` and
+  `publish=false`; run
+  `https://github.com/adamallcock/runcost/actions/runs/26467232834` passed,
+  the publish job was skipped, and the artifact review is recorded in
+  `docs/reports/2026-05-26-release-workflow-0-1-0-no-publish-rehearsal.md`.
+  The workflow explicitly skipped real Go tag verification because remote tag
+  `v0.1.0` does not yet exist, so the real Go tag gate remains open.
 - Added docs:
   - `docs/process/alpha-smoke-runbook.md`
   - `docs/process/invoice-dashboard-comparison.md`

@@ -288,7 +288,7 @@
       "id": "milestone9_real_version_no_publish_rehearsal",
       "area": "milestone9",
       "requirement": "Run the guarded release workflow with publishing disabled for the real intended beta version.",
-      "status": "partial",
+      "status": "satisfied",
       "required_for": ["public_beta", "v1"],
       "required_evidence": [
         "Successful GitHub release workflow run for the intended beta version with publish=false.",
@@ -299,10 +299,15 @@
           "kind": "report",
           "path": "docs/reports/2026-05-26-release-workflow-no-publish-rehearsal.md",
           "proves": "A publish=false rehearsal succeeded for version 0.0.0, but not for the real intended beta version."
+        },
+        {
+          "kind": "report",
+          "path": "docs/reports/2026-05-26-release-workflow-0-1-0-no-publish-rehearsal.md",
+          "proves": "A publish=false guarded release workflow rehearsal succeeded for real intended beta version 0.1.0, artifacts were reviewed, and publishing stayed disabled."
         }
       ],
       "completion_check": "gh workflow run release.yml --ref main -f version=<real-version> -f publish=false",
-      "remaining_action": "Select the beta version, run publish=false from main, review artifacts, and record the real-version evidence."
+      "remaining_action": "Keep publishing disabled until trusted publisher setup and explicit approval; real Go tag verification remains tracked separately."
     },
     {
       "id": "milestone9_real_go_tag_verification",
