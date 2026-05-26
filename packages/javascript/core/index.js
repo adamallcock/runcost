@@ -33,6 +33,7 @@ const COMPONENT_ORDER_NAMES = [
   "transcription_seconds",
   "endpoint_runtime_seconds",
   "endpoint_instance_hours",
+  "storage_gb_days",
   "custom_units"
 ];
 const COMPONENT_ORDER = new Map(COMPONENT_ORDER_NAMES.map((name, index) => [name, index]));
@@ -48,7 +49,9 @@ const TOOL_OR_FEATURE_COMPONENTS = new Set([
   "image_generation_units",
   "video_generation_units",
   "audio_generation_units",
-  "transcription_seconds"
+  "transcription_seconds",
+  "endpoint_runtime_seconds",
+  "storage_gb_days"
 ]);
 
 function parseDecimal(value) {

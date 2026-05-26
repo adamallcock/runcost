@@ -17,7 +17,8 @@ JavaScript/TypeScript, and Go. The package versions should move together.
 - Keep schemas, docs, changelog, and package versions in sync.
 - Prefer trusted publishing and short-lived OIDC identity over stored registry
   tokens.
-- Publish no price-source updates without review.
+- Publish no price-source updates without the owner/cadence/review process in
+  `docs/process/2026-05-26-source-data-update-process.md`.
 
 ## Version Policy
 
@@ -50,14 +51,36 @@ npm run example:py
 
 4. Confirm the package CLI smoke in `npm run check:packages` covered both
    `runcost price-cards` and `runcost fixture-check`.
-5. Confirm `git diff --check` is clean.
-6. Create and push a semantic version tag, for example `v0.1.0`.
-7. Run the manual `release` workflow with publishing disabled first.
-8. Enable publishing only after the dry run artifacts look correct.
+5. Confirm source-data updates, if any, followed
+   `docs/process/2026-05-26-source-data-update-process.md`.
+6. Confirm `git diff --check` is clean.
+7. Create and push a semantic version tag, for example `v0.1.0`.
+8. Run the manual `release` workflow with publishing disabled first.
+9. Review the no-publish artifact review checklist in the workflow summary.
+10. Enable publishing only after the dry run artifacts look correct.
 
 `npm run check:release-dry-run` is local and does not publish. It builds the
 Python wheel and source distribution, packs the npm package, and verifies the
 Go module path through a clean temporary module with a local replace directive.
+
+The manual GitHub `release` workflow is the guarded release rehearsal. Run it
+with publishing disabled first. In no-publish mode it builds uploadable Python
+and npm artifacts, writes a no-publish artifact review checklist to the workflow
+summary, and verifies the real Go tag when `v<version>` already exists on the
+remote. If the tag is absent, the workflow explicitly records that real Go tag
+verification was skipped for that rehearsal.
+
+No-publish artifact review checklist:
+
+- Confirm Python wheel and source distribution are present in workflow artifacts.
+- Confirm npm tarball is present in workflow artifacts and includes package
+  README.
+- Confirm release readiness, dry-run, examples, package checks, and conformance
+  tests passed.
+- Confirm Go tag verification ran when the real Go tag existed, or was
+  explicitly skipped because the tag was absent.
+- Keep publishing disabled until PyPI/npm trusted publishers are configured and
+  artifacts are reviewed.
 
 ## Registry README Policy
 
@@ -109,6 +132,11 @@ pushed, verify from a clean module:
 go list -m -versions github.com/adamallcock/runcost
 go get github.com/adamallcock/runcost/packages/go/ledger@v0.1.0
 ```
+
+This real Go tag verification must not use a local `replace`. The local dry run
+still uses `replace` because unpublished commits are not available through the
+Go proxy, but the guarded release workflow verifies the published tag path when
+the tag exists.
 
 ## Rollback
 

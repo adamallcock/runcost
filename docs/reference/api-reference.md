@@ -16,6 +16,7 @@ This document describes the public API shape that currently exists across Python
 | Calculate from canonical usage | `calculate_cost(...)` | `calculateCost(options)` | `CalculateCost(options)` |
 | Calculate with explicit Go mode | N/A | N/A | `CalculateCostWithMode(options, mode)` |
 | Calculate with Go options | N/A | N/A | `CalculateCostWithOptions(options)` |
+| Calculate from typed Go structs | N/A | N/A | `CalculateCostTyped(...)`, `CalculateCostTypedWithOptions(...)` |
 | Aggregate existing ledgers | `aggregate_cost_ledgers(...)` | `aggregateCostLedgers(options)` | `AggregateCostLedgers(costLedgers, options)` |
 
 Inputs:
@@ -33,6 +34,12 @@ Inputs:
 Output:
 
 - `CostLedger` with `components`, `total`, `price_sources`, `applied_discounts`, `warnings`, and optional `debug_trace`.
+
+Go also exposes typed wrappers for the normalized usage and price-card path:
+`UsageLedger`, `ModelIdentity`, `UsageComponent`, `PriceCard`,
+`PriceComponent`, `Price`, `Source`, `DiscountPolicy`, `DiscountMatch`,
+`DiscountAdjustment`, and `CostOptions`. These structs convert to the canonical
+schema-shaped objects and delegate to the same calculator as the map-backed API.
 
 ## Aggregation
 

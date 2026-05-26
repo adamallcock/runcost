@@ -39,6 +39,8 @@ npm run example:py
 
 - Use primary provider docs, source repos, official APIs, or preserved source
   snapshots.
+- Follow `docs/process/2026-05-26-source-data-update-process.md` for source
+  update ownership, cadence, review, and release expectations.
 - Preserve source name, URL, retrieval time, and license when available.
 - Do not silently infer ambiguous units.
 - Prefer a warning or unsupported fixture over a plausible but unverified price.

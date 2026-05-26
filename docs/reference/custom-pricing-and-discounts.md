@@ -68,11 +68,15 @@ Common tool or feature components:
 - `code_interpreter_call_units`
 - `computer_use_action_units`
 - `tool_call_units`
+- `tool_execution_seconds`
+- `rerank_search_units`
 - `image_generation_units`
 - `video_generation_units`
 - `audio_generation_units`
+- `transcription_seconds`
 - `endpoint_runtime_seconds`
 - `endpoint_instance_hours`
+- `storage_gb_days`
 
 The schema also supports `custom_units` for contract-specific billing that RunCost does not yet model directly.
 

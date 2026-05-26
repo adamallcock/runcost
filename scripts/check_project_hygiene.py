@@ -15,10 +15,16 @@ REQUIRED_FILES = [
     "docs/reference/custom-pricing-and-discounts.md",
     "docs/reference/debug-trace.md",
     "docs/reports/fixture-coverage.md",
+    "docs/generated/contract-taxonomy.md",
+    "docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md",
     "docs/guides/package-installation.md",
     "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     "docs/guides/quickstart.md",
     "docs/process/release-process.md",
+    "docs/process/alpha-smoke-runbook.md",
+    "docs/process/invoice-dashboard-comparison.md",
+    "docs/process/2026-05-26-source-data-update-process.md",
+    "docs/process/beta-v1-hardening-roadmap.md",
     "docs/reference/source-adapters.md",
     "docs/reference/supported-surfaces.md",
     "docs/reference/warnings-and-limitations.md",
@@ -32,8 +38,18 @@ REQUIRED_FILES = [
     "scripts/check_release_readiness.py",
     "scripts/check_schema_taxonomy.py",
     "scripts/check_source_refresh.py",
+    "scripts/check_alpha_smoke.py",
+    "scripts/check_invoice_comparison.py",
+    "scripts/check_generated_contract_docs.py",
+    "scripts/compare_invoice_dashboard.py",
     "scripts/create_fixture.py",
+    "scripts/run_langchain_alpha_smoke.py",
+    "scripts/run_alpha_smoke.py",
+    "scripts/run_vercel_alpha_smoke.mjs",
+    "scripts/generate_contract_docs.py",
     "scripts/refresh_price_sources.py",
+    "fixtures/source-files/alpha-smoke-samples.json",
+    "fixtures/source-files/invoice-dashboard-comparison-sample.json",
     "packages/python/runcost/cli.py",
     "LICENSE",
     "CHANGELOG.md",
@@ -54,6 +70,8 @@ PUBLIC_API_NAMES = [
     "calculateCost",
     "CalculateCost",
     "CalculateCostWithOptions",
+    "CalculateCostTyped",
+    "CalculateCostTypedWithOptions",
     "from_response",
     "fromResponse",
     "FromResponse",
@@ -186,6 +204,18 @@ def check_package_metadata() -> None:
         "check_source_refresh.py" in scripts.get("test", ""),
         "root npm test must run source refresh command checks",
     )
+    assert_true(
+        "check_alpha_smoke.py" in scripts.get("test", ""),
+        "root npm test must run alpha smoke sample checks",
+    )
+    assert_true(
+        "check_invoice_comparison.py" in scripts.get("test", ""),
+        "root npm test must run invoice/dashboard comparison checks",
+    )
+    assert_true(
+        "check_generated_contract_docs.py" in scripts.get("test", ""),
+        "root npm test must run generated contract docs drift checks",
+    )
     assert_true("check_fixture_coverage.py" in scripts.get("test", ""), "root npm test must run fixture coverage checks")
     assert_true(
         "check_fixture_coverage.py" in scripts.get("check:coverage", ""),
@@ -212,6 +242,18 @@ def check_package_metadata() -> None:
     assert_true(
         "refresh_price_sources.py" in scripts.get("prices:refresh", ""),
         "root prices:refresh must run source refresh command",
+    )
+    assert_true(
+        "run_alpha_smoke.py" in scripts.get("smoke:alpha", ""),
+        "root smoke:alpha must run alpha smoke harness",
+    )
+    assert_true(
+        "compare_invoice_dashboard.py" in scripts.get("compare:invoice", ""),
+        "root compare:invoice must run invoice/dashboard comparison command",
+    )
+    assert_true(
+        "generate_contract_docs.py --write" in scripts.get("generate:contracts", ""),
+        "root generate:contracts must regenerate contract docs",
     )
 
     js_package_path = ROOT / "packages/javascript/core/package.json"
@@ -322,6 +364,9 @@ def check_public_api_artifacts() -> None:
         "CalculateCost",
         "CalculateCostWithMode",
         "CalculateCostWithOptions",
+        "CalculateCostTyped",
+        "CalculateCostTypedWithMode",
+        "CalculateCostTypedWithOptions",
         "AggregateCostLedgers",
         "ExtractUsageLedger",
         "PriceCardsFromLlmPrices",
@@ -349,6 +394,7 @@ def check_public_api_artifacts() -> None:
         )
 
     assert_true("ExampleCalculateCost" in go_examples, "Go example test must include ExampleCalculateCost")
+    assert_true("ExampleCalculateCostTyped" in go_examples, "Go example test must include ExampleCalculateCostTyped")
     assert_true("ExampleFromResponse" in go_examples, "Go example test must include ExampleFromResponse")
 
 
@@ -374,6 +420,13 @@ def check_ci_workflow() -> None:
         "check_fixture_coverage.py",
         "check_fixture_generator.py",
         "check_source_refresh.py",
+        "check_alpha_smoke.py",
+        "check_invoice_comparison.py",
+        "check_generated_contract_docs.py",
+        "compare_invoice_dashboard.py",
+        "generate_contract_docs.py",
+        "run_langchain_alpha_smoke.py",
+        "run_vercel_alpha_smoke.mjs",
         "check_schema_taxonomy.py",
         "refresh_price_sources.py",
         "npm run check:packages",
@@ -392,6 +445,7 @@ def check_packaging_docs() -> None:
     migration = (ROOT / "docs/guides/2026-05-26-migration-from-hand-written-formulas.md").read_text(encoding="utf-8")
     api_reference = (ROOT / "docs/reference/api-reference.md").read_text(encoding="utf-8")
     release_process = (ROOT / "docs/process/release-process.md").read_text(encoding="utf-8")
+    source_update = (ROOT / "docs/process/2026-05-26-source-data-update-process.md").read_text(encoding="utf-8")
 
     assert_true(
         "2026-05-26-migration-from-hand-written-formulas.md" in root_readme,
@@ -406,6 +460,16 @@ def check_packaging_docs() -> None:
         assert_true(phrase in api_reference, f"API reference missing CLI command: {phrase}")
         assert_true(phrase in migration, f"migration guide missing CLI command: {phrase}")
         assert_true(phrase in release_process, f"release process missing CLI command: {phrase}")
+    for phrase in ["Ownership", "Cadence", "Review Checklist", "Product Truth Loop"]:
+        assert_true(phrase in source_update, f"source data update process missing section: {phrase}")
+    assert_true(
+        "2026-05-26-source-data-update-process.md" in root_readme,
+        "README must link to source data update process",
+    )
+    assert_true(
+        "2026-05-26-source-data-update-process.md" in release_process,
+        "release process must link to source data update process",
+    )
 
 
 def check_framework_adapter_paths() -> None:

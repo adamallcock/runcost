@@ -491,12 +491,12 @@ Exit gate:
 
 Delivered:
 
-- Canonical tool and feature units cover hosted search, file search, code interpreter, computer-use actions, generic tool calls, request/image/search source pricing, multimodal token details, custom units, and direct provider-reported cost comparison paths.
+- Canonical tool and feature units cover hosted search, file search, code interpreter, computer-use actions, generic tool calls, request/image/search source pricing, multimodal token details, normalized generated media, rerank, transcription, runtime-second, GB-day storage, custom units, and direct provider-reported cost comparison paths.
 - OpenAI Responses raw output fixtures cover hosted tool calls, including web search, file search, code interpreter, computer-use action counts, and function-call counts.
 - OpenRouter/source-adapter fixtures cover request, image, and search pricing; provider-reported cost fixtures cover return/recalculate/compare behavior.
 - Custom internal tool pricing is fixture-backed through user-defined tool components.
 - Unpriced tool/feature usage now emits `tool_component_unpriced` with structured metadata instead of falling through to generic component warnings.
-- Broader provider-specific media generation, transcription, rerank, storage/session, and GB-day billing breadth moves to Milestone 8 feedback and beta/V1 hardening.
+- Broader provider-specific media generation, transcription, rerank, provider-specific storage/session extraction, and live billing validation moves to Milestone 8 feedback and beta/V1 hardening.
 
 ### Milestone 6: Framework Adapters
 
@@ -620,9 +620,12 @@ Use real applications to validate correctness and ergonomics.
 
 Current status:
 
-- Not implemented yet. Existing checks validate fixtures, local package installs,
-  release artifacts, and synthetic examples, but they do not make live SDK/API
-  calls or exercise a real application integration.
+- Partial. A sanitized, optional alpha smoke harness exists with deterministic
+  no-network sample mode and API-key-gated live paths for selected direct API
+  calls. Existing checks validate fixtures, local package installs, release
+  artifacts, synthetic examples, and the smoke harness shape, but Milestone 8 is
+  not complete until at least one live run and one invoice/dashboard comparison
+  have been reviewed.
 
 Alpha scenarios:
 
@@ -645,6 +648,38 @@ Required alpha smoke harness:
   fixture, add a warning, or document the limitation.
 - Must include a no-network mode using checked-in sample responses so the
   smoke harness shape is still testable without credentials.
+
+Delivered so far:
+
+- `scripts/run_alpha_smoke.py` emits sanitized JSON evidence in sample or live
+  mode and requires `--allow-sample-prices` so smoke output is not mistaken for
+  invoice-exact pricing.
+- `scripts/check_alpha_smoke.py` validates deterministic no-network smoke
+  output for OpenAI Responses, Anthropic prompt caching, Vercel AI SDK
+  streamText final usage, LangChain agent metadata, OpenRouter cost comparison,
+  and multi-provider discount scenarios.
+- `fixtures/source-files/alpha-smoke-samples.json` stores checked-in sanitized
+  sample response shapes.
+- `docs/process/alpha-smoke-runbook.md` documents live gates, privacy rules, and
+  the product-truth loop.
+- `docs/process/invoice-dashboard-comparison.md` defines the invoice/dashboard
+  comparison report process.
+- `scripts/compare_invoice_dashboard.py`,
+  `scripts/check_invoice_comparison.py`,
+  `fixtures/source-files/invoice-dashboard-comparison-sample.json`, and
+  `docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md` provide a
+  sanitized comparison sample with exact, estimated, and unsupported
+  classifications.
+- `docs/process/beta-v1-hardening-roadmap.md` keeps public beta, polyglot
+  hardening, provider breadth, and V1 stabilization gates explicit.
+- `scripts/run_vercel_alpha_smoke.mjs` and
+  `scripts/run_langchain_alpha_smoke.py` provide optional framework-specific
+  sample/live smoke entrypoints without adding Vercel AI SDK or LangChain as
+  core dependencies.
+- `docs/reports/2026-05-26-alpha-smoke-live-no-credentials.md` records the
+  first live-harness execution in this environment: safe sanitized skips because
+  API-key environment variables were absent. It is documentation of the finding,
+  not completion of the live-provider-run gate.
 
 Progress criteria:
 
@@ -675,6 +710,30 @@ The finalization path is:
    type generation and drift checks if language maintenance is the largest
    risk, or provider/framework breadth if real integrations fail on coverage.
 
+Release rehearsal progress:
+
+- The guarded release workflow can run with publishing disabled.
+- No-publish runs write an artifact review checklist to the workflow summary.
+- When a remote `v<version>` tag exists, the workflow verifies the Go package
+  from `github.com/adamallcock/runcost/packages/go/ledger@v<version>` without a
+  local `replace`.
+- Actual trusted-publisher configuration, no-publish workflow execution,
+  artifact review, and publishing remain external release operations.
+
+Polyglot hardening progress:
+
+- `scripts/generate_contract_docs.py` generates
+  `docs/generated/contract-taxonomy.md` from `schemas/taxonomy.json`.
+- `scripts/check_generated_contract_docs.py` fails when the checked-in
+  generated contract docs drift from the locked taxonomy.
+- This is the first generated documentation artifact beyond fixture coverage;
+  schema-derived language types remain future hardening.
+- Go now has typed struct wrappers for the normalized usage, price-card,
+  discount-policy, and core calculation path through `UsageLedger`,
+  `PriceCard`, `DiscountPolicy`, `CostOptions`, and `CalculateCostTyped`.
+  These wrappers still delegate to the shared map-backed calculator so the
+  conformance-tested business logic remains single-path.
+
 For evaluation, the next concrete project checkpoint is not more source-adapter
 breadth. It is proving that an installed package can sit next to real SDK calls
 and produce a useful ledger without leaking private data or requiring app code
@@ -696,6 +755,19 @@ Beta requirements:
 - Security/privacy note.
 - Source-data update process.
 - Contribution guide for new providers and fixtures.
+
+Delivered so far:
+
+- Guarded release workflow and local release dry-run checks exist.
+- PyPI/npm trusted-publishing setup instructions exist, but external registry
+  configuration is not verified yet.
+- Real Go tag verification exists in the guarded release workflow when a remote
+  `v<version>` tag is present; no real tag verification evidence has been
+  captured yet.
+- Source-data update ownership, cadence, review checklist, and product-truth
+  loop are documented in
+  `docs/process/2026-05-26-source-data-update-process.md` and checked by
+  release readiness and project hygiene scripts.
 
 Progress criteria:
 

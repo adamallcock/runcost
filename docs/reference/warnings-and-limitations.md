@@ -86,7 +86,7 @@ The current metadata contract is locked in `schemas/taxonomy.json` under
 
 `source_capability_unsupported`: a matching price source explicitly states that it does not price the usage component.
 
-`tool_component_unpriced`: a tool or feature unit, such as hosted search, file search, code interpreter, computer-use actions, function calls, rerank, generation, transcription, or execution seconds, was present but not priced.
+`tool_component_unpriced`: a tool or feature unit, such as hosted search, file search, code interpreter, computer-use actions, function calls, rerank, generation, transcription, execution seconds, or GB-day storage, was present but not priced.
 
 `price_stale`: a matching price card exists, but its source retrieval timestamp is older than the freshness threshold.
 
@@ -99,7 +99,9 @@ The current metadata contract is locked in `schemas/taxonomy.json` under
 ## Current Limitations
 
 - Registry publishing is not complete.
-- Go types are still map-backed prototype types.
+- Go now has typed wrappers for normalized usage, price cards, discounts, and
+  core calculation, but raw provider and framework adapter paths are still
+  map-backed prototype objects.
 - Source adapters are prototypes, not a comprehensive provider price database.
 - Aggregation is first-class only for already-calculated cost ledgers.
 - Streaming support covers selected final-usage event envelopes for OpenAI Responses, Anthropic Messages, and Gemini generateContent, plus warnings for missing expected final usage. It does not estimate usage from arbitrary partial text chunks.
@@ -108,7 +110,7 @@ The current metadata contract is locked in `schemas/taxonomy.json` under
 - Tool-call pricing coverage exists only for selected fixtures and provider shapes.
 - Historical point-in-time pricing exists in the model but is not comprehensive.
 - Framework adapters cover selected usage metadata objects plus initial LangChain callback/context-manager and Vercel `wrapGenerate` / `onFinish` helpers, not every framework callback or streaming pattern.
-- Semantic Kernel, LangSmith, OpenRouter-compatible SDK paths, OpenAI Agents SDK usage objects, and Vercel `streamText` finish objects now have fixture-backed plain-object adapters. Live SDK/API-key smoke and real app validation remain Milestone 8 work.
+- Semantic Kernel, LangSmith, OpenRouter-compatible SDK paths, OpenAI Agents SDK usage objects, and Vercel `streamText` finish objects now have fixture-backed plain-object adapters. A sanitized Milestone 8 smoke harness exists, but live run evidence and real app validation are still incomplete.
 - Haystack, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, LangSmith exports, and Semantic Kernel telemetry are covered only for selected metadata or summary shapes.
 - AutoGen/AG2 support compares AG2-reported cost from usage summaries as framework-reported cost; AG2 custom-price and Azure model-version behavior can make that value differ from RunCost price cards.
 

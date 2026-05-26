@@ -54,6 +54,7 @@ UsageComponentName = Literal[
     "transcription_seconds",
     "endpoint_runtime_seconds",
     "endpoint_instance_hours",
+    "storage_gb_days",
     "custom_units",
 ]
 

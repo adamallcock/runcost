@@ -91,6 +91,12 @@ High-value next adapters:
 
 Source adapters should stay thin. The project should avoid embedding complex provider scraping logic inside the calculator core.
 
+The release-facing update process lives in
+`docs/process/2026-05-26-source-data-update-process.md`. It defines the source
+update owner, cadence, review checklist, and product-truth loop for converting
+source findings into fixtures, warnings, documented limitations, or adapter
+fixes.
+
 Recommended pipeline:
 
 1. Fetch or receive external pricing data.

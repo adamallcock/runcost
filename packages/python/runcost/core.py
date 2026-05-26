@@ -38,6 +38,7 @@ _COMPONENT_ORDER_NAMES = [
     "transcription_seconds",
     "endpoint_runtime_seconds",
     "endpoint_instance_hours",
+    "storage_gb_days",
     "custom_units",
 ]
 _COMPONENT_ORDER = {name: index for index, name in enumerate(_COMPONENT_ORDER_NAMES)}
@@ -54,6 +55,8 @@ _TOOL_OR_FEATURE_COMPONENTS = {
     "video_generation_units",
     "audio_generation_units",
     "transcription_seconds",
+    "endpoint_runtime_seconds",
+    "storage_gb_days",
 }
 
 

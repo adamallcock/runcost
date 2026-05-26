@@ -37,6 +37,41 @@ func ExampleCalculateCost() {
 	// Output: 0.0014
 }
 
+func ExampleCalculateCostTyped() {
+	usageLedger := UsageLedger{
+		SchemaVersion: "0.1",
+		Provider:      "openai",
+		Surface:       "openai.responses",
+		Model: ModelIdentity{
+			Requested:       "gpt-example",
+			Billed:          "gpt-example",
+			AliasResolution: "none",
+		},
+		Components: []UsageComponent{
+			{Name: "input_uncached_tokens", Quantity: "1000", Unit: "token"},
+			{Name: "output_text_tokens", Quantity: "200", Unit: "token"},
+		},
+	}
+	priceCards := []PriceCard{
+		{
+			SchemaVersion: "0.1",
+			ID:            "openai:gpt-example:example",
+			Provider:      "openai",
+			Surface:       "openai.responses",
+			Model:         "gpt-example",
+			Components: []PriceComponent{
+				{UsageComponent: "input_uncached_tokens", Unit: "token", Price: Price{Amount: "1", Currency: "USD", Per: "1000000"}},
+				{UsageComponent: "output_text_tokens", Unit: "token", Price: Price{Amount: "2", Currency: "USD", Per: "1000000"}},
+			},
+			Source: Source{Name: "example"},
+		},
+	}
+
+	result := CalculateCostTyped(usageLedger, priceCards, nil)
+	fmt.Println(result["total"])
+	// Output: 0.0014
+}
+
 func ExampleFromResponse() {
 	response := Object{
 		"model": "gpt-example",

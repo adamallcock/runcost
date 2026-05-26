@@ -20,6 +20,7 @@ REQUIRED_FILES = [
     "CONTRIBUTING.md",
     "SECURITY.md",
     "docs/process/release-process.md",
+    "docs/process/2026-05-26-source-data-update-process.md",
     "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     ".github/workflows/release.yml",
     "scripts/check_release_dry_run.py",
@@ -95,6 +96,12 @@ def check_release_workflow() -> None:
     required_snippets = [
         "workflow_dispatch:",
         "EXPECTED_VERSION: ${{ inputs.version }}",
+        "publish:",
+        "default: false",
+        "Verify Go module from published tag",
+        "go list -m -versions github.com/adamallcock/runcost",
+        "go get github.com/adamallcock/runcost/packages/go/ledger@v${{ inputs.version }}",
+        "No-publish artifact review checklist",
         "npm run check:release",
         "npm run check:release-dry-run",
         "python3 -m build",
@@ -110,6 +117,7 @@ def check_release_workflow() -> None:
 
 def check_release_docs() -> None:
     release_doc = (ROOT / "docs/process/release-process.md").read_text(encoding="utf-8")
+    source_update_doc = (ROOT / "docs/process/2026-05-26-source-data-update-process.md").read_text(encoding="utf-8")
     for phrase in [
         "trusted publishing",
         "Go module",
@@ -123,11 +131,35 @@ def check_release_docs() -> None:
         "Registry README Policy",
         "Workflow filename",
         "Allowed action",
+        "publishing disabled",
+        "real Go tag",
+        "artifact review",
+        "source-data-update-process",
     ]:
         assert_true(re.search(re.escape(phrase), release_doc, re.IGNORECASE), f"release process missing {phrase}")
 
+    for phrase in [
+        "Ownership",
+        "Cadence",
+        "Review Checklist",
+        "Product Truth Loop",
+        "price-source update",
+        "fixture",
+        "structured warning",
+        "documented limitation",
+        "source-adapter fix",
+    ]:
+        assert_true(
+            re.search(re.escape(phrase), source_update_doc, re.IGNORECASE),
+            f"source data update process missing {phrase}",
+        )
+
     contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
     assert_true("fixture" in contributing.lower(), "CONTRIBUTING.md must describe fixture-first workflow")
+    assert_true(
+        "2026-05-26-source-data-update-process.md" in contributing,
+        "CONTRIBUTING.md must link source data update process",
+    )
     security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
     assert_true("OIDC" in security, "SECURITY.md must mention OIDC publishing")
     migration = (ROOT / "docs/guides/2026-05-26-migration-from-hand-written-formulas.md").read_text(encoding="utf-8")

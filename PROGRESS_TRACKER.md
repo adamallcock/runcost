@@ -26,9 +26,9 @@ The tracker separates roadmap state from active work state:
 
 ## Active Focus
 
-Current active lane: Milestones 7 and 5 are complete for current scope; the next recommended lane is Milestone 8 live smoke and alpha feedback.
+Current active lane: Milestone 8 live smoke and alpha feedback.
 
-Why this lane is active: the current objective was to close Milestone 7 first, then Milestone 5. Milestone 7 is closed against the repo-side private-alpha gate, while external registry setup and real published-tag verification remain release operations. Milestone 5 is closed against the current exit gate for OpenAI-style hosted tools, OpenRouter/provider-reported costs, and custom internal tools; broader provider-specific feature breadth moves to Milestone 8 feedback and beta/V1 hardening.
+Why this lane is active: the current objective is to complete the remaining end-to-end plan after Milestones 0-7. Milestone 8 is the next real gate because it proves RunCost beside live SDK/API calls, starts the findings-to-fixtures loop, and produces the first invoice/dashboard comparison evidence.
 
 Doc rename coordination: another agent may rename Markdown files to match repository naming rules. Until that lands, avoid broad documentation churn and re-inspect paths before changing cross-document links.
 
@@ -37,16 +37,18 @@ Doc rename coordination: another agent may rename Markdown files to match reposi
 Evidence collected on 2026-05-26:
 
 - `npm test` passes.
-- Python and JavaScript fixture runner checks 83 shared fixtures, with fixture metadata allowing language-scoped framework ergonomics fixtures.
-- Fixture metadata and checked-in coverage report pass through `python3 scripts/check_fixture_coverage.py` with 83 fixtures.
+- Python and JavaScript fixture runner checks 86 shared fixtures, with fixture metadata allowing language-scoped framework ergonomics fixtures.
+- Fixture metadata and checked-in coverage report pass through `python3 scripts/check_fixture_coverage.py` with 86 fixtures.
 - Source refresh command smoke check passes through `python3 scripts/check_source_refresh.py`.
+- Alpha smoke harness sample-mode check passes through `python3 scripts/check_alpha_smoke.py`; live API-key-gated runs are implemented for selected direct API paths but have not been executed in this repo evidence yet.
 - Go package passes `go test ./packages/go/...`.
+- Go typed normalized usage, price-card, discount-policy, and core calculation wrappers are covered by `packages/go/ledger/typed_api_test.go` and `ExampleCalculateCostTyped`.
 - Python compile check passes for package, scripts, and Python example.
 - JavaScript and Python examples run.
-- Clean package install checks pass for Python, JavaScript/TypeScript, and Go through `npm run check:packages`.
+- Clean package install checks pass for Python, JavaScript/TypeScript, and Go through `npm run check:packages`, including the typed Go core wrapper from a clean temporary module.
 - Release readiness checks pass through `npm run check:release`.
 - No-publish release dry-run checks pass through `npm run check:release-dry-run`.
-- Real-life live SDK/API smoke tests are not implemented yet; current examples and checks use synthetic responses, fixtures, local package installs, or local/live price-source refresh commands.
+- Real-life live SDK/API smoke tests are implemented as optional API-key-gated harnesses, but credentialed provider evidence has not been captured yet; current completed runs use synthetic responses, fixtures, local package installs, no-network sample smoke, or local/live price-source refresh commands.
 - Project hygiene check passes.
 - JSON files parse through `jq`.
 - ASCII scan reports no non-ASCII text.
@@ -90,7 +92,7 @@ Status: complete for this pass.
 | Add Go public API docs and typed examples | Done | Go doc comments in `ledger.go`; `packages/go/ledger/example_test.go`; Go tests pass | Examples cover `CalculateCost` and `FromResponse`. |
 | Add public API parity matrix | Done | `docs/notes/api-parity-matrix.md`; hygiene check validates public API names | Tracks Python, JS/TS, and Go support by capability. |
 | Add debug trace fixture shape | Done | `schemas/debug-trace.schema.json`, `debug-trace-explain-decisions.json`; `npm test` passes | Optional `debug_trace` / `debugTrace` explains price-card, component, alias, discount, and warning decisions. |
-| Add fixture metadata fields | Done | `schemas/fixture.schema.json`; all 83 fixtures include `metadata` | Metadata covers requirement IDs, provider, surface, scenario, tags, and expected languages. |
+| Add fixture metadata fields | Done | `schemas/fixture.schema.json`; all 86 fixtures include `metadata` | Metadata covers requirement IDs, provider, surface, scenario, tags, and expected languages. |
 | Add fixture coverage report | Done | `docs/reports/fixture-coverage.md`; `scripts/check_fixture_coverage.py`; `npm test` passes | Reports scenarios, provider surfaces, components, warning codes, source adapters, framework adapters, requirements, tags, and expected languages. |
 | Add generated-artifact drift checks | Done | `scripts/check_project_hygiene.py`; `npm test` runs it | Starts as required-artifact, package metadata, parity, fixture floor, and CI command checks. |
 | Add CI workflow | Done | `.github/workflows/ci.yml`; hygiene check passes | CI runs conformance tests, examples, and Python compile checks. |
@@ -114,20 +116,67 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 |---|---|---:|---|---|
 | Milestone 0: Prototype Foundation | Complete for current scope | No | `npm test` passes; cores, examples, schemas, and broad shared fixtures exist. | Later type hardening moved into Milestones 1 and 1.5. |
 | Milestone 1: Contract Hardening | Complete for current scope | No | Schemas exist; fixture runner validates schemas including debug traces and fixture metadata; warning fixtures exist; coverage report and hygiene checks exist; fixture generator helpers now create runnable normalized-usage fixture skeletons; Go fixture tests validate generated cost-ledger structure and exact component totals; v0.1 taxonomy lock is checked by `scripts/check_schema_taxonomy.py`. | Future schema-derived type generation is tracked under Milestone 1.5. |
-| Milestone 1.5: Polyglot Toolchain Foundation | Complete for current scope | No | Decision record, manual type artifacts, parity matrix, Go examples, hygiene checks, and CI workflow exist. | Generated/schema-derived type workflow remains a later hardening item, not a current active lane. |
+| Milestone 1.5: Polyglot Toolchain Foundation | Complete for current scope | No | Decision record, manual type artifacts, parity matrix, Go examples, generated taxonomy docs, generated-doc drift checks, hygiene checks, and CI workflow exist. | Schema-derived language type workflow remains a later hardening item, not a current active lane. |
 | Milestone 2: Core Calculator Correctness | Complete for current scope | No | Decimal-safe calculator, aliases, strict/compatibility modes, effective dates, service tiers, stale prices, provider-reported cost modes, source priority, deterministic price-card tie-breaking, source disagreement, debug traces, long-context thresholds, batch/priority/provisioned fixtures, typed warning metadata payloads, adversarial decimal precision coverage, cross-language component-total invariant checks, and byte-stable component/source/discount/warning ordering checks exist. | Later beta/V1 hardening can add more edge-case fixtures as real smoke tests find them. |
 | Milestone 3: Source Adapter Layer | Complete for current scope | No | `llm-prices` current and historical feeds, LiteLLM, Portkey, OpenRouter models, models.dev, reviewed official snapshots, source-cache envelopes, local JSON/YAML file loading, explicit refresh command, source capability warnings, user compact pricing, and Helicone prototype adapters exist. | Later source expansion moves to beta/V1 hardening. |
 | Milestone 4: Provider Extractors V0 | Complete for current scope | No | OpenAI Responses, OpenAI Chat Completions, OpenAI Embeddings, Anthropic, OpenRouter, Groq, xAI Chat Completions and xAI Responses, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Gemini/Vertex, Bedrock Converse, and Bedrock InvokeModel extractors exist for selected surfaces; selected final streaming usage cases are fixture-backed; OpenAI Conversations are documented as non-cost-bearing state resources whose costs attach to Responses. | Additional stream protocols, provider-specific generated media, rerank, transcription, and deeper provider-specific feature fields move to beta/V1 hardening. |
-| Milestone 5: Tool Call and Feature Pricing | Complete for current scope | No | Generic and raw OpenAI tool-call fixtures exist, including web search, file search, code interpreter, computer-use actions, and function calls; OpenRouter request/image/search source pricing, provider-reported cost modes, Gemini/Vertex multimodal token details, and custom internal tool components exist. | Broader provider-specific generated media, transcription, rerank, storage/session, GB-day, and live provider validation move to Milestone 8/beta hardening. |
+| Milestone 5: Tool Call and Feature Pricing | Complete for current scope | No | Generic and raw OpenAI tool-call fixtures exist, including web search, file search, code interpreter, computer-use actions, and function calls; OpenRouter request/image/search source pricing, provider-reported cost modes, Gemini/Vertex multimodal token details, normalized generated media, transcription, rerank, runtime-second, GB-day storage pricing, and custom internal tool components exist. | Broader provider-specific generated media, transcription, rerank, provider-specific storage/session extraction, and live provider validation move to Milestone 8/beta hardening. |
 | Milestone 6: Framework Adapters | Complete for current scope | No | LangChain AIMessage, OpenAI Agents SDK usage objects, Vercel AI SDK generateText and streamText finish objects, LlamaIndex TokenCountingHandler, Haystack metadata, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, LangSmith run/export usage, Semantic Kernel telemetry, OpenRouter SDK responses, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` and `onFinish` helpers, and aggregation exist with fixtures. | Live SDK/API-key smoke, real application validation, deeper framework callback variants, and smoke-derived examples move to Milestone 8/beta hardening. |
 | Milestone 7: Packaging and Developer Experience | Complete for current scope | No | Package metadata, types, examples, CI, clean install checks, Python package CLI, migration guide, alpha docs, license metadata, changelog, contributing/security docs, registry README policy, release process, release readiness checks, guarded release workflow, and local no-publish release dry run exist. | First registry publication, external trusted publisher configuration, and real post-tag Go module verification remain release operations outside the repo-side private-alpha gate. |
-| Milestone 8: Alpha Quality and Feedback | Not started | No | No live SDK/API/application smoke harness exists yet. Current evidence is local fixtures, examples, clean package installs, and release dry runs. | Real application alpha runs, issue-to-fixture loop, invoice/dashboard comparison, and integration ergonomics validation. |
-| Milestone 9: Public Beta | Not started | No | None. | Stable v0.x schemas, package publishing pipeline, source-data update process, and public dependency caveats. |
+| Milestone 8: Alpha Quality and Feedback | Partial | Yes | `scripts/run_alpha_smoke.py`, `scripts/run_vercel_alpha_smoke.mjs`, `scripts/run_langchain_alpha_smoke.py`, `scripts/check_alpha_smoke.py`, `fixtures/source-files/alpha-smoke-samples.json`, and `docs/process/alpha-smoke-runbook.md` exist; sample mode covers OpenAI Responses, Anthropic prompt caching, Vercel stream finish, LangChain metadata, OpenRouter cost comparison, and multi-provider discounts without credentials. Sanitized invoice/dashboard comparison mechanics exist through `scripts/compare_invoice_dashboard.py`, `scripts/check_invoice_comparison.py`, `fixtures/source-files/invoice-dashboard-comparison-sample.json`, and `docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md`. | Execute at least one credentialed live SDK/API run, classify all live findings, and run a real provider dashboard/invoice/usage-export comparison. |
+| Milestone 9: Public Beta | Partial | No | Guarded release workflow, trusted-publishing docs, no-publish artifact review checklist, local release dry run, real Go tag verification path, and source-data update owner/cadence/review process exist. | External PyPI/npm trusted publisher configuration, actual no-publish workflow run review, real tag Go verification, and beta caveat review remain. |
 | Milestone 10: V1 | Not started | No | None. | Stable schemas/warning codes/package APIs, production-ready packages, strong provider/source coverage, historical-pricing path, and top framework integrations. |
 
 ## Work Log
 
 ### 2026-05-26
+
+- Started Milestone 8 alpha quality gate.
+- Added optional sanitized alpha smoke harness:
+  - `scripts/run_alpha_smoke.py`
+  - `scripts/check_alpha_smoke.py`
+  - `fixtures/source-files/alpha-smoke-samples.json`
+- Sample mode is no-network and checks OpenAI Responses, Anthropic prompt caching, Vercel AI SDK streamText final usage, LangChain agent metadata, OpenRouter cost comparison, and multi-provider discount scenarios.
+- Live mode is explicit, API-key-gated, and currently supports selected direct API paths for OpenAI Responses, Anthropic Messages, and OpenRouter chat completions.
+- Added optional framework-specific smoke scripts:
+  - `scripts/run_vercel_alpha_smoke.mjs`
+  - `scripts/run_langchain_alpha_smoke.py`
+- Vercel and LangChain live scripts are API-key-gated and dependency-optional; missing credentials or optional SDK packages produce sanitized skipped reports.
+- Ran the aggregate live harness in the current environment. It produced sanitized skipped reports for OpenAI, Anthropic, OpenRouter, Vercel, and LangChain because API-key environment variables were not set, plus a passing local multi-provider discount scenario.
+- Captured that finding as `docs/reports/2026-05-26-alpha-smoke-live-no-credentials.md`; this is product-truth documentation for the no-credential state, not completion of the live-provider-run gate.
+- Added sanitized invoice/dashboard comparison mechanics:
+  - `scripts/compare_invoice_dashboard.py`
+  - `scripts/check_invoice_comparison.py`
+  - `fixtures/source-files/invoice-dashboard-comparison-sample.json`
+  - `docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md`
+- The sample comparison classifies exact, estimated, and unsupported fields and documents product-truth actions. It proves the comparison workflow, but a real provider dashboard/invoice/usage export is still required before Milestone 8 invoice validation is complete.
+- Advanced package publication readiness without publishing:
+  - release workflow now has a no-publish artifact review checklist in the GitHub step summary;
+  - release workflow verifies `github.com/adamallcock/runcost/packages/go/ledger@v<version>` from the real remote tag when that tag exists, without a local `replace`;
+  - release process docs distinguish local dry-run `replace` checks from real Go tag verification.
+- Advanced polyglot generated-artifact hardening:
+  - `scripts/generate_contract_docs.py` generates `docs/generated/contract-taxonomy.md` from `schemas/taxonomy.json`;
+  - `scripts/check_generated_contract_docs.py` fails on generated contract-doc drift;
+  - `npm run generate:contracts` refreshes the checked-in generated docs.
+- Advanced Go API hardening:
+  - added typed structs for normalized usage, model identity, usage components, price cards, price components, prices, sources, effective ranges, discount policies, discount matches, discount adjustments, and calculator options;
+  - added `CalculateCostTyped`, `CalculateCostTypedWithMode`, and `CalculateCostTypedWithOptions` as typed wrappers over the existing conformance-tested calculator;
+  - added `packages/go/ledger/typed_api_test.go` and `ExampleCalculateCostTyped` so the typed API is exercised in Go tests.
+- Advanced provider/feature breadth:
+  - added `storage_gb_days` as a canonical component with `gb_day` units across schemas, taxonomy, Python types, TypeScript declarations, Go ordering, and tool/feature warning classification;
+  - added `fixtures/storage-gb-day-pricing.json` to prove normalized GB-day storage pricing across Python, JavaScript/TypeScript, and Go;
+  - added `fixtures/feature-pricing-generated-media-rerank-transcription.json` to prove normalized generated image, video, audio, rerank, transcription, tool-execution-second, and endpoint-runtime-second pricing across Python, JavaScript/TypeScript, and Go;
+  - added `fixtures/feature-component-unpriced-warning.json` to prove unpriced runtime-second feature usage emits `tool_component_unpriced`;
+  - regenerated contract taxonomy docs and fixture coverage; fixture count is now 86.
+- Advanced public-beta source-data process hardening:
+  - added `docs/process/2026-05-26-source-data-update-process.md` with owner, cadence, review checklist, and product-truth loop for source refreshes;
+  - linked the process from README, source-adapter docs, release process, beta/V1 roadmap, and contributing guide;
+  - added project hygiene and release readiness checks so the source-data process remains part of beta/release validation.
+- Added docs:
+  - `docs/process/alpha-smoke-runbook.md`
+  - `docs/process/invoice-dashboard-comparison.md`
+  - `docs/process/2026-05-26-source-data-update-process.md`
+  - `docs/process/beta-v1-hardening-roadmap.md`
 
 - Completed Milestone 5 for the current tool-call and feature-pricing scope.
 - Added `openai-responses-raw-computer-and-function-tools.json` to fixture OpenAI Responses `computer_call` action counts and `function_call` counts as first-class tool/feature components across Python, JavaScript/TypeScript, and Go.
@@ -1149,7 +1198,7 @@ Language support today:
 
 - Python: first-class prototype package. Public functions, manual `TypedDict` contracts, source install, package smoke checks, examples, and fixture conformance exist.
 - JavaScript/TypeScript: first-class prototype package. ESM runtime, manual TypeScript declarations, npm package README, tarball install checks, examples, and fixture conformance exist.
-- Go: first-class conformance participant for core/package behavior, but still a prototype map-backed API. Go has docs, examples, fixture tests, clean-module import checks, and source-adapter/helper functions, but not stable generated structs.
+- Go: first-class conformance participant for core/package behavior. Go now has typed wrappers for normalized usage, price cards, discount policies, calculator options, and core calculation, while raw provider/framework/source paths remain map-backed prototype APIs.
 - Future languages: not started. New language support should not begin until schema-derived artifacts and alpha smoke results stabilize Python, JavaScript/TypeScript, and Go.
 
 Finalization path after the Milestones 0-4 completion pass:
@@ -1192,7 +1241,7 @@ Supported languages today:
 
 - Python: first-class prototype core, typed with manual `TypedDict` contracts, package metadata exists in `pyproject.toml`, examples run, and clean local install checks pass.
 - JavaScript/TypeScript: first-class prototype ESM core, manual `index.d.ts` declarations, package metadata exists, package tarball install checks pass, publish allowlist exists, and guarded npm publish workflow exists, but no registry release has been cut yet.
-- Go: first-class conformance participant with public functions, docs, example tests, public GitHub module path, and clean module import checks, but still map-backed prototype APIs rather than stable schema-derived structs.
+- Go: first-class conformance participant with public functions, docs, example tests, public GitHub module path, clean module import checks, and typed wrappers for the normalized usage/price-card/discount core path. Raw provider/framework/source APIs are still map-backed rather than schema-derived structs.
 - Future languages: no implementation yet. The policy says future languages must consume schemas and fixtures first.
 
 What is implemented and well covered:
@@ -1220,7 +1269,7 @@ What is implemented and well covered:
 Partially implemented:
 
 - Contract hardening is complete for the current prototype scope: schema validation, fixture metadata, debug trace fixtures, fixture coverage reporting, single-fixture validation, fixture generator helpers, Go-side cost-ledger structure/component-total/output-order validation, and a machine-checked v0.1 taxonomy lock exist. Broader schema-derived type generation is tracked under Milestone 1.5.
-- Polyglot maintainability: parity matrix and hygiene checks exist, but generated type/docs workflows are not real yet. TypeScript and Python types are manual. Go uses object maps.
+- Polyglot maintainability: parity matrix and hygiene checks exist, and generated taxonomy docs now have drift checks. TypeScript and Python types are manual. Go has typed wrappers for the core normalized usage/price-card/discount path, but provider/framework/source APIs still use object maps.
 - Go conformance: Go runs every fixture, validates generated cost-ledger structure, enforces exact component-total invariants, checks byte-stable output ordering and warning metadata keys, and checks expected subsets. Full JSON Schema validation and schema-derived structs remain future hardening work.
 - Source adapters: complete for the current prototype scope. Core adapters exist for nine source families plus local JSON/YAML file loading and an explicit source refresh command, including source-cache envelopes, models.dev enrichment, reviewed official pricing snapshots, source capability warnings, user compact pricing, and Helicone model-registry data. Later source expansion moves to beta/V1 hardening.
 - Historical pricing: effective dates and `llm-prices` historical feed date windows are fixture-proven, but broader provider historical catalogs and migration semantics remain future hardening.
@@ -1238,7 +1287,7 @@ Stubs or placeholders:
 - Public API type surfaces are manually maintained placeholders for generated/schema-derived models.
 - `scripts/check_project_hygiene.py` and `scripts/check_release_readiness.py` are useful guards but still mostly check presence, API-name strings, fixture floor, fixture metadata presence, package metadata, CI commands, release docs, version sync, and release workflow snippets. They are not yet full drift detectors.
 - README now provides alpha package onboarding and links to public docs, but does not yet represent a production-ready package.
-- Go APIs are explicitly prototype map-backed `Object` functions.
+- Go APIs still include prototype map-backed `Object` functions for raw provider, framework, and source-adapter paths; the normalized usage/price-card/discount calculation path now has typed wrappers.
 
 Highest-risk gaps before private alpha:
 

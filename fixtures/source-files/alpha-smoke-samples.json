@@ -1,0 +1,100 @@
+{
+  "schema_version": "0.1",
+  "description": "Sanitized no-network sample provider and framework response shapes for the optional alpha smoke harness.",
+  "scenarios": {
+    "anthropic_prompt_caching": {
+      "response": {
+        "id": "msg_alpha_sample",
+        "model": "claude-alpha-smoke",
+        "type": "message",
+        "usage": {
+          "cache_creation_input_tokens": 150,
+          "cache_creation_input_tokens_1h": 50,
+          "cache_read_input_tokens": 1000,
+          "input_tokens": 42,
+          "output_tokens": 64
+        }
+      }
+    },
+    "langchain_agent_run": {
+      "message": {
+        "response_metadata": {
+          "model_name": "gpt-alpha-smoke"
+        },
+        "usage_metadata": {
+          "input_token_details": {
+            "cache_creation": 5,
+            "cache_read": 25
+          },
+          "input_tokens": 140,
+          "output_token_details": {
+            "reasoning": 12
+          },
+          "output_tokens": 48
+        }
+      }
+    },
+    "openai_responses": {
+      "response": {
+        "id": "resp_alpha_sample",
+        "model": "gpt-alpha-smoke",
+        "object": "response",
+        "output": [
+          {
+            "id": "ws_alpha_sample",
+            "status": "completed",
+            "type": "web_search_call"
+          },
+          {
+            "call_id": "call_alpha_sample",
+            "name": "lookup",
+            "type": "function_call"
+          }
+        ],
+        "usage": {
+          "input_tokens": 120,
+          "input_tokens_details": {
+            "cached_tokens": 20
+          },
+          "output_tokens": 40,
+          "output_tokens_details": {
+            "reasoning_tokens": 8
+          }
+        }
+      }
+    },
+    "openrouter_cost_compare": {
+      "response": {
+        "id": "gen-alpha-sample",
+        "model": "openai/gpt-alpha-smoke",
+        "usage": {
+          "completion_tokens": 20,
+          "cost": "0.0004",
+          "prompt_tokens": 80
+        }
+      }
+    },
+    "vercel_ai_sdk_stream_text": {
+      "finish": {
+        "finishReason": "stop",
+        "model": {
+          "modelId": "gpt-alpha-smoke",
+          "provider": "openai"
+        },
+        "totalUsage": {
+          "inputTokenDetails": {
+            "cacheReadTokens": 10,
+            "cacheWriteTokens": 10,
+            "noCacheTokens": 70
+          },
+          "inputTokens": 90,
+          "outputTokenDetails": {
+            "reasoningTokens": 6,
+            "textTokens": 24
+          },
+          "outputTokens": 30
+        }
+      }
+    }
+  }
+}

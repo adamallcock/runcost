@@ -1,0 +1,182 @@
+{
+  "schema_version": "0.1",
+  "comparison_id": "openai-alpha-smoke-sample-2026-05-26",
+  "description": "Sanitized reviewed dashboard-style sample for validating RunCost invoice/dashboard comparison mechanics without private billing exports.",
+  "safe_to_commit": true,
+  "contains_private_billing_export": false,
+  "provider": {
+    "name": "openai",
+    "surface": "openai.responses",
+    "model": "gpt-alpha-smoke",
+    "source": "sanitized_dashboard_sample",
+    "window": "2026-05-26T00:00:00Z/2026-05-26T00:05:00Z",
+    "values": {
+      "request_count": "1",
+      "input_tokens": "120",
+      "cached_input_tokens": "20",
+      "output_tokens": "40",
+      "reasoning_tokens": "8",
+      "tool_search_units": "1",
+      "provider_reported_cost": "0.011188",
+      "runcost_total": "0.011182",
+      "discounts_credits_taxes": "-0.000004"
+    }
+  },
+  "runcost": {
+    "source": "sample_alpha_smoke_ledger",
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-alpha-smoke",
+        "returned": "gpt-alpha-smoke",
+        "billed": "gpt-alpha-smoke",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.0001",
+          "price_card_id": "openai:gpt-alpha-smoke:alpha-smoke-sample",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.000002",
+          "price_card_id": "openai:gpt-alpha-smoke:alpha-smoke-sample",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "32",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.000064",
+          "price_card_id": "openai:gpt-alpha-smoke:alpha-smoke-sample",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "8",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.000016",
+          "price_card_id": "openai:gpt-alpha-smoke:alpha-smoke-sample",
+          "discount_eligible": true
+        },
+        {
+          "name": "web_search_units",
+          "quantity": "1",
+          "unit": "search",
+          "unit_price": "0.01",
+          "cost": "0.01",
+          "price_card_id": "openai:gpt-alpha-smoke:alpha-smoke-sample",
+          "discount_eligible": true
+        },
+        {
+          "name": "tool_call_units",
+          "quantity": "1",
+          "unit": "call",
+          "unit_price": "0.001",
+          "cost": "0.001",
+          "price_card_id": "openai:gpt-alpha-smoke:alpha-smoke-sample",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.011182",
+      "price_sources": [
+        {
+          "name": "alpha-smoke-sample",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  },
+  "field_mappings": [
+    {
+      "field": "request_count",
+      "provider_path": "$.provider.values.request_count",
+      "runcost_value": "1",
+      "status_rule": "exact",
+      "notes": "One sanitized smoke request maps to one dashboard request row."
+    },
+    {
+      "field": "input_tokens",
+      "provider_path": "$.provider.values.input_tokens",
+      "components": [
+        "input_uncached_tokens",
+        "input_cache_read_tokens"
+      ],
+      "status_rule": "exact",
+      "notes": "Provider dashboard reports total prompt/input tokens including cached reads."
+    },
+    {
+      "field": "cached_input_tokens",
+      "provider_path": "$.provider.values.cached_input_tokens",
+      "components": [
+        "input_cache_read_tokens"
+      ],
+      "status_rule": "exact",
+      "notes": "Provider and RunCost both expose cached read tokens."
+    },
+    {
+      "field": "output_tokens",
+      "provider_path": "$.provider.values.output_tokens",
+      "components": [
+        "output_text_tokens",
+        "output_reasoning_tokens"
+      ],
+      "status_rule": "exact",
+      "notes": "Provider output total includes visible text plus reasoning tokens."
+    },
+    {
+      "field": "reasoning_tokens",
+      "provider_path": "$.provider.values.reasoning_tokens",
+      "components": [
+        "output_reasoning_tokens"
+      ],
+      "status_rule": "exact",
+      "notes": "Reasoning tokens are first-class in the cost ledger."
+    },
+    {
+      "field": "tool_search_units",
+      "provider_path": "$.provider.values.tool_search_units",
+      "components": [
+        "web_search_units"
+      ],
+      "status_rule": "exact",
+      "notes": "Hosted search is represented as one search unit."
+    },
+    {
+      "field": "provider_reported_cost",
+      "provider_path": "$.provider.values.provider_reported_cost",
+      "runcost_path": "$.runcost.cost_ledger.total",
+      "status_rule": "estimated",
+      "tolerance": "0.00001",
+      "notes": "Dashboard total includes provider-side rounding and a small adjustment not represented by the sample price card."
+    },
+    {
+      "field": "runcost_total",
+      "provider_path": "$.provider.values.runcost_total",
+      "runcost_path": "$.runcost.cost_ledger.total",
+      "status_rule": "exact",
+      "notes": "Dashboard sample stores the reviewed RunCost total for traceability."
+    },
+    {
+      "field": "discounts_credits_taxes",
+      "provider_path": "$.provider.values.discounts_credits_taxes",
+      "status_rule": "unsupported",
+      "notes": "Provider-side credits, taxes, and rounded adjustments are not modeled by RunCost cost ledgers."
+    }
+  ]
+}

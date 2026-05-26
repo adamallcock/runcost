@@ -43,6 +43,7 @@ var componentOrderNames = []string{
 	"transcription_seconds",
 	"endpoint_runtime_seconds",
 	"endpoint_instance_hours",
+	"storage_gb_days",
 	"custom_units",
 }
 
@@ -67,11 +68,476 @@ var toolOrFeatureComponents = map[string]bool{
 	"video_generation_units":         true,
 	"audio_generation_units":         true,
 	"transcription_seconds":          true,
+	"endpoint_runtime_seconds":       true,
+	"storage_gb_days":                true,
 }
 
 // Object is the prototype map-backed representation for canonical ledgers,
 // price cards, discount policies, provider responses, and adapter inputs.
 type Object = map[string]any
+
+// ModelIdentity identifies the requested, returned, and billable model names
+// on a canonical usage ledger.
+type ModelIdentity struct {
+	Requested       string
+	Returned        string
+	Billed          string
+	AliasResolution string
+}
+
+// Object converts the model identity to the canonical schema-shaped object.
+func (model ModelIdentity) Object() Object {
+	result := Object{"requested": model.Requested}
+	if model.Returned != "" {
+		result["returned"] = model.Returned
+	}
+	if model.Billed != "" {
+		result["billed"] = model.Billed
+	}
+	if model.AliasResolution != "" {
+		result["alias_resolution"] = model.AliasResolution
+	}
+	return result
+}
+
+// ToolMetadata describes a tool or feature usage component's billing source.
+type ToolMetadata struct {
+	Provider      string
+	Name          string
+	BillingSource string
+}
+
+// Object converts tool metadata to the canonical schema-shaped object.
+func (tool ToolMetadata) Object() Object {
+	result := Object{}
+	if tool.Provider != "" {
+		result["provider"] = tool.Provider
+	}
+	if tool.Name != "" {
+		result["name"] = tool.Name
+	}
+	if tool.BillingSource != "" {
+		result["billing_source"] = tool.BillingSource
+	}
+	return result
+}
+
+// UsageComponent is a typed Go representation of a canonical usage component.
+type UsageComponent struct {
+	Name       string
+	Quantity   string
+	Unit       string
+	Tool       *ToolMetadata
+	SourcePath string
+	Metadata   Object
+}
+
+// Object converts the usage component to the canonical schema-shaped object.
+func (component UsageComponent) Object() Object {
+	result := Object{
+		"name":     component.Name,
+		"quantity": component.Quantity,
+		"unit":     component.Unit,
+	}
+	if component.Tool != nil {
+		result["tool"] = component.Tool.Object()
+	}
+	if component.SourcePath != "" {
+		result["source_path"] = component.SourcePath
+	}
+	if component.Metadata != nil {
+		result["metadata"] = component.Metadata
+	}
+	return result
+}
+
+// UsageLedger is a typed Go representation of the canonical normalized usage
+// ledger contract.
+type UsageLedger struct {
+	SchemaVersion string
+	Provider      string
+	Surface       string
+	Model         ModelIdentity
+	Context       Object
+	Components    []UsageComponent
+	RawUsage      Object
+	Metadata      Object
+}
+
+// Object converts the usage ledger to the canonical schema-shaped object.
+func (usage UsageLedger) Object() Object {
+	result := Object{
+		"schema_version": usage.SchemaVersion,
+		"provider":       usage.Provider,
+		"surface":        usage.Surface,
+		"model":          usage.Model.Object(),
+		"components":     usageComponentsToAny(usage.Components),
+	}
+	if usage.Context != nil {
+		result["context"] = usage.Context
+	}
+	if usage.RawUsage != nil {
+		result["raw_usage"] = usage.RawUsage
+	}
+	if usage.Metadata != nil {
+		result["metadata"] = usage.Metadata
+	}
+	return result
+}
+
+// Price is a typed Go representation of a component price.
+type Price struct {
+	Amount   string
+	Currency string
+	Per      string
+}
+
+// Object converts the price to the canonical schema-shaped object.
+func (price Price) Object() Object {
+	return Object{
+		"amount":   price.Amount,
+		"currency": price.Currency,
+		"per":      price.Per,
+	}
+}
+
+// PriceConditions limits a price component to a context such as a long-context
+// token range.
+type PriceConditions struct {
+	MinTotalInputTokens string
+	MaxTotalInputTokens string
+}
+
+// Object converts price conditions to the canonical schema-shaped object.
+func (conditions PriceConditions) Object() Object {
+	result := Object{}
+	if conditions.MinTotalInputTokens != "" {
+		result["min_total_input_tokens"] = conditions.MinTotalInputTokens
+	}
+	if conditions.MaxTotalInputTokens != "" {
+		result["max_total_input_tokens"] = conditions.MaxTotalInputTokens
+	}
+	return result
+}
+
+// PriceComponent is a typed Go representation of a canonical price component.
+type PriceComponent struct {
+	UsageComponent   string
+	Unit             string
+	Price            Price
+	DiscountEligible *bool
+	Conditions       *PriceConditions
+	Notes            string
+}
+
+// Object converts the price component to the canonical schema-shaped object.
+func (component PriceComponent) Object() Object {
+	result := Object{
+		"usage_component": component.UsageComponent,
+		"unit":            component.Unit,
+		"price":           component.Price.Object(),
+	}
+	if component.DiscountEligible != nil {
+		result["discount_eligible"] = *component.DiscountEligible
+	}
+	if component.Conditions != nil {
+		result["conditions"] = component.Conditions.Object()
+	}
+	if component.Notes != "" {
+		result["notes"] = component.Notes
+	}
+	return result
+}
+
+// Source identifies where a canonical price card came from.
+type Source struct {
+	Name        string
+	URL         string
+	RetrievedAt string
+	Version     string
+	License     string
+}
+
+// Object converts the source metadata to the canonical schema-shaped object.
+func (source Source) Object() Object {
+	result := Object{"name": source.Name}
+	if source.URL != "" {
+		result["url"] = source.URL
+	}
+	if source.RetrievedAt != "" {
+		result["retrieved_at"] = source.RetrievedAt
+	}
+	if source.Version != "" {
+		result["version"] = source.Version
+	}
+	if source.License != "" {
+		result["license"] = source.License
+	}
+	return result
+}
+
+// EffectiveRange describes when a price card or discount policy applies.
+type EffectiveRange struct {
+	From string
+	To   string
+}
+
+// Object converts the effective range to the canonical schema-shaped object.
+func (effective EffectiveRange) Object() Object {
+	result := Object{}
+	if effective.From != "" {
+		result["from"] = effective.From
+	}
+	if effective.To != "" {
+		result["to"] = effective.To
+	}
+	return result
+}
+
+// PriceCard is a typed Go representation of a canonical price card.
+type PriceCard struct {
+	SchemaVersion string
+	ID            string
+	Provider      string
+	Surface       string
+	Model         string
+	Aliases       []string
+	ServiceTier   string
+	Region        string
+	Effective     *EffectiveRange
+	Components    []PriceComponent
+	Source        Source
+	Metadata      Object
+}
+
+// Object converts the price card to the canonical schema-shaped object.
+func (card PriceCard) Object() Object {
+	result := Object{
+		"schema_version": card.SchemaVersion,
+		"id":             card.ID,
+		"provider":       card.Provider,
+		"model":          card.Model,
+		"components":     priceComponentsToAny(card.Components),
+		"source":         card.Source.Object(),
+	}
+	if card.Surface != "" {
+		result["surface"] = card.Surface
+	}
+	if len(card.Aliases) > 0 {
+		result["aliases"] = stringsToAny(card.Aliases)
+	}
+	if card.ServiceTier != "" {
+		result["service_tier"] = card.ServiceTier
+	}
+	if card.Region != "" {
+		result["region"] = card.Region
+	}
+	if card.Effective != nil {
+		result["effective"] = card.Effective.Object()
+	}
+	if card.Metadata != nil {
+		result["metadata"] = card.Metadata
+	}
+	return result
+}
+
+// DiscountMatch describes when a discount policy applies.
+type DiscountMatch struct {
+	Provider          string
+	Surface           string
+	Model             string
+	ServiceTier       string
+	Region            string
+	Components        []string
+	ExcludeComponents []string
+	Tags              map[string]string
+}
+
+// Object converts the discount match to the canonical schema-shaped object.
+func (match DiscountMatch) Object() Object {
+	result := Object{}
+	if match.Provider != "" {
+		result["provider"] = match.Provider
+	}
+	if match.Surface != "" {
+		result["surface"] = match.Surface
+	}
+	if match.Model != "" {
+		result["model"] = match.Model
+	}
+	if match.ServiceTier != "" {
+		result["service_tier"] = match.ServiceTier
+	}
+	if match.Region != "" {
+		result["region"] = match.Region
+	}
+	if len(match.Components) > 0 {
+		result["components"] = stringsToAny(match.Components)
+	}
+	if len(match.ExcludeComponents) > 0 {
+		result["exclude_components"] = stringsToAny(match.ExcludeComponents)
+	}
+	if len(match.Tags) > 0 {
+		tags := Object{}
+		for key, value := range match.Tags {
+			tags[key] = value
+		}
+		result["tags"] = tags
+	}
+	return result
+}
+
+// DiscountAdjustment describes the discount or markup applied by a policy.
+type DiscountAdjustment struct {
+	Type  string
+	Value string
+}
+
+// Object converts the discount adjustment to the canonical schema-shaped
+// object.
+func (adjustment DiscountAdjustment) Object() Object {
+	return Object{
+		"type":  adjustment.Type,
+		"value": adjustment.Value,
+	}
+}
+
+// DiscountPolicy is a typed Go representation of a canonical discount policy.
+type DiscountPolicy struct {
+	SchemaVersion string
+	ID            string
+	Description   string
+	Match         DiscountMatch
+	Effective     *EffectiveRange
+	Adjustment    DiscountAdjustment
+	Precedence    *int
+	Metadata      Object
+}
+
+// Object converts the discount policy to the canonical schema-shaped object.
+func (policy DiscountPolicy) Object() Object {
+	result := Object{
+		"schema_version": policy.SchemaVersion,
+		"id":             policy.ID,
+		"adjustment":     policy.Adjustment.Object(),
+	}
+	if policy.Description != "" {
+		result["description"] = policy.Description
+	}
+	match := policy.Match.Object()
+	if len(match) > 0 {
+		result["match"] = match
+	}
+	if policy.Effective != nil {
+		result["effective"] = policy.Effective.Object()
+	}
+	if policy.Precedence != nil {
+		result["precedence"] = *policy.Precedence
+	}
+	if policy.Metadata != nil {
+		result["metadata"] = policy.Metadata
+	}
+	return result
+}
+
+// CostOptions is a typed Go wrapper for common calculator options. Raw can be
+// used for temporary experimental options that are already understood by the
+// map-backed core.
+type CostOptions struct {
+	Mode                     string
+	PriceSourcePriority      []string
+	ProviderReportedCost     string
+	ProviderReportedCostMode string
+	StaleAfterDays           *int
+	DebugTrace               bool
+	Raw                      Object
+}
+
+// Object converts calculator options to the map-backed option object consumed
+// by the core.
+func (options CostOptions) Object() Object {
+	result := Object{}
+	for key, value := range options.Raw {
+		result[key] = value
+	}
+	if options.Mode != "" {
+		result["mode"] = options.Mode
+	}
+	if len(options.PriceSourcePriority) > 0 {
+		result["price_source_priority"] = stringsToAny(options.PriceSourcePriority)
+	}
+	if options.ProviderReportedCost != "" {
+		result["provider_reported_cost"] = options.ProviderReportedCost
+	}
+	if options.ProviderReportedCostMode != "" {
+		result["provider_reported_cost_mode"] = options.ProviderReportedCostMode
+	}
+	if options.StaleAfterDays != nil {
+		result["stale_after_days"] = *options.StaleAfterDays
+	}
+	if options.DebugTrace {
+		result["debug_trace"] = true
+	}
+	return result
+}
+
+// CalculateCostTyped returns a componentized cost ledger for typed Go usage,
+// price-card, and discount-policy structs.
+func CalculateCostTyped(usageLedger UsageLedger, priceCards []PriceCard, discountPolicies []DiscountPolicy) Object {
+	return CalculateCostTypedWithMode(usageLedger, priceCards, discountPolicies, "compatibility")
+}
+
+// CalculateCostTypedWithMode returns a componentized cost ledger for typed Go
+// inputs using either "compatibility" or "strict" mode.
+func CalculateCostTypedWithMode(usageLedger UsageLedger, priceCards []PriceCard, discountPolicies []DiscountPolicy, mode string) Object {
+	return CalculateCostTypedWithOptions(usageLedger, priceCards, discountPolicies, CostOptions{Mode: mode})
+}
+
+// CalculateCostTypedWithOptions returns a componentized cost ledger for typed Go
+// inputs and typed calculator options.
+func CalculateCostTypedWithOptions(usageLedger UsageLedger, priceCards []PriceCard, discountPolicies []DiscountPolicy, options CostOptions) Object {
+	return CalculateCostWithOptions(usageLedger.Object(), priceCardsToAny(priceCards), discountPoliciesToAny(discountPolicies), options.Object())
+}
+
+func stringsToAny(values []string) []any {
+	result := []any{}
+	for _, value := range values {
+		result = append(result, value)
+	}
+	return result
+}
+
+func usageComponentsToAny(components []UsageComponent) []any {
+	result := []any{}
+	for _, component := range components {
+		result = append(result, component.Object())
+	}
+	return result
+}
+
+func priceComponentsToAny(components []PriceComponent) []any {
+	result := []any{}
+	for _, component := range components {
+		result = append(result, component.Object())
+	}
+	return result
+}
+
+func priceCardsToAny(cards []PriceCard) []any {
+	result := []any{}
+	for _, card := range cards {
+		result = append(result, card.Object())
+	}
+	return result
+}
+
+func discountPoliciesToAny(policies []DiscountPolicy) []any {
+	result := []any{}
+	for _, policy := range policies {
+		result = append(result, policy.Object())
+	}
+	return result
+}
 
 func numberString(value any) string {
 	if value == nil {

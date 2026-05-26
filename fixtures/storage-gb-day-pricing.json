@@ -1,0 +1,107 @@
+{
+  "name": "storage-gb-day-pricing",
+  "description": "Covers GB-day storage pricing as a first-class feature billing component.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-FEATURE-PRICING"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "normalized_usage",
+    "tags": [
+      "component:storage_gb_days",
+      "feature_pricing",
+      "storage_pricing"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-example",
+        "billed": "gpt-example",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "storage_gb_days",
+          "quantity": "3.5",
+          "unit": "gb_day",
+          "tool": {
+            "provider": "openai",
+            "name": "vector_store",
+            "billing_source": "provider"
+          },
+          "metadata": {
+            "storage_scope": "vector_store"
+          }
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-example:storage",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-example",
+        "components": [
+          {
+            "usage_component": "storage_gb_days",
+            "unit": "gb_day",
+            "price": {
+              "amount": "0.10",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-example",
+        "billed": "gpt-example",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "storage_gb_days",
+          "quantity": "3.5",
+          "unit": "gb_day",
+          "unit_price": "0.1",
+          "cost": "0.35",
+          "price_card_id": "openai:gpt-example:storage",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.35",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

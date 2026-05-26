@@ -1,0 +1,245 @@
+{
+  "name": "feature-pricing-generated-media-rerank-transcription",
+  "description": "Covers generated media, rerank, transcription, and runtime-second feature pricing from normalized usage.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-FEATURE-PRICING"
+    ],
+    "provider": "multi",
+    "surface": "normalized.feature_pricing",
+    "scenario": "normalized_usage",
+    "tags": [
+      "component:tool_execution_seconds",
+      "component:rerank_search_units",
+      "component:image_generation_units",
+      "component:video_generation_units",
+      "component:audio_generation_units",
+      "component:transcription_seconds",
+      "component:endpoint_runtime_seconds",
+      "feature_pricing",
+      "generated_media",
+      "rerank",
+      "transcription"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "multi",
+      "surface": "normalized.feature_pricing",
+      "model": {
+        "requested": "feature-example",
+        "billed": "feature-example",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "tool_execution_seconds",
+          "quantity": "12.5",
+          "unit": "second"
+        },
+        {
+          "name": "rerank_search_units",
+          "quantity": "4",
+          "unit": "search"
+        },
+        {
+          "name": "image_generation_units",
+          "quantity": "3",
+          "unit": "image"
+        },
+        {
+          "name": "video_generation_units",
+          "quantity": "2",
+          "unit": "video"
+        },
+        {
+          "name": "audio_generation_units",
+          "quantity": "5",
+          "unit": "audio"
+        },
+        {
+          "name": "transcription_seconds",
+          "quantity": "90",
+          "unit": "second"
+        },
+        {
+          "name": "endpoint_runtime_seconds",
+          "quantity": "45",
+          "unit": "second"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "multi:feature-example:features",
+        "provider": "multi",
+        "surface": "normalized.feature_pricing",
+        "model": "feature-example",
+        "components": [
+          {
+            "usage_component": "tool_execution_seconds",
+            "unit": "second",
+            "price": {
+              "amount": "0.02",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "rerank_search_units",
+            "unit": "search",
+            "price": {
+              "amount": "0.001",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "image_generation_units",
+            "unit": "image",
+            "price": {
+              "amount": "0.04",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "video_generation_units",
+            "unit": "video",
+            "price": {
+              "amount": "0.15",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "audio_generation_units",
+            "unit": "audio",
+            "price": {
+              "amount": "0.03",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "transcription_seconds",
+            "unit": "second",
+            "price": {
+              "amount": "0.0001",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "endpoint_runtime_seconds",
+            "unit": "second",
+            "price": {
+              "amount": "0.002",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "multi",
+      "surface": "normalized.feature_pricing",
+      "model": {
+        "requested": "feature-example",
+        "billed": "feature-example",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "tool_execution_seconds",
+          "quantity": "12.5",
+          "unit": "second",
+          "unit_price": "0.02",
+          "cost": "0.25",
+          "price_card_id": "multi:feature-example:features",
+          "discount_eligible": true
+        },
+        {
+          "name": "rerank_search_units",
+          "quantity": "4",
+          "unit": "search",
+          "unit_price": "0.001",
+          "cost": "0.004",
+          "price_card_id": "multi:feature-example:features",
+          "discount_eligible": true
+        },
+        {
+          "name": "image_generation_units",
+          "quantity": "3",
+          "unit": "image",
+          "unit_price": "0.04",
+          "cost": "0.12",
+          "price_card_id": "multi:feature-example:features",
+          "discount_eligible": true
+        },
+        {
+          "name": "video_generation_units",
+          "quantity": "2",
+          "unit": "video",
+          "unit_price": "0.15",
+          "cost": "0.3",
+          "price_card_id": "multi:feature-example:features",
+          "discount_eligible": true
+        },
+        {
+          "name": "audio_generation_units",
+          "quantity": "5",
+          "unit": "audio",
+          "unit_price": "0.03",
+          "cost": "0.15",
+          "price_card_id": "multi:feature-example:features",
+          "discount_eligible": true
+        },
+        {
+          "name": "transcription_seconds",
+          "quantity": "90",
+          "unit": "second",
+          "unit_price": "0.0001",
+          "cost": "0.009",
+          "price_card_id": "multi:feature-example:features",
+          "discount_eligible": true
+        },
+        {
+          "name": "endpoint_runtime_seconds",
+          "quantity": "45",
+          "unit": "second",
+          "unit_price": "0.002",
+          "cost": "0.09",
+          "price_card_id": "multi:feature-example:features",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.923",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

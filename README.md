@@ -37,6 +37,11 @@ npm run check:coverage
 npm run check:packages
 npm run check:release
 npm run check:release-dry-run
+npm run generate:contracts
+npm run smoke:alpha -- --mode sample --output /tmp/runcost-alpha-smoke.json --allow-sample-prices
+node scripts/run_vercel_alpha_smoke.mjs --mode sample --output /tmp/runcost-vercel-smoke.json --allow-sample-prices
+python3 scripts/run_langchain_alpha_smoke.py --mode sample --output /tmp/runcost-langchain-smoke.json --allow-sample-prices
+npm run compare:invoice -- --input fixtures/source-files/invoice-dashboard-comparison-sample.json --output /tmp/invoice-comparison.json
 npm run example:js
 npm run example:py
 ```
@@ -48,12 +53,17 @@ npm run example:py
 - Migration from hand-written formulas: `docs/guides/2026-05-26-migration-from-hand-written-formulas.md`
 - API reference: `docs/reference/api-reference.md`
 - Debug trace: `docs/reference/debug-trace.md`
+- Generated contract taxonomy: `docs/generated/contract-taxonomy.md`
 - Fixture coverage: `docs/reports/fixture-coverage.md`
 - Supported surfaces: `docs/reference/supported-surfaces.md`
 - Custom pricing and discounts: `docs/reference/custom-pricing-and-discounts.md`
 - Source adapters: `docs/reference/source-adapters.md`
 - Aggregation and streaming: `docs/reference/aggregation-and-streaming.md`
 - Warnings and limitations: `docs/reference/warnings-and-limitations.md`
+- Alpha smoke runbook: `docs/process/alpha-smoke-runbook.md`
+- Invoice/dashboard comparison process: `docs/process/invoice-dashboard-comparison.md`
+- Source data update process: `docs/process/2026-05-26-source-data-update-process.md`
+- Beta and V1 hardening roadmap: `docs/process/beta-v1-hardening-roadmap.md`
 - Release process: `docs/process/release-process.md`
 - Contributing: `CONTRIBUTING.md`
 - Security policy: `SECURITY.md`
@@ -77,13 +87,13 @@ npm run example:py
   - JavaScript: `packages/javascript/core/`
   - Go: `packages/go/ledger/`
 
-The implementation is still pre-alpha. The current center of gravity is normalized usage plus price cards in, componentized cost ledger out. Release-readiness scaffolding exists, but first registry publication, provider-specific streaming parsers, and broader tool-call pricing are still ahead.
+The implementation is still pre-alpha. The current center of gravity is normalized usage plus price cards in, componentized cost ledger out. Release-readiness and sample alpha-smoke scaffolding exist, but first registry publication, live smoke evidence, invoice/dashboard comparison, provider-specific feature breadth, and V1 API stabilization are still ahead.
 
 ## Prototype Capabilities
 
 - Python, JavaScript, and Go cores.
 - Decimal-safe cost calculation.
-- Component ledgers for input, cached input, output, reasoning, tool units, and Gemini/Vertex multimodal token details.
+- Component ledgers for input, cached input, output, reasoning, tool units, normalized generated media, rerank, transcription, runtime seconds, GB-day storage, and Gemini/Vertex multimodal token details.
 - Raw extractors for OpenAI Responses, OpenAI Chat Completions, and Anthropic Messages.
 - Raw extractors for OpenRouter Chat Completions, Cohere Chat, Google Gemini/Vertex generateContent, and AWS Bedrock Converse.
 - Final streaming usage extraction for OpenAI Responses `response.completed`, Anthropic Messages SSE event sequences, and Gemini stream chunks with `usageMetadata`.
@@ -99,6 +109,9 @@ The implementation is still pre-alpha. The current center of gravity is normaliz
 - LiteLLM, Portkey, OpenRouter models, models.dev, reviewed official snapshots, source-cache, local JSON/YAML file, user compact pricing, and Helicone model-registry source adapter prototypes.
 - Installed Python CLI with `runcost price-cards` and `runcost fixture-check` for lightweight package-user checks.
 - Explicit `npm run prices:refresh -- ...` command for writing source-cache envelopes from live or reviewed JSON snapshots.
+- Optional `npm run smoke:alpha -- ...` command for sanitized no-network and API-key-gated alpha smoke evidence.
 - Strict mode and compatibility mode.
-- TypeScript declarations, Python typed contracts, and Go examples.
+- TypeScript declarations, Python typed contracts, and Go examples plus typed
+  Go wrappers for normalized usage, price cards, discounts, and core cost
+  calculation.
 - Shared JSON fixtures that both implementations must pass.

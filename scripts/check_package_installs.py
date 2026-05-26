@@ -171,6 +171,42 @@ func TestImport(t *testing.T) {
     if result["total"] != "0" {
         t.Fatalf("unexpected aggregate total: %#v", result["total"])
     }
+    typedResult := ledger.CalculateCostTyped(
+        ledger.UsageLedger{
+            SchemaVersion: "0.1",
+            Provider: "test",
+            Surface: "test.responses",
+            Model: ledger.ModelIdentity{
+                Requested: "test-model",
+                Billed: "test-model",
+                AliasResolution: "none",
+            },
+            Components: []ledger.UsageComponent{
+                {Name: "input_uncached_tokens", Quantity: "100", Unit: "token"},
+            },
+        },
+        []ledger.PriceCard{
+            {
+                SchemaVersion: "0.1",
+                ID: "test:test-model:typed",
+                Provider: "test",
+                Surface: "test.responses",
+                Model: "test-model",
+                Components: []ledger.PriceComponent{
+                    {
+                        UsageComponent: "input_uncached_tokens",
+                        Unit: "token",
+                        Price: ledger.Price{Amount: "1", Currency: "USD", Per: "1000000"},
+                    },
+                },
+                Source: ledger.Source{Name: "typed-install-check"},
+            },
+        },
+        nil,
+    )
+    if typedResult["total"] != "0.0001" {
+        t.Fatalf("unexpected typed total: %#v", typedResult["total"])
+    }
     cards := ledger.PriceCardsFromSourceCache(ledger.Object{"price_cards": []any{
         ledger.Object{
             "schema_version": "0.1",

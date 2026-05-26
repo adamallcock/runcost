@@ -60,6 +60,73 @@ jobs:
           mkdir -p dist/npm
           npm pack ./packages/javascript/core --pack-destination dist/npm
 
+      - name: Verify Go module from published tag
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --tags origin "refs/tags/v${{ inputs.version }}" >/dev/null 2>&1; then
+            tmpdir="$(mktemp -d)"
+            cd "$tmpdir"
+            go mod init runcost-release-tag-check
+            go list -m -versions github.com/adamallcock/runcost
+            go get github.com/adamallcock/runcost/packages/go/ledger@v${{ inputs.version }}
+            cat > ledger_test.go <<'EOF'
+          package releasecheck
+
+          import (
+              "encoding/json"
+              "testing"
+
+              ledger "github.com/adamallcock/runcost/packages/go/ledger"
+          )
+
+          func TestPublishedTagImportPath(t *testing.T) {
+              result := ledger.CalculateCost(
+                  ledger.Object{
+                      "schema_version": "0.1",
+                      "provider": "release-check",
+                      "surface": "release-check",
+                      "model": ledger.Object{"requested": "model", "billed": "model", "alias_resolution": "none"},
+                      "components": []any{ledger.Object{"name": "input_uncached_tokens", "quantity": "1000", "unit": "token"}},
+                  },
+                  []any{ledger.Object{
+                      "schema_version": "0.1",
+                      "id": "release-check:model",
+                      "provider": "release-check",
+                      "surface": "release-check",
+                      "model": "model",
+                      "components": []any{ledger.Object{
+                          "usage_component": "input_uncached_tokens",
+                          "unit": "token",
+                          "price": ledger.Object{"amount": "1", "currency": "USD", "per": "1000000"},
+                      }},
+                      "source": ledger.Object{"name": "release-check"},
+                  }},
+                  nil,
+              )
+              if result["total"] != "0.001" {
+                  encoded, _ := json.Marshal(result)
+                  t.Fatalf("unexpected release-check total: %s", encoded)
+              }
+          }
+          EOF
+            go test ./...
+          else
+            echo "No published tag v${{ inputs.version }} found; skipping real Go tag verification for this no-publish rehearsal."
+          fi
+
+      - name: No-publish artifact review checklist
+        if: ${{ !inputs.publish }}
+        run: |
+          {
+            echo "## No-publish artifact review checklist"
+            echo
+            echo "- Confirm Python wheel and source distribution are present in workflow artifacts."
+            echo "- Confirm npm tarball is present in workflow artifacts and includes package README."
+            echo "- Confirm release readiness, dry-run, examples, package checks, and conformance tests passed."
+            echo "- Confirm Go tag verification ran when tag v${{ inputs.version }} existed, or was explicitly skipped because the tag was absent."
+            echo "- Keep publishing disabled until PyPI/npm trusted publishers are configured and artifacts are reviewed."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:

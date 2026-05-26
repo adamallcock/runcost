@@ -13,20 +13,20 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 83
-- Providers: 15
-- Provider surfaces: 19
-- Usage components covered: 23
+- Fixtures: 86
+- Providers: 16
+- Provider surfaces: 20
+- Usage components covered: 31
 - Warning/error codes covered: 12
-- Requirement IDs covered: 18
+- Requirement IDs covered: 19
 
 ## Expected Languages
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 81 |
-| `javascript` | 82 |
-| `python` | 82 |
+| `go` | 84 |
+| `javascript` | 85 |
+| `python` | 85 |
 
 ## Scenarios
 
@@ -37,7 +37,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `discount` | 1 |
 | `framework_adapter` | 16 |
 | `long_context` | 2 |
-| `normalized_usage` | 6 |
+| `normalized_usage` | 8 |
 | `provider_reported` | 2 |
 | `raw_provider_response` | 27 |
 | `service_mode` | 3 |
@@ -45,7 +45,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `source_adapter` | 13 |
 | `source_priority` | 2 |
 | `strict_error` | 1 |
-| `warning` | 5 |
+| `warning` | 6 |
 
 ## Provider Surfaces
 
@@ -63,9 +63,10 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `groq` | `groq.chat_completions` | 1 |
 | `huggingface` | `huggingface.chat_completions` | 1 |
 | `mistral` | `mistral.chat_completions` | 1 |
+| `multi` | `normalized.feature_pricing` | 2 |
 | `openai` | `openai.chat_completions` | 11 |
 | `openai` | `openai.embeddings` | 1 |
-| `openai` | `openai.responses` | 42 |
+| `openai` | `openai.responses` | 43 |
 | `openrouter` | `openrouter.chat_completions` | 7 |
 | `vertex` | `vertex.gemini.generate_content` | 1 |
 | `xai` | `xai.chat_completions` | 1 |
@@ -75,20 +76,23 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Component | Fixtures |
 |---|---:|
+| `audio_generation_units` | 1 |
 | `code_interpreter_call_units` | 1 |
 | `code_interpreter_session_units` | 1 |
 | `computer_use_action_units` | 2 |
 | `custom_units` | 2 |
 | `embedding_tokens` | 1 |
 | `endpoint_instance_hours` | 1 |
+| `endpoint_runtime_seconds` | 2 |
 | `file_search_units` | 1 |
+| `image_generation_units` | 1 |
 | `input_audio_tokens` | 2 |
 | `input_cache_read_tokens` | 36 |
 | `input_cache_write_1h_tokens` | 2 |
 | `input_cache_write_tokens` | 14 |
 | `input_image_tokens` | 2 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 75 |
+| `input_uncached_tokens` | 76 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 2 |
 | `output_image_tokens` | 2 |
@@ -96,7 +100,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `output_text_tokens` | 63 |
 | `output_video_tokens` | 1 |
 | `request_units` | 3 |
+| `rerank_search_units` | 1 |
+| `storage_gb_days` | 1 |
 | `tool_call_units` | 1 |
+| `tool_execution_seconds` | 1 |
+| `transcription_seconds` | 1 |
+| `video_generation_units` | 1 |
 | `web_search_units` | 8 |
 
 ## Warning And Error Codes
@@ -112,7 +121,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `service_tier_unsupported` | 1 |
 | `source_capability_unsupported` | 1 |
 | `stream_usage_missing` | 1 |
-| `tool_component_unpriced` | 1 |
+| `tool_component_unpriced` | 2 |
 | `unknown_model` | 2 |
 | `unknown_surface` | 1 |
 
@@ -159,7 +168,8 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-CUSTOM-PRICING` | 1 |
 | `RC-DEBUG-TRACE` | 1 |
 | `RC-DISCOUNT-POLICY` | 1 |
-| `RC-FIXTURE-CONFORMANCE` | 83 |
+| `RC-FEATURE-PRICING` | 3 |
+| `RC-FIXTURE-CONFORMANCE` | 86 |
 | `RC-FRAMEWORK-ADAPTER` | 14 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
 | `RC-LONG-CONTEXT` | 2 |
@@ -171,7 +181,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-SOURCE-PRIORITY` | 2 |
 | `RC-STRICT-MODE` | 1 |
 | `RC-TOOL-PRICING` | 2 |
-| `RC-WARNING-MODE` | 6 |
+| `RC-WARNING-MODE` | 7 |
 
 ## Tags
 
@@ -192,13 +202,16 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `alias` | 1 |
 | `byte_stable_ordering` | 2 |
 | `cache` | 14 |
+| `component:audio_generation_units` | 1 |
 | `component:code_interpreter_call_units` | 1 |
 | `component:code_interpreter_session_units` | 1 |
 | `component:computer_use_action_units` | 2 |
 | `component:custom_units` | 2 |
 | `component:embedding_tokens` | 1 |
 | `component:endpoint_instance_hours` | 1 |
+| `component:endpoint_runtime_seconds` | 2 |
 | `component:file_search_units` | 1 |
+| `component:image_generation_units` | 1 |
 | `component:input_audio_tokens` | 2 |
 | `component:input_cache_read_tokens` | 36 |
 | `component:input_cache_write_1h_tokens` | 2 |
@@ -213,13 +226,19 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:output_text_tokens` | 63 |
 | `component:output_video_tokens` | 1 |
 | `component:request_units` | 3 |
+| `component:rerank_search_units` | 1 |
+| `component:storage_gb_days` | 1 |
 | `component:tool_call_units` | 1 |
+| `component:tool_execution_seconds` | 1 |
+| `component:transcription_seconds` | 1 |
+| `component:video_generation_units` | 1 |
 | `component:web_search_units` | 8 |
 | `debug_trace` | 1 |
 | `decimal_precision` | 1 |
 | `discount` | 1 |
 | `effective_date` | 2 |
 | `embeddings` | 1 |
+| `feature_pricing` | 3 |
 | `framework:ag2` | 2 |
 | `framework:haystack` | 1 |
 | `framework:langsmith` | 2 |
@@ -229,6 +248,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `framework:semantic_kernel` | 1 |
 | `framework:vercel_ai_sdk` | 1 |
 | `framework_adapter` | 16 |
+| `generated_media` | 1 |
 | `helper:from_ag2_usage_summary` | 2 |
 | `helper:from_haystack_generator_result` | 1 |
 | `helper:from_langchain_message` | 1 |
@@ -251,6 +271,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `provider_reported` | 7 |
 | `raw_provider_response` | 27 |
 | `reasoning` | 9 |
+| `rerank` | 1 |
 | `service_mode` | 3 |
 | `service_tier` | 2 |
 | `source:file` | 1 |
@@ -267,9 +288,11 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `source_adapter` | 13 |
 | `source_priority` | 3 |
 | `stale_price` | 1 |
+| `storage_pricing` | 1 |
 | `streaming` | 4 |
 | `strict_error` | 1 |
 | `tool_pricing` | 4 |
+| `transcription` | 1 |
 | `warning` | 3 |
 | `warning:component_unpriced` | 1 |
 | `warning:long_context_rule_missing` | 1 |
@@ -280,6 +303,6 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `warning:service_tier_unsupported` | 1 |
 | `warning:source_capability_unsupported` | 1 |
 | `warning:stream_usage_missing` | 1 |
-| `warning:tool_component_unpriced` | 1 |
+| `warning:tool_component_unpriced` | 2 |
 | `warning:unknown_model` | 2 |
 | `warning:unknown_surface` | 1 |

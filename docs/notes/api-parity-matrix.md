@@ -24,6 +24,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | Capability | Python | JavaScript/TypeScript | Go | Evidence |
 |---|---:|---:|---:|---|
 | Calculate cost from normalized usage and price cards | Yes | Yes | Yes | `calculate_cost`, `calculateCost`, `CalculateCost`; shared fixtures |
+| Calculate cost from typed Go structs | N/A | N/A | Yes | `CalculateCostTyped`, `CalculateCostTypedWithOptions`; Go `typed_api_test.go` and `ExampleCalculateCostTyped` |
 | Calculate cost with advanced options | Yes | Yes | Yes | `calculate_cost` keyword options, `calculateCost` options object, `CalculateCostWithOptions`; stale/provider-reported fixtures |
 | Extract usage and calculate from raw response | Yes | Yes | Yes | `from_response`, `fromResponse`, `FromResponse`; raw response fixtures |
 | Aggregate already-calculated cost ledgers | Yes | Yes | Yes | `aggregate_cost_ledgers`, `aggregateCostLedgers`, `AggregateCostLedgers`; `cost-ledger-aggregation-basic.json`, `stream-final-usage-missing-warning.json` |
@@ -114,6 +115,14 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | `code_interpreter_call_units` | Yes | Yes | Yes | OpenAI tool-call fixture |
 | `computer_use_action_units` | Yes | Yes | Yes | OpenAI computer-use raw fixture |
 | `tool_call_units` | Yes | Yes | Yes | OpenAI function-call raw fixture |
+| `tool_execution_seconds` | Yes | Yes | Yes | `feature-pricing-generated-media-rerank-transcription.json` |
+| `rerank_search_units` | Yes | Yes | Yes | `feature-pricing-generated-media-rerank-transcription.json` |
+| `image_generation_units` | Yes | Yes | Yes | `feature-pricing-generated-media-rerank-transcription.json` |
+| `video_generation_units` | Yes | Yes | Yes | `feature-pricing-generated-media-rerank-transcription.json` |
+| `audio_generation_units` | Yes | Yes | Yes | `feature-pricing-generated-media-rerank-transcription.json` |
+| `transcription_seconds` | Yes | Yes | Yes | `feature-pricing-generated-media-rerank-transcription.json` |
+| `endpoint_runtime_seconds` | Yes | Yes | Yes | `feature-pricing-generated-media-rerank-transcription.json`, `feature-component-unpriced-warning.json` |
+| `storage_gb_days` | Yes | Yes | Yes | `storage-gb-day-pricing.json` |
 | Multimodal image, audio, and video units | Partial | Partial | Partial | `gemini-generate-content-raw-multimodal.json`; Gemini/Vertex modality details supported, broader provider coverage pending |
 | Provider-specific tool-call pricing units | Partial | Partial | Partial | current scope covers OpenAI hosted tool units, OpenRouter request/image/search pricing, provider-reported costs, and custom units; broader provider breadth remains beta hardening |
 
@@ -121,7 +130,7 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 
 | Surface | Python | JavaScript/TypeScript | Go | Evidence |
 |---|---:|---:|---:|---|
-| Public typed contract models | Partial | Partial | Partial | `types.py`, `index.d.ts`, Go docs/examples; `DebugTrace` typed for Python and TypeScript |
+| Public typed contract models | Partial | Partial | Partial | `types.py`, `index.d.ts`, Go typed normalized usage/price/discount structs, Go docs/examples; `DebugTrace` typed for Python and TypeScript |
 | Package-level API docs | Partial | Partial | Partial | README, package examples, alpha docs, debug trace docs |
 | Public example for basic cost calculation | Yes | Yes | Yes | Python and JS examples; Go example test |
 | Schema validation in conformance tests | Yes | Yes | Partial | Python runner validates schemas for Python/JS outputs; Go validates generated cost-ledger structure, component-total invariants, and output ordering in fixture tests |

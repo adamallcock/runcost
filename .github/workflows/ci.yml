@@ -31,6 +31,11 @@ jobs:
       - name: Run conformance tests
         run: npm test
 
+      - name: Run framework alpha smoke samples
+        run: |
+          node scripts/run_vercel_alpha_smoke.mjs --mode sample --output /tmp/runcost-vercel-smoke.json --allow-sample-prices
+          python3 scripts/run_langchain_alpha_smoke.py --mode sample --output /tmp/runcost-langchain-smoke.json --allow-sample-prices
+
       - name: Run clean package install checks
         run: npm run check:packages
 
@@ -52,9 +57,16 @@ jobs:
             scripts/check_fixture_coverage.py \
             scripts/check_fixture_generator.py \
             scripts/check_source_refresh.py \
+            scripts/check_alpha_smoke.py \
+            scripts/check_invoice_comparison.py \
+            scripts/check_generated_contract_docs.py \
             scripts/check_project_hygiene.py \
             scripts/check_package_installs.py \
             scripts/check_release_readiness.py \
+            scripts/compare_invoice_dashboard.py \
+            scripts/generate_contract_docs.py \
+            scripts/run_langchain_alpha_smoke.py \
+            scripts/run_alpha_smoke.py \
             scripts/refresh_price_sources.py \
             scripts/check_schema_taxonomy.py \
             scripts/create_fixture.py \
