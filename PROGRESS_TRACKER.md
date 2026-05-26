@@ -177,8 +177,11 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
   - GitHub returned `workflow release.yml not found on the default branch`;
   - captured the finding as `docs/reports/2026-05-26-release-workflow-no-publish-blocked.md`;
   - updated release docs to clarify that GitHub workflow dispatch requires the release workflow to exist on the default branch before branch-targeted no-publish rehearsal can run.
-- Opened draft PR for review and default-branch workflow landing:
+- Opened PR for review and default-branch workflow landing:
   - `https://github.com/adamallcock/runcost/pull/1`;
+  - fixed the first GitHub CI failure by making the YAML file-source fixture portable across checkout paths;
+  - latest PR CI `test` check passed at `https://github.com/adamallcock/runcost/actions/runs/26430029924/job/77801179229`;
+  - PR is ready for review, mergeable, and no longer draft;
   - this is the next GitHub-side step before retrying the guarded no-publish workflow dispatch.
 - Added docs:
   - `docs/process/alpha-smoke-runbook.md`
