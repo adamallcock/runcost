@@ -557,6 +557,27 @@ function applyDiscounts(cost, policies, usageLedger, component, discountEligible
   return { cost: current, applied };
 }
 
+function discountNotAppliedWarnings(policies, appliedDiscounts) {
+  const appliedPolicyIds = new Set(appliedDiscounts.map((discount) => discount.policy_id));
+  const warnings = [];
+  for (const policy of policies) {
+    if (policy.metadata?.warn_if_unapplied !== true) {
+      continue;
+    }
+    if (appliedPolicyIds.has(policy.id)) {
+      continue;
+    }
+    warnings.push({
+      code: "discount_not_applied",
+      message: `Discount policy ${policy.id} did not apply to any priced component.`,
+      metadata: {
+        policy_id: policy.id
+      }
+    });
+  }
+  return warnings;
+}
+
 function staleAfterDays(usageLedger, value) {
   if (value !== undefined && value !== null) {
     return Number(value);
@@ -863,6 +884,7 @@ export function calculateCost({
   if (reportedWarning) {
     warnings.push(reportedWarning);
   }
+  warnings.push(...discountNotAppliedWarnings(discountPolicies, appliedDiscounts));
   const orderedComponents = orderedCostComponents(components);
   const orderedSources = orderedPriceSources([...sourceByName.values()]);
   const orderedDiscounts = orderedAppliedDiscounts(appliedDiscounts);

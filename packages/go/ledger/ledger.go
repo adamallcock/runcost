@@ -1086,6 +1086,34 @@ func applyDiscounts(cost string, policies []any, usageLedger Object, component O
 	return current, applied
 }
 
+func discountNotAppliedWarnings(policies []any, appliedDiscounts []any) []any {
+	appliedPolicyIDs := map[string]bool{}
+	for _, rawDiscount := range appliedDiscounts {
+		discount := asObject(rawDiscount)
+		appliedPolicyIDs[asString(discount["policy_id"])] = true
+	}
+	warnings := []any{}
+	for _, rawPolicy := range policies {
+		policy := asObject(rawPolicy)
+		metadata := asObject(policy["metadata"])
+		if value, ok := metadata["warn_if_unapplied"].(bool); !ok || !value {
+			continue
+		}
+		policyID := asString(policy["id"])
+		if appliedPolicyIDs[policyID] {
+			continue
+		}
+		warnings = append(warnings, Object{
+			"code":    "discount_not_applied",
+			"message": fmt.Sprintf("Discount policy %s did not apply to any priced component.", policyID),
+			"metadata": Object{
+				"policy_id": policyID,
+			},
+		})
+	}
+	return warnings
+}
+
 func optionalInt(value any) (int, bool) {
 	if value == nil {
 		return 0, false
@@ -1502,6 +1530,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 	if warning, ok := providerReportedWarning(total, options); ok {
 		warnings = append(warnings, warning)
 	}
+	warnings = append(warnings, discountNotAppliedWarnings(discountPolicies, appliedDiscounts)...)
 	components = orderedCostComponents(components)
 	priceSources = orderedPriceSources(priceSources)
 	appliedDiscounts = orderedAppliedDiscounts(appliedDiscounts)

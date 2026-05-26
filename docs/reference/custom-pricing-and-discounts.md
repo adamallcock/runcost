@@ -148,6 +148,11 @@ Match fields:
 
 Use `components` for component-specific discounts, such as discounted input tokens but full-price tool calls.
 
+By default, a non-matching discount policy is silent because many discounts are
+intentionally narrow. To audit a policy that should apply, set
+`metadata.warn_if_unapplied` to `true`; RunCost will emit
+`discount_not_applied` if that policy does not apply to any priced component.
+
 ## User Overrides
 
 When multiple price sources can match, pass a priority list.

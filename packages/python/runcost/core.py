@@ -451,6 +451,31 @@ def _apply_discounts(
     return {"cost": current, "applied": applied}
 
 
+def _discount_not_applied_warnings(
+    policies: Iterable[Dict[str, Any]],
+    applied_discounts: Iterable[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    applied_policy_ids = {discount["policy_id"] for discount in applied_discounts}
+    warnings = []
+    for policy in policies:
+        metadata = policy.get("metadata") if isinstance(policy.get("metadata"), dict) else {}
+        if metadata.get("warn_if_unapplied") is not True:
+            continue
+        policy_id = policy["id"]
+        if policy_id in applied_policy_ids:
+            continue
+        warnings.append(
+            {
+                "code": "discount_not_applied",
+                "message": f"Discount policy {policy_id} did not apply to any priced component.",
+                "metadata": {
+                    "policy_id": policy_id,
+                },
+            }
+        )
+    return warnings
+
+
 def _stale_after_days(usage_ledger: Dict[str, Any], stale_after_days: Optional[int]) -> Optional[int]:
     if stale_after_days is not None:
         return int(stale_after_days)
@@ -766,6 +791,7 @@ def calculate_cost(
     )
     if provider_warning:
         warnings.append(provider_warning)
+    warnings.extend(_discount_not_applied_warnings(policies, applied_discounts))
     components = _ordered_cost_components(components)
     price_sources = _ordered_price_sources(sources_by_name.values())
     applied_discounts = _ordered_applied_discounts(applied_discounts)

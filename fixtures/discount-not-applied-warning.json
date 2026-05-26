@@ -1,0 +1,129 @@
+{
+  "name": "discount-not-applied-warning",
+  "description": "Emits discount_not_applied for opt-in discount policies that match no priced components.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-DISCOUNT-POLICY",
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-WARNING-MODE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "discount",
+    "tags": [
+      "component:input_uncached_tokens",
+      "discount",
+      "warning:discount_not_applied"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-fixture",
+        "returned": "gpt-fixture",
+        "billed": "gpt-fixture",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-fixture:discount-miss",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-fixture",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.01",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      }
+    ],
+    "discount_policies": [
+      {
+        "schema_version": "0.1",
+        "id": "must-apply-output-discount",
+        "match": {
+          "provider": "openai",
+          "components": [
+            "output_text_tokens"
+          ]
+        },
+        "adjustment": {
+          "type": "percentage_discount",
+          "value": "10"
+        },
+        "metadata": {
+          "warn_if_unapplied": true
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-fixture",
+        "returned": "gpt-fixture",
+        "billed": "gpt-fixture",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.01",
+          "cost": "1",
+          "price_card_id": "openai:gpt-fixture:discount-miss",
+          "discount_eligible": true
+        }
+      ],
+      "total": "1",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-24T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "discount_not_applied",
+          "message": "Discount policy must-apply-output-discount did not apply to any priced component.",
+          "metadata": {
+            "policy_id": "must-apply-output-discount"
+          }
+        }
+      ]
+    }
+  }
+}
