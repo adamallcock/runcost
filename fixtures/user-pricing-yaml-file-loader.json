@@ -87,9 +87,7 @@
       "total": "0.0007",
       "price_sources": [
         {
-          "name": "user-pricing",
-          "url": "file:///Users/adamallcock/Documents/Coding/llm-pricing/fixtures/source-files/user-pricing-file-basic.yaml",
-          "retrieved_at": "1970-01-01T00:00:00Z"
+          "name": "user-pricing"
         }
       ],
       "applied_discounts": [],
