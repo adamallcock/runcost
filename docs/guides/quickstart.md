@@ -171,9 +171,23 @@ Use `from_response` / `fromResponse` / `FromResponse` when you want RunCost to e
 
 Use the framework helpers when the object came from LangChain, OpenAI Agents SDK, Vercel AI SDK, LlamaIndex, Haystack, LiteLLM, AutoGen/AG2, LangSmith, Semantic Kernel, or an OpenRouter-compatible SDK response.
 
+## CLI Checks
+
+The Python package installs a small `runcost` command for lightweight local
+checks:
+
+```bash
+runcost price-cards --source-type user-pricing --input prices.json
+runcost fixture-check fixtures/my-case.json
+```
+
+Use the CLI for one fixture or one price-source conversion. Use `npm test` for
+the full multi-language conformance suite.
+
 ## Read Next
 
 - [Package Installation](2026-05-25-package-installation.md)
+- [Migration From Hand-Written Formulas](2026-05-26-migration-from-hand-written-formulas.md)
 - [API Reference](2026-05-25-api-reference.md)
 - [Custom Pricing And Discounts](2026-05-25-custom-pricing-and-discounts.md)
 - [Source Adapters](2026-05-25-source-adapters.md)

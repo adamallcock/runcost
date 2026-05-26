@@ -24,9 +24,21 @@ From a cloned checkout:
 ```bash
 python3 -m pip install .
 python3 -c "from runcost import from_response; print(from_response)"
+runcost --help
 ```
 
 The Python package is defined by the root `pyproject.toml` and loads package sources from `packages/python`.
+
+The installed Python package includes a small `runcost` CLI:
+
+```bash
+runcost price-cards --source-type user-pricing --input prices.json
+runcost fixture-check fixtures/my-case.json
+```
+
+The CLI is intentionally lightweight. It is useful for checking one fixture or
+converting one local price source; the repository conformance suite remains the
+full multi-language validation gate.
 
 ## JavaScript And TypeScript
 
@@ -64,7 +76,7 @@ Run the clean install smoke test locally:
 npm run check:packages
 ```
 
-That command creates temporary projects for Python, npm, and Go and verifies that the public package entry points can be imported without relying on the repo working directory.
+That command creates temporary projects for Python, npm, and Go and verifies that the public package entry points and Python CLI can be used without relying on the repo working directory.
 
 ## Release Readiness Checklist
 

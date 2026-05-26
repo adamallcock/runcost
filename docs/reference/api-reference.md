@@ -122,6 +122,19 @@ Streaming final usage:
 
 Adapters return canonical `PriceCard` objects. Users can merge these with their own custom cards and then use `priceSourcePriority` to make overrides deterministic.
 
+## CLI
+
+The Python package installs a small `runcost` command:
+
+| Command | Purpose |
+|---|---|
+| `runcost price-cards --source-type TYPE --input PATH` | Convert one pricing source JSON file to canonical price cards. |
+| `runcost fixture-check PATH` | Calculate one fixture and compare the expected cost-ledger subset when present. |
+
+The CLI is dependency-free and intentionally narrower than the repository test
+runner. Use `npm test` for the full Python, JavaScript/TypeScript, and Go
+conformance suite.
+
 ## Modes
 
 Compatibility mode returns a ledger with warnings when possible.

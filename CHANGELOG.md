@@ -17,6 +17,9 @@ limitations.
 - Add package publish-readiness artifacts: MIT license, contribution guide,
   security policy, release process, release-readiness checks, and a guarded
   GitHub Actions release workflow.
+- Add installed Python `runcost` CLI commands for price-card conversion and
+  single-fixture checks, plus a migration guide for replacing hand-written
+  formulas.
 
 ## 0.0.0
 

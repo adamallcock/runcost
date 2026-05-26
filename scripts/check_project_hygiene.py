@@ -16,6 +16,7 @@ REQUIRED_FILES = [
     "docs/reference/debug-trace.md",
     "docs/reports/fixture-coverage.md",
     "docs/guides/package-installation.md",
+    "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     "docs/guides/quickstart.md",
     "docs/process/release-process.md",
     "docs/reference/source-adapters.md",
@@ -33,6 +34,7 @@ REQUIRED_FILES = [
     "scripts/check_source_refresh.py",
     "scripts/create_fixture.py",
     "scripts/refresh_price_sources.py",
+    "packages/python/runcost/cli.py",
     "LICENSE",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
@@ -222,6 +224,9 @@ def check_package_metadata() -> None:
     assert_true("files" in js_package, "JavaScript package must define a publish file allowlist")
     assert_true(js_package.get("license") == "MIT", "JavaScript package must declare MIT license")
 
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert_true('runcost = "runcost.cli:main"' in pyproject, "Python package must install runcost CLI")
+
 
 def check_public_api_artifacts() -> None:
     parity = (ROOT / "docs/notes/api-parity-matrix.md").read_text(encoding="utf-8")
@@ -380,6 +385,29 @@ def check_ci_workflow() -> None:
         assert_true(command in workflow, f"CI workflow missing command: {command}")
 
 
+def check_packaging_docs() -> None:
+    root_readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    quickstart = (ROOT / "docs/guides/quickstart.md").read_text(encoding="utf-8")
+    installation = (ROOT / "docs/guides/package-installation.md").read_text(encoding="utf-8")
+    migration = (ROOT / "docs/guides/2026-05-26-migration-from-hand-written-formulas.md").read_text(encoding="utf-8")
+    api_reference = (ROOT / "docs/reference/api-reference.md").read_text(encoding="utf-8")
+    release_process = (ROOT / "docs/process/release-process.md").read_text(encoding="utf-8")
+
+    assert_true(
+        "2026-05-26-migration-from-hand-written-formulas.md" in root_readme,
+        "README must link to migration guide",
+    )
+    assert_true("npm test" in quickstart, "quickstart must mention npm test")
+    assert_true("npm run check:packages" in installation, "package installation guide must mention package checks")
+    assert_true("runcost.cli:main" in (ROOT / "pyproject.toml").read_text(encoding="utf-8"), "pyproject missing CLI entry")
+    for phrase in ["runcost price-cards", "runcost fixture-check"]:
+        assert_true(phrase in quickstart, f"quickstart missing CLI command: {phrase}")
+        assert_true(phrase in installation, f"package installation guide missing CLI command: {phrase}")
+        assert_true(phrase in api_reference, f"API reference missing CLI command: {phrase}")
+        assert_true(phrase in migration, f"migration guide missing CLI command: {phrase}")
+        assert_true(phrase in release_process, f"release process missing CLI command: {phrase}")
+
+
 def check_framework_adapter_paths() -> None:
     framework_notes = (ROOT / "docs/notes/framework-adapter-notes.md").read_text(encoding="utf-8")
     supported_surfaces = (ROOT / "docs/reference/supported-surfaces.md").read_text(encoding="utf-8")
@@ -430,6 +458,7 @@ def main() -> int:
     check_public_api_artifacts()
     check_fixture_floor()
     check_ci_workflow()
+    check_packaging_docs()
     check_framework_adapter_paths()
     print("Project hygiene checks passed.")
     return 0

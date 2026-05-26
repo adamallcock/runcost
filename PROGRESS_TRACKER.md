@@ -26,9 +26,9 @@ The tracker separates roadmap state from active work state:
 
 ## Active Focus
 
-Current active lane: none; Milestone 6 framework adapter completion pass is complete for current scope.
+Current active lane: Milestone 7 packaging/DX completion pass, then Milestone 5 tool and feature pricing.
 
-Why no lane is active: Milestone 6 has been promoted from documented/partial paths to fixture-backed plain-object adapters for the current no-live-smoke scope. The next active lane should be selected deliberately from the backlog rather than inferred from partial roadmap rows.
+Why this lane is active: the current objective is to close Milestone 7 first, then move to Milestone 5. Milestone 7 is being evaluated against the repo-side private-alpha gate, while external registry setup and real published-tag verification remain release operations.
 
 Doc rename coordination: another agent may rename Markdown files to match repository naming rules. Until that lands, avoid broad documentation churn and re-inspect paths before changing cross-document links.
 
@@ -120,7 +120,7 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 | Milestone 4: Provider Extractors V0 | Complete for current scope | No | OpenAI Responses, OpenAI Chat Completions, OpenAI Embeddings, Anthropic, OpenRouter, Groq, xAI Chat Completions and xAI Responses, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Gemini/Vertex, Bedrock Converse, and Bedrock InvokeModel extractors exist for selected surfaces; selected final streaming usage cases are fixture-backed; OpenAI Conversations are documented as non-cost-bearing state resources whose costs attach to Responses. | Additional stream protocols, rerank, generated media, transcription, and deeper provider-specific feature fields move to Milestone 5+ or beta/V1 hardening. |
 | Milestone 5: Tool Call and Feature Pricing | Partial | No | Generic and raw OpenAI tool-call fixtures exist; OpenRouter request/image/search source pricing and Gemini/Vertex multimodal token details exist. | Provider-specific tool pricing breadth for computer use, rerank, embeddings, image/audio/video generation, transcription, storage/session/GB-day forms, and direct pass-through costs. |
 | Milestone 6: Framework Adapters | Complete for current scope | No | LangChain AIMessage, OpenAI Agents SDK usage objects, Vercel AI SDK generateText and streamText finish objects, LlamaIndex TokenCountingHandler, Haystack metadata, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, LangSmith run/export usage, Semantic Kernel telemetry, OpenRouter SDK responses, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` and `onFinish` helpers, and aggregation exist with fixtures. | Live SDK/API-key smoke, real application validation, deeper framework callback variants, and smoke-derived examples move to Milestone 8/beta hardening. |
-| Milestone 7: Packaging and Developer Experience | Partial | No | Package metadata, types, examples, CI, clean install checks, alpha docs, license metadata, changelog, contributing/security docs, registry README policy, release process, release readiness checks, guarded release workflow, and local no-publish release dry run exist. | First registry publication, external trusted publisher configuration, and real post-tag Go module verification. |
+| Milestone 7: Packaging and Developer Experience | Complete for current scope | No | Package metadata, types, examples, CI, clean install checks, Python package CLI, migration guide, alpha docs, license metadata, changelog, contributing/security docs, registry README policy, release process, release readiness checks, guarded release workflow, and local no-publish release dry run exist. | First registry publication, external trusted publisher configuration, and real post-tag Go module verification remain release operations outside the repo-side private-alpha gate. |
 | Milestone 8: Alpha Quality and Feedback | Not started | No | No live SDK/API/application smoke harness exists yet. Current evidence is local fixtures, examples, clean package installs, and release dry runs. | Real application alpha runs, issue-to-fixture loop, invoice/dashboard comparison, and integration ergonomics validation. |
 | Milestone 9: Public Beta | Not started | No | None. | Stable v0.x schemas, package publishing pipeline, source-data update process, and public dependency caveats. |
 | Milestone 10: V1 | Not started | No | None. | Stable schemas/warning codes/package APIs, production-ready packages, strong provider/source coverage, historical-pricing path, and top framework integrations. |
@@ -128,6 +128,20 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 ## Work Log
 
 ### 2026-05-25
+
+- Completed Milestone 7 for the current repo-side/private-alpha scope.
+- Added installed Python CLI coverage:
+  - `runcost price-cards --source-type ... --input ...`
+  - `runcost fixture-check ...`
+- Added `docs/guides/2026-05-26-migration-from-hand-written-formulas.md`.
+- Updated package installation, quickstart, API reference, release process, README, project plan, and hygiene/release checks for the CLI and migration guide.
+- `npm run check:packages` now verifies the Python CLI in a clean installed virtual environment.
+- External registry publication, trusted-publisher setup, and post-tag Go module verification remain release operations rather than repo-side Milestone 7 blockers.
+- Verification after Milestone 7 packaging/DX slice:
+  - `npm run check:packages` passed with CLI smoke, Python import smoke, npm tarball import smoke, and Go clean-module import smoke.
+  - `python3 scripts/check_project_hygiene.py` passed.
+  - `npm run check:release` passed.
+  - `python3 -m py_compile packages/python/runcost/core.py packages/python/runcost/cli.py packages/python/runcost/types.py packages/python/runcost/__init__.py scripts/check_package_installs.py scripts/check_project_hygiene.py scripts/check_release_readiness.py` passed.
 
 - Completed Milestone 6 for the current no-live-smoke scope.
 - Added fixture-backed framework adapter paths:

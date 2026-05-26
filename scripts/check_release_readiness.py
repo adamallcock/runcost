@@ -20,6 +20,7 @@ REQUIRED_FILES = [
     "CONTRIBUTING.md",
     "SECURITY.md",
     "docs/process/release-process.md",
+    "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     ".github/workflows/release.yml",
     "scripts/check_release_dry_run.py",
     "packages/javascript/core/README.md",
@@ -115,6 +116,8 @@ def check_release_docs() -> None:
         "semantic version",
         "PyPI",
         "npm",
+        "runcost price-cards",
+        "runcost fixture-check",
         "provenance",
         "check:release-dry-run",
         "Registry README Policy",
@@ -127,6 +130,9 @@ def check_release_docs() -> None:
     assert_true("fixture" in contributing.lower(), "CONTRIBUTING.md must describe fixture-first workflow")
     security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
     assert_true("OIDC" in security, "SECURITY.md must mention OIDC publishing")
+    migration = (ROOT / "docs/guides/2026-05-26-migration-from-hand-written-formulas.md").read_text(encoding="utf-8")
+    assert_true("hand-written" in migration.lower(), "migration guide must cover hand-written formulas")
+    assert_true("fixture-check" in migration, "migration guide must mention fixture checks")
 
 
 def main() -> int:

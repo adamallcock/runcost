@@ -40,6 +40,60 @@ def check_python_install(source_root: Path, workdir: Path) -> None:
     pip_env = os.environ.copy()
     pip_env.setdefault("PIP_DISABLE_PIP_VERSION_CHECK", "1")
     run([str(python), "-m", "pip", "install", "--quiet", str(source_root)], workdir, env=pip_env)
+    cli_fixture = workdir / "cli-fixture.json"
+    cli_fixture.write_text(
+        """{
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "test",
+      "surface": "test.responses",
+      "model": {
+        "requested": "test-model",
+        "billed": "test-model",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "test:test-model",
+        "provider": "test",
+        "surface": "test.responses",
+        "model": "test-model",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "total": "0.0001"
+    }
+  }
+}
+""",
+        encoding="utf-8",
+    )
     run(
         [
             str(python),
@@ -48,6 +102,18 @@ def check_python_install(source_root: Path, workdir: Path) -> None:
         ],
         workdir,
     )
+    run(
+        [
+            str(venv_dir / "bin" / "runcost"),
+            "price-cards",
+            "--source-type",
+            "user-pricing",
+            "--input",
+            "prices.json",
+        ],
+        workdir,
+    )
+    run([str(venv_dir / "bin" / "runcost"), "fixture-check", str(cli_fixture)], workdir)
 
 
 def check_javascript_install(source_root: Path, workdir: Path) -> None:

@@ -45,6 +45,7 @@ npm run example:py
 
 - Quickstart: `docs/guides/quickstart.md`
 - Installation: `docs/guides/package-installation.md`
+- Migration from hand-written formulas: `docs/guides/2026-05-26-migration-from-hand-written-formulas.md`
 - API reference: `docs/reference/api-reference.md`
 - Debug trace: `docs/reference/debug-trace.md`
 - Fixture coverage: `docs/reports/fixture-coverage.md`
@@ -96,6 +97,7 @@ The implementation is still pre-alpha. The current center of gravity is normaliz
 - Source capability warnings when a pricing source explicitly does not price a usage component.
 - Simon Willison `llm-prices` adapter for simple current/historical price feeds.
 - LiteLLM, Portkey, OpenRouter models, models.dev, reviewed official snapshots, source-cache, local JSON/YAML file, user compact pricing, and Helicone model-registry source adapter prototypes.
+- Installed Python CLI with `runcost price-cards` and `runcost fixture-check` for lightweight package-user checks.
 - Explicit `npm run prices:refresh -- ...` command for writing source-cache envelopes from live or reviewed JSON snapshots.
 - Strict mode and compatibility mode.
 - TypeScript declarations, Python typed contracts, and Go examples.

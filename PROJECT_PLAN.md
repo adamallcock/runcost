@@ -547,6 +547,8 @@ Exit gate:
 
 ### Milestone 7: Packaging and Developer Experience
 
+Status: Complete for current repo-side/private-alpha scope.
+
 Goal:
 
 Turn the repo into usable packages.
@@ -582,6 +584,8 @@ Delivered in current prototype:
 - Release readiness checks through `npm run check:release`.
 - Local no-publish release dry run through `npm run check:release-dry-run`, covering Python source distribution and wheel build, npm package packing, and Go clean-module import verification with a local replace directive.
 - Registry README policy: PyPI uses the root README, while the npm package carries a short package-local README that links back to the repository docs.
+- Installed Python CLI entry point: `runcost price-cards` for local price-source conversion and `runcost fixture-check` for lightweight one-fixture checks.
+- Migration guide from hand-written formulas to usage ledgers, price cards, and fixtures.
 
 Progress criteria:
 
@@ -591,10 +595,11 @@ Progress criteria:
 - Optional packages keep framework dependencies isolated.
 - Release readiness checks pass without publishing.
 - Manual release workflow can build artifacts and requires explicit publish opt-in.
+- Package-user CLI smoke checks pass in a clean installed Python environment.
 
 Exit gate:
 
-- The library is ready for private alpha users.
+- The library is ready for private alpha users from the repository/source-install path. First real registry publication, external trusted-publisher setup, and post-tag Go module verification remain release operations, not repo-side blockers.
 
 ### Milestone 8: Alpha Quality and Feedback
 
