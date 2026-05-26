@@ -70,6 +70,12 @@ summary, and verifies the real Go tag when `v<version>` already exists on the
 remote. If the tag is absent, the workflow explicitly records that real Go tag
 verification was skipped for that rehearsal.
 
+GitHub workflow dispatch requires `.github/workflows/release.yml` to exist on
+the repository default branch. If the workflow is still only on a feature
+branch, `gh workflow run release.yml --ref <branch> ...` can fail with
+`workflow release.yml not found on the default branch`. In that case, merge the
+workflow to the default branch first, then rerun the no-publish rehearsal.
+
 No-publish artifact review checklist:
 
 - Confirm Python wheel and source distribution are present in workflow artifacts.
@@ -79,6 +85,8 @@ No-publish artifact review checklist:
   tests passed.
 - Confirm Go tag verification ran when the real Go tag existed, or was
   explicitly skipped because the tag was absent.
+- Confirm the workflow dispatch ran from a workflow file GitHub recognizes on
+  the default branch.
 - Keep publishing disabled until PyPI/npm trusted publishers are configured and
   artifacts are reviewed.
 

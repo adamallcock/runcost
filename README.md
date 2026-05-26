@@ -64,6 +64,7 @@ npm run example:py
 - Invoice/dashboard comparison process: `docs/process/invoice-dashboard-comparison.md`
 - Source data update process: `docs/process/2026-05-26-source-data-update-process.md`
 - Beta and V1 hardening roadmap: `docs/process/beta-v1-hardening-roadmap.md`
+- No-publish workflow blocked report: `docs/reports/2026-05-26-release-workflow-no-publish-blocked.md`
 - Release process: `docs/process/release-process.md`
 - Contributing: `CONTRIBUTING.md`
 - Security policy: `SECURITY.md`

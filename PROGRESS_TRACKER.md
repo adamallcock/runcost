@@ -124,7 +124,7 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 | Milestone 6: Framework Adapters | Complete for current scope | No | LangChain AIMessage, OpenAI Agents SDK usage objects, Vercel AI SDK generateText and streamText finish objects, LlamaIndex TokenCountingHandler, Haystack metadata, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, LangSmith run/export usage, Semantic Kernel telemetry, OpenRouter SDK responses, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` and `onFinish` helpers, and aggregation exist with fixtures. | Live SDK/API-key smoke, real application validation, deeper framework callback variants, and smoke-derived examples move to Milestone 8/beta hardening. |
 | Milestone 7: Packaging and Developer Experience | Complete for current scope | No | Package metadata, types, examples, CI, clean install checks, Python package CLI, migration guide, alpha docs, license metadata, changelog, contributing/security docs, registry README policy, release process, release readiness checks, guarded release workflow, and local no-publish release dry run exist. | First registry publication, external trusted publisher configuration, and real post-tag Go module verification remain release operations outside the repo-side private-alpha gate. |
 | Milestone 8: Alpha Quality and Feedback | Partial | Yes | `scripts/run_alpha_smoke.py`, `scripts/run_vercel_alpha_smoke.mjs`, `scripts/run_langchain_alpha_smoke.py`, `scripts/check_alpha_smoke.py`, `fixtures/source-files/alpha-smoke-samples.json`, and `docs/process/alpha-smoke-runbook.md` exist; sample mode covers OpenAI Responses, Anthropic prompt caching, Vercel stream finish, LangChain metadata, OpenRouter cost comparison, and multi-provider discounts without credentials. Sanitized invoice/dashboard comparison mechanics exist through `scripts/compare_invoice_dashboard.py`, `scripts/check_invoice_comparison.py`, `fixtures/source-files/invoice-dashboard-comparison-sample.json`, and `docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md`. | Execute at least one credentialed live SDK/API run, classify all live findings, and run a real provider dashboard/invoice/usage-export comparison. |
-| Milestone 9: Public Beta | Partial | No | Guarded release workflow, trusted-publishing docs, no-publish artifact review checklist, local release dry run, real Go tag verification path, and source-data update owner/cadence/review process exist. | External PyPI/npm trusted publisher configuration, actual no-publish workflow run review, real tag Go verification, and beta caveat review remain. |
+| Milestone 9: Public Beta | Partial | No | Guarded release workflow, trusted-publishing docs, no-publish artifact review checklist, local release dry run, real Go tag verification path, source-data update owner/cadence/review process, and blocked no-publish workflow dispatch evidence exist. | External PyPI/npm trusted publisher configuration, actual no-publish workflow run review after workflow is on default branch, real tag Go verification, and beta caveat review remain. |
 | Milestone 10: V1 | Not started | No | None. | Stable schemas/warning codes/package APIs, production-ready packages, strong provider/source coverage, historical-pricing path, and top framework integrations. |
 
 ## Work Log
@@ -172,11 +172,17 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
   - added `docs/process/2026-05-26-source-data-update-process.md` with owner, cadence, review checklist, and product-truth loop for source refreshes;
   - linked the process from README, source-adapter docs, release process, beta/V1 roadmap, and contributing guide;
   - added project hygiene and release readiness checks so the source-data process remains part of beta/release validation.
+- Attempted guarded no-publish release workflow dispatch:
+  - `gh workflow run release.yml --ref package-doc-readiness -f version=0.0.0 -f publish=false`;
+  - GitHub returned `workflow release.yml not found on the default branch`;
+  - captured the finding as `docs/reports/2026-05-26-release-workflow-no-publish-blocked.md`;
+  - updated release docs to clarify that GitHub workflow dispatch requires the release workflow to exist on the default branch before branch-targeted no-publish rehearsal can run.
 - Added docs:
   - `docs/process/alpha-smoke-runbook.md`
   - `docs/process/invoice-dashboard-comparison.md`
   - `docs/process/2026-05-26-source-data-update-process.md`
   - `docs/process/beta-v1-hardening-roadmap.md`
+  - `docs/reports/2026-05-26-release-workflow-no-publish-blocked.md`
 
 - Completed Milestone 5 for the current tool-call and feature-pricing scope.
 - Added `openai-responses-raw-computer-and-function-tools.json` to fixture OpenAI Responses `computer_call` action counts and `function_call` counts as first-class tool/feature components across Python, JavaScript/TypeScript, and Go.

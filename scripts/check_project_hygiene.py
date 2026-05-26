@@ -17,6 +17,7 @@ REQUIRED_FILES = [
     "docs/reports/fixture-coverage.md",
     "docs/generated/contract-taxonomy.md",
     "docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md",
+    "docs/reports/2026-05-26-release-workflow-no-publish-blocked.md",
     "docs/guides/package-installation.md",
     "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     "docs/guides/quickstart.md",
