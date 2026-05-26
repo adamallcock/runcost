@@ -43,22 +43,18 @@ For mechanical coverage counts, see [Fixture Coverage](../reports/fixture-covera
 |---|---|---|
 | LangChain | AIMessage usage metadata | Fixture-backed |
 | LangChain | Python callback/context-manager helper | Fixture-backed for Python |
+| OpenAI Agents SDK | Usage objects and aggregated request usage entries | Fixture-backed |
 | Vercel AI SDK | `generateText` result | Fixture-backed |
+| Vercel AI SDK | `streamText` finish/onFinish result | Fixture-backed |
 | Vercel AI SDK | `wrapGenerate` middleware helper | Fixture-backed for JavaScript |
+| Vercel AI SDK | `onFinish` helper | Fixture-backed for JavaScript |
 | LlamaIndex | TokenCountingHandler output | Fixture-backed |
 | Haystack | OpenAIChatGenerator reply metadata / OpenAIGenerator meta usage | Fixture-backed |
 | LiteLLM proxy | OpenAI-compatible usage plus hidden response cost metadata | Fixture-backed |
 | AutoGen / AG2 | `get_actual_usage()`, `get_total_usage()`, `gather_usage_summary(...)` summary dictionaries | Fixture-backed for selected usage summary shape |
-
-## Documented Partial Adapter Paths
-
-These paths are researched and documented in [Framework Adapter Notes](../notes/framework-adapter-notes.md), but they are not yet fixture-backed and should not be treated as implemented support.
-
-| Framework / Gateway | Object or Path | Status |
-|---|---|---|
-| Semantic Kernel | Function invocation filters, auto-function filters, connector token metadata | Documented path; not fixture-backed |
-| LangSmith | Trace usage metadata and bulk export cost comparison | Documented path; not fixture-backed |
-| OpenRouter-compatible SDK paths | OpenAI SDK base URL, OpenRouter SDK, Agent SDK full responses | Documented path; not fixture-backed |
+| Semantic Kernel | Basic telemetry/filter token metadata | Fixture-backed |
+| LangSmith | Trace/run usage metadata and export `total_cost` comparison | Fixture-backed |
+| OpenRouter-compatible SDK paths | OpenAI SDK base URL responses and resolved Agent SDK full responses | Fixture-backed |
 
 ## Aggregation
 
@@ -83,5 +79,5 @@ These paths are researched and documented in [Framework Adapter Notes](../notes/
 - Support means extraction and pricing behavior has at least one shared fixture across Python and JavaScript, with Go coverage through the conformance suite where applicable.
 - Support does not mean every model, region, service tier, tool, or historical price is present.
 - OpenAI Conversations are documented as state resources, not standalone usage-bearing model responses. Price Responses calls that attach to Conversations through the fixture-backed OpenAI Responses extractor.
-- Documented partial adapter paths are integration targets with source evidence; they still need adapters, fixtures, examples, and parity-matrix promotion before they become supported.
-- The next support expansion should prioritize provider-specific tool-call pricing, streaming usage, and clean framework middleware ergonomics.
+- Milestone 6 framework paths are fixture-backed for dependency-free plain-object shapes. Live SDK/API-key smoke and real application validation are assigned to Milestone 8.
+- The next support expansion should prioritize provider-specific tool-call pricing, broader streaming usage, and framework findings from live smoke runs.

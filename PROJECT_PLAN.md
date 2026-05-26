@@ -489,6 +489,8 @@ Exit gate:
 
 ### Milestone 6: Framework Adapters
 
+Status: Complete for current scope.
+
 Goal:
 
 Make adoption easy for common agent and LLM frameworks.
@@ -520,22 +522,28 @@ Delivered in current prototype:
 - Haystack OpenAI generator result metadata extraction.
 - LiteLLM proxy response metadata extraction with hidden response-cost comparison.
 - AutoGen/AG2 usage summary extraction with cached-vs-actual mode selection and framework-reported cost comparison.
+- OpenAI Agents SDK usage object extraction with aggregated request usage preservation.
+- Vercel AI SDK `streamText` finish/onFinish object extraction.
+- LangSmith run/export usage extraction with exported `total_cost` comparison.
+- Semantic Kernel telemetry/filter output extraction for basic prompt/completion token metrics and plugin/function metadata preservation.
+- OpenRouter-compatible SDK response extraction for OpenAI SDK-routed responses and resolved Agent SDK response objects.
 - One-call helper APIs for LangChain, Vercel AI SDK, and LlamaIndex in Python, JavaScript/TypeScript, and Go.
-- One-call helper APIs for Haystack, LiteLLM proxy metadata, and AutoGen/AG2 usage summaries in Python, JavaScript/TypeScript, and Go.
+- One-call helper APIs for Haystack, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, OpenAI Agents SDK usage, Vercel stream finish objects, LangSmith runs, Semantic Kernel telemetry, and OpenRouter SDK responses in Python, JavaScript/TypeScript, and Go.
+- JavaScript helper APIs for Vercel AI SDK `onFinish` hooks and OpenRouter Agent SDK `getResponse()` objects.
 - Framework adapter notes in `docs/notes/framework-adapter-notes.md`.
-- Documented partial adapter paths for Semantic Kernel, LangSmith export comparison, and OpenRouter-compatible SDK paths.
+- Fixture-backed adapter paths for Semantic Kernel, LangSmith export comparison, OpenRouter-compatible SDK paths, OpenAI Agents SDK usage, and Vercel AI SDK streamText final usage.
 
 Progress criteria:
 
 - LangChain Python callback works with one context manager.
 - Vercel AI SDK wrapper works with one middleware/helper.
 - LlamaIndex callback handler captures model and usage metadata.
-- Semantic Kernel, LangSmith, and OpenRouter-compatible SDK paths have documented adapter paths even if initial support is partial.
-- Framework fixtures cover direct result objects, callbacks, streaming finalization, and multi-step runs.
+- Semantic Kernel, LangSmith, OpenRouter-compatible SDK paths, OpenAI Agents SDK usage, and Vercel AI SDK streamText final usage have fixture-backed adapter paths for current plain-object scope.
+- Framework fixtures cover direct result objects, callbacks, streaming finalization, framework-reported cost comparison, and multi-step runs.
 
 Exit gate:
 
-- A developer can integrate with at least LangChain, Vercel AI SDK, and LlamaIndex in one or two lines.
+- A developer can integrate with LangChain, OpenAI Agents SDK, Vercel AI SDK, LlamaIndex, Haystack, LiteLLM, AutoGen/AG2, LangSmith, Semantic Kernel, and OpenRouter-compatible SDK responses in one or two lines for the fixture-backed plain-object scope.
 
 ### Milestone 7: Packaging and Developer Experience
 

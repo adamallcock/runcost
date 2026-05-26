@@ -81,13 +81,20 @@ Common one-call helper:
 | Framework object | Python | JavaScript/TypeScript | Go |
 |---|---|---|---|
 | LangChain AIMessage | `from_langchain_message` | `fromLangChainMessage` | `FromLangChainMessage` |
+| OpenAI Agents SDK usage | `from_openai_agents_usage` | `fromOpenAIAgentsUsage` | `FromOpenAIAgentsUsage` |
 | Vercel AI SDK `generateText` result | `from_vercel_ai_sdk_result` | `fromVercelAISDKResult` | `FromVercelAISDKResult` |
+| Vercel AI SDK `streamText` finish result | `from_vercel_ai_sdk_stream_finish` | `fromVercelAISDKStreamFinish` | `FromVercelAISDKStreamFinish` |
 | LlamaIndex token counter | `from_llamaindex_token_counter` | `fromLlamaIndexTokenCounter` | `FromLlamaIndexTokenCounter` |
 | Haystack generator result | `from_haystack_generator_result` | `fromHaystackGeneratorResult` | `FromHaystackGeneratorResult` |
 | LiteLLM proxy / SDK response | `from_litellm_response` | `fromLiteLLMResponse` | `FromLiteLLMResponse` |
 | AutoGen / AG2 usage summary | `from_ag2_usage_summary` | `fromAG2UsageSummary` | `FromAG2UsageSummary` |
+| LangSmith run/export usage | `from_langsmith_run` | `fromLangSmithRun` | `FromLangSmithRun` |
+| Semantic Kernel telemetry | `from_semantic_kernel_telemetry` | `fromSemanticKernelTelemetry` | `FromSemanticKernelTelemetry` |
+| OpenRouter SDK response | `from_openrouter_sdk_response` | `fromOpenRouterSDKResponse` | `FromOpenRouterSDKResponse` |
 | LangChain callback/context manager | `track_langchain_costs` / `RunCostLangChainCallback` | N/A | N/A |
 | Vercel AI SDK middleware | N/A | `createRunCostVercelMiddleware` | N/A |
+| Vercel AI SDK `onFinish` helper | N/A | `createRunCostVercelOnFinish` | N/A |
+| OpenRouter Agent SDK result | N/A | `fromOpenRouterAgentResult` | N/A |
 
 The framework helpers route through the same cost calculator after extracting canonical usage.
 

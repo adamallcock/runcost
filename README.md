@@ -87,9 +87,8 @@ The implementation is still pre-alpha. The current center of gravity is normaliz
 - Raw extractors for OpenRouter Chat Completions, Cohere Chat, Google Gemini/Vertex generateContent, and AWS Bedrock Converse.
 - Final streaming usage extraction for OpenAI Responses `response.completed`, Anthropic Messages SSE event sequences, and Gemini stream chunks with `usageMetadata`.
 - Shared OpenAI-compatible chat extraction for Groq, xAI, Mistral, DeepSeek, Azure OpenAI, Hugging Face Inference Providers, and OpenRouter.
-- One-call framework helpers for LangChain AIMessage, Vercel AI SDK generateText, LlamaIndex TokenCountingHandler, Haystack generator metadata, LiteLLM proxy response metadata, and AutoGen/AG2 usage summary outputs.
-- Framework-native helpers for Python LangChain callback/context-manager usage and JavaScript Vercel AI SDK `wrapGenerate` middleware.
-- Documented partial adapter paths for Semantic Kernel, LangSmith export comparison, and OpenRouter-compatible SDK paths.
+- One-call framework helpers for LangChain AIMessage, OpenAI Agents SDK usage, Vercel AI SDK generateText and streamText finish objects, LlamaIndex TokenCountingHandler, Haystack generator metadata, LiteLLM proxy response metadata, AutoGen/AG2 usage summary outputs, LangSmith run/export usage, Semantic Kernel telemetry, and OpenRouter SDK response objects.
+- Framework-native helpers for Python LangChain callback/context-manager usage and JavaScript Vercel AI SDK `wrapGenerate` middleware / `onFinish` hooks.
 - Multi-call/session aggregation for already-calculated cost ledgers, including missing final streaming usage warnings.
 - Exact alias resolution through price-card aliases.
 - Component-aware discount policies.

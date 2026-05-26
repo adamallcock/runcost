@@ -13,7 +13,7 @@ Purpose: keep the implementation state explicit across context compaction and lo
 
 ## Active Objective
 
-Complete `PROJECT_PLAN.md` end to end for Milestones 0, 1, 1.5, 2, 3, and 4 before resuming packaging, alpha smoke, or release work, while keeping the project polyglot, schema-first, fixture-first, and easy to maintain across Python, JavaScript/TypeScript, Go, and future languages.
+Keep `PROJECT_PLAN.md` implementation state explicit while closing current-scope roadmap gaps, preserving the polyglot, schema-first, fixture-first architecture across Python, JavaScript/TypeScript, Go, and future languages.
 
 ## Status Vocabulary
 
@@ -26,9 +26,9 @@ The tracker separates roadmap state from active work state:
 
 ## Active Focus
 
-Current active lane: Milestones 0-4 completion pass verification and handoff.
+Current active lane: none; Milestone 6 framework adapter completion pass is complete for current scope.
 
-Why this lane is active: the current goal is to close Milestones 0, 1, 1.5, 2, 3, and 4 before resuming packaging, alpha smoke, or public release work. Milestones 0, 1, 1.5, 2, 3, and 4 are now complete for current scope. The remaining work in this lane is final verification, commit hygiene, and making sure this tracker is the single handoff ledger.
+Why no lane is active: Milestone 6 has been promoted from documented/partial paths to fixture-backed plain-object adapters for the current no-live-smoke scope. The next active lane should be selected deliberately from the backlog rather than inferred from partial roadmap rows.
 
 Doc rename coordination: another agent may rename Markdown files to match repository naming rules. Until that lands, avoid broad documentation churn and re-inspect paths before changing cross-document links.
 
@@ -37,8 +37,8 @@ Doc rename coordination: another agent may rename Markdown files to match reposi
 Evidence collected on 2026-05-25:
 
 - `npm test` passes.
-- Python and JavaScript fixture runner checks 74 shared fixtures, with fixture metadata allowing language-scoped framework ergonomics fixtures.
-- Fixture metadata and checked-in coverage report pass through `python3 scripts/check_fixture_coverage.py` with 74 fixtures.
+- Python and JavaScript fixture runner checks 81 shared fixtures, with fixture metadata allowing language-scoped framework ergonomics fixtures.
+- Fixture metadata and checked-in coverage report pass through `python3 scripts/check_fixture_coverage.py` with 81 fixtures.
 - Source refresh command smoke check passes through `python3 scripts/check_source_refresh.py`.
 - Go package passes `go test ./packages/go/...`.
 - Python compile check passes for package, scripts, and Python example.
@@ -90,20 +90,21 @@ Status: complete for this pass.
 | Add Go public API docs and typed examples | Done | Go doc comments in `ledger.go`; `packages/go/ledger/example_test.go`; Go tests pass | Examples cover `CalculateCost` and `FromResponse`. |
 | Add public API parity matrix | Done | `docs/notes/api-parity-matrix.md`; hygiene check validates public API names | Tracks Python, JS/TS, and Go support by capability. |
 | Add debug trace fixture shape | Done | `schemas/debug-trace.schema.json`, `debug-trace-explain-decisions.json`; `npm test` passes | Optional `debug_trace` / `debugTrace` explains price-card, component, alias, discount, and warning decisions. |
-| Add fixture metadata fields | Done | `schemas/fixture.schema.json`; all 74 fixtures include `metadata` | Metadata covers requirement IDs, provider, surface, scenario, tags, and expected languages. |
+| Add fixture metadata fields | Done | `schemas/fixture.schema.json`; all 81 fixtures include `metadata` | Metadata covers requirement IDs, provider, surface, scenario, tags, and expected languages. |
 | Add fixture coverage report | Done | `docs/reports/fixture-coverage.md`; `scripts/check_fixture_coverage.py`; `npm test` passes | Reports scenarios, provider surfaces, components, warning codes, source adapters, framework adapters, requirements, tags, and expected languages. |
 | Add generated-artifact drift checks | Done | `scripts/check_project_hygiene.py`; `npm test` runs it | Starts as required-artifact, package metadata, parity, fixture floor, and CI command checks. |
 | Add CI workflow | Done | `.github/workflows/ci.yml`; hygiene check passes | CI runs conformance tests, examples, and Python compile checks. |
 | Add cost-ledger aggregation primitive | Done | `cost-ledger-aggregation-basic.json`, `stream-final-usage-missing-warning.json`; Python/JS/Go tests pass | Aggregates already-calculated ledgers and emits `stream_usage_missing` when expected final stream usage is absent. |
 | Add provider streaming final-usage extraction | Done | `openai-responses-stream-completed-event.json`, `anthropic-messages-stream-events.json`, `gemini-generate-content-stream-chunks.json`; Python/JS/Go tests pass | Handles selected final-usage stream event envelopes without estimating arbitrary partial deltas. |
-| Add documented partial framework adapter paths | Done | `docs/notes/framework-adapter-notes.md`, `docs/reference/supported-surfaces.md`, `docs/notes/api-parity-matrix.md`; hygiene check guards names | Covers Semantic Kernel, AutoGen/AG2, LangSmith export comparison, and OpenRouter-compatible SDK paths as researched but not fixture-backed targets; Haystack and LiteLLM were later promoted to fixture-backed adapters. |
+| Add documented partial framework adapter paths | Done | `docs/notes/framework-adapter-notes.md`, `docs/reference/supported-surfaces.md`, `docs/notes/api-parity-matrix.md`; hygiene check guards names | Historical documentation slice. The remaining partial paths were later promoted by the Milestone 6 fixture-backed adapter slice. |
 | Add Haystack and LiteLLM fixture-backed framework adapters | Done | `haystack-openai-chat-generator-meta.json`, `litellm-proxy-response-cost-metadata.json`; Python/JS fixture runner and Go tests pass | Adds one-call helpers and extractors across Python, JavaScript/TypeScript, and Go. |
 | Normalize documentation layout | Done | `docs/guides/`, `docs/reference/`, `docs/notes/`, `docs/decisions/`, `docs/reports/`, `docs/process/`; hygiene and release scripts use new paths | Preserves content while moving dated/uppercase docs into categorized lowercase paths. |
 | Add AutoGen/AG2 fixture-backed framework adapter | Done | `ag2-usage-summary-actual.json`, `ag2-usage-summary-total.json`; Python/JS fixture runner, Go tests, package install checks, release checks, examples, JSON parse, ASCII scan, and diff whitespace checks pass | Adds selected usage summary extraction and one-call helpers across Python, JavaScript/TypeScript, and Go. |
 | Add fixture generator helpers | Done | `scripts/create_fixture.py`, `scripts/check_fixture_generator.py`, `npm run fixture:new`; generator smoke checks and targeted fixture checks pass | Adds schema-shaped fixture scaffolding and single-fixture validation to reduce future fixture duplication. |
 | Add v0.1 schema taxonomy lock | Done | `schemas/taxonomy.json`, `scripts/check_schema_taxonomy.py`; full validation passes | Locks component names, units, warning codes, alias resolution values, fixture scenarios, expected languages, and debug decision types. |
 | Add typed warning metadata payloads | Done | `warning_metadata_required_keys` in `schemas/taxonomy.json`; warning fixtures; Python/JS fixture runner and Go fixture tests pass | Every warning now carries metadata, and per-code required metadata keys are enforced across supported languages. |
-| Add adversarial decimal arithmetic fixture | Done | `decimal-arithmetic-adversarial.json`; `npm test` passes with 74 fixtures | Proves large token quantities and tiny per-token prices without binary float leakage across Python, JavaScript/TypeScript, and Go. |
+| Add adversarial decimal arithmetic fixture | Done | `decimal-arithmetic-adversarial.json`; `npm test` passes with 81 fixtures | Proves large token quantities and tiny per-token prices without binary float leakage across Python, JavaScript/TypeScript, and Go. |
+| Add Milestone 6 fixture-backed framework adapters | Done | `openai-agents-sdk-usage.json`, `vercel-ai-sdk-stream-text-finish.json`, `langsmith-run-usage-metadata.json`, `langsmith-export-cost-compare.json`, `semantic-kernel-telemetry-basic.json`, `openrouter-openai-sdk-response.json`, `openrouter-agent-sdk-response.json`; `npm test`, Go tests, package install checks, release checks, JSON parse, py_compile, and diff whitespace checks pass | Promotes OpenAI Agents SDK usage, Vercel `streamText` finish objects, LangSmith run/export usage, Semantic Kernel telemetry, and OpenRouter SDK response paths to dependency-free fixture-backed support across Python, JavaScript/TypeScript, and Go. |
 
 ## Milestone Roadmap Status
 
@@ -118,13 +119,46 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 | Milestone 3: Source Adapter Layer | Complete for current scope | No | `llm-prices` current and historical feeds, LiteLLM, Portkey, OpenRouter models, models.dev, reviewed official snapshots, source-cache envelopes, local JSON/YAML file loading, explicit refresh command, source capability warnings, user compact pricing, and Helicone prototype adapters exist. | Later source expansion moves to beta/V1 hardening. |
 | Milestone 4: Provider Extractors V0 | Complete for current scope | No | OpenAI Responses, OpenAI Chat Completions, OpenAI Embeddings, Anthropic, OpenRouter, Groq, xAI Chat Completions and xAI Responses, Mistral, DeepSeek, Azure OpenAI, Hugging Face, Cohere, Gemini/Vertex, Bedrock Converse, and Bedrock InvokeModel extractors exist for selected surfaces; selected final streaming usage cases are fixture-backed; OpenAI Conversations are documented as non-cost-bearing state resources whose costs attach to Responses. | Additional stream protocols, rerank, generated media, transcription, and deeper provider-specific feature fields move to Milestone 5+ or beta/V1 hardening. |
 | Milestone 5: Tool Call and Feature Pricing | Partial | No | Generic and raw OpenAI tool-call fixtures exist; OpenRouter request/image/search source pricing and Gemini/Vertex multimodal token details exist. | Provider-specific tool pricing breadth for computer use, rerank, embeddings, image/audio/video generation, transcription, storage/session/GB-day forms, and direct pass-through costs. |
-| Milestone 6: Framework Adapters | Partial | No | LangChain AIMessage, Vercel AI SDK generateText, LlamaIndex TokenCountingHandler, Haystack metadata, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` middleware, and aggregation exist with fixtures. | Semantic Kernel, LangSmith export comparison, OpenRouter-compatible SDK wrappers, OpenAI Agents SDK, framework stream integrations, and concrete examples for remaining paths. |
+| Milestone 6: Framework Adapters | Complete for current scope | No | LangChain AIMessage, OpenAI Agents SDK usage objects, Vercel AI SDK generateText and streamText finish objects, LlamaIndex TokenCountingHandler, Haystack metadata, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, LangSmith run/export usage, Semantic Kernel telemetry, OpenRouter SDK responses, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` and `onFinish` helpers, and aggregation exist with fixtures. | Live SDK/API-key smoke, real application validation, deeper framework callback variants, and smoke-derived examples move to Milestone 8/beta hardening. |
 | Milestone 7: Packaging and Developer Experience | Partial | No | Package metadata, types, examples, CI, clean install checks, alpha docs, license metadata, changelog, contributing/security docs, registry README policy, release process, release readiness checks, guarded release workflow, and local no-publish release dry run exist. | First registry publication, external trusted publisher configuration, and real post-tag Go module verification. |
 | Milestone 8: Alpha Quality and Feedback | Not started | No | No live SDK/API/application smoke harness exists yet. Current evidence is local fixtures, examples, clean package installs, and release dry runs. | Real application alpha runs, issue-to-fixture loop, invoice/dashboard comparison, and integration ergonomics validation. |
 | Milestone 9: Public Beta | Not started | No | None. | Stable v0.x schemas, package publishing pipeline, source-data update process, and public dependency caveats. |
 | Milestone 10: V1 | Not started | No | None. | Stable schemas/warning codes/package APIs, production-ready packages, strong provider/source coverage, historical-pricing path, and top framework integrations. |
 
 ## Work Log
+
+### 2026-05-25
+
+- Completed Milestone 6 for the current no-live-smoke scope.
+- Added fixture-backed framework adapter paths:
+  - OpenAI Agents SDK usage objects.
+  - Vercel AI SDK `streamText` finish/onFinish objects.
+  - LangSmith run/export usage metadata and `total_cost` comparison.
+  - Semantic Kernel telemetry/filter token metadata.
+  - OpenRouter-compatible SDK and resolved Agent SDK response objects.
+- Added dependency-free helper APIs across Python, JavaScript/TypeScript, and Go:
+  - `from_openai_agents_usage`, `from_vercel_ai_sdk_stream_finish`, `from_langsmith_run`, `from_semantic_kernel_telemetry`, `from_openrouter_sdk_response`.
+  - `fromOpenAIAgentsUsage`, `fromVercelAISDKStreamFinish`, `createRunCostVercelOnFinish`, `fromLangSmithRun`, `fromSemanticKernelTelemetry`, `fromOpenRouterSDKResponse`, `fromOpenRouterAgentResult`.
+  - `FromOpenAIAgentsUsage`, `FromVercelAISDKStreamFinish`, `FromLangSmithRun`, `FromSemanticKernelTelemetry`, `FromOpenRouterSDKResponse`.
+- Added shared fixtures:
+  - `openai-agents-sdk-usage.json`
+  - `vercel-ai-sdk-stream-text-finish.json`
+  - `langsmith-run-usage-metadata.json`
+  - `langsmith-export-cost-compare.json`
+  - `semantic-kernel-telemetry-basic.json`
+  - `openrouter-openai-sdk-response.json`
+  - `openrouter-agent-sdk-response.json`
+- Regenerated `docs/reports/fixture-coverage.md`; fixture count is now 81 and framework-adapter scenario count is now 16.
+- Kept live SDK/API-key smoke and real application validation explicitly assigned to Milestone 8.
+- Verification after Milestone 6 adapter slice:
+  - `python3 scripts/check_fixtures.py --fixture ...` passed for the seven new fixtures.
+  - `npm test` passed: 81 fixtures checked across Python and JavaScript, fixture generator/source refresh/coverage/schema taxonomy/hygiene checks passed, Go tests green.
+  - `go test ./packages/go/...` passed.
+  - `python3 -m py_compile packages/python/runcost/core.py packages/python/runcost/types.py packages/python/runcost/__init__.py scripts/check_fixtures.py scripts/check_package_installs.py scripts/check_project_hygiene.py` passed.
+  - `npm run check:packages` passed with fresh Python, npm, and Go install checks.
+  - `npm run check:release` passed.
+  - `jq empty package.json packages/javascript/core/package.json schemas/*.json fixtures/*.json fixtures/source-files/*.json` passed.
+  - `git diff --check` passed.
 
 ### 2026-05-24
 
@@ -1044,8 +1078,8 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
   - `go test ./packages/go/...` passed.
   - `python3 -m py_compile packages/python/runcost/core.py packages/python/runcost/__init__.py packages/python/runcost/types.py scripts/check_fixtures.py scripts/check_schema_taxonomy.py scripts/check_fixture_coverage.py scripts/check_package_installs.py scripts/check_project_hygiene.py` passed.
   - `jq empty package.json packages/javascript/core/package.json schemas/*.json fixtures/*.json fixtures/source-files/*.json` passed.
-  - `python3 scripts/check_fixture_coverage.py --write-report` passed and regenerated coverage for 74 fixtures.
-  - `npm test` passed: 74 fixtures, fixture generator checks, source refresh command checks, fixture coverage, taxonomy checks, Go tests, and hygiene checks green.
+  - `python3 scripts/check_fixture_coverage.py --write-report` passed and regenerated coverage for the then-current fixture set.
+  - `npm test` passed: fixture checks, fixture generator checks, source refresh command checks, fixture coverage, taxonomy checks, Go tests, and hygiene checks green.
   - `npm run check:packages` passed.
   - `npm run check:release` passed.
   - `npm run check:release-dry-run` passed.
@@ -1065,7 +1099,7 @@ Answer: not yet. The repo has strong local validation, but not a real SDK/API/ap
 
 What exists today:
 
-- Fixture conformance: `npm test` runs 74 shared fixtures through Python and JavaScript, runs Go tests, checks fixture metadata coverage, source-refresh smoke behavior, schema taxonomy, fixture generator behavior, and project hygiene.
+- Fixture conformance: `npm test` runs 81 shared fixtures through Python and JavaScript, runs Go tests, checks fixture metadata coverage, source-refresh smoke behavior, schema taxonomy, fixture generator behavior, and project hygiene.
 - Package smoke tests: `npm run check:packages` installs Python from a temporary source copy, packs and installs the npm tarball into a clean npm project, and imports the Go package from a clean temporary module with a local replace directive.
 - Release artifact smoke tests: `npm run check:release-dry-run` builds Python wheel/source distribution, packs npm, confirms the npm tarball includes `README.md`, and verifies Go importability from a clean temporary module.
 - Examples: `examples/python_basic.py`, `examples/javascript_basic.mjs`, and Go example tests exercise synthetic provider responses and price cards.
@@ -1076,7 +1110,7 @@ What does not exist yet:
 - No live OpenAI Responses, Anthropic Messages, OpenRouter, Gemini/Vertex, Bedrock, or framework SDK smoke script.
 - No optional API-key-gated alpha smoke harness that records provider response shape, RunCost ledger output, and regression fixture candidates.
 - No sample invoice/dashboard reconciliation run.
-- No real application integration evidence for Vercel streaming, LangChain agent runs, or multi-provider router usage.
+- No real application integration evidence for Vercel streaming, LangChain agent runs, OpenAI Agents SDK runs, Semantic Kernel filters, LangSmith exports, or multi-provider router usage.
 - No recurring live-source drift monitor that proposes fixture/source updates.
 
 Language support today:
@@ -1088,7 +1122,7 @@ Language support today:
 
 Finalization path after the Milestones 0-4 completion pass:
 
-1. Build the Milestone 8 alpha smoke harness. It should be optional and API-key-gated, never require secrets for normal CI, and emit sanitized outputs that can become fixtures. Minimum scenarios: OpenAI Responses with cached/reasoning/tool usage, Anthropic Messages with cache write/read, OpenRouter provider-reported cost comparison, Vercel AI SDK streaming final usage, LangChain callback/context manager, and one multi-call aggregation run.
+1. Build the Milestone 8 alpha smoke harness. It should be optional and API-key-gated, never require secrets for normal CI, and emit sanitized outputs that can become fixtures. Minimum scenarios: OpenAI Responses with cached/reasoning/tool usage, Anthropic Messages with cache write/read, OpenRouter provider-reported cost comparison, Vercel AI SDK streaming final usage, LangChain callback/context manager, OpenAI Agents SDK usage, LangSmith export comparison, Semantic Kernel telemetry/filter output, and one multi-call aggregation run.
 2. Convert every smoke discrepancy into a fixture, warning, or documented limitation. This is the quality loop that prevents live findings from staying as notes.
 3. Run one invoice/dashboard comparison sample. The goal is not universal invoice exactness; it is to document where RunCost is exact, estimated, or intentionally limited.
 4. Cut the first registry release after smoke harness confidence: configure PyPI/npm trusted publishers externally, tag `v0.1.0`, run the release workflow with publishing disabled, inspect artifacts, then publish.
@@ -1104,8 +1138,8 @@ Naming update:
 
 Audit evidence:
 
-- `python3 scripts/check_fixtures.py` passed with 74 fixtures across declared Python and JavaScript fixture coverage after the warning metadata and decimal hardening slice.
-- `python3 scripts/check_fixture_coverage.py` passed with metadata on all 74 fixtures and a current checked-in coverage report after the warning metadata and decimal hardening slice.
+- `python3 scripts/check_fixtures.py` passed with 81 fixtures across declared Python and JavaScript fixture coverage after the Milestone 6 framework adapter slice.
+- `python3 scripts/check_fixture_coverage.py` passed with metadata on all 81 fixtures and a current checked-in coverage report after the Milestone 6 framework adapter slice.
 - `python3 scripts/check_source_refresh.py` passed against a no-network local snapshot.
 - `npm test` passed: fixture checks, source refresh command checks, fixture coverage checks, schema taxonomy checks, Go tests, and project hygiene checks green after the warning metadata and decimal hardening slice.
 - `npm run check:packages` passed: clean Python, npm, and Go install smoke checks green.
@@ -1147,7 +1181,7 @@ What is implemented and well covered:
 - Optional debug traces for price-card candidates, component matches, model alias resolution, discount applications, and warnings.
 - Source adapters for `llm-prices` current and historical feeds, LiteLLM, Portkey, OpenRouter models, models.dev, reviewed official snapshots, source-cache envelopes, local JSON/YAML files, source capability warnings, user compact pricing, and Helicone model-registry data.
 - Provider extractors for OpenAI Responses, OpenAI Chat Completions, OpenAI Embeddings, Anthropic Messages, OpenRouter chat completions, Groq, xAI Chat Completions and xAI Responses, Mistral, DeepSeek, Azure OpenAI chat, Hugging Face Inference Providers chat, Cohere Chat, Gemini/Vertex generateContent, Bedrock Converse, and Bedrock InvokeModel with Anthropic Messages bodies, including selected final streaming usage envelopes for OpenAI Responses, Anthropic Messages, and Gemini generateContent.
-- Framework metadata helpers for LangChain AIMessage, Vercel AI SDK generateText result objects, LlamaIndex TokenCountingHandler data, Haystack generator metadata, LiteLLM proxy response metadata, AutoGen/AG2 usage summaries, Python LangChain callback/context-manager usage, and JavaScript Vercel `wrapGenerate` middleware.
+- Framework metadata helpers for LangChain AIMessage, OpenAI Agents SDK usage objects, Vercel AI SDK generateText and streamText finish objects, LlamaIndex TokenCountingHandler data, Haystack generator metadata, LiteLLM proxy response metadata, AutoGen/AG2 usage summaries, LangSmith run/export usage, Semantic Kernel telemetry, OpenRouter SDK response objects, Python LangChain callback/context-manager usage, and JavaScript Vercel `wrapGenerate` / `onFinish` helpers.
 - Cost-ledger aggregation for multi-call/session rollups, with fixture-backed `stream_usage_missing` warnings when final stream usage is expected but absent.
 - Docs for project plan, product requirements, architecture, market validation, live evaluation protocol, parity matrix, provider extractor notes, framework adapter notes, polyglot tooling decision, contribution, security, changelog, and release process.
 
@@ -1161,7 +1195,7 @@ Partially implemented:
 - Provider extractors: complete for the current V0 provider-surface scope. OpenAI Responses, OpenAI Embeddings, xAI Responses, Anthropic Messages, Bedrock InvokeModel with Anthropic Messages bodies, and Gemini final stream usage shapes now have fixtures. OpenAI Conversations are documented as non-cost-bearing state resources whose costs attach to Responses. Provider-specific tool fields, other streaming variants, rerank, image/audio/video generation, and transcription paths move to Milestone 5+ or beta/V1 hardening.
 - Tool pricing: generic tool components, OpenAI raw tool calls, OpenRouter image/request/search source pricing, and custom units exist. Provider-specific tool pricing remains sparse.
 - Multimodal: Gemini/Vertex modality token details are covered. Other providers and generated-media billing are not.
-- Framework adapters: direct metadata/result objects are covered for LangChain, Vercel AI SDK, LlamaIndex, Haystack, LiteLLM proxy responses, and AutoGen/AG2 usage summaries. Initial Python LangChain callback/context-manager plus JavaScript Vercel middleware helpers exist, and generic multi-step cost-ledger aggregation now exists. Semantic Kernel, LangSmith export comparison, and OpenRouter-compatible SDK paths have documented partial adapter paths, but they are not implemented or fixture-backed. Framework-specific stream integrations, OpenAI Agents SDK, and concrete examples for the remaining partial paths are still missing.
+- Framework adapters: complete for the current no-live-smoke scope. Direct metadata/result objects are fixture-backed for LangChain, OpenAI Agents SDK usage, Vercel AI SDK generateText and streamText finish results, LlamaIndex, Haystack, LiteLLM proxy responses, AutoGen/AG2 usage summaries, LangSmith run/export usage, Semantic Kernel telemetry, and OpenRouter-compatible SDK responses. Initial Python LangChain callback/context-manager plus JavaScript Vercel middleware/onFinish helpers exist, and generic multi-step cost-ledger aggregation exists. Live SDK/API-key smoke, real app validation, and deeper callback/stream variants move to Milestone 8/beta hardening.
 - Documentation: public quickstart, installation, API reference, aggregation/streaming, debug trace, custom pricing, discount, warning/strict-mode, source adapter, support-matrix docs, contribution guide, security/privacy note, changelog, registry README policy, and release process now exist. Deeper framework integration guides and automated release notes are still missing.
 - Packaging: clean local install checks now pass for Python, JavaScript/TypeScript, and Go. License metadata, PyPI/npm guarded release workflow, Go tag policy, changelog, provenance guidance, release readiness checks, registry README checks, and a no-publish release dry run exist. First real registry publication, external trusted publisher configuration, and real post-tag Go module verification remain incomplete.
 
@@ -1179,7 +1213,7 @@ Highest-risk gaps before private alpha:
 1. First real registry release readiness: configure PyPI/npm trusted publishing and verify Go tags after a real tag is pushed.
 2. Broader provider/framework streaming support beyond the initial OpenAI, Anthropic, and Gemini final-usage fixtures.
 3. Schema-derived typed models and generated artifact workflow, especially for Go structs and generated docs.
-4. Broader framework integration ergonomics beyond the initial LangChain/Vercel helpers, especially turning remaining documented partial paths into fixture-backed adapters and examples.
+4. Broader framework integration ergonomics from live smoke findings, especially real SDK examples, deeper callback variants, and sanitized fixture conversion.
 5. Deeper debug traces for extractor and framework adapter internals.
 6. Stronger generated artifact drift detection and schema-derived type/doc checks.
 

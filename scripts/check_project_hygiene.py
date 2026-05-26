@@ -380,12 +380,14 @@ def check_ci_workflow() -> None:
         assert_true(command in workflow, f"CI workflow missing command: {command}")
 
 
-def check_documented_partial_framework_paths() -> None:
+def check_framework_adapter_paths() -> None:
     framework_notes = (ROOT / "docs/notes/framework-adapter-notes.md").read_text(encoding="utf-8")
     supported_surfaces = (ROOT / "docs/reference/supported-surfaces.md").read_text(encoding="utf-8")
     parity = (ROOT / "docs/notes/api-parity-matrix.md").read_text(encoding="utf-8")
 
     framework_note_terms = [
+        "OpenAI Agents SDK Usage",
+        "Vercel AI SDK",
         "Semantic Kernel",
         "Haystack",
         "AutoGen / AG2",
@@ -397,6 +399,8 @@ def check_documented_partial_framework_paths() -> None:
         assert_true(term in framework_notes, f"framework adapter notes missing framework path: {term}")
 
     for term in [
+        "OpenAI Agents SDK",
+        "Vercel AI SDK",
         "Semantic Kernel",
         "Haystack",
         "AutoGen / AG2",
@@ -408,12 +412,15 @@ def check_documented_partial_framework_paths() -> None:
         assert_true(term in parity, f"API parity matrix missing framework path: {term}")
 
     for term in [
-        "Semantic Kernel",
-        "LangSmith",
-        "OpenRouter-compatible SDK paths",
+        "openai-agents-sdk-usage.json",
+        "vercel-ai-sdk-stream-text-finish.json",
+        "langsmith-run-usage-metadata.json",
+        "langsmith-export-cost-compare.json",
+        "semantic-kernel-telemetry-basic.json",
+        "openrouter-openai-sdk-response.json",
+        "openrouter-agent-sdk-response.json",
     ]:
-        assert_true(term in supported_surfaces, f"supported surfaces missing partial framework path: {term}")
-        assert_true(term in parity, f"API parity matrix missing partial framework path: {term}")
+        assert_true(term in parity, f"API parity matrix missing framework fixture: {term}")
 
 
 def main() -> int:
@@ -423,7 +430,7 @@ def main() -> int:
     check_public_api_artifacts()
     check_fixture_floor()
     check_ci_workflow()
-    check_documented_partial_framework_paths()
+    check_framework_adapter_paths()
     print("Project hygiene checks passed.")
     return 0
 

@@ -134,14 +134,16 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | LangChain callback/context manager | Yes | N/A | N/A | `track_langchain_costs`, `RunCostLangChainCallback`; `langchain-callback-context-manager.json` |
 | LlamaIndex | Yes | Yes | Yes | `from_llamaindex_token_counter`, `fromLlamaIndexTokenCounter`, `FromLlamaIndexTokenCounter`; lower-level `extract_llamaindex_token_counter_usage`, `extractLlamaIndexTokenCounterUsage`; `llamaindex-token-counter-events.json` |
 | Vercel AI SDK | Yes | Yes | Yes | `from_vercel_ai_sdk_result`, `fromVercelAISDKResult`, `FromVercelAISDKResult`; lower-level `extract_vercel_ai_sdk_usage`, `extractVercelAISDKUsage`; `vercel-ai-sdk-generate-text-total-usage.json` |
+| Vercel AI SDK streamText finish | Yes | Yes | Yes | `from_vercel_ai_sdk_stream_finish`, `fromVercelAISDKStreamFinish`, `FromVercelAISDKStreamFinish`; adapter `vercel_ai_sdk.stream_text`; `vercel-ai-sdk-stream-text-finish.json` |
 | Vercel AI SDK middleware | N/A | Yes | N/A | `createRunCostVercelMiddleware`; `vercel-ai-sdk-middleware-wrap-generate.json` |
+| Vercel AI SDK onFinish helper | N/A | Yes | N/A | `createRunCostVercelOnFinish`; uses `fromVercelAISDKStreamFinish` |
 | Haystack | Yes | Yes | Yes | `from_haystack_generator_result`, `fromHaystackGeneratorResult`, `FromHaystackGeneratorResult`; lower-level `extract_haystack_generator_usage`, `extractHaystackGeneratorUsage`; `haystack-openai-chat-generator-meta.json` |
 | LiteLLM proxy response metadata | Yes | Yes | Yes | `from_litellm_response`, `fromLiteLLMResponse`, `FromLiteLLMResponse`; lower-level `extract_litellm_proxy_response_usage`, `extractLiteLLMProxyResponseUsage`; `litellm-proxy-response-cost-metadata.json` |
 | AutoGen / AG2 usage summary | Yes | Yes | Yes | `from_ag2_usage_summary`, `fromAG2UsageSummary`, `FromAG2UsageSummary`; lower-level `extract_ag2_usage_summary_usage`, `extractAG2UsageSummaryUsage`; `ag2-usage-summary-actual.json`, `ag2-usage-summary-total.json` |
-| OpenAI Agents SDK | Planned | Planned | Planned | Milestone 6 |
-| Semantic Kernel | Partial | Partial | Partial | Documented adapter path in `docs/notes/framework-adapter-notes.md`; no fixture-backed extractor yet |
-| LangSmith export/compare | Partial | Partial | Partial | Documented adapter path in `docs/notes/framework-adapter-notes.md`; no fixture-backed extractor yet |
-| OpenRouter-compatible SDK paths | Partial | Partial | Partial | Documented adapter path in `docs/notes/framework-adapter-notes.md`; OpenRouter chat/model fixtures exist, SDK wrappers do not |
+| OpenAI Agents SDK | Yes | Yes | Yes | `from_openai_agents_usage`, `fromOpenAIAgentsUsage`, `FromOpenAIAgentsUsage`; lower-level `extract_openai_agents_usage`, `extractOpenAIAgentsUsage`; `openai-agents-sdk-usage.json` |
+| Semantic Kernel | Yes | Yes | Yes | `from_semantic_kernel_telemetry`, `fromSemanticKernelTelemetry`, `FromSemanticKernelTelemetry`; lower-level `extract_semantic_kernel_telemetry_usage`, `extractSemanticKernelTelemetryUsage`; `semantic-kernel-telemetry-basic.json` |
+| LangSmith export/compare | Yes | Yes | Yes | `from_langsmith_run`, `fromLangSmithRun`, `FromLangSmithRun`; lower-level `extract_langsmith_run_usage`, `extractLangSmithRunUsage`; `langsmith-run-usage-metadata.json`, `langsmith-export-cost-compare.json` |
+| OpenRouter-compatible SDK paths | Yes | Yes | Yes | `from_openrouter_sdk_response`, `fromOpenRouterSDKResponse`, `FromOpenRouterSDKResponse`; lower-level `extract_openrouter_sdk_response_usage`, `extractOpenRouterSDKResponseUsage`; `openrouter-openai-sdk-response.json`, `openrouter-agent-sdk-response.json`; JavaScript also has `fromOpenRouterAgentResult` |
 
 ## Release Rule
 

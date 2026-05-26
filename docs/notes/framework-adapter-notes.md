@@ -22,19 +22,24 @@ Framework extraction is selected with `extract.adapter`:
 - `haystack.generator_result`
 - `litellm.proxy_response`
 - `ag2.usage_summary`
+- `openai_agents.usage`
+- `vercel_ai_sdk.stream_text`
+- `langsmith.run_usage`
+- `semantic_kernel.telemetry`
+- `openrouter.sdk_response`
 
 The output usage ledger keeps `provider`, `surface`, and `model` from the caller or framework response, so existing provider price cards remain usable.
 
 For one-call cost calculation, use the public helpers:
 
-- Python: `from_langchain_message`, `from_vercel_ai_sdk_result`, `from_llamaindex_token_counter`, `from_haystack_generator_result`, `from_litellm_response`, `from_ag2_usage_summary`.
-- JavaScript/TypeScript: `fromLangChainMessage`, `fromVercelAISDKResult`, `fromLlamaIndexTokenCounter`, `fromHaystackGeneratorResult`, `fromLiteLLMResponse`, `fromAG2UsageSummary`.
-- Go: `FromLangChainMessage`, `FromVercelAISDKResult`, `FromLlamaIndexTokenCounter`, `FromHaystackGeneratorResult`, `FromLiteLLMResponse`, `FromAG2UsageSummary`.
+- Python: `from_langchain_message`, `from_openai_agents_usage`, `from_vercel_ai_sdk_result`, `from_vercel_ai_sdk_stream_finish`, `from_llamaindex_token_counter`, `from_haystack_generator_result`, `from_litellm_response`, `from_ag2_usage_summary`, `from_langsmith_run`, `from_semantic_kernel_telemetry`, `from_openrouter_sdk_response`.
+- JavaScript/TypeScript: `fromLangChainMessage`, `fromOpenAIAgentsUsage`, `fromVercelAISDKResult`, `fromVercelAISDKStreamFinish`, `fromLlamaIndexTokenCounter`, `fromHaystackGeneratorResult`, `fromLiteLLMResponse`, `fromAG2UsageSummary`, `fromLangSmithRun`, `fromSemanticKernelTelemetry`, `fromOpenRouterSDKResponse`, `fromOpenRouterAgentResult`.
+- Go: `FromLangChainMessage`, `FromOpenAIAgentsUsage`, `FromVercelAISDKResult`, `FromVercelAISDKStreamFinish`, `FromLlamaIndexTokenCounter`, `FromHaystackGeneratorResult`, `FromLiteLLMResponse`, `FromAG2UsageSummary`, `FromLangSmithRun`, `FromSemanticKernelTelemetry`, `FromOpenRouterSDKResponse`.
 
 For framework-native ergonomics, use:
 
 - Python LangChain: `track_langchain_costs(...)` or `RunCostLangChainCallback(...)`.
-- JavaScript Vercel AI SDK: `createRunCostVercelMiddleware(...)`.
+- JavaScript Vercel AI SDK: `createRunCostVercelMiddleware(...)` for `wrapGenerate` and `createRunCostVercelOnFinish(...)` for `streamText` finish hooks.
 
 ## LangChain AIMessage
 
@@ -71,11 +76,31 @@ print(cost_callback.latest)
 
 The helper is dependency-free and duck-types LangChain callback output. It currently records AIMessage-like generations from `on_llm_end` / `on_chat_model_end`.
 
+## OpenAI Agents SDK Usage
+
+Source reference:
+
+- OpenAI Agents SDK usage docs describe usage aggregation and per-request usage entries available from run context usage: https://openai.github.io/openai-agents-python/usage/
+
+Mapping:
+
+- Read `usage`, `context_wrapper.usage`, `context.usage`, or a raw usage-shaped object.
+- `input_tokens` minus `input_tokens_details.cached_tokens` -> `input_uncached_tokens`.
+- `input_tokens_details.cached_tokens` -> `input_cache_read_tokens`.
+- `output_tokens` minus `output_tokens_details.reasoning_tokens` -> `output_text_tokens`.
+- `output_tokens_details.reasoning_tokens` -> `output_reasoning_tokens`.
+- `request_usage_entries` is preserved in raw usage for audit/debug use.
+
+Status:
+
+- Fixture-backed for OpenAI-style Agents SDK usage objects across Python, JavaScript/TypeScript, and Go.
+
 ## Vercel AI SDK
 
 Source reference:
 
 - AI SDK `generateText` reference documents final-step `usage`, aggregate `totalUsage`, input details including cache read/write and non-cache tokens, output details including text and reasoning tokens, and response `modelId`: https://ai-sdk.dev/docs/reference/ai-sdk-core/generate-text
+- AI SDK `streamText` reference documents `onFinish` / finish results carrying final usage metadata: https://ai-sdk.dev/docs/reference/ai-sdk-core/stream-text
 
 Mapping:
 
@@ -103,6 +128,21 @@ const runcostMiddleware = createRunCostVercelMiddleware({
 ```
 
 The helper implements `wrapGenerate`, records ledgers in `middleware.ledgers`, and attaches the latest ledger to the result as `runCost` by default.
+
+`streamText` finish/onFinish helper:
+
+```js
+import { createRunCostVercelOnFinish } from "runcost";
+
+const onFinish = createRunCostVercelOnFinish({
+  provider: "openai",
+  surface: "openai.responses",
+  model: "gpt-5-nano",
+  priceCards
+});
+```
+
+The `onFinish` helper records ledgers on the returned handler and returns the ledger for the final result object. It is dependency-free and does not import the AI SDK.
 
 ## LlamaIndex TokenCountingHandler
 
@@ -181,29 +221,25 @@ Notes:
 - AG2's cost can depend on custom prices and Azure model-version assumptions, so RunCost compares AG2-reported cost as framework-reported cost rather than treating it as authoritative by default.
 - This adapter is fixture-backed for selected AG2 usage summary dictionaries. It is not a full wrapper around every AutoGen or AG2 runtime callback, stream, or tool path.
 
-## Planned / Partial Adapter Paths
-
-The following paths are documented from current primary docs but are not fixture-backed in the current prototype. Treat them as research-backed adapter targets, not implemented support.
-
-### Microsoft Semantic Kernel
+## Microsoft Semantic Kernel
 
 Source references:
 
 - Semantic Kernel filters can intercept function invocation, prompt rendering, and automatic function invocation, with access to the relevant execution context before and after the operation: https://learn.microsoft.com/en-us/semantic-kernel/concepts/enterprise-readiness/filters
 - Microsoft's Semantic Kernel metering note describes prompt, completion, and total token metrics captured for Azure OpenAI/OpenAI connector calls: https://devblogs.microsoft.com/agent-framework/track-your-token-usage-and-costs-with-semantic-kernel/
 
-Recommended bridge:
+Mapping:
 
-- Use a function-invocation or auto-function-invocation filter to observe the completed call and any framework result object.
+- Use a function-invocation or auto-function-invocation filter to observe the completed call and pass the completed telemetry/result object into RunCost.
 - Prefer provider raw response / inner content when the connector exposes it, because Semantic Kernel language SDKs and connectors may represent token metadata differently.
 - Map prompt/input tokens to `input_uncached_tokens`, completion/output tokens to `output_text_tokens`, and total tokens only into raw usage.
 - Preserve filter/plugin/function metadata as raw framework metadata so later debug traces can explain which Semantic Kernel function produced the cost.
 
 Status:
 
-- Partial documentation only. No `semantic_kernel.*` adapter is implemented yet.
+- Fixture-backed for basic prompt/completion telemetry objects across Python, JavaScript/TypeScript, and Go. Broader filter/runtime variants remain Milestone 8 live-smoke work.
 
-### LangSmith Export / Compare
+## LangSmith Export / Compare
 
 Source references:
 
@@ -211,17 +247,18 @@ Source references:
 - LangSmith traces can be populated with `usage_metadata` on the current run or returned output, using fields such as input, output, total, cache-read, and cost details: https://docs.langchain.com/langsmith/cost-tracking
 - LangSmith bulk exports can limit exported fields, including `total_tokens` and `total_cost`: https://docs.langchain.com/langsmith/data-export
 
-Recommended bridge:
+Mapping:
 
-- Export or fetch LangSmith run rows with token and cost fields, then calculate RunCost ledgers from the underlying provider usage if available.
-- Compare LangSmith-reported `total_cost` / cost detail fields against RunCost output using the existing provider-reported-cost comparison path.
+- Export or fetch LangSmith run rows with token and cost fields, then calculate RunCost ledgers from the underlying provider usage when available.
+- Map `usage_metadata`, `usageMetadata`, `outputs.usage_metadata`, or `outputs.llm_output.usage` token fields.
+- Compare LangSmith-reported `total_cost` / `totalCost` / cost detail fields against RunCost output using the existing provider-reported-cost comparison path.
 - Preserve run hierarchy fields so aggregate ledgers can be compared at trace, parent run, or child run level.
 
 Status:
 
-- Partial documentation only. No `langsmith.*` adapter is implemented yet.
+- Fixture-backed for run usage metadata and exported `total_cost` comparison across Python, JavaScript/TypeScript, and Go. Full trace-tree aggregation remains Milestone 8+ work.
 
-### OpenRouter-Compatible SDK Paths
+## OpenRouter-Compatible SDK Paths
 
 Source references:
 
@@ -230,7 +267,7 @@ Source references:
 - OpenRouter's OpenAI SDK guide shows using the OpenAI SDK with `baseURL: "https://openrouter.ai/api/v1"`: https://openrouter.ai/docs/guides/community/openai-sdk
 - OpenRouter's Agent SDK `callModel` result exposes response accessors such as `getResponse()` and full response streams: https://openrouter.ai/docs/agent-sdk/call-model/api-reference
 
-Recommended bridge:
+Mapping:
 
 - For OpenAI SDK compatibility, route responses through the existing `openrouter.chat_completions` / OpenAI-compatible extraction path.
 - When OpenRouter usage accounting includes `usage.cost` or `cost_details`, compare it as provider-reported cost.
@@ -239,4 +276,4 @@ Recommended bridge:
 
 Status:
 
-- Partial documentation only. OpenRouter chat completions and OpenRouter models pricing are fixture-backed, but SDK-specific wrappers and Agent SDK result objects are not implemented yet.
+- Fixture-backed for OpenAI SDK-routed response objects and resolved Agent SDK response objects across Python, JavaScript/TypeScript, and Go. JavaScript also exposes `fromOpenRouterAgentResult(...)` for objects with `getResponse()`. Live SDK smoke is assigned to Milestone 8.

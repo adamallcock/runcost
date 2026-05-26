@@ -169,7 +169,7 @@ Use `calculate_cost` / `calculateCost` / `CalculateCost` when you already have c
 
 Use `from_response` / `fromResponse` / `FromResponse` when you want RunCost to extract usage from a raw provider SDK response.
 
-Use the framework helpers when the object came from LangChain, Vercel AI SDK, or LlamaIndex.
+Use the framework helpers when the object came from LangChain, OpenAI Agents SDK, Vercel AI SDK, LlamaIndex, Haystack, LiteLLM, AutoGen/AG2, LangSmith, Semantic Kernel, or an OpenRouter-compatible SDK response.
 
 ## Read Next
 
