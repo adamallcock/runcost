@@ -79,5 +79,7 @@ For mechanical coverage counts, see [Fixture Coverage](../reports/fixture-covera
 - Support means extraction and pricing behavior has at least one shared fixture across Python and JavaScript, with Go coverage through the conformance suite where applicable.
 - Support does not mean every model, region, service tier, tool, or historical price is present.
 - OpenAI Conversations are documented as state resources, not standalone usage-bearing model responses. Price Responses calls that attach to Conversations through the fixture-backed OpenAI Responses extractor.
+- OpenAI Responses hosted tool extraction is fixture-backed for web search, file search, code interpreter calls, computer-use action counts, and function-call counts.
+- Tool/feature pricing is complete for the current exit gate: OpenAI-style hosted tools, OpenRouter/provider-reported costs, and custom internal tools. Broader provider-specific generated media, transcription, rerank, storage/session, GB-day, and live validation remain beta hardening.
 - Milestone 6 framework paths are fixture-backed for dependency-free plain-object shapes. Live SDK/API-key smoke and real application validation are assigned to Milestone 8.
-- The next support expansion should prioritize provider-specific tool-call pricing, broader streaming usage, and framework findings from live smoke runs.
+- The next support expansion should prioritize live smoke, provider-specific feature breadth, broader streaming usage, and framework findings from real app runs.

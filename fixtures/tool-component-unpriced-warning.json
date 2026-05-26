@@ -1,0 +1,102 @@
+{
+  "name": "tool-component-unpriced-warning",
+  "description": "Emits tool_component_unpriced when a tool or feature unit is present but no matching price exists.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-TOOL-PRICING",
+      "RC-WARNING-MODE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "warning",
+    "tags": [
+      "component:computer_use_action_units",
+      "tool_pricing",
+      "warning:tool_component_unpriced"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "computer-use-preview",
+        "returned": "computer-use-preview",
+        "billed": "computer-use-preview",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "computer_use_action_units",
+          "quantity": "2",
+          "unit": "call",
+          "tool": {
+            "provider": "openai",
+            "name": "computer",
+            "billing_source": "provider"
+          }
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:computer-use-preview:tokens-only",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "computer-use-preview",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "3",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "computer-use-preview",
+        "returned": "computer-use-preview",
+        "billed": "computer-use-preview",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "tool_component_unpriced",
+          "message": "No price found for tool or feature component computer_use_action_units on model computer-use-preview.",
+          "metadata": {
+            "component": "computer_use_action_units",
+            "unit": "call",
+            "model": "computer-use-preview"
+          }
+        }
+      ]
+    }
+  }
+}

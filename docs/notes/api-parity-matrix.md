@@ -112,8 +112,10 @@ This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages ex
 | `web_search_units` | Yes | Yes | Yes | OpenAI tool-call fixture; Portkey adapter fixture |
 | `file_search_units` | Yes | Yes | Yes | OpenAI tool-call fixture |
 | `code_interpreter_call_units` | Yes | Yes | Yes | OpenAI tool-call fixture |
+| `computer_use_action_units` | Yes | Yes | Yes | OpenAI computer-use raw fixture |
+| `tool_call_units` | Yes | Yes | Yes | OpenAI function-call raw fixture |
 | Multimodal image, audio, and video units | Partial | Partial | Partial | `gemini-generate-content-raw-multimodal.json`; Gemini/Vertex modality details supported, broader provider coverage pending |
-| Provider-specific tool-call pricing units | Partial | Partial | Partial | generic custom units work; provider breadth remains low |
+| Provider-specific tool-call pricing units | Partial | Partial | Partial | current scope covers OpenAI hosted tool units, OpenRouter request/image/search pricing, provider-reported costs, and custom units; broader provider breadth remains beta hardening |
 
 ## Type and Documentation Surfaces
 

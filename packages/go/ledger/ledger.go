@@ -54,6 +54,21 @@ var componentOrder = func() map[string]int {
 	return orders
 }()
 
+var toolOrFeatureComponents = map[string]bool{
+	"web_search_units":               true,
+	"file_search_units":              true,
+	"code_interpreter_session_units": true,
+	"code_interpreter_call_units":    true,
+	"computer_use_action_units":      true,
+	"tool_call_units":                true,
+	"tool_execution_seconds":         true,
+	"rerank_search_units":            true,
+	"image_generation_units":         true,
+	"video_generation_units":         true,
+	"audio_generation_units":         true,
+	"transcription_seconds":          true,
+}
+
 // Object is the prototype map-backed representation for canonical ledgers,
 // price cards, discount policies, provider responses, and adapter inputs.
 type Object = map[string]any
@@ -371,6 +386,30 @@ func unpricedComponentMetadata(usageLedger Object, component Object) Object {
 		"component": asString(component["name"]),
 		"unit":      asString(component["unit"]),
 		"model":     billedModel(usageLedger),
+	}
+}
+
+func isToolOrFeatureComponent(componentName string) bool {
+	return toolOrFeatureComponents[componentName]
+}
+
+func unpricedComponentWarning(usageLedger Object, component Object) Object {
+	componentName := asString(component["name"])
+	if isToolOrFeatureComponent(componentName) {
+		return Object{
+			"code": "tool_component_unpriced",
+			"message": fmt.Sprintf(
+				"No price found for tool or feature component %s on model %s.",
+				componentName,
+				billedModel(usageLedger),
+			),
+			"metadata": unpricedComponentMetadata(usageLedger, component),
+		}
+	}
+	return Object{
+		"code":     "component_unpriced",
+		"message":  fmt.Sprintf("No price found for %s (%s).", componentName, asString(component["unit"])),
+		"metadata": unpricedComponentMetadata(usageLedger, component),
 	}
 }
 
@@ -898,15 +937,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 			} else if warning, ok := longContextRuleMissingWarning(usageLedger, candidates, component); ok {
 				warnings = append(warnings, warning)
 			} else {
-				code := "component_unpriced"
-				if strings.Contains(asString(component["name"]), "tool") {
-					code = "tool_component_unpriced"
-				}
-				warnings = append(warnings, Object{
-					"code":     code,
-					"message":  fmt.Sprintf("No price found for %s (%s).", asString(component["name"]), asString(component["unit"])),
-					"metadata": unpricedComponentMetadata(usageLedger, component),
-				})
+				warnings = append(warnings, unpricedComponentWarning(usageLedger, component))
 			}
 			incrementTraceSummary(trace, "unpriced_components")
 			continue
@@ -1533,6 +1564,7 @@ func extractOpenAIResponsesUsage(response Object, options Object) Object {
 	input := getNumber(usage, "input_tokens")
 	output := getNumber(usage, "output_tokens")
 	toolComponents := []any{}
+	functionCallCount := 0
 	for _, rawItem := range asSlice(response["output"]) {
 		item := asObject(rawItem)
 		switch asString(item["type"]) {
@@ -1542,8 +1574,17 @@ func extractOpenAIResponsesUsage(response Object, options Object) Object {
 			toolComponents = append(toolComponents, positiveComponent("file_search_units", "1", "call", "$.output[*].type"))
 		case "code_interpreter_call":
 			toolComponents = append(toolComponents, positiveComponent("code_interpreter_call_units", "1", "call", "$.output[*].type"))
+		case "computer_call":
+			actionCount := len(asSlice(item["actions"]))
+			if actionCount == 0 {
+				actionCount = 1
+			}
+			toolComponents = append(toolComponents, positiveComponent("computer_use_action_units", strconv.Itoa(actionCount), "call", "$.output[*].actions[*]"))
+		case "function_call":
+			functionCallCount++
 		}
 	}
+	toolComponents = append(toolComponents, positiveComponent("tool_call_units", strconv.Itoa(functionCallCount), "call", "$.output[*].type"))
 	provider := asString(options["provider"])
 	surface := asString(options["surface"])
 	if surface == "" {

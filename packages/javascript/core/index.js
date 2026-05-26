@@ -36,6 +36,20 @@ const COMPONENT_ORDER_NAMES = [
   "custom_units"
 ];
 const COMPONENT_ORDER = new Map(COMPONENT_ORDER_NAMES.map((name, index) => [name, index]));
+const TOOL_OR_FEATURE_COMPONENTS = new Set([
+  "web_search_units",
+  "file_search_units",
+  "code_interpreter_session_units",
+  "code_interpreter_call_units",
+  "computer_use_action_units",
+  "tool_call_units",
+  "tool_execution_seconds",
+  "rerank_search_units",
+  "image_generation_units",
+  "video_generation_units",
+  "audio_generation_units",
+  "transcription_seconds"
+]);
 
 function parseDecimal(value) {
   const text = String(value);
@@ -362,6 +376,25 @@ function unpricedComponentMetadata(usageLedger, component) {
     component: component.name,
     unit: component.unit,
     model: billedModel(usageLedger)
+  };
+}
+
+function isToolOrFeatureComponent(componentName) {
+  return TOOL_OR_FEATURE_COMPONENTS.has(componentName);
+}
+
+function unpricedComponentWarning(usageLedger, component) {
+  if (isToolOrFeatureComponent(component.name)) {
+    return {
+      code: "tool_component_unpriced",
+      message: `No price found for tool or feature component ${component.name} on model ${billedModel(usageLedger)}.`,
+      metadata: unpricedComponentMetadata(usageLedger, component)
+    };
+  }
+  return {
+    code: "component_unpriced",
+    message: `No price found for ${component.name} (${component.unit}).`,
+    metadata: unpricedComponentMetadata(usageLedger, component)
   };
 }
 
@@ -717,11 +750,7 @@ export function calculateCost({
       } else if (longContextWarning) {
         warnings.push(longContextWarning);
       } else {
-        warnings.push({
-          code: component.name.includes("tool") ? "tool_component_unpriced" : "component_unpriced",
-          message: `No price found for ${component.name} (${component.unit}).`,
-          metadata: unpricedComponentMetadata(usageLedger, component)
-        });
+        warnings.push(unpricedComponentWarning(usageLedger, component));
       }
       if (trace) {
         trace.summary.unpriced_components += 1;
@@ -1040,6 +1069,7 @@ export function extractOpenAIResponsesUsage(response, options = {}) {
   const output = usage.output_tokens || 0;
 
   const toolComponents = [];
+  let functionCallCount = 0;
   for (const item of response.output || []) {
     if (item.type === "web_search_call") {
       toolComponents.push(positiveComponent("web_search_units", 1, "search", "$.output[*].type"));
@@ -1047,8 +1077,14 @@ export function extractOpenAIResponsesUsage(response, options = {}) {
       toolComponents.push(positiveComponent("file_search_units", 1, "call", "$.output[*].type"));
     } else if (item.type === "code_interpreter_call") {
       toolComponents.push(positiveComponent("code_interpreter_call_units", 1, "call", "$.output[*].type"));
+    } else if (item.type === "computer_call") {
+      const actionCount = Array.isArray(item.actions) ? item.actions.length : 1;
+      toolComponents.push(positiveComponent("computer_use_action_units", actionCount, "call", "$.output[*].actions[*]"));
+    } else if (item.type === "function_call") {
+      functionCallCount += 1;
     }
   }
+  toolComponents.push(positiveComponent("tool_call_units", functionCallCount, "call", "$.output[*].type"));
 
   return baseUsageLedger({
     provider,

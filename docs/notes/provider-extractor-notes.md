@@ -50,6 +50,7 @@ Decision:
 - Conversations are state containers and item stores, not standalone model inference responses with usage totals.
 - Costs for work that uses a Conversation are associated with the Responses API calls that attach to or read from that Conversation.
 - `openai.responses` remains the fixture-backed extraction surface for token usage, including Responses that include a `conversation` field.
+- OpenAI Responses hosted tool outputs are fixture-backed for web search, file search, code interpreter calls, computer-use action counts, and function-call counts.
 - If OpenAI later exposes standalone billable usage on Conversation operations, add a new fixture before promoting `openai.conversations` to fixture-backed support.
 
 ## xAI Responses

@@ -444,6 +444,8 @@ Exit gate:
 
 ### Milestone 5: Tool Call and Feature Pricing
 
+Status: Complete for current scope.
+
 Goal:
 
 Make tool pricing a first-class differentiator.
@@ -486,6 +488,15 @@ Progress criteria:
 Exit gate:
 
 - Tool pricing works for at least OpenAI-style hosted tools, OpenRouter/provider-reported costs, and custom internal tools.
+
+Delivered:
+
+- Canonical tool and feature units cover hosted search, file search, code interpreter, computer-use actions, generic tool calls, request/image/search source pricing, multimodal token details, custom units, and direct provider-reported cost comparison paths.
+- OpenAI Responses raw output fixtures cover hosted tool calls, including web search, file search, code interpreter, computer-use action counts, and function-call counts.
+- OpenRouter/source-adapter fixtures cover request, image, and search pricing; provider-reported cost fixtures cover return/recalculate/compare behavior.
+- Custom internal tool pricing is fixture-backed through user-defined tool components.
+- Unpriced tool/feature usage now emits `tool_component_unpriced` with structured metadata instead of falling through to generic component warnings.
+- Broader provider-specific media generation, transcription, rerank, storage/session, and GB-day billing breadth moves to Milestone 8 feedback and beta/V1 hardening.
 
 ### Milestone 6: Framework Adapters
 

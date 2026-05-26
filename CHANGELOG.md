@@ -20,6 +20,9 @@ limitations.
 - Add installed Python `runcost` CLI commands for price-card conversion and
   single-fixture checks, plus a migration guide for replacing hand-written
   formulas.
+- Add OpenAI Responses computer-use and function-call tool pricing fixtures,
+  plus consistent unpriced tool/feature warnings across Python, JavaScript, and
+  Go.
 
 ## 0.0.0
 

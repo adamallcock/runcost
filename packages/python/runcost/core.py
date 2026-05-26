@@ -41,6 +41,20 @@ _COMPONENT_ORDER_NAMES = [
     "custom_units",
 ]
 _COMPONENT_ORDER = {name: index for index, name in enumerate(_COMPONENT_ORDER_NAMES)}
+_TOOL_OR_FEATURE_COMPONENTS = {
+    "web_search_units",
+    "file_search_units",
+    "code_interpreter_session_units",
+    "code_interpreter_call_units",
+    "computer_use_action_units",
+    "tool_call_units",
+    "tool_execution_seconds",
+    "rerank_search_units",
+    "image_generation_units",
+    "video_generation_units",
+    "audio_generation_units",
+    "transcription_seconds",
+}
 
 
 def _plain_value(value: Any) -> Any:
@@ -248,6 +262,28 @@ def _unpriced_component_metadata(usage_ledger: Dict[str, Any], component: Dict[s
         "component": component.get("name"),
         "unit": component.get("unit"),
         "model": _billed_model(usage_ledger),
+    }
+
+
+def _is_tool_or_feature_component(component_name: str) -> bool:
+    return component_name in _TOOL_OR_FEATURE_COMPONENTS
+
+
+def _unpriced_component_warning(usage_ledger: Dict[str, Any], component: Dict[str, Any]) -> Dict[str, Any]:
+    component_name = component["name"]
+    if _is_tool_or_feature_component(component_name):
+        return {
+            "code": "tool_component_unpriced",
+            "message": (
+                f"No price found for tool or feature component {component_name} "
+                f"on model {_billed_model(usage_ledger)}."
+            ),
+            "metadata": _unpriced_component_metadata(usage_ledger, component),
+        }
+    return {
+        "code": "component_unpriced",
+        "message": f"No price found for {component_name} ({component['unit']}).",
+        "metadata": _unpriced_component_metadata(usage_ledger, component),
     }
 
 
@@ -616,15 +652,7 @@ def calculate_cost(
             elif long_context_warning:
                 warnings.append(long_context_warning)
             else:
-                warnings.append(
-                    {
-                        "code": "tool_component_unpriced"
-                        if "tool" in component["name"]
-                        else "component_unpriced",
-                        "message": f"No price found for {component['name']} ({component['unit']}).",
-                        "metadata": _unpriced_component_metadata(usage_ledger, component),
-                    }
-                )
+                warnings.append(_unpriced_component_warning(usage_ledger, component))
             if trace is not None:
                 trace["summary"]["unpriced_components"] += 1
             continue
@@ -982,6 +1010,7 @@ def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> 
     input_tokens = usage.get("input_tokens", 0)
     output_tokens = usage.get("output_tokens", 0)
     tool_components = []
+    function_call_count = 0
     for item in response.get("output", []):
         if item.get("type") == "web_search_call":
             tool_components.append(_positive_component("web_search_units", 1, "search", "$.output[*].type"))
@@ -989,6 +1018,15 @@ def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> 
             tool_components.append(_positive_component("file_search_units", 1, "call", "$.output[*].type"))
         elif item.get("type") == "code_interpreter_call":
             tool_components.append(_positive_component("code_interpreter_call_units", 1, "call", "$.output[*].type"))
+        elif item.get("type") == "computer_call":
+            actions = item.get("actions")
+            action_count = len(actions) if isinstance(actions, list) else 1
+            tool_components.append(
+                _positive_component("computer_use_action_units", action_count, "call", "$.output[*].actions[*]")
+            )
+        elif item.get("type") == "function_call":
+            function_call_count += 1
+    tool_components.append(_positive_component("tool_call_units", function_call_count, "call", "$.output[*].type"))
 
     return _base_usage_ledger(
         provider=provider,

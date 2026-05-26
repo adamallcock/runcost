@@ -86,7 +86,7 @@ The current metadata contract is locked in `schemas/taxonomy.json` under
 
 `source_capability_unsupported`: a matching price source explicitly states that it does not price the usage component.
 
-`tool_component_unpriced`: a tool or feature unit was present but not priced.
+`tool_component_unpriced`: a tool or feature unit, such as hosted search, file search, code interpreter, computer-use actions, function calls, rerank, generation, transcription, or execution seconds, was present but not priced.
 
 `price_stale`: a matching price card exists, but its source retrieval timestamp is older than the freshness threshold.
 
