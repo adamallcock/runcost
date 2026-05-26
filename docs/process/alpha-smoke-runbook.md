@@ -24,6 +24,18 @@ python3 scripts/check_alpha_smoke.py
 Sample mode uses checked-in sanitized response shapes from
 `fixtures/source-files/alpha-smoke-samples.json`.
 
+Before a live run, check credential and optional dependency readiness without
+printing secret values:
+
+```bash
+npm run smoke:alpha:preflight
+npm run smoke:alpha:preflight -- --output /tmp/runcost-alpha-smoke-preflight.json
+npm run smoke:alpha:preflight -- --require-ready
+```
+
+The preflight reports scenario readiness, missing environment variable names,
+and missing optional package names only. It never prints API-key values.
+
 ## Live Runs
 
 Live mode is explicit and still uses sample price cards. That means the output

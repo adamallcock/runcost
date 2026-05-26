@@ -41,6 +41,7 @@ Evidence collected on 2026-05-26:
 - Fixture metadata and checked-in coverage report pass through `python3 scripts/check_fixture_coverage.py` with 93 fixtures.
 - Source refresh command smoke check passes through `python3 scripts/check_source_refresh.py`.
 - Alpha smoke harness sample-mode check passes through `python3 scripts/check_alpha_smoke.py`; live API-key-gated runs are implemented for selected direct API paths but have not been executed in this repo evidence yet.
+- Alpha smoke preflight passes through `python3 scripts/check_alpha_smoke_preflight.py`; the current environment reports OpenAI, Anthropic, OpenRouter, Vercel AI SDK, and LangChain live scenarios as not ready because credentials and/or optional framework packages are missing, while the local multi-provider discount scenario is ready.
 - Alpha smoke product-truth classification checks pass through `python3 scripts/check_alpha_product_truth.py`; the current no-credential live report is tied to machine-readable documented-limitation entries in `fixtures/source-files/alpha-smoke-product-truth-register.json`.
 - Invoice/dashboard comparison sample checks pass through `python3 scripts/check_invoice_comparison.py`; comparison outputs include `evidence_type` and `milestone8_real_evidence` so the checked-in sample cannot be mistaken for real provider dashboard/export evidence.
 - Go package passes `go test ./packages/go/...`.
@@ -144,8 +145,11 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 - Added optional sanitized alpha smoke harness:
   - `scripts/run_alpha_smoke.py`
   - `scripts/check_alpha_smoke.py`
+  - `scripts/run_alpha_smoke_preflight.py`
+  - `scripts/check_alpha_smoke_preflight.py`
   - `fixtures/source-files/alpha-smoke-samples.json`
 - Sample mode is no-network and checks OpenAI Responses, Anthropic prompt caching, Vercel AI SDK streamText final usage, LangChain agent metadata, OpenRouter cost comparison, and multi-provider discount scenarios.
+- Preflight mode reports credential and optional SDK dependency readiness without emitting API-key values; in the current environment it reports only the local multi-provider discount scenario as ready.
 - Live mode is explicit, API-key-gated, and currently supports selected direct API paths for OpenAI Responses, Anthropic Messages, and OpenRouter chat completions.
 - Added optional framework-specific smoke scripts:
   - `scripts/run_vercel_alpha_smoke.mjs`

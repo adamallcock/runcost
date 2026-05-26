@@ -29,6 +29,11 @@
           "kind": "script",
           "path": "scripts/run_alpha_smoke.py",
           "proves": "The optional live smoke entrypoint exists."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/run_alpha_smoke_preflight.py",
+          "proves": "Credential and optional dependency readiness can be checked without emitting secret values."
         }
       ],
       "completion_check": "python3 scripts/check_alpha_product_truth.py --smoke-report <sanitized-live-report.json>",
@@ -54,6 +59,11 @@
           "kind": "fixture",
           "path": "fixtures/anthropic-messages-raw-cache.json",
           "proves": "The extractor has fixture-backed cache-token coverage."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/run_alpha_smoke_preflight.py",
+          "proves": "Credential readiness can be checked without emitting secret values."
         }
       ],
       "completion_check": "python3 scripts/check_alpha_product_truth.py --smoke-report <sanitized-live-report.json>",
@@ -79,6 +89,11 @@
           "kind": "fixture",
           "path": "fixtures/vercel-ai-sdk-stream-text-finish.json",
           "proves": "The streamText finish object shape is fixture-backed."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/run_alpha_smoke_preflight.py",
+          "proves": "Credential and optional Vercel SDK dependency readiness can be checked without emitting secret values."
         }
       ],
       "completion_check": "node scripts/run_vercel_alpha_smoke.mjs --mode live --output <sanitized-report.json> --allow-sample-prices",
@@ -104,6 +119,11 @@
           "kind": "fixture",
           "path": "fixtures/langchain-callback-context-manager.json",
           "proves": "The LangChain callback/context-manager path is fixture-backed."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/run_alpha_smoke_preflight.py",
+          "proves": "Credential and optional LangChain dependency readiness can be checked without emitting secret values."
         }
       ],
       "completion_check": "python3 scripts/run_langchain_alpha_smoke.py --mode live --output <sanitized-report.json> --allow-sample-prices",
@@ -129,6 +149,11 @@
           "kind": "fixture",
           "path": "fixtures/provider-reported-cost-used.json",
           "proves": "Provider-reported cost modes are fixture-backed."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/run_alpha_smoke_preflight.py",
+          "proves": "Credential readiness can be checked without emitting secret values."
         }
       ],
       "completion_check": "python3 scripts/check_alpha_product_truth.py --smoke-report <sanitized-live-report.json>",
