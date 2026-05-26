@@ -348,7 +348,11 @@ def generate_warning_docs() -> str:
         f"- Fixture-backed warning codes: `{len(rows) - len(uncovered)}`",
         f"- Uncovered warning codes: `{len(uncovered)}`",
         "",
-        "Uncovered warning codes are valid contract values, but they are not yet supported claims. Add a shared fixture before relying on them for V1 behavior.",
+        (
+            "All warning codes currently have shared fixture coverage."
+            if not uncovered
+            else "Uncovered warning codes are valid contract values, but they are not yet supported claims. Add a shared fixture before relying on them for V1 behavior."
+        ),
         "",
         "## Warning Coverage Matrix",
         "",

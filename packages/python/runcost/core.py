@@ -134,6 +134,13 @@ def _card_identity_matches(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -
     return model_matches and provider_matches and surface_matches
 
 
+def _card_model_surface_matches(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> bool:
+    billed_model = _billed_model(usage_ledger)
+    model_matches = card["model"] == billed_model or billed_model in card.get("aliases", [])
+    surface_matches = "surface" not in card or card["surface"] == usage_ledger["surface"]
+    return model_matches and surface_matches
+
+
 def _effective_matches(card: Dict[str, Any], priced_at: Optional[str]) -> bool:
     if not priced_at:
         return True
@@ -352,6 +359,31 @@ def _has_price_card_for_usage(
     return any(_card_identity_matches(usage_ledger, card) for card in price_cards)
 
 
+def _has_price_card_for_model_surface(
+    usage_ledger: Dict[str, Any],
+    price_cards: Iterable[Dict[str, Any]],
+) -> bool:
+    return any(_card_model_surface_matches(usage_ledger, card) for card in price_cards)
+
+
+def _unknown_provider_warning(usage_ledger: Dict[str, Any]) -> Dict[str, Any]:
+    provider = usage_ledger.get("provider")
+    return {
+        "code": "unknown_provider",
+        "message": f"No price card found for provider {provider}.",
+        "metadata": _warning_identity_metadata(usage_ledger),
+    }
+
+
+def _unknown_model_warning(usage_ledger: Dict[str, Any]) -> Dict[str, Any]:
+    model = _billed_model(usage_ledger)
+    return {
+        "code": "unknown_model",
+        "message": f"No price card found for {model}.",
+        "metadata": _warning_identity_metadata(usage_ledger),
+    }
+
+
 def _no_matching_card_warning(
     usage_ledger: Dict[str, Any],
     price_cards: Iterable[Dict[str, Any]],
@@ -383,6 +415,34 @@ def _no_matching_card_warning(
         "message": f"No price card matched provider, surface, model, and context for {_billed_model(usage_ledger)}.",
         "metadata": _warning_identity_metadata(usage_ledger),
     }
+
+
+def _usage_metadata_field_warnings(
+    usage_ledger: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    metadata = usage_ledger.get("metadata") if isinstance(usage_ledger.get("metadata"), dict) else {}
+    warnings: List[Dict[str, Any]] = []
+    for field in metadata.get("ignored_usage_fields") or []:
+        field_name = str(field)
+        warnings.append(
+            {
+                "code": "usage_field_ignored",
+                "message": f"Usage field {field_name} was not mapped to a cost component.",
+                "path": field_name,
+                "metadata": {"field": field_name},
+            }
+        )
+    for field in metadata.get("inclusive_usage_fields") or []:
+        field_name = str(field)
+        warnings.append(
+            {
+                "code": "inclusive_usage_ambiguous",
+                "message": f"Usage field {field_name} appears inclusive; RunCost priced component fields instead.",
+                "path": field_name,
+                "metadata": {"field": field_name},
+            }
+        )
+    return warnings
 
 
 def _policy_matches(
@@ -632,7 +692,7 @@ def calculate_cost(
     price_cards_list = list(price_cards)
     source_priority = list(price_source_priority or [])
     components = []
-    warnings = []
+    warnings = _usage_metadata_field_warnings(usage_ledger)
     applied_discounts = []
     sources_by_name: Dict[str, Dict[str, Any]] = {}
     trace = _new_debug_trace() if _debug_trace_enabled(debug_trace) else None
@@ -650,21 +710,21 @@ def calculate_cost(
                 "source_priority": source_priority,
             }
         )
+    model_surface_card_exists = _has_price_card_for_model_surface(usage_ledger, price_cards_list)
     warned_unknown_model = False
+    warned_unknown_provider = False
     warned_no_matching_card = False
     warned_alias_inferred = False
     warned_stale_cards = set()
 
     for component in usage_ledger["components"]:
         if not has_model_card:
-            if not warned_unknown_model:
-                warnings.append(
-                    {
-                        "code": "unknown_model",
-                        "message": f"No price card found for {resolved_billed_model}.",
-                        "metadata": _warning_identity_metadata(usage_ledger),
-                    }
-                )
+            if model_surface_card_exists:
+                if not warned_unknown_provider:
+                    warnings.append(_unknown_provider_warning(usage_ledger))
+                    warned_unknown_provider = True
+            elif not warned_unknown_model:
+                warnings.append(_unknown_model_warning(usage_ledger))
                 warned_unknown_model = True
             if trace is not None:
                 trace["summary"]["unpriced_components"] += 1

@@ -53,7 +53,7 @@ Warning metadata is intentionally required so downstream billing, reconciliation
 and alerting code can group warnings without parsing human-readable messages.
 The current metadata contract is locked in `schemas/taxonomy.json` under
 `warning_metadata_required_keys` and enforced by the shared fixture runner.
-For fixture-backed warning coverage and uncovered V1 warning-code gaps, see
+For fixture-backed warning coverage and V1 warning-code support status, see
 [Generated Warning Coverage](../generated/warning-coverage.md).
 
 | Warning code | Required metadata keys |
@@ -82,7 +82,13 @@ For fixture-backed warning coverage and uncovered V1 warning-code gaps, see
 
 `unknown_surface`: RunCost does not know how to extract usage for the supplied provider surface.
 
+`unknown_provider`: usage was extracted for a model and surface that appear in price data, but not for the requested provider.
+
 `unknown_model`: usage was extracted, but no matching price card was available.
+
+`usage_field_ignored`: a normalized usage ledger explicitly marked a raw field as intentionally not mapped to a cost component.
+
+`inclusive_usage_ambiguous`: a normalized usage ledger explicitly marked a raw field as an inclusive total while RunCost priced the component fields instead.
 
 `component_unpriced`: one or more usage components did not have a matching price component.
 

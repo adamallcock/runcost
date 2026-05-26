@@ -385,7 +385,7 @@
       "id": "v1_warning_code_fixture_coverage",
       "area": "v1",
       "requirement": "Every stable warning code has shared fixture coverage before V1.",
-      "status": "partial",
+      "status": "satisfied",
       "required_for": ["v1"],
       "required_evidence": [
         "Generated warning coverage shows every warning code as fixture-backed.",
@@ -395,16 +395,31 @@
         {
           "kind": "docs",
           "path": "docs/generated/warning-coverage.md",
-          "proves": "Warning-code fixture coverage is generated from taxonomy and fixtures; current output shows uncovered V1 warning gaps."
+          "proves": "Warning-code fixture coverage is generated from taxonomy and fixtures; current output shows all stable warning codes are fixture-backed."
         },
         {
           "kind": "script",
           "path": "scripts/check_generated_contract_docs.py",
           "proves": "Warning coverage docs are drift-checked with the other generated contract docs."
+        },
+        {
+          "kind": "fixtures",
+          "path": "fixtures/unknown-provider-compatibility.json",
+          "proves": "The unknown_provider warning has shared conformance coverage."
+        },
+        {
+          "kind": "fixtures",
+          "path": "fixtures/usage-field-ignored-warning.json",
+          "proves": "The usage_field_ignored warning has shared conformance coverage."
+        },
+        {
+          "kind": "fixtures",
+          "path": "fixtures/inclusive-usage-ambiguous-warning.json",
+          "proves": "The inclusive_usage_ambiguous warning has shared conformance coverage."
         }
       ],
       "completion_check": "python3 scripts/check_generated_contract_docs.py",
-      "remaining_action": "Add shared fixtures for uncovered warning codes or explicitly remove/defer unstable codes before V1."
+      "remaining_action": "Keep warning coverage at 100% when warning codes change."
     },
     {
       "id": "provider_framework_breadth_live_examples",

@@ -1,0 +1,114 @@
+{
+  "name": "usage-field-ignored-warning",
+  "description": "Propagates an explicit usage_field_ignored warning from normalized usage metadata when an extractor or caller marks a raw usage field as intentionally unpriced.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-CALC-CORE",
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-WARNING-MODE"
+    ],
+    "provider": "openai",
+    "surface": "openai.embeddings",
+    "scenario": "warning",
+    "tags": [
+      "component:embedding_tokens",
+      "warning",
+      "warning:usage_field_ignored"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.embeddings",
+      "model": {
+        "requested": "text-embedding-test",
+        "billed": "text-embedding-test",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "embedding_tokens",
+          "quantity": "1000",
+          "unit": "token"
+        }
+      ],
+      "metadata": {
+        "ignored_usage_fields": [
+          "$.data[*].embedding"
+        ]
+      }
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:text-embedding-test",
+        "provider": "openai",
+        "surface": "openai.embeddings",
+        "model": "text-embedding-test",
+        "components": [
+          {
+            "usage_component": "embedding_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.02",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.embeddings",
+      "model": {
+        "requested": "text-embedding-test",
+        "billed": "text-embedding-test",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "embedding_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.00000002",
+          "cost": "0.00002",
+          "price_card_id": "openai:text-embedding-test",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.00002",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "usage_field_ignored",
+          "message": "Usage field $.data[*].embedding was not mapped to a cost component.",
+          "path": "$.data[*].embedding",
+          "metadata": {
+            "field": "$.data[*].embedding"
+          }
+        }
+      ]
+    }
+  }
+}

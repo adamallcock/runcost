@@ -671,6 +671,14 @@ func cardIdentityMatches(usageLedger Object, card Object) bool {
 	return modelMatches && providerMatches && surfaceMatches
 }
 
+func cardModelSurfaceMatches(usageLedger Object, card Object) bool {
+	model := billedModel(usageLedger)
+	modelMatches := asString(card["model"]) == model || containsString(asSlice(card["aliases"]), model)
+	surface := asString(card["surface"])
+	surfaceMatches := surface == "" || surface == asString(usageLedger["surface"])
+	return modelMatches && surfaceMatches
+}
+
 func effectiveMatches(card Object, pricedAt string) bool {
 	if pricedAt == "" {
 		return true
@@ -960,6 +968,34 @@ func hasPriceCardForUsage(usageLedger Object, priceCards []any) bool {
 	return false
 }
 
+func hasPriceCardForModelSurface(usageLedger Object, priceCards []any) bool {
+	for _, rawCard := range priceCards {
+		card := asObject(rawCard)
+		if cardModelSurfaceMatches(usageLedger, card) {
+			return true
+		}
+	}
+	return false
+}
+
+func unknownProviderWarning(usageLedger Object) Object {
+	provider := asString(usageLedger["provider"])
+	return Object{
+		"code":     "unknown_provider",
+		"message":  fmt.Sprintf("No price card found for provider %s.", provider),
+		"metadata": warningIdentityMetadata(usageLedger),
+	}
+}
+
+func unknownModelWarning(usageLedger Object) Object {
+	model := billedModel(usageLedger)
+	return Object{
+		"code":     "unknown_model",
+		"message":  fmt.Sprintf("No price card found for %s.", model),
+		"metadata": warningIdentityMetadata(usageLedger),
+	}
+}
+
 func noMatchingCardWarning(usageLedger Object, priceCards []any) Object {
 	context := usageContext(usageLedger)
 	identityCards := []Object{}
@@ -1108,6 +1144,34 @@ func discountNotAppliedWarnings(policies []any, appliedDiscounts []any) []any {
 			"message": fmt.Sprintf("Discount policy %s did not apply to any priced component.", policyID),
 			"metadata": Object{
 				"policy_id": policyID,
+			},
+		})
+	}
+	return warnings
+}
+
+func usageMetadataFieldWarnings(usageLedger Object) []any {
+	metadata := asObject(usageLedger["metadata"])
+	warnings := []any{}
+	for _, rawField := range asSlice(metadata["ignored_usage_fields"]) {
+		field := asString(rawField)
+		warnings = append(warnings, Object{
+			"code":    "usage_field_ignored",
+			"message": fmt.Sprintf("Usage field %s was not mapped to a cost component.", field),
+			"path":    field,
+			"metadata": Object{
+				"field": field,
+			},
+		})
+	}
+	for _, rawField := range asSlice(metadata["inclusive_usage_fields"]) {
+		field := asString(rawField)
+		warnings = append(warnings, Object{
+			"code":    "inclusive_usage_ambiguous",
+			"message": fmt.Sprintf("Usage field %s appears inclusive; RunCost priced component fields instead.", field),
+			"path":    field,
+			"metadata": Object{
+				"field": field,
 			},
 		})
 	}
@@ -1373,7 +1437,7 @@ func CalculateCostWithMode(usageLedger Object, priceCards []any, discountPolicie
 // provider-reported cost comparison.
 func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPolicies []any, options Object) Object {
 	components := []any{}
-	warnings := []any{}
+	warnings := usageMetadataFieldWarnings(usageLedger)
 	appliedDiscounts := []any{}
 	sourceByName := map[string]Object{}
 	sourceNames := []string{}
@@ -1392,6 +1456,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		mode = "compatibility"
 	}
 	hasModelCard := hasPriceCardForUsage(usageLedger, priceCards)
+	modelSurfaceCardExists := hasPriceCardForModelSurface(usageLedger, priceCards)
 	candidateCards := matchingCards(usageLedger, priceCards, options)
 	if trace != nil {
 		appendTraceDecision(trace, Object{
@@ -1402,6 +1467,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		})
 	}
 	warnedUnknownModel := false
+	warnedUnknownProvider := false
 	warnedNoMatchingCard := false
 	warnedAliasInferred := false
 	warnedStaleCards := map[string]bool{}
@@ -1409,12 +1475,13 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 	for _, rawComponent := range asSlice(usageLedger["components"]) {
 		component := asObject(rawComponent)
 		if !hasModelCard {
-			if !warnedUnknownModel {
-				warnings = append(warnings, Object{
-					"code":     "unknown_model",
-					"message":  fmt.Sprintf("No price card found for %s.", resolvedBilledModel),
-					"metadata": warningIdentityMetadata(usageLedger),
-				})
+			if modelSurfaceCardExists {
+				if !warnedUnknownProvider {
+					warnings = append(warnings, unknownProviderWarning(usageLedger))
+					warnedUnknownProvider = true
+				}
+			} else if !warnedUnknownModel {
+				warnings = append(warnings, unknownModelWarning(usageLedger))
 				warnedUnknownModel = true
 			}
 			incrementTraceSummary(trace, "unpriced_components")

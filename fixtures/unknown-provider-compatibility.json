@@ -1,0 +1,96 @@
+{
+  "name": "unknown-provider-compatibility",
+  "description": "Compatibility mode returns an unknown_provider warning when the model and surface exist only under a different provider.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-WARNING-MODE"
+    ],
+    "provider": "custom-provider",
+    "surface": "openai.responses",
+    "scenario": "warning",
+    "tags": [
+      "component:input_uncached_tokens",
+      "warning",
+      "warning:unknown_provider"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "custom-provider",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-known",
+        "returned": "gpt-known",
+        "billed": "gpt-known",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "10",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-known",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-known",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "custom-provider",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-known",
+        "returned": "gpt-known",
+        "billed": "gpt-known",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "unknown_provider",
+          "message": "No price card found for provider custom-provider.",
+          "metadata": {
+            "provider": "custom-provider",
+            "surface": "openai.responses",
+            "model": "gpt-known"
+          }
+        }
+      ]
+    }
+  }
+}

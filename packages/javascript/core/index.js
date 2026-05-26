@@ -235,6 +235,13 @@ function cardIdentityMatches(usageLedger, card) {
   return modelMatches && providerMatches && surfaceMatches;
 }
 
+function cardModelSurfaceMatches(usageLedger, card) {
+  const model = billedModel(usageLedger);
+  const modelMatches = card.model === model || (card.aliases || []).includes(model);
+  const surfaceMatches = !card.surface || card.surface === usageLedger.surface;
+  return modelMatches && surfaceMatches;
+}
+
 function effectiveMatches(card, pricedAt) {
   if (!pricedAt) {
     return true;
@@ -499,6 +506,51 @@ function hasPriceCardForUsage(usageLedger, priceCards) {
   return priceCards.some((card) => cardIdentityMatches(usageLedger, card));
 }
 
+function hasPriceCardForModelSurface(usageLedger, priceCards) {
+  return priceCards.some((card) => cardModelSurfaceMatches(usageLedger, card));
+}
+
+function unknownProviderWarning(usageLedger) {
+  return {
+    code: "unknown_provider",
+    message: `No price card found for provider ${usageLedger.provider}.`,
+    metadata: warningIdentityMetadata(usageLedger)
+  };
+}
+
+function unknownModelWarning(usageLedger) {
+  const model = billedModel(usageLedger);
+  return {
+    code: "unknown_model",
+    message: `No price card found for ${model}.`,
+    metadata: warningIdentityMetadata(usageLedger)
+  };
+}
+
+function usageMetadataFieldWarnings(usageLedger) {
+  const metadata = usageLedger.metadata && typeof usageLedger.metadata === "object" ? usageLedger.metadata : {};
+  const warnings = [];
+  for (const field of metadata.ignored_usage_fields || []) {
+    const fieldName = String(field);
+    warnings.push({
+      code: "usage_field_ignored",
+      message: `Usage field ${fieldName} was not mapped to a cost component.`,
+      path: fieldName,
+      metadata: { field: fieldName }
+    });
+  }
+  for (const field of metadata.inclusive_usage_fields || []) {
+    const fieldName = String(field);
+    warnings.push({
+      code: "inclusive_usage_ambiguous",
+      message: `Usage field ${fieldName} appears inclusive; RunCost priced component fields instead.`,
+      path: fieldName,
+      metadata: { field: fieldName }
+    });
+  }
+  return warnings;
+}
+
 function policyMatches(policy, usageLedger, component) {
   const match = policy.match || {};
   const billedModel =
@@ -721,7 +773,7 @@ export function calculateCost({
   debug_trace
 }) {
   const components = [];
-  const warnings = [];
+  const warnings = usageMetadataFieldWarnings(usageLedger);
   const appliedDiscounts = [];
   const sourceByName = new Map();
   const trace = debugTraceEnabled(debugTrace ?? debug_trace) ? newDebugTrace() : null;
@@ -729,9 +781,11 @@ export function calculateCost({
   let resolvedBilledModel = billedModel(usageLedger);
   let aliasResolution = usageLedger.model.alias_resolution || "none";
   const hasModelCard = hasPriceCardForUsage(usageLedger, priceCards);
+  const modelSurfaceCardExists = hasPriceCardForModelSurface(usageLedger, priceCards);
   const sourcePriority = priceSourcePriority || price_source_priority || [];
   const candidateCards = matchingCards(usageLedger, priceCards, sourcePriority);
   let warnedUnknownModel = false;
+  let warnedUnknownProvider = false;
   let warnedNoMatchingCard = false;
   let warnedAliasInferred = false;
   const warnedStaleCards = new Set();
@@ -749,12 +803,13 @@ export function calculateCost({
 
   for (const component of usageLedger.components) {
     if (!hasModelCard) {
-      if (!warnedUnknownModel) {
-        warnings.push({
-          code: "unknown_model",
-          message: `No price card found for ${resolvedBilledModel}.`,
-          metadata: warningIdentityMetadata(usageLedger)
-        });
+      if (modelSurfaceCardExists) {
+        if (!warnedUnknownProvider) {
+          warnings.push(unknownProviderWarning(usageLedger));
+          warnedUnknownProvider = true;
+        }
+      } else if (!warnedUnknownModel) {
+        warnings.push(unknownModelWarning(usageLedger));
         warnedUnknownModel = true;
       }
       if (trace) {
