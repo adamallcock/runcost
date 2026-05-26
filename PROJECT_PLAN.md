@@ -680,6 +680,11 @@ Delivered so far:
   first live-harness execution in this environment: safe sanitized skips because
   API-key environment variables were absent. It is documentation of the finding,
   not completion of the live-provider-run gate.
+- `fixtures/source-files/alpha-smoke-product-truth-register.json` and
+  `scripts/check_alpha_product_truth.py` make the product-truth loop
+  machine-checkable: non-passing live smoke outcomes must be tied to a fixture,
+  structured warning, documented limitation, extractor/source-adapter fix, or
+  price-source update artifact.
 
 Progress criteria:
 
@@ -700,7 +705,8 @@ The finalization path is:
 1. Finish the Milestone 8 alpha smoke harness and run it against at least one
    real provider or framework workflow.
 2. Convert all smoke findings into fixtures, warnings, or documented
-   limitations.
+   limitations, and register the conversion in
+   `fixtures/source-files/alpha-smoke-product-truth-register.json`.
 3. Run one invoice/dashboard comparison sample and document exact versus
    estimated cases.
 4. Configure PyPI and npm trusted publishers outside the repo.

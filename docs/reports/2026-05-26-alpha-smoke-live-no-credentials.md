@@ -32,6 +32,11 @@ This report does not satisfy the Milestone 8 live-provider-run gate. It proves
 the live harness is safe to execute without credentials and that missing
 credentials are classified as documented limitations instead of opaque failures.
 
+Machine-readable product-truth register:
+
+- `fixtures/source-files/alpha-smoke-product-truth-register.json`
+- Validated by `python3 scripts/check_alpha_product_truth.py`
+
 Next required evidence:
 
 - run at least one credentialed provider/API smoke;

@@ -97,6 +97,22 @@ Every non-passing live result must become one of:
 Do not leave live smoke findings only in a terminal log. Add the fixture,
 warning, limitation, or fix in the same branch when practical.
 
+The machine-readable product-truth register lives at
+`fixtures/source-files/alpha-smoke-product-truth-register.json`. It ties each
+known live smoke outcome to the artifact that resolved it. Validate the current
+no-credential live path or a specific live report with:
+
+```bash
+npm run check:alpha-truth
+python3 scripts/check_alpha_product_truth.py --smoke-report /tmp/runcost-alpha-smoke-live.json
+```
+
+For a non-passing credentialed live finding, add or update one register entry
+with the scenario, status, next-action type, classification, artifact path, and
+resolution. The artifact must be one of the product-truth outcomes above: a
+fixture, structured warning, documented limitation, extractor/source-adapter
+fix, or price-source update.
+
 ## Source Anchors
 
 - OpenAI Responses API reference: https://developers.openai.com/api/reference/resources/responses/methods/create

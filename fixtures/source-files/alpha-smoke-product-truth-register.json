@@ -1,0 +1,65 @@
+{
+  "schema_version": "0.1",
+  "description": "Machine-readable register that ties sanitized alpha smoke outcomes to product-truth artifacts.",
+  "entries": [
+    {
+      "scenario": "openai_responses",
+      "status": "skipped",
+      "next_action_type": "documented_limitation",
+      "reason_contains": "OPENAI_API_KEY is not set",
+      "classification": "documented_limitation",
+      "artifact": "docs/reports/2026-05-26-alpha-smoke-live-no-credentials.md",
+      "artifact_kind": "report",
+      "resolution": "The current environment lacks OpenAI credentials, so the live smoke safely records a skipped run instead of making a provider call."
+    },
+    {
+      "scenario": "anthropic_prompt_caching",
+      "status": "skipped",
+      "next_action_type": "documented_limitation",
+      "reason_contains": "ANTHROPIC_API_KEY is not set",
+      "classification": "documented_limitation",
+      "artifact": "docs/reports/2026-05-26-alpha-smoke-live-no-credentials.md",
+      "artifact_kind": "report",
+      "resolution": "The current environment lacks Anthropic credentials, so the live smoke safely records a skipped run instead of making a provider call."
+    },
+    {
+      "scenario": "openrouter_cost_compare",
+      "status": "skipped",
+      "next_action_type": "documented_limitation",
+      "reason_contains": "OPENROUTER_API_KEY is not set",
+      "classification": "documented_limitation",
+      "artifact": "docs/reports/2026-05-26-alpha-smoke-live-no-credentials.md",
+      "artifact_kind": "report",
+      "resolution": "The current environment lacks OpenRouter credentials, so the live smoke safely records a skipped run instead of making a provider call."
+    },
+    {
+      "scenario": "vercel_ai_sdk_stream_text",
+      "status": "skipped",
+      "next_action_type": "documented_limitation",
+      "reason_contains": "OPENAI_API_KEY is not set",
+      "classification": "documented_limitation",
+      "artifact": "docs/reports/2026-05-26-alpha-smoke-live-no-credentials.md",
+      "artifact_kind": "report",
+      "resolution": "The current environment lacks OpenAI credentials, so the optional Vercel live smoke safely records a skipped run instead of making a provider call."
+    },
+    {
+      "scenario": "langchain_agent_run",
+      "status": "skipped",
+      "next_action_type": "documented_limitation",
+      "reason_contains": "OPENAI_API_KEY is not set",
+      "classification": "documented_limitation",
+      "artifact": "docs/reports/2026-05-26-alpha-smoke-live-no-credentials.md",
+      "artifact_kind": "report",
+      "resolution": "The current environment lacks OpenAI credentials, so the optional LangChain live smoke safely records a skipped run instead of making a provider call."
+    },
+    {
+      "scenario": "multi_provider_discount",
+      "status": "passed",
+      "next_action_type": "none",
+      "classification": "none",
+      "artifact": "fixtures/source-files/alpha-smoke-samples.json",
+      "artifact_kind": "sample_fixture",
+      "resolution": "The local multi-provider discount smoke matched an existing checked-in sample path."
+    }
+  ]
+}

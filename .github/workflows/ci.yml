@@ -62,6 +62,7 @@ jobs:
             scripts/check_fixture_generator.py \
             scripts/check_source_refresh.py \
             scripts/check_alpha_smoke.py \
+            scripts/check_alpha_product_truth.py \
             scripts/check_invoice_comparison.py \
             scripts/check_generated_contract_docs.py \
             scripts/check_type_taxonomy_parity.py \
