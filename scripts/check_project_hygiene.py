@@ -20,6 +20,8 @@ REQUIRED_FILES = [
     "docs/generated/warning-coverage.md",
     "docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md",
     "docs/reports/2026-05-26-release-workflow-no-publish-blocked.md",
+    "docs/reports/2026-05-26-release-workflow-0-1-0-no-publish-rehearsal.md",
+    "docs/reports/2026-05-26-go-tag-verification-0-1-0.md",
     "docs/guides/package-installation.md",
     "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     "docs/guides/quickstart.md",
@@ -463,8 +465,10 @@ def check_packaging_docs() -> None:
     migration = (ROOT / "docs/guides/2026-05-26-migration-from-hand-written-formulas.md").read_text(encoding="utf-8")
     api_reference = (ROOT / "docs/reference/api-reference.md").read_text(encoding="utf-8")
     release_process = (ROOT / "docs/process/release-process.md").read_text(encoding="utf-8")
+    beta_roadmap = (ROOT / "docs/process/beta-v1-hardening-roadmap.md").read_text(encoding="utf-8")
     source_update = (ROOT / "docs/process/2026-05-26-source-data-update-process.md").read_text(encoding="utf-8")
     warnings = (ROOT / "docs/reference/warnings-and-limitations.md").read_text(encoding="utf-8")
+    gates = load_json(ROOT / "fixtures/source-files/project-completion-gates.json")
 
     assert_true(
         "2026-05-26-migration-from-hand-written-formulas.md" in root_readme,
@@ -493,6 +497,26 @@ def check_packaging_docs() -> None:
         "warning-coverage.md" in warnings,
         "warnings and limitations docs must link generated warning coverage",
     )
+    assert_true(
+        "2026-05-26-release-workflow-0-1-0-no-publish-rehearsal.md" in beta_roadmap,
+        "beta/V1 roadmap must link the real-version no-publish rehearsal report",
+    )
+    assert_true(
+        "2026-05-26-go-tag-verification-0-1-0.md" in beta_roadmap,
+        "beta/V1 roadmap must link the real Go tag verification report",
+    )
+    gate_status = {gate["id"]: gate["status"] for gate in gates["gates"]}
+    remaining_beta_text = beta_roadmap.lower().split("current release evidence:")[0]
+    if gate_status.get("milestone9_real_version_no_publish_rehearsal") == "satisfied":
+        assert_true(
+            "real-version no-publish rehearsal" not in remaining_beta_text,
+            "beta/V1 roadmap must not list satisfied no-publish rehearsal as a remaining strict-gate blocker",
+        )
+    if gate_status.get("milestone9_real_go_tag_verification") == "satisfied":
+        assert_true(
+            "real go tag verification" not in remaining_beta_text,
+            "beta/V1 roadmap must not list satisfied Go tag verification as a remaining strict-gate blocker",
+        )
 
 
 def check_framework_adapter_paths() -> None:

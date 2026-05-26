@@ -45,8 +45,19 @@ python3 scripts/check_project_completion_gates.py --require-v1
 ```
 
 Those strict checks are expected to fail until the live smoke, real invoice or
-dashboard comparison, registry configuration, real-version no-publish
-rehearsal, and real Go tag verification have actually happened.
+dashboard comparison, registry configuration, explicitly approved registry
+publication, and post-live caveat review have actually happened.
+
+Current release evidence:
+
+- The guarded release workflow has passed with `publish=false` for intended
+  beta version `0.1.0`; artifact review is recorded in
+  `docs/reports/2026-05-26-release-workflow-0-1-0-no-publish-rehearsal.md`.
+- Remote tag `v0.1.0` has been verified from a clean temporary Go module
+  without a local `replace`; evidence is recorded in
+  `docs/reports/2026-05-26-go-tag-verification-0-1-0.md`.
+- Actual PyPI/npm publication remains intentionally disabled until trusted
+  publishing is configured externally and publishing is explicitly approved.
 
 ## Polyglot Hardening Gate
 
