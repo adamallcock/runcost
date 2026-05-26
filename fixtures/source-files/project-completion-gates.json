@@ -228,7 +228,7 @@
         {
           "kind": "script",
           "path": "scripts/check_invoice_comparison.py",
-          "proves": "The real-evidence check exists and rejects sanitized samples as completion evidence."
+          "proves": "The real-evidence check exists, rejects sanitized samples as completion evidence, and requires sanitized classified rows with product-truth actions for discrepancies."
         },
         {
           "kind": "report",

@@ -88,6 +88,11 @@ python3 scripts/check_invoice_comparison.py \
   --require-real
 ```
 
+The real-evidence check rejects artifacts that retain private billing exports
+or secret-like values. It also requires every row to be classified as `exact`,
+`estimated`, or `unsupported`, and every `estimated` or `unsupported` row must
+carry a product-truth action instead of `none`.
+
 The checked-in sample report is
 `docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md`.
 It proves the comparison workflow and classification shape, but Milestone 8

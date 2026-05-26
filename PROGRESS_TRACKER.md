@@ -44,6 +44,7 @@ Evidence collected on 2026-05-26:
 - Alpha smoke preflight passes through `python3 scripts/check_alpha_smoke_preflight.py`; the current environment reports OpenAI, Anthropic, OpenRouter, Vercel AI SDK, and LangChain live scenarios as not ready because credentials and/or optional framework packages are missing, while the local multi-provider discount scenario is ready.
 - Alpha smoke product-truth classification checks pass through `python3 scripts/check_alpha_product_truth.py`; the current no-credential live report is tied to machine-readable documented-limitation entries in `fixtures/source-files/alpha-smoke-product-truth-register.json`.
 - Invoice/dashboard comparison sample checks pass through `python3 scripts/check_invoice_comparison.py`; comparison outputs include `evidence_type` and `milestone8_real_evidence` so the checked-in sample cannot be mistaken for real provider dashboard/export evidence.
+- Real invoice/dashboard comparison validation now requires sanitized artifacts, classified rows, and product-truth actions for every estimated or unsupported discrepancy.
 - Go package passes `go test ./packages/go/...`.
 - Go typed normalized usage, price-card, discount-policy, and core calculation wrappers are covered by `packages/go/ledger/typed_api_test.go` and `ExampleCalculateCostTyped`.
 - Python compile check passes for package, scripts, and Python example.
