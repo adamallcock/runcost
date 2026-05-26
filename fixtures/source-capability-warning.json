@@ -1,0 +1,140 @@
+{
+  "name": "source-capability-warning",
+  "description": "Emits a source capability warning when a reviewed pricing snapshot explicitly says a usage component is unsupported by that source.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SOURCE-ADAPTER",
+      "RC-WARNING-MODE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "warning",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "component:web_search_units",
+      "source:official-snapshot",
+      "warning:source_capability_unsupported"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-official-capability",
+        "returned": "gpt-official-capability",
+        "billed": "gpt-official-capability",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token"
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "20",
+          "unit": "token"
+        },
+        {
+          "name": "web_search_units",
+          "quantity": "1",
+          "unit": "search"
+        }
+      ]
+    },
+    "price_source": {
+      "type": "official-snapshot",
+      "data": {
+        "provider": "openai",
+        "surface": "openai.responses",
+        "source": {
+          "name": "OpenAI pricing page snapshot",
+          "url": "https://platform.openai.com/docs/pricing",
+          "retrieved_at": "2026-05-25T12:00:00Z",
+          "version": "2026-05-25"
+        },
+        "rows": [
+          {
+            "model": "gpt-official-capability",
+            "input": "1.25",
+            "output": "5",
+            "capabilities": {
+              "priced_components": [
+                "input_uncached_tokens",
+                "output_text_tokens"
+              ],
+              "unsupported_components": [
+                "web_search_units"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-official-capability",
+        "returned": "gpt-official-capability",
+        "billed": "gpt-official-capability",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.00000125",
+          "cost": "0.000125",
+          "price_card_id": "openai:gpt-official-capability:official-snapshot",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.000005",
+          "cost": "0.0001",
+          "price_card_id": "openai:gpt-official-capability:official-snapshot",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.000225",
+      "price_sources": [
+        {
+          "name": "OpenAI pricing page snapshot",
+          "url": "https://platform.openai.com/docs/pricing",
+          "retrieved_at": "2026-05-25T12:00:00Z",
+          "version": "2026-05-25"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "source_capability_unsupported",
+          "message": "Price source OpenAI pricing page snapshot explicitly does not price web_search_units.",
+          "metadata": {
+            "component": "web_search_units",
+            "price_card_id": "openai:gpt-official-capability:official-snapshot",
+            "source": "OpenAI pricing page snapshot"
+          }
+        }
+      ]
+    }
+  }
+}

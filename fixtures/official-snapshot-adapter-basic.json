@@ -1,0 +1,194 @@
+{
+  "name": "official-snapshot-adapter-basic",
+  "description": "Maps reviewed official provider pricing-page snapshot rows into canonical RunCost price cards with source provenance.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SOURCE-ADAPTER"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "source_adapter",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:input_cache_read_tokens",
+      "component:input_cache_write_tokens",
+      "component:output_text_tokens",
+      "component:output_reasoning_tokens",
+      "component:web_search_units",
+      "source:official-snapshot",
+      "source_adapter"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-official",
+        "returned": "gpt-official",
+        "billed": "gpt-official",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token"
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "40",
+          "unit": "token"
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "10",
+          "unit": "token"
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "20",
+          "unit": "token"
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "5",
+          "unit": "token"
+        },
+        {
+          "name": "web_search_units",
+          "quantity": "2",
+          "unit": "search"
+        }
+      ]
+    },
+    "price_source": {
+      "type": "official-snapshot",
+      "data": {
+        "schema_version": "0.1",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "source": {
+          "name": "OpenAI pricing page snapshot",
+          "url": "https://platform.openai.com/docs/pricing",
+          "retrieved_at": "2026-05-25T12:00:00Z",
+          "version": "2026-05-25",
+          "license": "reviewed"
+        },
+        "rows": [
+          {
+            "model": "gpt-official",
+            "aliases": [
+              "gpt-official-2026-05-25"
+            ],
+            "input": "1.25",
+            "cached_input": "0.125",
+            "cache_write": "1.5",
+            "output": "5",
+            "reasoning": "5",
+            "web_search": "0.01",
+            "effective": {
+              "from": "2026-05-25"
+            },
+            "source_label": "Official model pricing table",
+            "capabilities": {
+              "pricing_dimensions": [
+                "token",
+                "search"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-official",
+        "returned": "gpt-official",
+        "billed": "gpt-official",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.00000125",
+          "cost": "0.000125",
+          "price_card_id": "openai:gpt-official:official-snapshot",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "40",
+          "unit": "token",
+          "unit_price": "0.000000125",
+          "cost": "0.000005",
+          "price_card_id": "openai:gpt-official:official-snapshot",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "10",
+          "unit": "token",
+          "unit_price": "0.0000015",
+          "cost": "0.000015",
+          "price_card_id": "openai:gpt-official:official-snapshot",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.000005",
+          "cost": "0.0001",
+          "price_card_id": "openai:gpt-official:official-snapshot",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "5",
+          "unit": "token",
+          "unit_price": "0.000005",
+          "cost": "0.000025",
+          "price_card_id": "openai:gpt-official:official-snapshot",
+          "discount_eligible": true
+        },
+        {
+          "name": "web_search_units",
+          "quantity": "2",
+          "unit": "search",
+          "unit_price": "0.01",
+          "cost": "0.02",
+          "price_card_id": "openai:gpt-official:official-snapshot",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.02027",
+      "price_sources": [
+        {
+          "name": "OpenAI pricing page snapshot",
+          "url": "https://platform.openai.com/docs/pricing",
+          "retrieved_at": "2026-05-25T12:00:00Z",
+          "version": "2026-05-25",
+          "license": "reviewed"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

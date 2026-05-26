@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional, TypedDict
+from typing import Any, Dict, List, Literal, Optional, TypedDict, Union
 
 SchemaVersion = Literal["0.1"]
 DecimalString = str
@@ -54,6 +54,7 @@ UsageComponentName = Literal[
     "transcription_seconds",
     "endpoint_runtime_seconds",
     "endpoint_instance_hours",
+    "storage_gb_days",
     "custom_units",
 ]
 
@@ -77,6 +78,7 @@ WarningCode = Literal[
     "usage_field_ignored",
     "inclusive_usage_ambiguous",
     "component_unpriced",
+    "source_capability_unsupported",
     "service_tier_unsupported",
     "long_context_rule_missing",
     "discount_not_applied",
@@ -231,11 +233,145 @@ class AppliedDiscount(TypedDict):
     amount: MoneyString
 
 
-class CostWarning(TypedDict, total=False):
+class WarningIdentityMetadata(TypedDict):
+    provider: str
+    surface: str
+    model: str
+
+
+class AliasInferredWarningMetadata(TypedDict):
+    requested_model: str
+    billed_model: str
+
+
+class PriceStaleWarningMetadata(TypedDict):
+    source: str
+    age_days: int
+    threshold_days: int
+    retrieved_at: str
+    priced_at: str
+
+
+class PriceSourceDisagreementWarningMetadata(TypedDict):
+    component: str
+    selected_price_card_id: str
+    candidate_price_card_ids: List[str]
+
+
+class UsageFieldWarningMetadata(TypedDict):
+    field: str
+
+
+class ComponentUnpricedWarningMetadata(TypedDict):
+    component: str
+    unit: str
+    model: str
+
+
+class SourceCapabilityUnsupportedWarningMetadata(TypedDict):
+    component: str
+    price_card_id: str
+    source: str
+
+
+class ServiceTierUnsupportedWarningMetadata(TypedDict):
+    model: str
+    service_tier: str
+
+
+class LongContextRuleMissingWarningMetadata(TypedDict):
+    component: str
+    unit: str
+    total_input_tokens: DecimalString
+
+
+class DiscountNotAppliedWarningMetadata(TypedDict):
+    policy_id: str
+
+
+class _StreamUsageMissingRequired(TypedDict):
+    actual_ledger_count: int
+
+
+class StreamUsageMissingWarningMetadata(_StreamUsageMissingRequired, total=False):
+    expected_ledger_count: int
+
+
+class HistoricalPriceMissingWarningMetadata(TypedDict):
+    model: str
+    priced_at: str
+
+
+class ProviderReportedCostWarningMetadata(TypedDict):
+    provider_reported_cost: MoneyString
+    calculated_total: MoneyString
+
+
+WarningMetadata = Union[
+    WarningIdentityMetadata,
+    AliasInferredWarningMetadata,
+    PriceStaleWarningMetadata,
+    PriceSourceDisagreementWarningMetadata,
+    UsageFieldWarningMetadata,
+    ComponentUnpricedWarningMetadata,
+    SourceCapabilityUnsupportedWarningMetadata,
+    ServiceTierUnsupportedWarningMetadata,
+    LongContextRuleMissingWarningMetadata,
+    DiscountNotAppliedWarningMetadata,
+    StreamUsageMissingWarningMetadata,
+    HistoricalPriceMissingWarningMetadata,
+    ProviderReportedCostWarningMetadata,
+]
+
+
+class _CostWarningRequired(TypedDict):
     code: WarningCode
     message: str
+    metadata: WarningMetadata
+
+
+class CostWarning(_CostWarningRequired, total=False):
     path: str
-    metadata: Dict[str, Any]
+
+
+DebugDecisionType = Literal[
+    "price_card_candidates",
+    "price_component_match",
+    "model_alias_resolution",
+    "discount_application",
+    "warning",
+]
+
+
+class DebugDecision(TypedDict, total=False):
+    type: DebugDecisionType
+    component: str
+    model: str
+    from_: str
+    to: str
+    resolution: str
+    price_card_id: str
+    selected_price_card_id: str
+    selected_source: str
+    candidate_price_card_ids: List[str]
+    source_priority: List[str]
+    policy_id: str
+    amount: str
+    warning_code: str
+    message: str
+
+
+class DebugTraceSummary(TypedDict):
+    priced_components: int
+    unpriced_components: int
+    warnings: int
+    applied_discounts: int
+
+
+class DebugTrace(TypedDict):
+    schema_version: SchemaVersion
+    decisions: List[DebugDecision]
+    summary: DebugTraceSummary
 
 
 class CostLedger(TypedDict, total=False):
@@ -249,4 +385,5 @@ class CostLedger(TypedDict, total=False):
     price_sources: List[SourceInfo]
     applied_discounts: List[AppliedDiscount]
     warnings: List[CostWarning]
+    debug_trace: DebugTrace
     metadata: Dict[str, Any]

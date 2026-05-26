@@ -4,15 +4,540 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net/url"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
 
+var componentOrderNames = []string{
+	"input_uncached_tokens",
+	"input_cache_read_tokens",
+	"input_cache_write_tokens",
+	"input_cache_write_1h_tokens",
+	"input_image_units",
+	"input_audio_tokens",
+	"input_image_tokens",
+	"input_video_tokens",
+	"output_text_tokens",
+	"output_reasoning_tokens",
+	"output_audio_tokens",
+	"output_image_tokens",
+	"output_video_tokens",
+	"embedding_tokens",
+	"request_units",
+	"web_search_units",
+	"file_search_units",
+	"code_interpreter_session_units",
+	"code_interpreter_call_units",
+	"computer_use_action_units",
+	"tool_call_units",
+	"tool_execution_seconds",
+	"rerank_search_units",
+	"image_generation_units",
+	"video_generation_units",
+	"audio_generation_units",
+	"transcription_seconds",
+	"endpoint_runtime_seconds",
+	"endpoint_instance_hours",
+	"storage_gb_days",
+	"custom_units",
+}
+
+var componentOrder = func() map[string]int {
+	orders := map[string]int{}
+	for index, name := range componentOrderNames {
+		orders[name] = index
+	}
+	return orders
+}()
+
+var toolOrFeatureComponents = map[string]bool{
+	"web_search_units":               true,
+	"file_search_units":              true,
+	"code_interpreter_session_units": true,
+	"code_interpreter_call_units":    true,
+	"computer_use_action_units":      true,
+	"tool_call_units":                true,
+	"tool_execution_seconds":         true,
+	"rerank_search_units":            true,
+	"image_generation_units":         true,
+	"video_generation_units":         true,
+	"audio_generation_units":         true,
+	"transcription_seconds":          true,
+	"endpoint_runtime_seconds":       true,
+	"storage_gb_days":                true,
+}
+
 // Object is the prototype map-backed representation for canonical ledgers,
 // price cards, discount policies, provider responses, and adapter inputs.
 type Object = map[string]any
+
+// ModelIdentity identifies the requested, returned, and billable model names
+// on a canonical usage ledger.
+type ModelIdentity struct {
+	Requested       string
+	Returned        string
+	Billed          string
+	AliasResolution string
+}
+
+// Object converts the model identity to the canonical schema-shaped object.
+func (model ModelIdentity) Object() Object {
+	result := Object{"requested": model.Requested}
+	if model.Returned != "" {
+		result["returned"] = model.Returned
+	}
+	if model.Billed != "" {
+		result["billed"] = model.Billed
+	}
+	if model.AliasResolution != "" {
+		result["alias_resolution"] = model.AliasResolution
+	}
+	return result
+}
+
+// ToolMetadata describes a tool or feature usage component's billing source.
+type ToolMetadata struct {
+	Provider      string
+	Name          string
+	BillingSource string
+}
+
+// Object converts tool metadata to the canonical schema-shaped object.
+func (tool ToolMetadata) Object() Object {
+	result := Object{}
+	if tool.Provider != "" {
+		result["provider"] = tool.Provider
+	}
+	if tool.Name != "" {
+		result["name"] = tool.Name
+	}
+	if tool.BillingSource != "" {
+		result["billing_source"] = tool.BillingSource
+	}
+	return result
+}
+
+// UsageComponent is a typed Go representation of a canonical usage component.
+type UsageComponent struct {
+	Name       string
+	Quantity   string
+	Unit       string
+	Tool       *ToolMetadata
+	SourcePath string
+	Metadata   Object
+}
+
+// Object converts the usage component to the canonical schema-shaped object.
+func (component UsageComponent) Object() Object {
+	result := Object{
+		"name":     component.Name,
+		"quantity": component.Quantity,
+		"unit":     component.Unit,
+	}
+	if component.Tool != nil {
+		result["tool"] = component.Tool.Object()
+	}
+	if component.SourcePath != "" {
+		result["source_path"] = component.SourcePath
+	}
+	if component.Metadata != nil {
+		result["metadata"] = component.Metadata
+	}
+	return result
+}
+
+// UsageLedger is a typed Go representation of the canonical normalized usage
+// ledger contract.
+type UsageLedger struct {
+	SchemaVersion string
+	Provider      string
+	Surface       string
+	Model         ModelIdentity
+	Context       Object
+	Components    []UsageComponent
+	RawUsage      Object
+	Metadata      Object
+}
+
+// Object converts the usage ledger to the canonical schema-shaped object.
+func (usage UsageLedger) Object() Object {
+	result := Object{
+		"schema_version": usage.SchemaVersion,
+		"provider":       usage.Provider,
+		"surface":        usage.Surface,
+		"model":          usage.Model.Object(),
+		"components":     usageComponentsToAny(usage.Components),
+	}
+	if usage.Context != nil {
+		result["context"] = usage.Context
+	}
+	if usage.RawUsage != nil {
+		result["raw_usage"] = usage.RawUsage
+	}
+	if usage.Metadata != nil {
+		result["metadata"] = usage.Metadata
+	}
+	return result
+}
+
+// Price is a typed Go representation of a component price.
+type Price struct {
+	Amount   string
+	Currency string
+	Per      string
+}
+
+// Object converts the price to the canonical schema-shaped object.
+func (price Price) Object() Object {
+	return Object{
+		"amount":   price.Amount,
+		"currency": price.Currency,
+		"per":      price.Per,
+	}
+}
+
+// PriceConditions limits a price component to a context such as a long-context
+// token range.
+type PriceConditions struct {
+	MinTotalInputTokens string
+	MaxTotalInputTokens string
+}
+
+// Object converts price conditions to the canonical schema-shaped object.
+func (conditions PriceConditions) Object() Object {
+	result := Object{}
+	if conditions.MinTotalInputTokens != "" {
+		result["min_total_input_tokens"] = conditions.MinTotalInputTokens
+	}
+	if conditions.MaxTotalInputTokens != "" {
+		result["max_total_input_tokens"] = conditions.MaxTotalInputTokens
+	}
+	return result
+}
+
+// PriceComponent is a typed Go representation of a canonical price component.
+type PriceComponent struct {
+	UsageComponent   string
+	Unit             string
+	Price            Price
+	DiscountEligible *bool
+	Conditions       *PriceConditions
+	Notes            string
+}
+
+// Object converts the price component to the canonical schema-shaped object.
+func (component PriceComponent) Object() Object {
+	result := Object{
+		"usage_component": component.UsageComponent,
+		"unit":            component.Unit,
+		"price":           component.Price.Object(),
+	}
+	if component.DiscountEligible != nil {
+		result["discount_eligible"] = *component.DiscountEligible
+	}
+	if component.Conditions != nil {
+		result["conditions"] = component.Conditions.Object()
+	}
+	if component.Notes != "" {
+		result["notes"] = component.Notes
+	}
+	return result
+}
+
+// Source identifies where a canonical price card came from.
+type Source struct {
+	Name        string
+	URL         string
+	RetrievedAt string
+	Version     string
+	License     string
+}
+
+// Object converts the source metadata to the canonical schema-shaped object.
+func (source Source) Object() Object {
+	result := Object{"name": source.Name}
+	if source.URL != "" {
+		result["url"] = source.URL
+	}
+	if source.RetrievedAt != "" {
+		result["retrieved_at"] = source.RetrievedAt
+	}
+	if source.Version != "" {
+		result["version"] = source.Version
+	}
+	if source.License != "" {
+		result["license"] = source.License
+	}
+	return result
+}
+
+// EffectiveRange describes when a price card or discount policy applies.
+type EffectiveRange struct {
+	From string
+	To   string
+}
+
+// Object converts the effective range to the canonical schema-shaped object.
+func (effective EffectiveRange) Object() Object {
+	result := Object{}
+	if effective.From != "" {
+		result["from"] = effective.From
+	}
+	if effective.To != "" {
+		result["to"] = effective.To
+	}
+	return result
+}
+
+// PriceCard is a typed Go representation of a canonical price card.
+type PriceCard struct {
+	SchemaVersion string
+	ID            string
+	Provider      string
+	Surface       string
+	Model         string
+	Aliases       []string
+	ServiceTier   string
+	Region        string
+	Effective     *EffectiveRange
+	Components    []PriceComponent
+	Source        Source
+	Metadata      Object
+}
+
+// Object converts the price card to the canonical schema-shaped object.
+func (card PriceCard) Object() Object {
+	result := Object{
+		"schema_version": card.SchemaVersion,
+		"id":             card.ID,
+		"provider":       card.Provider,
+		"model":          card.Model,
+		"components":     priceComponentsToAny(card.Components),
+		"source":         card.Source.Object(),
+	}
+	if card.Surface != "" {
+		result["surface"] = card.Surface
+	}
+	if len(card.Aliases) > 0 {
+		result["aliases"] = stringsToAny(card.Aliases)
+	}
+	if card.ServiceTier != "" {
+		result["service_tier"] = card.ServiceTier
+	}
+	if card.Region != "" {
+		result["region"] = card.Region
+	}
+	if card.Effective != nil {
+		result["effective"] = card.Effective.Object()
+	}
+	if card.Metadata != nil {
+		result["metadata"] = card.Metadata
+	}
+	return result
+}
+
+// DiscountMatch describes when a discount policy applies.
+type DiscountMatch struct {
+	Provider          string
+	Surface           string
+	Model             string
+	ServiceTier       string
+	Region            string
+	Components        []string
+	ExcludeComponents []string
+	Tags              map[string]string
+}
+
+// Object converts the discount match to the canonical schema-shaped object.
+func (match DiscountMatch) Object() Object {
+	result := Object{}
+	if match.Provider != "" {
+		result["provider"] = match.Provider
+	}
+	if match.Surface != "" {
+		result["surface"] = match.Surface
+	}
+	if match.Model != "" {
+		result["model"] = match.Model
+	}
+	if match.ServiceTier != "" {
+		result["service_tier"] = match.ServiceTier
+	}
+	if match.Region != "" {
+		result["region"] = match.Region
+	}
+	if len(match.Components) > 0 {
+		result["components"] = stringsToAny(match.Components)
+	}
+	if len(match.ExcludeComponents) > 0 {
+		result["exclude_components"] = stringsToAny(match.ExcludeComponents)
+	}
+	if len(match.Tags) > 0 {
+		tags := Object{}
+		for key, value := range match.Tags {
+			tags[key] = value
+		}
+		result["tags"] = tags
+	}
+	return result
+}
+
+// DiscountAdjustment describes the discount or markup applied by a policy.
+type DiscountAdjustment struct {
+	Type  string
+	Value string
+}
+
+// Object converts the discount adjustment to the canonical schema-shaped
+// object.
+func (adjustment DiscountAdjustment) Object() Object {
+	return Object{
+		"type":  adjustment.Type,
+		"value": adjustment.Value,
+	}
+}
+
+// DiscountPolicy is a typed Go representation of a canonical discount policy.
+type DiscountPolicy struct {
+	SchemaVersion string
+	ID            string
+	Description   string
+	Match         DiscountMatch
+	Effective     *EffectiveRange
+	Adjustment    DiscountAdjustment
+	Precedence    *int
+	Metadata      Object
+}
+
+// Object converts the discount policy to the canonical schema-shaped object.
+func (policy DiscountPolicy) Object() Object {
+	result := Object{
+		"schema_version": policy.SchemaVersion,
+		"id":             policy.ID,
+		"adjustment":     policy.Adjustment.Object(),
+	}
+	if policy.Description != "" {
+		result["description"] = policy.Description
+	}
+	match := policy.Match.Object()
+	if len(match) > 0 {
+		result["match"] = match
+	}
+	if policy.Effective != nil {
+		result["effective"] = policy.Effective.Object()
+	}
+	if policy.Precedence != nil {
+		result["precedence"] = *policy.Precedence
+	}
+	if policy.Metadata != nil {
+		result["metadata"] = policy.Metadata
+	}
+	return result
+}
+
+// CostOptions is a typed Go wrapper for common calculator options. Raw can be
+// used for temporary experimental options that are already understood by the
+// map-backed core.
+type CostOptions struct {
+	Mode                     string
+	PriceSourcePriority      []string
+	ProviderReportedCost     string
+	ProviderReportedCostMode string
+	StaleAfterDays           *int
+	DebugTrace               bool
+	Raw                      Object
+}
+
+// Object converts calculator options to the map-backed option object consumed
+// by the core.
+func (options CostOptions) Object() Object {
+	result := Object{}
+	for key, value := range options.Raw {
+		result[key] = value
+	}
+	if options.Mode != "" {
+		result["mode"] = options.Mode
+	}
+	if len(options.PriceSourcePriority) > 0 {
+		result["price_source_priority"] = stringsToAny(options.PriceSourcePriority)
+	}
+	if options.ProviderReportedCost != "" {
+		result["provider_reported_cost"] = options.ProviderReportedCost
+	}
+	if options.ProviderReportedCostMode != "" {
+		result["provider_reported_cost_mode"] = options.ProviderReportedCostMode
+	}
+	if options.StaleAfterDays != nil {
+		result["stale_after_days"] = *options.StaleAfterDays
+	}
+	if options.DebugTrace {
+		result["debug_trace"] = true
+	}
+	return result
+}
+
+// CalculateCostTyped returns a componentized cost ledger for typed Go usage,
+// price-card, and discount-policy structs.
+func CalculateCostTyped(usageLedger UsageLedger, priceCards []PriceCard, discountPolicies []DiscountPolicy) Object {
+	return CalculateCostTypedWithMode(usageLedger, priceCards, discountPolicies, "compatibility")
+}
+
+// CalculateCostTypedWithMode returns a componentized cost ledger for typed Go
+// inputs using either "compatibility" or "strict" mode.
+func CalculateCostTypedWithMode(usageLedger UsageLedger, priceCards []PriceCard, discountPolicies []DiscountPolicy, mode string) Object {
+	return CalculateCostTypedWithOptions(usageLedger, priceCards, discountPolicies, CostOptions{Mode: mode})
+}
+
+// CalculateCostTypedWithOptions returns a componentized cost ledger for typed Go
+// inputs and typed calculator options.
+func CalculateCostTypedWithOptions(usageLedger UsageLedger, priceCards []PriceCard, discountPolicies []DiscountPolicy, options CostOptions) Object {
+	return CalculateCostWithOptions(usageLedger.Object(), priceCardsToAny(priceCards), discountPoliciesToAny(discountPolicies), options.Object())
+}
+
+func stringsToAny(values []string) []any {
+	result := []any{}
+	for _, value := range values {
+		result = append(result, value)
+	}
+	return result
+}
+
+func usageComponentsToAny(components []UsageComponent) []any {
+	result := []any{}
+	for _, component := range components {
+		result = append(result, component.Object())
+	}
+	return result
+}
+
+func priceComponentsToAny(components []PriceComponent) []any {
+	result := []any{}
+	for _, component := range components {
+		result = append(result, component.Object())
+	}
+	return result
+}
+
+func priceCardsToAny(cards []PriceCard) []any {
+	result := []any{}
+	for _, card := range cards {
+		result = append(result, card.Object())
+	}
+	return result
+}
+
+func discountPoliciesToAny(policies []DiscountPolicy) []any {
+	result := []any{}
+	for _, policy := range policies {
+		result = append(result, policy.Object())
+	}
+	return result
+}
 
 func numberString(value any) string {
 	if value == nil {
@@ -214,6 +739,14 @@ func hasSourcePriority(options Object) bool {
 	return len(asSlice(options["price_source_priority"])) > 0 || len(asSlice(options["priceSourcePriority"])) > 0
 }
 
+func sourcePriority(options Object) []any {
+	priority := asSlice(options["price_source_priority"])
+	if len(priority) == 0 {
+		priority = asSlice(options["priceSourcePriority"])
+	}
+	return priority
+}
+
 func matchingCards(usageLedger Object, priceCards []any, options Object) []Object {
 	type scoredCard struct {
 		card  Object
@@ -232,6 +765,16 @@ func matchingCards(usageLedger Object, priceCards []any, options Object) []Objec
 	sort.SliceStable(scored, func(left int, right int) bool {
 		if scored[left].score != scored[right].score {
 			return scored[left].score > scored[right].score
+		}
+		leftSource := asString(asObject(scored[left].card["source"])["name"])
+		rightSource := asString(asObject(scored[right].card["source"])["name"])
+		if leftSource != rightSource {
+			return leftSource < rightSource
+		}
+		leftID := asString(scored[left].card["id"])
+		rightID := asString(scored[right].card["id"])
+		if leftID != rightID {
+			return leftID < rightID
 		}
 		return scored[left].index < scored[right].index
 	})
@@ -296,6 +839,46 @@ func findPriceComponents(usageLedger Object, priceCards []Object, component Obje
 	return matches
 }
 
+func warningIdentityMetadata(usageLedger Object) Object {
+	return Object{
+		"provider": asString(usageLedger["provider"]),
+		"surface":  asString(usageLedger["surface"]),
+		"model":    billedModel(usageLedger),
+	}
+}
+
+func unpricedComponentMetadata(usageLedger Object, component Object) Object {
+	return Object{
+		"component": asString(component["name"]),
+		"unit":      asString(component["unit"]),
+		"model":     billedModel(usageLedger),
+	}
+}
+
+func isToolOrFeatureComponent(componentName string) bool {
+	return toolOrFeatureComponents[componentName]
+}
+
+func unpricedComponentWarning(usageLedger Object, component Object) Object {
+	componentName := asString(component["name"])
+	if isToolOrFeatureComponent(componentName) {
+		return Object{
+			"code": "tool_component_unpriced",
+			"message": fmt.Sprintf(
+				"No price found for tool or feature component %s on model %s.",
+				componentName,
+				billedModel(usageLedger),
+			),
+			"metadata": unpricedComponentMetadata(usageLedger, component),
+		}
+	}
+	return Object{
+		"code":     "component_unpriced",
+		"message":  fmt.Sprintf("No price found for %s (%s).", componentName, asString(component["unit"])),
+		"metadata": unpricedComponentMetadata(usageLedger, component),
+	}
+}
+
 func longContextRuleMissingWarning(usageLedger Object, candidates []Object, component Object) (Object, bool) {
 	if len(candidates) == 0 {
 		return nil, false
@@ -310,10 +893,50 @@ func longContextRuleMissingWarning(usageLedger Object, candidates []Object, comp
 	if !hasConditions {
 		return nil, false
 	}
+	totalInput := decimal(totalInputTokens(usageLedger))
 	return Object{
 		"code":    "long_context_rule_missing",
-		"message": fmt.Sprintf("No long-context pricing rule matched %s at %s input tokens.", asString(component["name"]), decimal(totalInputTokens(usageLedger))),
+		"message": fmt.Sprintf("No long-context pricing rule matched %s at %s input tokens.", asString(component["name"]), totalInput),
+		"metadata": Object{
+			"component":          asString(component["name"]),
+			"unit":               asString(component["unit"]),
+			"total_input_tokens": totalInput,
+		},
 	}, true
+}
+
+func sourceCapabilityWarning(matchingCards []Object, component Object) (Object, bool) {
+	componentName := asString(component["name"])
+	for _, card := range matchingCards {
+		metadata := asObject(card["metadata"])
+		capabilities := asObject(metadata["source_capabilities"])
+		if len(capabilities) == 0 {
+			continue
+		}
+		unsupported := asSlice(capabilities["unsupported_components"])
+		if unsupported == nil {
+			unsupported = asSlice(capabilities["unsupportedComponents"])
+		}
+		for _, rawUnsupported := range unsupported {
+			if asString(rawUnsupported) == componentName {
+				source := asObject(card["source"])
+				sourceName := asString(source["name"])
+				if sourceName == "" {
+					sourceName = asString(card["id"])
+				}
+				return Object{
+					"code":    "source_capability_unsupported",
+					"message": fmt.Sprintf("Price source %s explicitly does not price %s.", sourceName, componentName),
+					"metadata": Object{
+						"component":     componentName,
+						"price_card_id": card["id"],
+						"source":        asString(source["name"]),
+					},
+				}, true
+			}
+		}
+	}
+	return nil, false
 }
 
 func hasPriceCardForUsage(usageLedger Object, priceCards []any) bool {
@@ -348,6 +971,10 @@ func noMatchingCardWarning(usageLedger Object, priceCards []any) Object {
 			return Object{
 				"code":    "service_tier_unsupported",
 				"message": fmt.Sprintf("No price card found for service tier %s.", serviceTier),
+				"metadata": Object{
+					"model":        billedModel(usageLedger),
+					"service_tier": serviceTier,
+				},
 			}
 		}
 	}
@@ -364,12 +991,17 @@ func noMatchingCardWarning(usageLedger Object, priceCards []any) Object {
 			return Object{
 				"code":    "historical_price_missing",
 				"message": fmt.Sprintf("No price card effective for %s.", pricedAt),
+				"metadata": Object{
+					"model":     billedModel(usageLedger),
+					"priced_at": pricedAt,
+				},
 			}
 		}
 	}
 	return Object{
-		"code":    "price_not_found",
-		"message": fmt.Sprintf("No price card matched provider, surface, model, and context for %s.", billedModel(usageLedger)),
+		"code":     "price_not_found",
+		"message":  fmt.Sprintf("No price card matched provider, surface, model, and context for %s.", billedModel(usageLedger)),
+		"metadata": warningIdentityMetadata(usageLedger),
 	}
 }
 
@@ -506,6 +1138,13 @@ func stalePriceWarning(usageLedger Object, card Object, options Object) (Object,
 	return Object{
 		"code":    "price_stale",
 		"message": fmt.Sprintf("Price source %s is %d days old; threshold is %d days.", sourceName, ageDays, threshold),
+		"metadata": Object{
+			"source":         sourceName,
+			"age_days":       ageDays,
+			"threshold_days": threshold,
+			"retrieved_at":   asString(asObject(card["source"])["retrieved_at"]),
+			"priced_at":      datePart(usageContext(usageLedger)["priced_at"]),
+		},
 	}, true
 }
 
@@ -534,6 +1173,10 @@ func providerReportedWarning(total string, options Object) (Object, bool) {
 	return Object{
 		"code":    "provider_reported_cost_mismatch",
 		"message": fmt.Sprintf("Provider reported cost %s differs from calculated total %s.", providerTotal, total),
+		"metadata": Object{
+			"provider_reported_cost": providerTotal,
+			"calculated_total":       total,
+		},
 	}, true
 }
 
@@ -573,6 +1216,10 @@ func applyProviderReportedCostUse(total string, components []any, warnings []any
 	warnings = append(warnings, Object{
 		"code":    "provider_reported_cost_used",
 		"message": fmt.Sprintf("Provider reported cost %s used as authoritative total.", providerTotal),
+		"metadata": Object{
+			"provider_reported_cost": providerTotal,
+			"calculated_total":       total,
+		},
 	})
 	return providerTotal, components, warnings
 }
@@ -593,7 +1240,77 @@ func priceSourceDisagreementWarning(matches []Object, component Object, options 
 	return Object{
 		"code":    "price_source_disagreement",
 		"message": fmt.Sprintf("Multiple price sources disagree for %s; using %s.", asString(component["name"]), chosen),
+		"metadata": Object{
+			"component":                asString(component["name"]),
+			"selected_price_card_id":   chosen,
+			"candidate_price_card_ids": matchPriceCardIDs(matches),
+		},
 	}, true
+}
+
+func debugTraceEnabled(options Object) bool {
+	if value, ok := options["debug_trace"].(bool); ok && value {
+		return true
+	}
+	if value, ok := options["debugTrace"].(bool); ok && value {
+		return true
+	}
+	return false
+}
+
+func newDebugTrace() Object {
+	return Object{
+		"schema_version": "0.1",
+		"decisions":      []any{},
+		"summary": Object{
+			"priced_components":   0,
+			"unpriced_components": 0,
+			"warnings":            0,
+			"applied_discounts":   0,
+		},
+	}
+}
+
+func appendTraceDecision(trace Object, decision Object) {
+	if trace == nil {
+		return
+	}
+	trace["decisions"] = append(asSlice(trace["decisions"]), decision)
+}
+
+func incrementTraceSummary(trace Object, key string) {
+	if trace == nil {
+		return
+	}
+	summary := asObject(trace["summary"])
+	current := 0
+	if value, ok := optionalInt(summary[key]); ok {
+		current = value
+	}
+	summary[key] = current + 1
+}
+
+func setTraceSummary(trace Object, key string, value int) {
+	if trace == nil {
+		return
+	}
+	asObject(trace["summary"])[key] = value
+}
+
+func priceCardIDs(cards []Object) []any {
+	ids := []any{}
+	for _, card := range cards {
+		ids = append(ids, asString(card["id"]))
+	}
+	return ids
+}
+
+func matchPriceCardIDs(matches []Object) []any {
+	ids := []any{}
+	for _, match := range matches {
+		ids = append(ids, asString(asObject(match["card"])["id"]))
+	}
+	return ids
 }
 
 // CalculateCost returns a componentized cost ledger for normalized usage,
@@ -621,6 +1338,10 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 	appliedDiscounts := []any{}
 	sourceByName := map[string]Object{}
 	sourceNames := []string{}
+	var trace Object
+	if debugTraceEnabled(options) {
+		trace = newDebugTrace()
+	}
 	total := "0"
 	resolvedBilledModel := billedModel(usageLedger)
 	aliasResolution := asString(asObject(usageLedger["model"])["alias_resolution"])
@@ -633,6 +1354,14 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 	}
 	hasModelCard := hasPriceCardForUsage(usageLedger, priceCards)
 	candidateCards := matchingCards(usageLedger, priceCards, options)
+	if trace != nil {
+		appendTraceDecision(trace, Object{
+			"type":                     "price_card_candidates",
+			"model":                    resolvedBilledModel,
+			"candidate_price_card_ids": priceCardIDs(candidateCards),
+			"source_priority":          sourcePriority(options),
+		})
+	}
 	warnedUnknownModel := false
 	warnedNoMatchingCard := false
 	warnedStaleCards := map[string]bool{}
@@ -642,11 +1371,13 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		if !hasModelCard {
 			if !warnedUnknownModel {
 				warnings = append(warnings, Object{
-					"code":    "unknown_model",
-					"message": fmt.Sprintf("No price card found for %s.", resolvedBilledModel),
+					"code":     "unknown_model",
+					"message":  fmt.Sprintf("No price card found for %s.", resolvedBilledModel),
+					"metadata": warningIdentityMetadata(usageLedger),
 				})
 				warnedUnknownModel = true
 			}
+			incrementTraceSummary(trace, "unpriced_components")
 			continue
 		}
 
@@ -655,6 +1386,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 				warnings = append(warnings, noMatchingCardWarning(usageLedger, priceCards))
 				warnedNoMatchingCard = true
 			}
+			incrementTraceSummary(trace, "unpriced_components")
 			continue
 		}
 
@@ -666,18 +1398,14 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 			}
 		}
 		if len(matches) == 0 {
-			if warning, ok := longContextRuleMissingWarning(usageLedger, candidates, component); ok {
+			if warning, ok := sourceCapabilityWarning(candidateCards, component); ok {
+				warnings = append(warnings, warning)
+			} else if warning, ok := longContextRuleMissingWarning(usageLedger, candidates, component); ok {
 				warnings = append(warnings, warning)
 			} else {
-				code := "component_unpriced"
-				if strings.Contains(asString(component["name"]), "tool") {
-					code = "tool_component_unpriced"
-				}
-				warnings = append(warnings, Object{
-					"code":    code,
-					"message": fmt.Sprintf("No price found for %s (%s).", asString(component["name"]), asString(component["unit"])),
-				})
+				warnings = append(warnings, unpricedComponentWarning(usageLedger, component))
 			}
+			incrementTraceSummary(trace, "unpriced_components")
 			continue
 		}
 
@@ -686,11 +1414,26 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		}
 		card := asObject(matches[0]["card"])
 		priceComponent := asObject(matches[0]["price_component"])
+		appendTraceDecision(trace, Object{
+			"type":                     "price_component_match",
+			"component":                asString(component["name"]),
+			"candidate_price_card_ids": matchPriceCardIDs(matches),
+			"selected_price_card_id":   asString(card["id"]),
+			"selected_source":          asString(asObject(card["source"])["name"]),
+		})
 		if asString(card["model"]) != resolvedBilledModel && containsString(asSlice(card["aliases"]), resolvedBilledModel) {
+			previousBilledModel := resolvedBilledModel
 			resolvedBilledModel = asString(card["model"])
 			if aliasResolution == "none" {
 				aliasResolution = "source_exact"
 			}
+			appendTraceDecision(trace, Object{
+				"type":          "model_alias_resolution",
+				"from":          previousBilledModel,
+				"to":            resolvedBilledModel,
+				"price_card_id": asString(card["id"]),
+				"resolution":    aliasResolution,
+			})
 		}
 
 		price := asObject(priceComponent["price"])
@@ -698,6 +1441,15 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		eligible := discountEligible(priceComponent)
 		finalCost, applied := applyDiscounts(baseCost, discountPolicies, usageLedger, component, eligible)
 		appliedDiscounts = append(appliedDiscounts, applied...)
+		for _, rawApplied := range applied {
+			appliedItem := asObject(rawApplied)
+			appendTraceDecision(trace, Object{
+				"type":      "discount_application",
+				"component": asString(appliedItem["component"]),
+				"policy_id": asString(appliedItem["policy_id"]),
+				"amount":    asString(appliedItem["amount"]),
+			})
+		}
 		total = add(total, finalCost)
 
 		source := asObject(card["source"])
@@ -723,6 +1475,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 			"price_card_id":     asString(card["id"]),
 			"discount_eligible": eligible,
 		})
+		incrementTraceSummary(trace, "priced_components")
 	}
 
 	priceSources := []any{}
@@ -732,6 +1485,22 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 	total, components, warnings = applyProviderReportedCostUse(total, components, warnings, options)
 	if warning, ok := providerReportedWarning(total, options); ok {
 		warnings = append(warnings, warning)
+	}
+	components = orderedCostComponents(components)
+	priceSources = orderedPriceSources(priceSources)
+	appliedDiscounts = orderedAppliedDiscounts(appliedDiscounts)
+	warnings = orderedWarnings(warnings)
+	if trace != nil {
+		for _, rawWarning := range warnings {
+			warning := asObject(rawWarning)
+			appendTraceDecision(trace, Object{
+				"type":         "warning",
+				"warning_code": asString(warning["code"]),
+				"message":      asString(warning["message"]),
+			})
+		}
+		setTraceSummary(trace, "warnings", len(warnings))
+		setTraceSummary(trace, "applied_discounts", len(appliedDiscounts))
 	}
 
 	model := asObject(usageLedger["model"])
@@ -752,8 +1521,283 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		"applied_discounts": appliedDiscounts,
 		"warnings":          warnings,
 	}
+	if trace != nil {
+		result["debug_trace"] = trace
+	}
 	if mode == "strict" && len(warnings) > 0 {
 		panic(fmt.Sprintf("strict mode cost calculation failed: %s", asString(asObject(warnings[0])["code"])))
+	}
+	return result
+}
+
+func sourceKey(source Object) string {
+	return strings.Join([]string{
+		asString(source["name"]),
+		asString(source["url"]),
+		asString(source["retrieved_at"]),
+		asString(source["version"]),
+	}, "|")
+}
+
+func componentRank(name string) int {
+	if rank, ok := componentOrder[name]; ok {
+		return rank
+	}
+	return len(componentOrder)
+}
+
+func orderedCostComponents(components []any) []any {
+	ordered := append([]any{}, components...)
+	sort.SliceStable(ordered, func(left int, right int) bool {
+		leftComponent := asObject(ordered[left])
+		rightComponent := asObject(ordered[right])
+		leftRank := componentRank(asString(leftComponent["name"]))
+		rightRank := componentRank(asString(rightComponent["name"]))
+		if leftRank != rightRank {
+			return leftRank < rightRank
+		}
+		leftKey := strings.Join([]string{
+			asString(leftComponent["name"]),
+			asString(leftComponent["unit"]),
+			asString(leftComponent["unit_price"]),
+			asString(leftComponent["price_card_id"]),
+			numberString(leftComponent["quantity"]),
+			numberString(leftComponent["cost"]),
+		}, "|")
+		rightKey := strings.Join([]string{
+			asString(rightComponent["name"]),
+			asString(rightComponent["unit"]),
+			asString(rightComponent["unit_price"]),
+			asString(rightComponent["price_card_id"]),
+			numberString(rightComponent["quantity"]),
+			numberString(rightComponent["cost"]),
+		}, "|")
+		return leftKey < rightKey
+	})
+	return ordered
+}
+
+func orderedPriceSources(sources []any) []any {
+	ordered := append([]any{}, sources...)
+	sort.SliceStable(ordered, func(left int, right int) bool {
+		return sourceKey(asObject(ordered[left])) < sourceKey(asObject(ordered[right]))
+	})
+	return ordered
+}
+
+func orderedAppliedDiscounts(discounts []any) []any {
+	ordered := append([]any{}, discounts...)
+	sort.SliceStable(ordered, func(left int, right int) bool {
+		leftDiscount := asObject(ordered[left])
+		rightDiscount := asObject(ordered[right])
+		leftKey := strings.Join([]string{
+			asString(leftDiscount["component"]),
+			asString(leftDiscount["policy_id"]),
+			numberString(leftDiscount["amount"]),
+		}, "|")
+		rightKey := strings.Join([]string{
+			asString(rightDiscount["component"]),
+			asString(rightDiscount["policy_id"]),
+			numberString(rightDiscount["amount"]),
+		}, "|")
+		return leftKey < rightKey
+	})
+	return ordered
+}
+
+func orderedWarnings(warnings []any) []any {
+	ordered := append([]any{}, warnings...)
+	sort.SliceStable(ordered, func(left int, right int) bool {
+		leftWarning := asObject(ordered[left])
+		rightWarning := asObject(ordered[right])
+		leftMetadata, _ := json.Marshal(leftWarning["metadata"])
+		rightMetadata, _ := json.Marshal(rightWarning["metadata"])
+		leftKey := strings.Join([]string{
+			asString(leftWarning["code"]),
+			asString(leftWarning["path"]),
+			asString(leftWarning["message"]),
+			string(leftMetadata),
+		}, "|")
+		rightKey := strings.Join([]string{
+			asString(rightWarning["code"]),
+			asString(rightWarning["path"]),
+			asString(rightWarning["message"]),
+			string(rightMetadata),
+		}, "|")
+		return leftKey < rightKey
+	})
+	return ordered
+}
+
+func componentKey(component Object) string {
+	discountEligible := "true"
+	if value, ok := component["discount_eligible"].(bool); ok {
+		discountEligible = strconv.FormatBool(value)
+	}
+	return strings.Join([]string{
+		asString(component["name"]),
+		asString(component["unit"]),
+		asString(component["unit_price"]),
+		asString(component["price_card_id"]),
+		discountEligible,
+	}, "|")
+}
+
+func optionalBool(value any) (bool, bool) {
+	if value == nil {
+		return false, false
+	}
+	typed, ok := value.(bool)
+	return typed, ok
+}
+
+func streamUsageMissingWarning(expectedLedgerCount any, actualLedgerCount int) Object {
+	metadata := Object{"actual_ledger_count": actualLedgerCount}
+	if expectedLedgerCount != nil {
+		metadata["expected_ledger_count"] = expectedLedgerCount
+	}
+	return Object{
+		"code":     "stream_usage_missing",
+		"message":  "Final streaming usage was expected but not observed; aggregate total may be incomplete.",
+		"metadata": metadata,
+	}
+}
+
+// AggregateCostLedgers merges already-calculated cost ledgers into a single
+// session or multi-call ledger.
+func AggregateCostLedgers(costLedgers []any, options Object) Object {
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "aggregate"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "aggregate.cost_ledgers"
+	}
+	model := asString(options["model"])
+	if model == "" {
+		model = "multiple"
+	}
+	mode := asString(options["mode"])
+	if mode == "" {
+		mode = "compatibility"
+	}
+
+	componentsByKey := map[string]Object{}
+	componentKeys := []string{}
+	sourcesByKey := map[string]Object{}
+	sourceKeys := []string{}
+	appliedDiscounts := []any{}
+	warnings := []any{}
+	total := "0"
+
+	for ledgerIndex, rawLedger := range costLedgers {
+		ledger := asObject(rawLedger)
+		total = add(total, ledger["total"])
+		for _, rawComponent := range asSlice(ledger["components"]) {
+			component := asObject(rawComponent)
+			key := componentKey(component)
+			if _, ok := componentsByKey[key]; !ok {
+				merged := Object{
+					"name":       asString(component["name"]),
+					"quantity":   "0",
+					"unit":       asString(component["unit"]),
+					"unit_price": asString(component["unit_price"]),
+					"cost":       "0",
+					"metadata":   Object{"source_ledger_indexes": []any{}},
+				}
+				if component["price_card_id"] != nil {
+					merged["price_card_id"] = component["price_card_id"]
+				}
+				if component["discount_eligible"] != nil {
+					merged["discount_eligible"] = component["discount_eligible"]
+				}
+				componentsByKey[key] = merged
+				componentKeys = append(componentKeys, key)
+			}
+			merged := componentsByKey[key]
+			merged["quantity"] = add(merged["quantity"], component["quantity"])
+			merged["cost"] = add(merged["cost"], component["cost"])
+			metadata := asObject(merged["metadata"])
+			metadata["source_ledger_indexes"] = append(asSlice(metadata["source_ledger_indexes"]), ledgerIndex)
+		}
+		for _, rawSource := range asSlice(ledger["price_sources"]) {
+			source := asObject(rawSource)
+			key := sourceKey(source)
+			if _, ok := sourcesByKey[key]; !ok {
+				sourcesByKey[key] = source
+				sourceKeys = append(sourceKeys, key)
+			}
+		}
+		appliedDiscounts = append(appliedDiscounts, asSlice(ledger["applied_discounts"])...)
+		warnings = append(warnings, asSlice(ledger["warnings"])...)
+	}
+
+	expectedCount := options["expected_ledger_count"]
+	if expectedCount == nil {
+		expectedCount = options["expectedLedgerCount"]
+	}
+	finalExpected, _ := optionalBool(options["stream_final_usage_expected"])
+	if value, ok := optionalBool(options["streamFinalUsageExpected"]); ok {
+		finalExpected = value
+	}
+	finalPresent := true
+	if value, ok := optionalBool(options["stream_final_usage_present"]); ok {
+		finalPresent = value
+	}
+	if value, ok := optionalBool(options["streamFinalUsagePresent"]); ok {
+		finalPresent = value
+	}
+	missingStreamUsageWarned := false
+	if finalExpected && !finalPresent {
+		warnings = append(warnings, streamUsageMissingWarning(expectedCount, len(costLedgers)))
+		missingStreamUsageWarned = true
+	}
+	if !missingStreamUsageWarned && expectedCount != nil {
+		if parsedExpectedCount, ok := optionalInt(expectedCount); ok && len(costLedgers) < parsedExpectedCount {
+			warnings = append(warnings, streamUsageMissingWarning(expectedCount, len(costLedgers)))
+		}
+	}
+
+	components := []any{}
+	for _, key := range componentKeys {
+		components = append(components, componentsByKey[key])
+	}
+	priceSources := []any{}
+	for _, key := range sourceKeys {
+		priceSources = append(priceSources, sourcesByKey[key])
+	}
+	components = orderedCostComponents(components)
+	priceSources = orderedPriceSources(priceSources)
+	appliedDiscounts = orderedAppliedDiscounts(appliedDiscounts)
+	warnings = orderedWarnings(warnings)
+	metadata := Object{
+		"ledger_count": len(costLedgers),
+		"aggregation":  "cost_ledgers",
+	}
+	if expectedCount != nil {
+		metadata["expected_ledger_count"] = expectedCount
+	}
+	result := Object{
+		"schema_version": "0.1",
+		"provider":       provider,
+		"surface":        surface,
+		"model": Object{
+			"requested":        model,
+			"returned":         model,
+			"billed":           model,
+			"alias_resolution": "none",
+		},
+		"currency":          "USD",
+		"components":        components,
+		"total":             total,
+		"price_sources":     priceSources,
+		"applied_discounts": appliedDiscounts,
+		"warnings":          warnings,
+		"metadata":          metadata,
+	}
+	if mode == "strict" && len(warnings) > 0 {
+		panic(fmt.Sprintf("strict mode cost aggregation failed: %s", asString(asObject(warnings[0])["code"])))
 	}
 	return result
 }
@@ -865,8 +1909,8 @@ func openAICompatibleReasoningOutput(usage Object) (any, string) {
 // ledger shape for supported surfaces.
 //
 // Supported prototype surfaces include OpenAI Responses, OpenAI-compatible chat
-// completions, Anthropic Messages, Cohere Chat, Gemini generateContent, and
-// AWS Bedrock Converse.
+// completions, Anthropic Messages, Cohere Chat, Gemini generateContent, AWS
+// Bedrock Converse, and AWS Bedrock InvokeModel.
 func ExtractUsageLedger(response Object, options Object) Object {
 	adapter := asString(options["adapter"])
 	if adapter == "" {
@@ -877,14 +1921,32 @@ func ExtractUsageLedger(response Object, options Object) Object {
 		return extractLangChainChatUsage(response, options)
 	case "vercel_ai_sdk.generate_text":
 		return extractVercelAISDKUsage(response, options)
+	case "vercel_ai_sdk.stream_text":
+		return extractVercelAISDKUsage(response, options)
 	case "llamaindex.token_counter":
 		return extractLlamaIndexTokenCounterUsage(response, options)
+	case "haystack.generator_result":
+		return extractHaystackGeneratorUsage(response, options)
+	case "litellm.proxy_response":
+		return extractLiteLLMProxyResponseUsage(response, options)
+	case "ag2.usage_summary":
+		return extractAG2UsageSummaryUsage(response, options)
+	case "openai_agents.usage":
+		return extractOpenAIAgentsUsage(response, options)
+	case "langsmith.run_usage":
+		return extractLangSmithRunUsage(response, options)
+	case "semantic_kernel.telemetry":
+		return extractSemanticKernelTelemetryUsage(response, options)
+	case "openrouter.sdk_response":
+		return extractOpenRouterSDKResponseUsage(response, options)
 	}
 
 	surface := asString(options["surface"])
 	switch surface {
-	case "openai.responses":
+	case "openai.responses", "xai.responses":
 		return extractOpenAIResponsesUsage(response, options)
+	case "openai.embeddings":
+		return extractOpenAIEmbeddingsUsage(response, options)
 	case "openai.chat_completions":
 		return extractOpenAIChatCompletionsUsage(response, options)
 	case "anthropic.messages":
@@ -893,6 +1955,8 @@ func ExtractUsageLedger(response Object, options Object) Object {
 		return extractGeminiGenerateContentUsage(response, options)
 	case "aws.bedrock.converse":
 		return extractBedrockConverseUsage(response, options)
+	case "aws.bedrock.invoke_model":
+		return extractBedrockInvokeModelUsage(response, options)
 	case "cohere.chat":
 		return extractCohereChatUsage(response, options)
 	default:
@@ -938,18 +2002,35 @@ func unsupportedSurfaceLedger(response Object, options Object) Object {
 			Object{
 				"code":    "unknown_surface",
 				"message": fmt.Sprintf("Unsupported surface: %s.", surface),
+				"metadata": Object{
+					"provider": provider,
+					"surface":  surface,
+					"model":    model,
+				},
 			},
 		},
 	}
 }
 
+func openAIResponsesPayload(response Object) Object {
+	if asString(response["type"]) == "response.completed" {
+		nested := asObject(response["response"])
+		if len(nested) > 0 {
+			return nested
+		}
+	}
+	return response
+}
+
 func extractOpenAIResponsesUsage(response Object, options Object) Object {
+	response = openAIResponsesPayload(response)
 	usage := asObject(response["usage"])
 	cachedInput := getNumber(usage, "input_tokens_details", "cached_tokens")
 	reasoning := getNumber(usage, "output_tokens_details", "reasoning_tokens")
 	input := getNumber(usage, "input_tokens")
 	output := getNumber(usage, "output_tokens")
 	toolComponents := []any{}
+	functionCallCount := 0
 	for _, rawItem := range asSlice(response["output"]) {
 		item := asObject(rawItem)
 		switch asString(item["type"]) {
@@ -959,11 +2040,28 @@ func extractOpenAIResponsesUsage(response Object, options Object) Object {
 			toolComponents = append(toolComponents, positiveComponent("file_search_units", "1", "call", "$.output[*].type"))
 		case "code_interpreter_call":
 			toolComponents = append(toolComponents, positiveComponent("code_interpreter_call_units", "1", "call", "$.output[*].type"))
+		case "computer_call":
+			actionCount := len(asSlice(item["actions"]))
+			if actionCount == 0 {
+				actionCount = 1
+			}
+			toolComponents = append(toolComponents, positiveComponent("computer_use_action_units", strconv.Itoa(actionCount), "call", "$.output[*].actions[*]"))
+		case "function_call":
+			functionCallCount++
 		}
 	}
+	toolComponents = append(toolComponents, positiveComponent("tool_call_units", strconv.Itoa(functionCallCount), "call", "$.output[*].type"))
 	provider := asString(options["provider"])
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.responses"
+	}
 	if provider == "" {
-		provider = "openai"
+		if surface == "xai.responses" {
+			provider = "xai"
+		} else {
+			provider = "openai"
+		}
 	}
 	requestedModel := asString(options["model"])
 	if requestedModel == "" {
@@ -977,7 +2075,33 @@ func extractOpenAIResponsesUsage(response Object, options Object) Object {
 		positiveComponent("output_reasoning_tokens", reasoning, "token", "$.usage.output_tokens_details.reasoning_tokens"),
 	}
 	components = append(components, toolComponents...)
-	return baseUsageLedger(provider, "openai.responses", requestedModel, asString(response["model"]), compactComponents(components), usage)
+	return baseUsageLedger(provider, surface, requestedModel, asString(response["model"]), compactComponents(components), usage)
+}
+
+func extractOpenAIEmbeddingsUsage(response Object, options Object) Object {
+	usage := asObject(response["usage"])
+	tokens := getNumber(usage, "prompt_tokens")
+	sourcePath := "$.usage.prompt_tokens"
+	if _, ok := usage["prompt_tokens"]; !ok {
+		tokens = getNumber(usage, "total_tokens")
+		sourcePath = "$.usage.total_tokens"
+	}
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "openai"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.embeddings"
+	}
+	requestedModel := asString(options["model"])
+	if requestedModel == "" {
+		requestedModel = asString(response["model"])
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, asString(response["model"]), compactComponents([]any{
+		positiveComponent("embedding_tokens", tokens, "token", sourcePath),
+	}), usage)
 }
 
 func extractOpenAICompatibleChatCompletionsUsage(response Object, options Object) Object {
@@ -1022,7 +2146,44 @@ func extractOpenRouterChatCompletionsUsage(response Object, options Object) Obje
 	return extractOpenAICompatibleChatCompletionsUsage(response, options)
 }
 
+func anthropicMessagesPayload(response Object) Object {
+	events := asSlice(response["events"])
+	if len(events) == 0 {
+		return response
+	}
+	message := Object{}
+	usage := Object{}
+	for _, rawEvent := range events {
+		event := asObject(rawEvent)
+		switch asString(event["type"]) {
+		case "message_start":
+			startMessage := asObject(event["message"])
+			if len(startMessage) > 0 {
+				for key, value := range startMessage {
+					message[key] = value
+				}
+				for key, value := range asObject(startMessage["usage"]) {
+					usage[key] = value
+				}
+			}
+		case "message_delta":
+			for key, value := range asObject(event["usage"]) {
+				usage[key] = value
+			}
+			for key, value := range asObject(event["delta"]) {
+				message[key] = value
+			}
+		}
+	}
+	if len(message) == 0 {
+		return response
+	}
+	message["usage"] = usage
+	return message
+}
+
 func extractAnthropicMessagesUsage(response Object, options Object) Object {
+	response = anthropicMessagesPayload(response)
 	usage := asObject(response["usage"])
 	cacheWrite := getNumber(usage, "cache_creation_input_tokens")
 	cacheWrite1h := getNumber(usage, "cache_creation_input_tokens_1h")
@@ -1167,7 +2328,31 @@ func geminiOrderedComponents(quantities map[string]string, order []string, sourc
 	return components
 }
 
+func geminiGenerateContentPayload(response Object) Object {
+	chunks := asSlice(response["chunks"])
+	if len(chunks) == 0 {
+		chunks = asSlice(response["stream"])
+	}
+	if len(chunks) == 0 {
+		return response
+	}
+	for index := len(chunks) - 1; index >= 0; index-- {
+		chunk := asObject(chunks[index])
+		if len(asObject(chunk["usageMetadata"])) > 0 {
+			return chunk
+		}
+	}
+	for index := len(chunks) - 1; index >= 0; index-- {
+		chunk := asObject(chunks[index])
+		if len(chunk) > 0 {
+			return chunk
+		}
+	}
+	return response
+}
+
 func extractGeminiGenerateContentUsage(response Object, options Object) Object {
+	response = geminiGenerateContentPayload(response)
 	usage := asObject(response["usageMetadata"])
 	cachedInput := getNumber(usage, "cachedContentTokenCount")
 	prompt := getNumber(usage, "promptTokenCount")
@@ -1279,6 +2464,69 @@ func extractBedrockConverseUsage(response Object, options Object) Object {
 		positiveComponent("input_cache_write_1h_tokens", cacheWrite1h, "token", "$.usage.cacheDetails"),
 		positiveComponent("input_cache_read_tokens", cacheRead, "token", "$.usage.cacheReadInputTokens"),
 		positiveComponent("output_text_tokens", getNumber(usage, "outputTokens"), "token", "$.usage.outputTokens"),
+	}), usage)
+}
+
+func bedrockInvokeModelBody(response Object) (Object, string) {
+	rawBody, ok := response["body"]
+	if !ok {
+		return response, "$"
+	}
+	switch body := rawBody.(type) {
+	case map[string]any:
+		return body, "$.body"
+	case string:
+		decoder := json.NewDecoder(strings.NewReader(body))
+		decoder.UseNumber()
+		var decoded Object
+		if err := decoder.Decode(&decoded); err == nil {
+			return decoded, "$.body"
+		}
+	case []byte:
+		decoder := json.NewDecoder(strings.NewReader(string(body)))
+		decoder.UseNumber()
+		var decoded Object
+		if err := decoder.Decode(&decoded); err == nil {
+			return decoded, "$.body"
+		}
+	}
+	return Object{}, "$.body"
+}
+
+func extractBedrockInvokeModelUsage(response Object, options Object) Object {
+	body, sourceRoot := bedrockInvokeModelBody(response)
+	usage := asObject(body["usage"])
+	cacheWrite := getNumber(usage, "cache_creation_input_tokens")
+	cacheWrite1h := getNumber(usage, "cache_creation_input_tokens_1h")
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "bedrock"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "aws.bedrock.invoke_model"
+	}
+	returnedModel := asString(response["modelId"])
+	if returnedModel == "" {
+		returnedModel = asString(response["model_id"])
+	}
+	if returnedModel == "" {
+		returnedModel = asString(options["model"])
+	}
+	if returnedModel == "" {
+		returnedModel = asString(body["model"])
+	}
+	requestedModel := asString(options["model"])
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("input_uncached_tokens", getNumber(usage, "input_tokens"), "token", sourceRoot+".usage.input_tokens"),
+		positiveComponent("input_cache_write_tokens", subtract(cacheWrite, cacheWrite1h), "token", sourceRoot+".usage.cache_creation_input_tokens"),
+		positiveComponent("input_cache_write_1h_tokens", cacheWrite1h, "token", sourceRoot+".usage.cache_creation_input_tokens_1h"),
+		positiveComponent("input_cache_read_tokens", getNumber(usage, "cache_read_input_tokens"), "token", sourceRoot+".usage.cache_read_input_tokens"),
+		positiveComponent("output_text_tokens", getNumber(usage, "output_tokens"), "token", sourceRoot+".usage.output_tokens"),
 	}), usage)
 }
 
@@ -1456,6 +2704,417 @@ func extractLlamaIndexTokenCounterUsage(response Object, options Object) Object 
 	}), response)
 }
 
+func haystackUsagePayload(response Object) (Object, Object, string) {
+	replies := asSlice(response["replies"])
+	if len(replies) > 0 {
+		reply := asObject(replies[0])
+		metadata := asObject(reply["_meta"])
+		if len(metadata) == 0 {
+			metadata = asObject(reply["meta"])
+		}
+		if len(metadata) > 0 {
+			return asObject(metadata["usage"]), metadata, "$.replies[0]._meta.usage"
+		}
+	}
+	metaItems := asSlice(response["meta"])
+	if len(metaItems) > 0 {
+		metadata := asObject(metaItems[0])
+		return asObject(metadata["usage"]), metadata, "$.meta[0].usage"
+	}
+	metadata := asObject(response["meta"])
+	if len(metadata) > 0 {
+		return asObject(metadata["usage"]), metadata, "$.meta.usage"
+	}
+	return asObject(response["usage"]), response, "$.usage"
+}
+
+func extractHaystackGeneratorUsage(response Object, options Object) Object {
+	usage, metadata, sourceRoot := haystackUsagePayload(response)
+	cachedInput, cachedSourcePath := openAICompatibleCachedInput(usage)
+	reasoning, reasoningSourcePath := openAICompatibleReasoningOutput(usage)
+	prompt := getNumber(usage, "prompt_tokens")
+	if _, ok := usage["prompt_tokens"]; !ok {
+		prompt = add(getNumber(usage, "prompt_cache_hit_tokens"), getNumber(usage, "prompt_cache_miss_tokens"))
+	}
+	completion := getNumber(usage, "completion_tokens")
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "unknown"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "framework.haystack.generator"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(metadata["model"])
+	if returnedModel == "" {
+		returnedModel = asString(response["model"])
+	}
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("input_uncached_tokens", subtract(prompt, cachedInput), "token", sourceRoot+".prompt_tokens"),
+		positiveComponent("input_cache_read_tokens", cachedInput, "token", strings.Replace(cachedSourcePath, "$.usage", sourceRoot, 1)),
+		positiveComponent("output_text_tokens", subtract(completion, reasoning), "token", sourceRoot+".completion_tokens"),
+		positiveComponent("output_reasoning_tokens", reasoning, "token", strings.Replace(reasoningSourcePath, "$.usage", sourceRoot, 1)),
+	}), usage)
+}
+
+func extractLiteLLMProxyResponseUsage(response Object, options Object) Object {
+	hidden := asObject(response["_hidden_params"])
+	if len(hidden) == 0 {
+		hidden = asObject(response["hidden_params"])
+	}
+	if asString(options["provider"]) == "" {
+		provider := asString(hidden["custom_llm_provider"])
+		if provider == "" {
+			provider = asString(hidden["litellm_provider"])
+		}
+		if provider != "" {
+			options["provider"] = provider
+		}
+	}
+	return extractOpenAICompatibleChatCompletionsUsage(response, options)
+}
+
+func ag2UsageSummaryPayload(response Object, options Object) (Object, string) {
+	mode := asString(options["ag2_usage_mode"])
+	if mode == "" {
+		mode = asString(options["usage_mode"])
+	}
+	if mode == "" {
+		mode = "actual"
+	}
+	excluding := asObject(response["usage_excluding_cached_inference"])
+	including := asObject(response["usage_including_cached_inference"])
+	if len(excluding) > 0 || len(including) > 0 {
+		switch mode {
+		case "total", "including_cached", "usage_including_cached_inference":
+			return including, "usage_including_cached_inference"
+		default:
+			return excluding, "usage_excluding_cached_inference"
+		}
+	}
+	return response, mode
+}
+
+func ag2ModelUsage(summary Object, requestedModel string) (string, Object) {
+	if requestedModel != "" {
+		usage := asObject(summary[requestedModel])
+		if len(usage) > 0 {
+			return requestedModel, usage
+		}
+	}
+	keys := make([]string, 0, len(summary))
+	for key := range summary {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		if key == "total_cost" {
+			continue
+		}
+		usage := asObject(summary[key])
+		if len(usage) > 0 {
+			return key, usage
+		}
+	}
+	if requestedModel != "" {
+		return requestedModel, Object{}
+	}
+	return "unknown", Object{}
+}
+
+func extractAG2UsageSummaryUsage(response Object, options Object) Object {
+	summary, mode := ag2UsageSummaryPayload(response, options)
+	returnedModel, modelUsage := ag2ModelUsage(summary, asString(options["model"]))
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "unknown"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "framework.ag2.usage_summary"
+	}
+	requestedModel := asString(options["model"])
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("input_uncached_tokens", getNumber(modelUsage, "prompt_tokens"), "token", "$."+mode+"."+returnedModel+".prompt_tokens"),
+		positiveComponent("output_text_tokens", getNumber(modelUsage, "completion_tokens"), "token", "$."+mode+"."+returnedModel+".completion_tokens"),
+	}), Object{
+		"mode":        mode,
+		"summary":     summary,
+		"model_usage": modelUsage,
+	})
+}
+
+func firstPresent(object Object, keys ...string) any {
+	for _, key := range keys {
+		if value, ok := object[key]; ok && value != nil {
+			return value
+		}
+	}
+	return json.Number("0")
+}
+
+func nestedObject(object Object, keys ...string) Object {
+	for _, key := range keys {
+		value := asObject(object[key])
+		if len(value) > 0 {
+			return value
+		}
+	}
+	return Object{}
+}
+
+func openAIAgentsUsagePayload(response Object) (Object, string, Object) {
+	usage := asObject(response["usage"])
+	if len(usage) > 0 {
+		return usage, "$.usage", response
+	}
+	for _, rootKey := range []string{"context_wrapper", "context"} {
+		root := asObject(response[rootKey])
+		usage := asObject(root["usage"])
+		if len(usage) > 0 {
+			return usage, "$." + rootKey + ".usage", root
+		}
+	}
+	return response, "$", response
+}
+
+func extractOpenAIAgentsUsage(response Object, options Object) Object {
+	usage, sourceRoot, sourceRootValue := openAIAgentsUsagePayload(response)
+	cachedInput := getNumber(nestedObject(usage, "input_tokens_details"), "cached_tokens")
+	reasoning := getNumber(nestedObject(usage, "output_tokens_details"), "reasoning_tokens")
+	inputTokens := getNumber(usage, "input_tokens")
+	outputTokens := getNumber(usage, "output_tokens")
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "openai"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.responses"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(usage["model"])
+	if returnedModel == "" {
+		returnedModel = asString(sourceRootValue["model"])
+	}
+	if returnedModel == "" {
+		returnedModel = asString(response["model"])
+	}
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("input_uncached_tokens", subtract(inputTokens, cachedInput), "token", sourceRoot+".input_tokens"),
+		positiveComponent("input_cache_read_tokens", cachedInput, "token", sourceRoot+".input_tokens_details.cached_tokens"),
+		positiveComponent("output_text_tokens", subtract(outputTokens, reasoning), "token", sourceRoot+".output_tokens"),
+		positiveComponent("output_reasoning_tokens", reasoning, "token", sourceRoot+".output_tokens_details.reasoning_tokens"),
+	}), usage)
+}
+
+func langSmithUsagePayload(response Object) (Object, string) {
+	usage := asObject(response["usage_metadata"])
+	if len(usage) > 0 {
+		return usage, "$.usage_metadata"
+	}
+	usage = asObject(response["usageMetadata"])
+	if len(usage) > 0 {
+		return usage, "$.usageMetadata"
+	}
+	outputs := asObject(response["outputs"])
+	usage = asObject(outputs["usage_metadata"])
+	if len(usage) > 0 {
+		return usage, "$.outputs.usage_metadata"
+	}
+	usage = asObject(outputs["usageMetadata"])
+	if len(usage) > 0 {
+		return usage, "$.outputs.usageMetadata"
+	}
+	llmOutput := asObject(outputs["llm_output"])
+	usage = asObject(llmOutput["usage"])
+	if len(usage) > 0 {
+		return usage, "$.outputs.llm_output.usage"
+	}
+	for _, key := range []string{"input_tokens", "inputTokens", "prompt_tokens", "promptTokens"} {
+		if _, ok := response[key]; ok {
+			return response, "$"
+		}
+	}
+	return Object{}, "$.usage_metadata"
+}
+
+func langSmithModel(response Object, usage Object, options Object) string {
+	serialized := asObject(response["serialized"])
+	serializedKwargs := asObject(serialized["kwargs"])
+	for _, value := range []any{
+		usage["model"],
+		usage["model_name"],
+		response["model"],
+		response["model_name"],
+		serializedKwargs["model"],
+		serializedKwargs["model_name"],
+		options["model"],
+	} {
+		if text := asString(value); text != "" {
+			return text
+		}
+	}
+	return ""
+}
+
+func extractLangSmithRunUsage(response Object, options Object) Object {
+	usage, sourceRoot := langSmithUsagePayload(response)
+	inputDetails := nestedObject(usage, "input_token_details", "inputTokenDetails")
+	outputDetails := nestedObject(usage, "output_token_details", "outputTokenDetails")
+	cacheRead := firstPresent(inputDetails, "cache_read", "cacheReadTokens", "cache_read_tokens")
+	cacheWrite := firstPresent(inputDetails, "cache_creation", "cacheWriteTokens", "cache_write_tokens")
+	inputTokens := firstPresent(usage, "input_tokens", "inputTokens", "prompt_tokens", "promptTokens")
+	outputTokens := firstPresent(usage, "output_tokens", "outputTokens", "completion_tokens", "completionTokens")
+	reasoning := firstPresent(outputDetails, "reasoning", "reasoningTokens", "reasoning_tokens")
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "unknown"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "framework.langsmith.run_usage"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := langSmithModel(response, usage, options)
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("input_uncached_tokens", subtract(subtract(inputTokens, cacheRead), cacheWrite), "token", sourceRoot+".input_tokens"),
+		positiveComponent("input_cache_read_tokens", cacheRead, "token", sourceRoot+".input_token_details.cache_read"),
+		positiveComponent("input_cache_write_tokens", cacheWrite, "token", sourceRoot+".input_token_details.cache_creation"),
+		positiveComponent("output_text_tokens", subtract(outputTokens, reasoning), "token", sourceRoot+".output_tokens"),
+		positiveComponent("output_reasoning_tokens", reasoning, "token", sourceRoot+".output_token_details.reasoning"),
+	}), usage)
+}
+
+func semanticKernelUsagePayload(response Object) (Object, string) {
+	for _, key := range []string{"usage", "token_usage", "tokenUsage"} {
+		usage := asObject(response[key])
+		if len(usage) > 0 {
+			return usage, "$." + key
+		}
+	}
+	metadata := asObject(response["metadata"])
+	for _, key := range []string{"usage", "token_usage", "tokenUsage"} {
+		usage := asObject(metadata[key])
+		if len(usage) > 0 {
+			return usage, "$.metadata." + key
+		}
+	}
+	return response, "$"
+}
+
+func extractSemanticKernelTelemetryUsage(response Object, options Object) Object {
+	usage, sourceRoot := semanticKernelUsagePayload(response)
+	inputTokens := firstPresent(usage, "prompt_tokens", "promptTokens", "input_tokens", "inputTokens")
+	outputTokens := firstPresent(usage, "completion_tokens", "completionTokens", "output_tokens", "outputTokens")
+	metadata := asObject(response["metadata"])
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "unknown"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "framework.semantic_kernel.telemetry"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(usage["model"])
+	if returnedModel == "" {
+		returnedModel = asString(metadata["model"])
+	}
+	if returnedModel == "" {
+		returnedModel = asString(response["model"])
+	}
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+	rawUsage := Object{}
+	for key, value := range usage {
+		rawUsage[key] = value
+	}
+	for _, key := range []string{"plugin_name", "function_name", "pluginName", "functionName"} {
+		if value, ok := response[key]; ok {
+			rawUsage[key] = value
+		}
+	}
+
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("input_uncached_tokens", inputTokens, "token", sourceRoot+".prompt_tokens"),
+		positiveComponent("output_text_tokens", outputTokens, "token", sourceRoot+".completion_tokens"),
+	}), rawUsage)
+}
+
+func openRouterSDKResponsePayload(response Object) Object {
+	nested := asObject(response["response"])
+	if len(asObject(nested["usage"])) > 0 {
+		return nested
+	}
+	return response
+}
+
+func extractOpenRouterSDKResponseUsage(response Object, options Object) Object {
+	payload := openRouterSDKResponsePayload(response)
+	usage := asObject(payload["usage"])
+	for _, key := range []string{"inputTokens", "outputTokens", "cachedTokens", "reasoningTokens"} {
+		if _, ok := usage[key]; ok {
+			inputTokens := firstPresent(usage, "inputTokens", "promptTokens")
+			cachedInput := firstPresent(usage, "cachedTokens", "cachedInputTokens")
+			outputTokens := firstPresent(usage, "outputTokens", "completionTokens")
+			reasoning := firstPresent(usage, "reasoningTokens")
+			provider := asString(options["provider"])
+			if provider == "" {
+				provider = "openrouter"
+			}
+			surface := asString(options["surface"])
+			if surface == "" {
+				surface = "openrouter.chat_completions"
+			}
+			requestedModel := asString(options["model"])
+			returnedModel := asString(payload["model"])
+			if returnedModel == "" {
+				returnedModel = requestedModel
+			}
+			if requestedModel == "" {
+				requestedModel = returnedModel
+			}
+			return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+				positiveComponent("input_uncached_tokens", subtract(inputTokens, cachedInput), "token", "$.usage.inputTokens"),
+				positiveComponent("input_cache_read_tokens", cachedInput, "token", "$.usage.cachedTokens"),
+				positiveComponent("output_text_tokens", subtract(outputTokens, reasoning), "token", "$.usage.outputTokens"),
+				positiveComponent("output_reasoning_tokens", reasoning, "token", "$.usage.reasoningTokens"),
+			}), usage)
+		}
+	}
+	options["provider"] = "openrouter"
+	options["surface"] = "openrouter.chat_completions"
+	return extractOpenAICompatibleChatCompletionsUsage(payload, options)
+}
+
 func addPriceComponent(components *[]any, usageComponent string, unit string, amount any, per string, extra Object) {
 	if amount == nil {
 		return
@@ -1477,6 +3136,18 @@ func PriceCardsFromLlmPrices(data Object) []any {
 	updatedAt := asString(data["updated_at"])
 	if updatedAt == "" {
 		updatedAt = "1970-01-01"
+	}
+	sourceURL := "https://www.llm-prices.com/current-v1.json"
+	for _, rawPrice := range asSlice(data["prices"]) {
+		price := asObject(rawPrice)
+		if _, ok := price["from_date"]; ok {
+			sourceURL = "https://www.llm-prices.com/historical-v1.json"
+			break
+		}
+		if _, ok := price["to_date"]; ok {
+			sourceURL = "https://www.llm-prices.com/historical-v1.json"
+			break
+		}
 	}
 	cards := []any{}
 	for _, rawPrice := range asSlice(data["prices"]) {
@@ -1515,7 +3186,7 @@ func PriceCardsFromLlmPrices(data Object) []any {
 			"components":     components,
 			"source": Object{
 				"name":         "llm-prices",
-				"url":          "https://www.llm-prices.com/current-v1.json",
+				"url":          sourceURL,
 				"retrieved_at": updatedAt + "T00:00:00Z",
 			},
 		})
@@ -1665,6 +3336,24 @@ func openRouterTierConditions(tiers []Object, index int) Object {
 	return Object{"conditions": conditions}
 }
 
+func thresholdTierConditions(tiers []Object, index int) Object {
+	tier := tiers[index]
+	conditions := Object{}
+	if tier["threshold"] != nil && rat(tier["threshold"]).Sign() > 0 {
+		conditions["min_total_input_tokens"] = numberString(tier["threshold"])
+	}
+	for _, candidate := range tiers[index+1:] {
+		if candidate["threshold"] != nil {
+			conditions["max_total_input_tokens"] = subtract(candidate["threshold"], "1")
+			break
+		}
+	}
+	if len(conditions) == 0 {
+		return Object{}
+	}
+	return Object{"conditions": conditions}
+}
+
 // PriceCardsFromOpenRouterModels maps OpenRouter /api/v1/models data into
 // canonical price cards.
 func PriceCardsFromOpenRouterModels(data Object) []any {
@@ -1729,6 +3418,940 @@ func PriceCardsFromOpenRouterModels(data Object) []any {
 	return cards
 }
 
+func modelsDevTiers(cost Object) []Object {
+	rawTiers := []Object{}
+	for _, rawTier := range asSlice(cost["tiers"]) {
+		tier := asObject(rawTier)
+		if len(tier) == 0 {
+			continue
+		}
+		tierInfo := asObject(tier["tier"])
+		if asString(tierInfo["type"]) == "context" && tierInfo["size"] != nil {
+			rawTiers = append(rawTiers, Object{"cost": tier, "size": tierInfo["size"]})
+		}
+	}
+	sort.SliceStable(rawTiers, func(left int, right int) bool {
+		return rat(rawTiers[left]["size"]).Cmp(rat(rawTiers[right]["size"])) < 0
+	})
+	baseConditions := Object{}
+	if len(rawTiers) > 0 {
+		baseConditions["max_total_input_tokens"] = subtract(rawTiers[0]["size"], "1")
+	}
+	tiers := []Object{{"cost": cost, "conditions": baseConditions}}
+	for index, tier := range rawTiers {
+		conditions := Object{"min_total_input_tokens": numberString(tier["size"])}
+		if index+1 < len(rawTiers) {
+			conditions["max_total_input_tokens"] = subtract(rawTiers[index+1]["size"], "1")
+		}
+		tiers = append(tiers, Object{"cost": tier["cost"], "conditions": conditions})
+	}
+	return tiers
+}
+
+func addModelsDevCostComponents(components *[]any, cost Object, conditions Object) {
+	extra := Object{}
+	if len(conditions) > 0 {
+		extra["conditions"] = conditions
+	}
+	addPriceComponent(components, "input_uncached_tokens", "token", cost["input"], "1000000", extra)
+	addPriceComponent(components, "output_text_tokens", "token", cost["output"], "1000000", extra)
+	addPriceComponent(components, "output_reasoning_tokens", "token", cost["reasoning"], "1000000", extra)
+	addPriceComponent(components, "input_cache_read_tokens", "token", cost["cache_read"], "1000000", extra)
+	addPriceComponent(components, "input_cache_write_tokens", "token", cost["cache_write"], "1000000", extra)
+	addPriceComponent(components, "input_audio_tokens", "token", cost["input_audio"], "1000000", extra)
+	addPriceComponent(components, "output_audio_tokens", "token", cost["output_audio"], "1000000", extra)
+}
+
+// PriceCardsFromModelsDev maps models.dev api.json data into canonical price cards.
+func PriceCardsFromModelsDev(data Object) []any {
+	updatedAt := asString(data["updated_at"])
+	if updatedAt == "" {
+		updatedAt = "1970-01-01"
+	}
+	cards := []any{}
+	for providerID, rawProvider := range data {
+		provider, ok := rawProvider.(map[string]any)
+		if !ok || len(provider) == 0 {
+			continue
+		}
+		models, ok := provider["models"].(map[string]any)
+		if !ok {
+			continue
+		}
+		for modelID, rawModel := range models {
+			model, ok := rawModel.(map[string]any)
+			if !ok || len(model) == 0 {
+				continue
+			}
+			components := []any{}
+			for _, tier := range modelsDevTiers(asObject(model["cost"])) {
+				addModelsDevCostComponents(&components, asObject(tier["cost"]), asObject(tier["conditions"]))
+			}
+			if len(components) == 0 {
+				continue
+			}
+			aliases := []any{}
+			if name := asString(model["name"]); name != "" && name != modelID {
+				aliases = append(aliases, name)
+			}
+			aliases = append(aliases, fmt.Sprintf("%s/%s", providerID, modelID))
+			card := Object{
+				"schema_version": "0.1",
+				"id":             fmt.Sprintf("%s:%s:models-dev", providerID, modelID),
+				"provider":       providerID,
+				"model":          modelID,
+				"aliases":        aliases,
+				"components":     components,
+				"source": Object{
+					"name":         "models.dev",
+					"url":          "https://models.dev/api.json",
+					"retrieved_at": updatedAt + "T00:00:00Z",
+					"license":      "MIT",
+				},
+				"metadata": Object{
+					"models_dev": Object{
+						"provider_name": provider["name"],
+						"family":        model["family"],
+						"limit":         model["limit"],
+						"modalities":    model["modalities"],
+						"reasoning":     model["reasoning"],
+						"tool_call":     model["tool_call"],
+						"status":        model["status"],
+						"release_date":  model["release_date"],
+						"last_updated":  model["last_updated"],
+					},
+				},
+			}
+			cards = append(cards, card)
+		}
+	}
+	return cards
+}
+
+func sourceInfo(data Object, defaultName string, defaultURL string) Object {
+	source := Object{}
+	if rawSource, ok := data["source"].(map[string]any); ok {
+		source = rawSource
+	}
+	retrievedAt := asString(source["retrieved_at"])
+	if retrievedAt == "" {
+		retrievedAt = asString(source["retrievedAt"])
+	}
+	if retrievedAt == "" {
+		retrievedAt = asString(data["retrieved_at"])
+	}
+	if retrievedAt == "" {
+		retrievedAt = asString(data["retrievedAt"])
+	}
+	if retrievedAt == "" {
+		updatedAt := asString(data["updated_at"])
+		if updatedAt == "" {
+			updatedAt = "1970-01-01"
+		}
+		retrievedAt = updatedAt + "T00:00:00Z"
+	}
+	name := asString(source["name"])
+	if name == "" {
+		name = defaultName
+	}
+	url := asString(source["url"])
+	if url == "" {
+		url = defaultURL
+	}
+	info := Object{"name": name, "url": url, "retrieved_at": retrievedAt}
+	if version := asString(source["version"]); version != "" {
+		info["version"] = version
+	}
+	if license := asString(source["license"]); license != "" {
+		info["license"] = license
+	}
+	return info
+}
+
+func componentAmount(entry Object, keys ...string) any {
+	prices := Object{}
+	if rawPrices, ok := entry["prices"].(map[string]any); ok {
+		prices = rawPrices
+	}
+	pricing := Object{}
+	if rawPricing, ok := entry["pricing"].(map[string]any); ok {
+		pricing = rawPricing
+	}
+	for _, key := range keys {
+		if value, ok := entry[key]; ok {
+			return value
+		}
+		if value, ok := prices[key]; ok {
+			return value
+		}
+		if value, ok := pricing[key]; ok {
+			return value
+		}
+	}
+	return nil
+}
+
+func sourceCachePriceCards(entry Object) []any {
+	for _, key := range []string{"price_cards", "priceCards", "cards"} {
+		if cards, ok := entry[key].([]any); ok {
+			filtered := []any{}
+			for _, rawCard := range cards {
+				if _, ok := rawCard.(map[string]any); ok {
+					filtered = append(filtered, rawCard)
+				}
+			}
+			return filtered
+		}
+	}
+	return []any{}
+}
+
+func sourceCacheSource(entry Object) Object {
+	source := Object{}
+	if rawSource, ok := entry["source"].(map[string]any); ok {
+		source = rawSource
+	}
+	sourceType := asString(entry["type"])
+	if sourceType == "" {
+		sourceType = asString(entry["source_type"])
+	}
+	if sourceType == "" {
+		sourceType = asString(entry["sourceType"])
+	}
+	name := asString(entry["name"])
+	if name == "" {
+		name = asString(source["name"])
+	}
+	if name == "" {
+		name = sourceType
+	}
+	if name == "" {
+		name = "source-cache"
+	}
+	info := Object{"name": name}
+	url := asString(entry["url"])
+	if url == "" {
+		url = asString(source["url"])
+	}
+	if url != "" {
+		info["url"] = url
+	}
+	retrievedAt := asString(entry["retrieved_at"])
+	if retrievedAt == "" {
+		retrievedAt = asString(entry["retrievedAt"])
+	}
+	if retrievedAt == "" {
+		retrievedAt = asString(source["retrieved_at"])
+	}
+	if retrievedAt == "" {
+		retrievedAt = asString(source["retrievedAt"])
+	}
+	if retrievedAt != "" {
+		info["retrieved_at"] = retrievedAt
+	}
+	version := asString(entry["version"])
+	if version == "" {
+		version = asString(source["version"])
+	}
+	if version != "" {
+		info["version"] = version
+	}
+	license := asString(entry["license"])
+	if license == "" {
+		license = asString(source["license"])
+	}
+	if license != "" {
+		info["license"] = license
+	}
+	return info
+}
+
+func sourceCacheMetadata(data Object, entry Object, cardCount int) Object {
+	metadata := Object{"card_count": cardCount}
+	for outputKey, inputKeys := range map[string][]string{
+		"generated_at": {"generated_at", "generatedAt"},
+		"checksum":     {"checksum", "sha256"},
+		"source_type":  {"type", "source_type", "sourceType"},
+	} {
+		for _, inputKey := range inputKeys {
+			value := entry[inputKey]
+			if value == nil {
+				value = data[inputKey]
+			}
+			if asString(value) != "" {
+				metadata[outputKey] = value
+				break
+			}
+		}
+	}
+	return metadata
+}
+
+// PriceCardsFromSourceCache maps a RunCost source-cache envelope into
+// canonical price cards while preserving retrieval metadata on each card.
+func PriceCardsFromSourceCache(data Object) []any {
+	entries := []any{data}
+	if rawSources, ok := data["sources"].([]any); ok {
+		entries = rawSources
+	}
+	cards := []any{}
+	for _, rawEntry := range entries {
+		entry, ok := rawEntry.(map[string]any)
+		if !ok {
+			continue
+		}
+		rawCards := sourceCachePriceCards(entry)
+		source := sourceCacheSource(entry)
+		cacheMetadata := sourceCacheMetadata(data, entry, len(rawCards))
+		for _, rawCard := range rawCards {
+			card := Object{}
+			for key, value := range asObject(rawCard) {
+				card[key] = value
+			}
+			if card["schema_version"] == nil {
+				card["schema_version"] = "0.1"
+			}
+			if card["source"] == nil {
+				card["source"] = source
+			}
+			metadata := Object{}
+			if rawMetadata, ok := card["metadata"].(map[string]any); ok {
+				for key, value := range rawMetadata {
+					metadata[key] = value
+				}
+			}
+			metadata["source_cache"] = cacheMetadata
+			card["metadata"] = metadata
+			cards = append(cards, card)
+		}
+	}
+	return cards
+}
+
+func fileURL(path string) string {
+	absolute, err := filepath.Abs(path)
+	if err != nil {
+		absolute = path
+	}
+	return (&url.URL{Scheme: "file", Path: absolute}).String()
+}
+
+func withFileSourceURL(data Object, path string) Object {
+	if _, ok := data["source"].(map[string]any); ok {
+		return data
+	}
+	copyData := Object{}
+	for key, value := range data {
+		copyData[key] = value
+	}
+	copyData["source"] = Object{"url": fileURL(path)}
+	return copyData
+}
+
+type yamlLine struct {
+	indent  int
+	content string
+}
+
+func stripYAMLComment(line string) string {
+	quote := rune(0)
+	for index, char := range line {
+		if (char == '\'' || char == '"') && quote == 0 {
+			quote = char
+		} else if char == quote {
+			quote = 0
+		}
+		if char == '#' && quote == 0 && (index == 0 || line[index-1] == ' ' || line[index-1] == '\t') {
+			return strings.TrimRight(line[:index], " \t")
+		}
+	}
+	return strings.TrimRight(line, " \t")
+}
+
+func yamlScalar(value string) any {
+	trimmed := strings.TrimSpace(value)
+	switch trimmed {
+	case "", "null", "Null", "NULL", "~":
+		return nil
+	case "true", "True", "TRUE":
+		return true
+	case "false", "False", "FALSE":
+		return false
+	}
+	if len(trimmed) >= 2 {
+		if (trimmed[0] == '"' && trimmed[len(trimmed)-1] == '"') || (trimmed[0] == '\'' && trimmed[len(trimmed)-1] == '\'') {
+			return trimmed[1 : len(trimmed)-1]
+		}
+	}
+	if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+		inner := strings.TrimSpace(trimmed[1 : len(trimmed)-1])
+		values := []any{}
+		if inner == "" {
+			return values
+		}
+		for _, part := range strings.Split(inner, ",") {
+			values = append(values, yamlScalar(strings.TrimSpace(part)))
+		}
+		return values
+	}
+	return trimmed
+}
+
+func yamlKeyValue(content string) (string, string, error) {
+	index := strings.Index(content, ":")
+	if index < 0 {
+		return "", "", fmt.Errorf("unsupported YAML line: %s", content)
+	}
+	return strings.TrimSpace(content[:index]), strings.TrimSpace(content[index+1:]), nil
+}
+
+func yamlLines(text string) []yamlLine {
+	lines := []yamlLine{}
+	for _, rawLine := range strings.Split(text, "\n") {
+		cleaned := stripYAMLComment(strings.TrimRight(rawLine, "\r"))
+		if strings.TrimSpace(cleaned) == "" {
+			continue
+		}
+		indent := len(cleaned) - len(strings.TrimLeft(cleaned, " "))
+		lines = append(lines, yamlLine{indent: indent, content: strings.TrimSpace(cleaned)})
+	}
+	return lines
+}
+
+func parseYAMLBlock(lines []yamlLine, start int, indent int) (any, int, error) {
+	index := start
+	if index >= len(lines) || lines[index].indent < indent {
+		return Object{}, index, nil
+	}
+	if strings.HasPrefix(lines[index].content, "- ") {
+		values := []any{}
+		for index < len(lines) && lines[index].indent == indent && strings.HasPrefix(lines[index].content, "- ") {
+			rest := strings.TrimSpace(strings.TrimPrefix(lines[index].content, "- "))
+			index++
+			if rest == "" {
+				value, next, err := parseYAMLBlock(lines, index, indent+2)
+				if err != nil {
+					return nil, index, err
+				}
+				values = append(values, value)
+				index = next
+			} else if strings.Contains(rest, ":") {
+				key, rawValue, err := yamlKeyValue(rest)
+				if err != nil {
+					return nil, index, err
+				}
+				item := Object{}
+				if rawValue != "" {
+					item[key] = yamlScalar(rawValue)
+				} else {
+					value, next, err := parseYAMLBlock(lines, index, indent+2)
+					if err != nil {
+						return nil, index, err
+					}
+					item[key] = value
+					index = next
+				}
+				if index < len(lines) && lines[index].indent >= indent+2 {
+					extra, next, err := parseYAMLBlock(lines, index, indent+2)
+					if err != nil {
+						return nil, index, err
+					}
+					if extraMap, ok := extra.(map[string]any); ok {
+						for extraKey, extraValue := range extraMap {
+							item[extraKey] = extraValue
+						}
+					}
+					index = next
+				}
+				values = append(values, item)
+			} else {
+				values = append(values, yamlScalar(rest))
+			}
+		}
+		return values, index, nil
+	}
+	mapping := Object{}
+	for index < len(lines) {
+		line := lines[index]
+		if line.indent < indent {
+			break
+		}
+		if line.indent > indent || strings.HasPrefix(line.content, "- ") {
+			break
+		}
+		key, rawValue, err := yamlKeyValue(line.content)
+		if err != nil {
+			return nil, index, err
+		}
+		index++
+		if rawValue != "" {
+			mapping[key] = yamlScalar(rawValue)
+		} else {
+			value, next, err := parseYAMLBlock(lines, index, indent+2)
+			if err != nil {
+				return nil, index, err
+			}
+			mapping[key] = value
+			index = next
+		}
+	}
+	return mapping, index, nil
+}
+
+func parseSimpleYAML(text string) (Object, error) {
+	lines := yamlLines(text)
+	if len(lines) == 0 {
+		return Object{}, nil
+	}
+	data, index, err := parseYAMLBlock(lines, 0, lines[0].indent)
+	if err != nil {
+		return nil, err
+	}
+	if index != len(lines) {
+		return nil, fmt.Errorf("unsupported YAML structure")
+	}
+	result, ok := data.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("YAML root must be a mapping")
+	}
+	return result, nil
+}
+
+func priceCardsFromSourceData(data Object, sourceType string, path string) ([]any, error) {
+	if sourceType == "" {
+		sourceType = "user-pricing"
+	}
+	switch sourceType {
+	case "llm-prices":
+		return PriceCardsFromLlmPrices(data), nil
+	case "litellm":
+		return PriceCardsFromLiteLLM(data), nil
+	case "openrouter-models":
+		return PriceCardsFromOpenRouterModels(data), nil
+	case "models-dev":
+		return PriceCardsFromModelsDev(data), nil
+	case "official-snapshot":
+		return PriceCardsFromOfficialSnapshot(data), nil
+	case "portkey":
+		return PriceCardsFromPortkey(data), nil
+	case "source-cache":
+		return PriceCardsFromSourceCache(data), nil
+	case "user-pricing":
+		if path != "" {
+			return PriceCardsFromUserPricing(withFileSourceURL(data, path)), nil
+		}
+		return PriceCardsFromUserPricing(data), nil
+	case "helicone":
+		return PriceCardsFromHelicone(data), nil
+	default:
+		return nil, fmt.Errorf("unsupported price source type: %s", sourceType)
+	}
+}
+
+// PriceCardsFromJSONFile reads a local JSON price-source file and maps it
+// through the requested source adapter.
+func PriceCardsFromJSONFile(path string, sourceType string) ([]any, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var data Object
+	if err := json.Unmarshal(raw, &data); err != nil {
+		return nil, err
+	}
+	return priceCardsFromSourceData(data, sourceType, path)
+}
+
+// PriceCardsFromYAMLFile reads a local YAML price-source file and maps it
+// through the requested source adapter.
+func PriceCardsFromYAMLFile(path string, sourceType string) ([]any, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	data, err := parseSimpleYAML(string(raw))
+	if err != nil {
+		return nil, err
+	}
+	return priceCardsFromSourceData(data, sourceType, path)
+}
+
+func addOfficialSnapshotComponent(components *[]any, row Object, componentName string, unit string, keys []string, per string) {
+	addPriceComponent(components, componentName, unit, componentAmount(row, keys...), per, nil)
+}
+
+// PriceCardsFromOfficialSnapshot maps reviewed official provider pricing
+// snapshots into canonical price cards.
+func PriceCardsFromOfficialSnapshot(data Object) []any {
+	if rawCards, ok := data["price_cards"].([]any); ok {
+		return rawCards
+	}
+	if rawCards, ok := data["priceCards"].([]any); ok {
+		return rawCards
+	}
+	source := sourceInfo(data, "official-snapshot", "file://official-pricing-snapshot")
+	providerDefault := asString(data["provider"])
+	if providerDefault == "" {
+		providerDefault = "unknown"
+	}
+	surfaceDefault := asString(data["surface"])
+	perDefault := numberString(data["per"])
+	if perDefault == "0" {
+		perDefault = "1000000"
+	}
+	rawRows, ok := data["rows"].([]any)
+	if !ok {
+		rawRows, _ = data["models"].([]any)
+	}
+	cards := []any{}
+	for _, rawRow := range rawRows {
+		row, ok := rawRow.(map[string]any)
+		if !ok {
+			continue
+		}
+		model := asString(row["model"])
+		if model == "" {
+			model = asString(row["id"])
+		}
+		provider := asString(row["provider"])
+		if provider == "" {
+			provider = providerDefault
+		}
+		if model == "" || provider == "" {
+			continue
+		}
+		per := numberString(row["per"])
+		if per == "0" {
+			per = perDefault
+		}
+		components := []any{}
+		if rawComponents, ok := row["components"].([]any); ok {
+			for _, rawComponent := range rawComponents {
+				component, ok := rawComponent.(map[string]any)
+				if !ok {
+					continue
+				}
+				price := asObject(component["price"])
+				amount := component["amount"]
+				if amount == nil {
+					amount = price["amount"]
+				}
+				componentPer := numberString(component["per"])
+				if componentPer == "0" {
+					componentPer = numberString(price["per"])
+				}
+				if componentPer == "0" {
+					componentPer = per
+				}
+				unit := asString(component["unit"])
+				if unit == "" {
+					unit = "token"
+				}
+				addPriceComponent(&components, asString(component["usage_component"]), unit, amount, componentPer, nil)
+			}
+		}
+		addOfficialSnapshotComponent(&components, row, "input_uncached_tokens", "token", []string{"input", "prompt", "input_uncached"}, per)
+		addOfficialSnapshotComponent(&components, row, "input_cache_read_tokens", "token", []string{"cache_read", "cached_input", "input_cache_read"}, per)
+		addOfficialSnapshotComponent(&components, row, "input_cache_write_tokens", "token", []string{"cache_write", "input_cache_write"}, per)
+		addOfficialSnapshotComponent(&components, row, "input_cache_write_1h_tokens", "token", []string{"cache_write_1h", "input_cache_write_1h"}, per)
+		addOfficialSnapshotComponent(&components, row, "output_text_tokens", "token", []string{"output", "completion", "output_text"}, per)
+		addOfficialSnapshotComponent(&components, row, "output_reasoning_tokens", "token", []string{"reasoning", "thinking", "output_reasoning"}, per)
+		addOfficialSnapshotComponent(&components, row, "input_audio_tokens", "token", []string{"input_audio", "audio_input"}, per)
+		addOfficialSnapshotComponent(&components, row, "output_audio_tokens", "token", []string{"output_audio", "audio_output"}, per)
+		addOfficialSnapshotComponent(&components, row, "request_units", "request", []string{"request", "per_request"}, "1")
+		addOfficialSnapshotComponent(&components, row, "web_search_units", "search", []string{"web_search", "search"}, "1")
+		if len(components) == 0 {
+			continue
+		}
+		cardID := asString(row["price_card_id"])
+		if cardID == "" {
+			cardID = asString(row["priceCardId"])
+		}
+		if cardID == "" {
+			cardID = fmt.Sprintf("%s:%s:official-snapshot", provider, model)
+		}
+		sourceLabel := asString(row["source_label"])
+		if sourceLabel == "" {
+			sourceLabel = asString(row["sourceLabel"])
+		}
+		card := Object{
+			"schema_version": "0.1",
+			"id":             cardID,
+			"provider":       provider,
+			"model":          model,
+			"aliases":        asSlice(row["aliases"]),
+			"components":     components,
+			"source":         source,
+			"metadata": Object{
+				"official_snapshot": Object{
+					"source_label": sourceLabel,
+					"notes":        row["notes"],
+					"capabilities": row["capabilities"],
+				},
+				"source_capabilities": asObject(row["capabilities"]),
+			},
+		}
+		surface := asString(row["surface"])
+		if surface == "" {
+			surface = surfaceDefault
+		}
+		if surface != "" {
+			card["surface"] = surface
+		}
+		if serviceTier := asString(row["service_tier"]); serviceTier != "" {
+			card["service_tier"] = serviceTier
+		}
+		if region := asString(row["region"]); region != "" {
+			card["region"] = region
+		}
+		if effective, ok := row["effective"].(map[string]any); ok {
+			card["effective"] = effective
+		}
+		cards = append(cards, card)
+	}
+	return cards
+}
+
+// PriceCardsFromUserPricing maps user-owned compact pricing data into
+// canonical price cards. Already-canonical price_cards are returned unchanged.
+func PriceCardsFromUserPricing(data Object) []any {
+	if rawCards, ok := data["price_cards"].([]any); ok {
+		return rawCards
+	}
+	if rawCards, ok := data["priceCards"].([]any); ok {
+		return rawCards
+	}
+	source := sourceInfo(data, "user-pricing", "file://user-pricing")
+	providerDefault := asString(data["provider"])
+	if providerDefault == "" {
+		providerDefault = "user"
+	}
+	surfaceDefault := asString(data["surface"])
+	serviceTierDefault := asString(data["service_tier"])
+	if serviceTierDefault == "" {
+		serviceTierDefault = asString(data["serviceTier"])
+	}
+	regionDefault := asString(data["region"])
+	perDefault := numberString(data["per"])
+	if perDefault == "0" {
+		perDefault = "1000000"
+	}
+	cards := []any{}
+	for _, rawEntry := range asSlice(data["models"]) {
+		entry := asObject(rawEntry)
+		if _, ok := entry["components"].([]any); ok && asString(entry["provider"]) != "" && (asString(entry["model"]) != "" || asString(entry["id"]) != "") {
+			card := Object{}
+			for key, value := range entry {
+				card[key] = value
+			}
+			if card["schema_version"] == nil {
+				card["schema_version"] = "0.1"
+			}
+			if asString(card["model"]) == "" {
+				card["model"] = asString(card["id"])
+			}
+			if card["source"] == nil {
+				card["source"] = source
+			}
+			cards = append(cards, card)
+			continue
+		}
+
+		model := asString(entry["model"])
+		if model == "" {
+			model = asString(entry["id"])
+		}
+		if model == "" {
+			continue
+		}
+		provider := asString(entry["provider"])
+		if provider == "" {
+			provider = providerDefault
+		}
+		per := numberString(entry["per"])
+		if per == "0" {
+			per = perDefault
+		}
+		components := []any{}
+		addPriceComponent(&components, "input_uncached_tokens", "token", componentAmount(entry, "input", "input_uncached", "input_uncached_tokens"), per, nil)
+		addPriceComponent(&components, "input_cache_read_tokens", "token", componentAmount(entry, "cached_input", "input_cached", "cache_read", "input_cache_read"), per, nil)
+		addPriceComponent(&components, "input_cache_write_tokens", "token", componentAmount(entry, "cache_write", "input_cache_write"), per, nil)
+		addPriceComponent(&components, "input_cache_write_1h_tokens", "token", componentAmount(entry, "cache_write_1h", "input_cache_write_1h"), per, nil)
+		addPriceComponent(&components, "output_text_tokens", "token", componentAmount(entry, "output", "completion", "output_text"), per, nil)
+		addPriceComponent(&components, "output_reasoning_tokens", "token", componentAmount(entry, "reasoning", "thinking", "output_reasoning"), per, nil)
+		addPriceComponent(&components, "request_units", "request", componentAmount(entry, "request", "per_request"), "1", nil)
+		addPriceComponent(&components, "web_search_units", "search", componentAmount(entry, "web_search"), "1", nil)
+		if len(components) == 0 {
+			continue
+		}
+		cardID := asString(entry["price_card_id"])
+		if cardID == "" {
+			cardID = asString(entry["priceCardId"])
+		}
+		if cardID == "" {
+			cardID = fmt.Sprintf("%s:%s:user-pricing", provider, model)
+		}
+		card := Object{
+			"schema_version": "0.1",
+			"id":             cardID,
+			"provider":       provider,
+			"model":          model,
+			"aliases":        asSlice(entry["aliases"]),
+			"components":     components,
+			"source":         source,
+		}
+		surface := asString(entry["surface"])
+		if surface == "" {
+			surface = surfaceDefault
+		}
+		if surface != "" {
+			card["surface"] = surface
+		}
+		serviceTier := asString(entry["service_tier"])
+		if serviceTier == "" {
+			serviceTier = asString(entry["serviceTier"])
+		}
+		if serviceTier == "" {
+			serviceTier = serviceTierDefault
+		}
+		if serviceTier != "" {
+			card["service_tier"] = serviceTier
+		}
+		region := asString(entry["region"])
+		if region == "" {
+			region = regionDefault
+		}
+		if region != "" {
+			card["region"] = region
+		}
+		if effective, ok := entry["effective"].(map[string]any); ok {
+			card["effective"] = effective
+		}
+		cards = append(cards, card)
+	}
+	return cards
+}
+
+func heliconeEndpointItems(data Object) []Object {
+	endpoints := data
+	if rawEndpoints, ok := data["endpoints"].(map[string]any); ok {
+		endpoints = rawEndpoints
+	}
+	items := []Object{}
+	for _, rawEntry := range endpoints {
+		if entry, ok := rawEntry.(map[string]any); ok {
+			items = append(items, entry)
+		}
+	}
+	return items
+}
+
+func heliconePricingTiers(pricing any) []Object {
+	tiers := []Object{}
+	switch typed := pricing.(type) {
+	case []any:
+		for _, rawTier := range typed {
+			if tier, ok := rawTier.(map[string]any); ok {
+				tiers = append(tiers, tier)
+			}
+		}
+	case map[string]any:
+		tiers = append(tiers, typed)
+	}
+	sort.SliceStable(tiers, func(i, j int) bool {
+		return rat(tiers[i]["threshold"]).Cmp(rat(tiers[j]["threshold"])) < 0
+	})
+	return tiers
+}
+
+func heliconeAddModalityComponents(components *[]any, tier Object, modality string, conditions Object) {
+	pricing, ok := tier[modality].(map[string]any)
+	if !ok {
+		return
+	}
+	names := map[string][2]string{
+		"image": {"input_image_tokens", "output_image_tokens"},
+		"audio": {"input_audio_tokens", "output_audio_tokens"},
+		"video": {"input_video_tokens", "output_video_tokens"},
+	}
+	componentNames, ok := names[modality]
+	if !ok {
+		return
+	}
+	addPriceComponent(components, componentNames[0], "token", pricing["input"], "1", conditions)
+	addPriceComponent(components, componentNames[1], "token", pricing["output"], "1", conditions)
+}
+
+// PriceCardsFromHelicone maps Helicone model-registry endpoint configs into
+// canonical price cards.
+func PriceCardsFromHelicone(data Object) []any {
+	source := sourceInfo(data, "helicone", "https://github.com/Helicone/helicone/tree/main/packages/cost")
+	cards := []any{}
+	for _, endpoint := range heliconeEndpointItems(data) {
+		model := asString(endpoint["providerModelId"])
+		provider := asString(endpoint["provider"])
+		if model == "" || provider == "" {
+			continue
+		}
+		tiers := heliconePricingTiers(endpoint["pricing"])
+		components := []any{}
+		for index, tier := range tiers {
+			conditions := thresholdTierConditions(tiers, index)
+			inputPrice := tier["input"]
+			addPriceComponent(&components, "input_uncached_tokens", "token", inputPrice, "1", conditions)
+			addPriceComponent(&components, "output_text_tokens", "token", tier["output"], "1", conditions)
+			cacheMultipliers := Object{}
+			if rawCacheMultipliers, ok := tier["cacheMultipliers"].(map[string]any); ok {
+				cacheMultipliers = rawCacheMultipliers
+			}
+			if inputPrice != nil {
+				if cacheMultipliers["cachedInput"] != nil {
+					addPriceComponent(&components, "input_cache_read_tokens", "token", multiplyDivide(inputPrice, cacheMultipliers["cachedInput"], "1"), "1", conditions)
+				}
+				if cacheMultipliers["write5m"] != nil {
+					addPriceComponent(&components, "input_cache_write_tokens", "token", multiplyDivide(inputPrice, cacheMultipliers["write5m"], "1"), "1", conditions)
+				}
+				if cacheMultipliers["write1h"] != nil {
+					addPriceComponent(&components, "input_cache_write_1h_tokens", "token", multiplyDivide(inputPrice, cacheMultipliers["write1h"], "1"), "1", conditions)
+				}
+			}
+			addPriceComponent(&components, "output_reasoning_tokens", "token", tier["thinking"], "1", conditions)
+			if index == 0 {
+				addPriceComponent(&components, "request_units", "request", tier["request"], "1", nil)
+				addPriceComponent(&components, "web_search_units", "search", tier["web_search"], "1", nil)
+			}
+			for _, modality := range []string{"image", "audio", "video"} {
+				heliconeAddModalityComponents(&components, tier, modality, conditions)
+			}
+		}
+		if len(components) == 0 {
+			continue
+		}
+		aliases := []any{}
+		for _, rawAlias := range asSlice(endpoint["providerModelIdAliases"]) {
+			if alias := asString(rawAlias); alias != "" && alias != model {
+				aliases = append(aliases, alias)
+			}
+		}
+		cards = append(cards, Object{
+			"schema_version": "0.1",
+			"id":             fmt.Sprintf("%s:%s:helicone", provider, model),
+			"provider":       provider,
+			"model":          model,
+			"aliases":        aliases,
+			"components":     components,
+			"source":         source,
+			"metadata": Object{
+				"author":                endpoint["author"],
+				"context_length":        endpoint["contextLength"],
+				"max_completion_tokens": endpoint["maxCompletionTokens"],
+				"ptb_enabled":           endpoint["ptbEnabled"],
+			},
+		})
+	}
+	return cards
+}
+
 // FromResponse extracts usage from a raw provider response and immediately
 // calculates a cost ledger from the supplied price cards and discount policies.
 func FromResponse(response Object, options Object, priceCards []any, discountPolicies []any) Object {
@@ -1738,10 +4361,13 @@ func FromResponse(response Object, options Object, priceCards []any, discountPol
 	}
 	surface := asString(options["surface"])
 	if surface != "openai.responses" &&
+		surface != "xai.responses" &&
+		surface != "openai.embeddings" &&
 		surface != "anthropic.messages" &&
 		surface != "google.gemini.generate_content" &&
 		surface != "vertex.gemini.generate_content" &&
 		surface != "aws.bedrock.converse" &&
+		surface != "aws.bedrock.invoke_model" &&
 		surface != "cohere.chat" &&
 		!isOpenAICompatibleChatSurface(surface) {
 		if mode == "strict" {
@@ -1768,9 +4394,139 @@ func FromVercelAISDKResult(result Object, options Object, priceCards []any, disc
 	return FromResponse(result, options, priceCards, discountPolicies)
 }
 
+// FromVercelAISDKStreamFinish prices a Vercel AI SDK streamText finish/onFinish
+// object by reading usage or totalUsage and applying provider price cards.
+func FromVercelAISDKStreamFinish(result Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options["adapter"] = "vercel_ai_sdk.stream_text"
+	return FromResponse(result, options, priceCards, discountPolicies)
+}
+
 // FromLlamaIndexTokenCounter prices a LlamaIndex TokenCountingHandler-like
 // object by reading its LLM token counters and applying provider price cards.
 func FromLlamaIndexTokenCounter(counter Object, options Object, priceCards []any, discountPolicies []any) Object {
 	options["adapter"] = "llamaindex.token_counter"
 	return FromResponse(counter, options, priceCards, discountPolicies)
+}
+
+// FromHaystackGeneratorResult prices a Haystack OpenAI generator result by
+// reading reply/meta usage metadata and applying provider price cards.
+func FromHaystackGeneratorResult(result Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options["adapter"] = "haystack.generator_result"
+	return FromResponse(result, options, priceCards, discountPolicies)
+}
+
+// FromLiteLLMResponse prices a LiteLLM proxy or SDK response by reading
+// OpenAI-compatible usage and comparing hidden response_cost metadata when present.
+func FromLiteLLMResponse(response Object, options Object, priceCards []any, discountPolicies []any) Object {
+	hidden := asObject(response["_hidden_params"])
+	if len(hidden) == 0 {
+		hidden = asObject(response["hidden_params"])
+	}
+	if _, exists := options["provider_reported_cost"]; !exists {
+		if responseCost, ok := hidden["response_cost"]; ok {
+			options["provider_reported_cost"] = responseCost
+			if asString(options["provider_reported_cost_mode"]) == "" {
+				options["provider_reported_cost_mode"] = "compare"
+			}
+		}
+	}
+	options["adapter"] = "litellm.proxy_response"
+	return FromResponse(response, options, priceCards, discountPolicies)
+}
+
+// FromAG2UsageSummary prices an AG2 usage summary returned from get_actual_usage,
+// get_total_usage, or gather_usage_summary.
+func FromAG2UsageSummary(summary Object, options Object, priceCards []any, discountPolicies []any) Object {
+	usageSummary, _ := ag2UsageSummaryPayload(summary, options)
+	_, modelUsage := ag2ModelUsage(usageSummary, asString(options["model"]))
+	if _, exists := options["provider_reported_cost"]; !exists {
+		reportedCost, hasCost := modelUsage["cost"]
+		if !hasCost {
+			reportedCost, hasCost = usageSummary["total_cost"]
+		}
+		if hasCost {
+			options["provider_reported_cost"] = reportedCost
+			if asString(options["provider_reported_cost_mode"]) == "" {
+				options["provider_reported_cost_mode"] = "compare"
+			}
+		}
+	}
+	options["adapter"] = "ag2.usage_summary"
+	return FromResponse(summary, options, priceCards, discountPolicies)
+}
+
+// FromOpenAIAgentsUsage prices an OpenAI Agents SDK usage or result-like object
+// without importing the Agents SDK.
+func FromOpenAIAgentsUsage(usage Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options["adapter"] = "openai_agents.usage"
+	return FromResponse(usage, options, priceCards, discountPolicies)
+}
+
+func langSmithReportedCost(run Object) (any, bool) {
+	usage := asObject(run["usage_metadata"])
+	for _, value := range []any{
+		run["total_cost"],
+		run["totalCost"],
+		run["cost"],
+		usage["total_cost"],
+		usage["totalCost"],
+	} {
+		if value != nil {
+			return value, true
+		}
+	}
+	return nil, false
+}
+
+// FromLangSmithRun prices a LangSmith run/export object and compares
+// total_cost as framework-reported cost when present.
+func FromLangSmithRun(run Object, options Object, priceCards []any, discountPolicies []any) Object {
+	if _, exists := options["provider_reported_cost"]; !exists {
+		if reportedCost, ok := langSmithReportedCost(run); ok {
+			options["provider_reported_cost"] = reportedCost
+			if asString(options["provider_reported_cost_mode"]) == "" {
+				options["provider_reported_cost_mode"] = "compare"
+			}
+		}
+	}
+	options["adapter"] = "langsmith.run_usage"
+	return FromResponse(run, options, priceCards, discountPolicies)
+}
+
+// FromSemanticKernelTelemetry prices Semantic Kernel telemetry/filter metadata
+// without importing Semantic Kernel.
+func FromSemanticKernelTelemetry(telemetry Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options["adapter"] = "semantic_kernel.telemetry"
+	return FromResponse(telemetry, options, priceCards, discountPolicies)
+}
+
+func openRouterReportedCost(response Object) (any, bool) {
+	payload := openRouterSDKResponsePayload(response)
+	usage := asObject(payload["usage"])
+	for _, value := range []any{
+		usage["cost"],
+		usage["totalCost"],
+		payload["cost"],
+		payload["totalCost"],
+	} {
+		if value != nil {
+			return value, true
+		}
+	}
+	return nil, false
+}
+
+// FromOpenRouterSDKResponse prices OpenRouter-compatible SDK responses,
+// including OpenAI SDK-routed chat responses and resolved Agent SDK responses.
+func FromOpenRouterSDKResponse(response Object, options Object, priceCards []any, discountPolicies []any) Object {
+	if _, exists := options["provider_reported_cost"]; !exists {
+		if reportedCost, ok := openRouterReportedCost(response); ok {
+			options["provider_reported_cost"] = reportedCost
+			if asString(options["provider_reported_cost_mode"]) == "" {
+				options["provider_reported_cost_mode"] = "compare"
+			}
+		}
+	}
+	options["adapter"] = "openrouter.sdk_response"
+	return FromResponse(response, options, priceCards, discountPolicies)
 }

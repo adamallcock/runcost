@@ -1,6 +1,26 @@
 {
   "name": "openai-responses-raw-dated-alias",
   "description": "Raw OpenAI Responses response whose returned model is resolved through an exact price-card alias.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "alias",
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "raw_provider_response"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "extract": {
       "provider": "openai",
@@ -24,7 +44,9 @@
         "provider": "openai",
         "surface": "openai.responses",
         "model": "gpt-5.4",
-        "aliases": ["gpt-5.4-2026-05-24"],
+        "aliases": [
+          "gpt-5.4-2026-05-24"
+        ],
         "components": [
           {
             "usage_component": "input_uncached_tokens",

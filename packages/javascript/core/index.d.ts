@@ -49,6 +49,7 @@ export type UsageComponentName =
   | "transcription_seconds"
   | "endpoint_runtime_seconds"
   | "endpoint_instance_hours"
+  | "storage_gb_days"
   | "custom_units";
 
 export type AliasResolution =
@@ -214,6 +215,7 @@ export type WarningCode =
   | "usage_field_ignored"
   | "inclusive_usage_ambiguous"
   | "component_unpriced"
+  | "source_capability_unsupported"
   | "service_tier_unsupported"
   | "long_context_rule_missing"
   | "discount_not_applied"
@@ -223,11 +225,170 @@ export type WarningCode =
   | "provider_reported_cost_used"
   | "provider_reported_cost_mismatch";
 
-export interface CostWarning {
-  code: WarningCode;
+export interface WarningIdentityMetadata {
+  provider: string;
+  surface: string;
+  model: string;
+  [key: string]: unknown;
+}
+
+export interface AliasInferredWarningMetadata {
+  requested_model: string;
+  billed_model: string;
+  [key: string]: unknown;
+}
+
+export interface PriceStaleWarningMetadata {
+  source: string;
+  age_days: number;
+  threshold_days: number;
+  retrieved_at: string;
+  priced_at: string;
+  [key: string]: unknown;
+}
+
+export interface PriceSourceDisagreementWarningMetadata {
+  component: string;
+  selected_price_card_id: string;
+  candidate_price_card_ids: string[];
+  [key: string]: unknown;
+}
+
+export interface UsageFieldWarningMetadata {
+  field: string;
+  [key: string]: unknown;
+}
+
+export interface ComponentUnpricedWarningMetadata {
+  component: string;
+  unit: string;
+  model: string;
+  [key: string]: unknown;
+}
+
+export interface SourceCapabilityUnsupportedWarningMetadata {
+  component: string;
+  price_card_id: string;
+  source: string;
+  [key: string]: unknown;
+}
+
+export interface ServiceTierUnsupportedWarningMetadata {
+  model: string;
+  service_tier: string;
+  [key: string]: unknown;
+}
+
+export interface LongContextRuleMissingWarningMetadata {
+  component: string;
+  unit: string;
+  total_input_tokens: DecimalString;
+  [key: string]: unknown;
+}
+
+export interface DiscountNotAppliedWarningMetadata {
+  policy_id: string;
+  [key: string]: unknown;
+}
+
+export interface StreamUsageMissingWarningMetadata {
+  actual_ledger_count: number;
+  expected_ledger_count?: number;
+  [key: string]: unknown;
+}
+
+export interface HistoricalPriceMissingWarningMetadata {
+  model: string;
+  priced_at: string;
+  [key: string]: unknown;
+}
+
+export interface ProviderReportedCostWarningMetadata {
+  provider_reported_cost: MoneyString;
+  calculated_total: MoneyString;
+  [key: string]: unknown;
+}
+
+export type WarningMetadata =
+  | WarningIdentityMetadata
+  | AliasInferredWarningMetadata
+  | PriceStaleWarningMetadata
+  | PriceSourceDisagreementWarningMetadata
+  | UsageFieldWarningMetadata
+  | ComponentUnpricedWarningMetadata
+  | SourceCapabilityUnsupportedWarningMetadata
+  | ServiceTierUnsupportedWarningMetadata
+  | LongContextRuleMissingWarningMetadata
+  | DiscountNotAppliedWarningMetadata
+  | StreamUsageMissingWarningMetadata
+  | HistoricalPriceMissingWarningMetadata
+  | ProviderReportedCostWarningMetadata;
+
+interface BaseCostWarning<Code extends WarningCode, Metadata extends WarningMetadata> {
+  code: Code;
   message: string;
   path?: string;
-  metadata?: Record<string, unknown>;
+  metadata: Metadata;
+}
+
+export type CostWarning =
+  | BaseCostWarning<"unknown_provider", WarningIdentityMetadata>
+  | BaseCostWarning<"unknown_surface", WarningIdentityMetadata>
+  | BaseCostWarning<"unknown_model", WarningIdentityMetadata>
+  | BaseCostWarning<"price_not_found", WarningIdentityMetadata>
+  | BaseCostWarning<"alias_inferred", AliasInferredWarningMetadata>
+  | BaseCostWarning<"price_stale", PriceStaleWarningMetadata>
+  | BaseCostWarning<"price_source_disagreement", PriceSourceDisagreementWarningMetadata>
+  | BaseCostWarning<"usage_field_ignored", UsageFieldWarningMetadata>
+  | BaseCostWarning<"inclusive_usage_ambiguous", UsageFieldWarningMetadata>
+  | BaseCostWarning<"component_unpriced", ComponentUnpricedWarningMetadata>
+  | BaseCostWarning<"tool_component_unpriced", ComponentUnpricedWarningMetadata>
+  | BaseCostWarning<"source_capability_unsupported", SourceCapabilityUnsupportedWarningMetadata>
+  | BaseCostWarning<"service_tier_unsupported", ServiceTierUnsupportedWarningMetadata>
+  | BaseCostWarning<"long_context_rule_missing", LongContextRuleMissingWarningMetadata>
+  | BaseCostWarning<"discount_not_applied", DiscountNotAppliedWarningMetadata>
+  | BaseCostWarning<"stream_usage_missing", StreamUsageMissingWarningMetadata>
+  | BaseCostWarning<"historical_price_missing", HistoricalPriceMissingWarningMetadata>
+  | BaseCostWarning<"provider_reported_cost_used", ProviderReportedCostWarningMetadata>
+  | BaseCostWarning<"provider_reported_cost_mismatch", ProviderReportedCostWarningMetadata>;
+
+export type DebugDecisionType =
+  | "price_card_candidates"
+  | "price_component_match"
+  | "model_alias_resolution"
+  | "discount_application"
+  | "warning";
+
+export interface DebugDecision {
+  type: DebugDecisionType;
+  component?: string;
+  model?: string;
+  from?: string;
+  to?: string;
+  resolution?: string;
+  price_card_id?: string;
+  selected_price_card_id?: string;
+  selected_source?: string;
+  candidate_price_card_ids?: string[];
+  source_priority?: string[];
+  policy_id?: string;
+  amount?: string;
+  warning_code?: WarningCode | string;
+  message?: string;
+  [key: string]: unknown;
+}
+
+export interface DebugTraceSummary {
+  priced_components: number;
+  unpriced_components: number;
+  warnings: number;
+  applied_discounts: number;
+}
+
+export interface DebugTrace {
+  schema_version: SchemaVersion;
+  decisions: DebugDecision[];
+  summary: DebugTraceSummary;
 }
 
 export interface CostLedger {
@@ -241,7 +402,23 @@ export interface CostLedger {
   price_sources?: SourceInfo[];
   applied_discounts?: AppliedDiscount[];
   warnings: CostWarning[];
+  debug_trace?: DebugTrace;
   metadata?: Record<string, unknown>;
+}
+
+export interface AggregateCostLedgersOptions {
+  costLedgers?: CostLedger[];
+  cost_ledgers?: CostLedger[];
+  provider?: string;
+  surface?: string;
+  model?: string;
+  mode?: CalculationMode;
+  expectedLedgerCount?: number;
+  expected_ledger_count?: number;
+  streamFinalUsageExpected?: boolean;
+  stream_final_usage_expected?: boolean;
+  streamFinalUsagePresent?: boolean;
+  stream_final_usage_present?: boolean;
 }
 
 export interface CalculateCostOptions {
@@ -257,6 +434,8 @@ export interface CalculateCostOptions {
   provider_reported_cost_mode?: "compare" | "use";
   priceSourcePriority?: string[];
   price_source_priority?: string[];
+  debugTrace?: boolean;
+  debug_trace?: boolean;
 }
 
 export interface ExtractOptions {
@@ -265,6 +444,8 @@ export interface ExtractOptions {
   provider?: string;
   surface: string;
   model?: string;
+  ag2_usage_mode?: "actual" | "total" | "including_cached" | "usage_excluding_cached_inference" | "usage_including_cached_inference";
+  usage_mode?: string;
 }
 
 export interface FromResponseOptions extends ExtractOptions {
@@ -279,32 +460,105 @@ export interface FromResponseOptions extends ExtractOptions {
   provider_reported_cost_mode?: "compare" | "use";
   priceSourcePriority?: string[];
   price_source_priority?: string[];
+  debugTrace?: boolean;
+  debug_trace?: boolean;
+}
+
+export interface RunCostVercelMiddlewareOptions extends FromResponseOptions {
+  attachCostLedger?: boolean;
+  onCostLedger?: (
+    ledger: CostLedger,
+    context: {
+      result: Record<string, unknown>;
+      params?: unknown;
+      model?: unknown;
+    }
+  ) => void;
+}
+
+export interface RunCostVercelMiddleware {
+  ledgers: CostLedger[];
+  readonly latest: CostLedger | null;
+  wrapGenerate(args: {
+    doGenerate: () => Promise<Record<string, unknown>>;
+    params?: unknown;
+    model?: unknown;
+  }): Promise<Record<string, unknown>>;
+}
+
+export interface RunCostVercelOnFinishOptions extends FromResponseOptions {
+  onCostLedger?: (
+    ledger: CostLedger,
+    context: {
+      result: Record<string, unknown>;
+    }
+  ) => void;
+  onFinish?: (result: Record<string, unknown>) => void | Promise<void>;
+}
+
+export interface RunCostVercelOnFinish {
+  (result: Record<string, unknown>): Promise<CostLedger>;
+  ledgers: CostLedger[];
+  readonly latest: CostLedger | null;
 }
 
 export interface SourceAdapterOptions {
   retrievedAt?: string;
+  retrieved_at?: string;
   sourceUrl?: string;
+  source_url?: string;
+  sourceName?: string;
+  source_name?: string;
   provider?: string;
+  surface?: string;
 }
 
 export function calculateCost(options: CalculateCostOptions): CostLedger;
+export function aggregateCostLedgers(options: AggregateCostLedgersOptions): CostLedger;
 export function extractUsageLedger(response: Record<string, unknown>, options: ExtractOptions): UsageLedger;
 export function extractOpenAIResponsesUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAIEmbeddingsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractOpenAIChatCompletionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractOpenAICompatibleChatCompletionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractOpenRouterChatCompletionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractAnthropicMessagesUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractGeminiGenerateContentUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractBedrockConverseUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractBedrockInvokeModelUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractCohereChatUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractLangChainChatUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractVercelAISDKUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractLlamaIndexTokenCounterUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractHaystackGeneratorUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractLiteLLMProxyResponseUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractAG2UsageSummaryUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAIAgentsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractLangSmithRunUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractSemanticKernelTelemetryUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenRouterSDKResponseUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function priceCardsFromLlmPrices(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromLiteLLM(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromOpenRouterModels(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
+export function priceCardsFromModelsDev(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
+export function priceCardsFromOfficialSnapshot(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromPortkey(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
+export function priceCardsFromSourceCache(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
+export function priceCardsFromJSONFile(path: string, options?: SourceAdapterOptions & { sourceType?: string; source_type?: string }): PriceCard[];
+export function priceCardsFromYAMLFile(path: string, options?: SourceAdapterOptions & { sourceType?: string; source_type?: string }): PriceCard[];
+export function priceCardsFromUserPricing(data: Record<string, unknown> | PriceCard[], options?: SourceAdapterOptions): PriceCard[];
+export function priceCardsFromHelicone(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function fromResponse(response: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromLangChainMessage(message: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromVercelAISDKResult(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromVercelAISDKStreamFinish(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromLlamaIndexTokenCounter(counter: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromHaystackGeneratorResult(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromLiteLLMResponse(response: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromAG2UsageSummary(summary: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromOpenAIAgentsUsage(usage: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromLangSmithRun(run: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromSemanticKernelTelemetry(telemetry: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromOpenRouterSDKResponse(response: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromOpenRouterAgentResult(result: Record<string, unknown> & { getResponse?: () => Promise<Record<string, unknown>> | Record<string, unknown> }, options: FromResponseOptions): Promise<CostLedger>;
+export function createRunCostVercelMiddleware(options: RunCostVercelMiddlewareOptions): RunCostVercelMiddleware;
+export function createRunCostVercelOnFinish(options: RunCostVercelOnFinishOptions): RunCostVercelOnFinish;

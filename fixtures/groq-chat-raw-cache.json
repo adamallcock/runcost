@@ -1,6 +1,27 @@
 {
   "name": "groq-chat-raw-cache",
   "description": "Extracts Groq OpenAI-compatible chat completion usage with prompt cache details.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "groq",
+    "surface": "groq.chat_completions",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "cache",
+      "component:input_cache_read_tokens",
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "raw_provider_response"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "raw_response": {
       "id": "chatcmpl-groq-fixture",

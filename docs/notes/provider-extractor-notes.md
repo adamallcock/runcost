@@ -1,9 +1,111 @@
-# Provider Extractor Notes
+---
+title: RunCost Provider Extractor Notes
+date: 2026-05-25
+type: note
+status: draft
+---
+
+# RunCost Provider Extractor Notes
 
 Status: v0.x prototype
-Date: 2026-05-24
+Date: 2026-05-25
 
 This document records raw provider usage fields that the current extractors depend on. It is not a pricing source; it is a mapping note for usage normalization.
+
+## OpenAI Responses
+
+Surface:
+
+- `openai.responses`
+
+Source references:
+
+- OpenAI streaming docs list `response.completed` as a common lifecycle event and the API reference shows completed response events carrying a nested `response` object: https://platform.openai.com/docs/api-reference/streaming
+- OpenAI Responses reference documents `usage.input_tokens`, `usage.input_tokens_details.cached_tokens`, `usage.output_tokens`, `usage.output_tokens_details.reasoning_tokens`, and `usage.total_tokens`: https://developers.openai.com/api/reference/resources/responses/methods/create
+
+Mapping:
+
+- Non-streaming responses read usage from the top-level `usage` object.
+- Streaming final events with `type == "response.completed"` read usage from `response.usage`.
+- `usage.input_tokens` minus cached tokens -> `input_uncached_tokens`.
+- `usage.input_tokens_details.cached_tokens` -> `input_cache_read_tokens`.
+- `usage.output_tokens` minus reasoning tokens -> `output_text_tokens`.
+- `usage.output_tokens_details.reasoning_tokens` -> `output_reasoning_tokens`.
+
+## OpenAI Conversations Decision
+
+Surface:
+
+- `openai.conversations`
+
+Source references:
+
+- OpenAI's conversation state guide describes the Conversations API as a way to persist conversation state and pass a conversation into later Responses API calls: https://developers.openai.com/api/docs/guides/conversation-state
+- OpenAI's Conversations reference describes conversation objects as state resources for storing and retrieving conversation state across Responses API calls: https://developers.openai.com/api/reference/resources/conversations/methods/create
+- OpenAI's Responses reference documents the `conversation` parameter on Responses and the Response object `usage` field for token usage: https://developers.openai.com/api/reference/resources/responses/methods/create
+
+Decision:
+
+- Do not add an `openai.conversations` cost extractor in v0.x.
+- Conversations are state containers and item stores, not standalone model inference responses with usage totals.
+- Costs for work that uses a Conversation are associated with the Responses API calls that attach to or read from that Conversation.
+- `openai.responses` remains the fixture-backed extraction surface for token usage, including Responses that include a `conversation` field.
+- OpenAI Responses hosted tool outputs are fixture-backed for web search, file search, code interpreter calls, computer-use action counts, and function-call counts.
+- If OpenAI later exposes standalone billable usage on Conversation operations, add a new fixture before promoting `openai.conversations` to fixture-backed support.
+
+## xAI Responses
+
+Surface:
+
+- `xai.responses`
+
+Source references:
+
+- xAI text generation docs state that Responses is the preferred API for xAI models and show the OpenAI-compatible Responses path through `client.responses.create(...)` with `base_url` set to `https://api.x.ai/v1`: https://docs.x.ai/developers/model-capabilities/text/generate-text
+- xAI prompt caching docs describe cached-token usage and pricing for Grok models: https://docs.x.ai/developers/advanced-api-usage/prompt-caching/usage-and-pricing
+
+Mapping:
+
+- Uses the same usage fields as OpenAI Responses for fixture-backed extraction.
+- `surface: "xai.responses"` defaults the canonical provider to `xai` even when callers omit `provider`.
+- Provider-specific tool, multimodal, and future Responses-only fields still need separate fixtures before being treated as supported.
+
+## OpenAI Embeddings
+
+Surface:
+
+- `openai.embeddings`
+
+Source references:
+
+- OpenAI Embeddings API reference documents `CreateEmbeddingResponse` returning `usage.prompt_tokens` and `usage.total_tokens`: https://developers.openai.com/api/reference/resources/embeddings/methods/create
+
+Mapping:
+
+- `usage.prompt_tokens` -> `embedding_tokens`.
+- `usage.total_tokens` is preserved in raw usage and used as a fallback only when `prompt_tokens` is absent.
+- Embedding vectors are ignored for pricing.
+
+## Anthropic Messages
+
+Surface:
+
+- `anthropic.messages`
+
+Source references:
+
+- Anthropic streaming docs state that `message_delta` usage token counts are cumulative and show `message_start`, `message_delta`, and `message_stop` event sequences: https://platform.claude.com/docs/en/build-with-claude/streaming
+- Anthropic streaming docs also describe SDK helpers that accumulate a stream into the final Message object: https://platform.claude.com/docs/en/build-with-claude/streaming
+
+Mapping:
+
+- Non-streaming responses read usage from the top-level `usage` object.
+- Streaming event collections read initial model and usage from `message_start.message`, then merge cumulative `message_delta.usage`.
+- `usage.input_tokens` -> `input_uncached_tokens`.
+- `usage.cache_creation_input_tokens` minus 1-hour creation tokens -> `input_cache_write_tokens`.
+- `usage.cache_creation_input_tokens_1h` -> `input_cache_write_1h_tokens`.
+- `usage.cache_read_input_tokens` -> `input_cache_read_tokens`.
+- `usage.output_tokens` -> `output_text_tokens`.
 
 ## OpenAI-Compatible Chat
 
@@ -80,9 +182,12 @@ Source reference:
 
 - Firebase AI Logic `GenerateContentResponse.UsageMetadata` documents `thoughtsTokenCount`, `totalTokenCount`, `promptTokensDetails`, cache token details, candidate token details, and tool prompt token details: https://firebase.google.com/docs/reference/swift/firebaseailogic/api/reference/Structs/GenerateContentResponse/UsageMetadata
 - Vertex AI REST `GenerateContentResponse` documents `usageMetadata` and `totalTokenCount`, where total is the sum of prompt, candidate, tool-use prompt, and thoughts token counts: https://cloud.google.com/vertex-ai/generative-ai/docs/reference/rest/v1/GenerateContentResponse
+- Gemini API text-generation docs state that `generate_content_stream` / `generateContentStream` returns `GenerateContentResponse` chunks incrementally: https://ai.google.dev/gemini-api/docs/text-generation
 
 Mapping:
 
+- Non-streaming responses read usage from top-level `usageMetadata`.
+- Streaming chunk collections read usage from the last chunk with `usageMetadata`.
 - Aggregate fallback: `usageMetadata.promptTokenCount` minus `usageMetadata.cachedContentTokenCount`, plus `usageMetadata.toolUsePromptTokenCount` when present, -> `input_uncached_tokens`.
 - Aggregate fallback: `usageMetadata.cachedContentTokenCount` -> `input_cache_read_tokens`.
 - Aggregate fallback: `usageMetadata.candidatesTokenCount` -> `output_text_tokens`.
@@ -128,3 +233,28 @@ Mapping:
 Notes:
 
 - Bedrock model-specific reasoning, guardrail, tool, and multimodal fields should get separate fixtures before being treated as supported.
+
+## AWS Bedrock InvokeModel
+
+Surface:
+
+- `aws.bedrock.invoke_model`
+
+Source references:
+
+- Boto3 `invoke_model` documents that the operation invokes a Bedrock model for inference, requires a `modelId`, and returns an inference `body`: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/bedrock-runtime/client/invoke_model.html
+- AWS Bedrock Anthropic Claude Messages request/response docs show the `InvokeModel` body shape and response `usage.input_tokens` / `usage.output_tokens` fields: https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages-request-response.html
+
+Mapping:
+
+- `response.modelId` -> returned and billed model when present.
+- `body.usage.input_tokens` -> `input_uncached_tokens`.
+- `body.usage.cache_creation_input_tokens` minus `cache_creation_input_tokens_1h` -> `input_cache_write_tokens` when present.
+- `body.usage.cache_creation_input_tokens_1h` -> `input_cache_write_1h_tokens` when present.
+- `body.usage.cache_read_input_tokens` -> `input_cache_read_tokens` when present.
+- `body.usage.output_tokens` -> `output_text_tokens`.
+- Any aggregate or provider-specific total field is preserved in raw usage but is never priced directly.
+
+Notes:
+
+- Current fixture coverage targets Anthropic Messages-compatible bodies inside `InvokeModel`. Other Bedrock native body formats, image generation, embeddings, streaming chunks, and guardrail/tool fields need separate fixtures before being treated as supported.

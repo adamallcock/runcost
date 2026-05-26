@@ -1,6 +1,26 @@
 {
   "name": "openrouter-models-adapter-tiered",
   "description": "Maps OpenRouter tiered pricing arrays into long-context price-component conditions.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SOURCE-ADAPTER"
+    ],
+    "provider": "openrouter",
+    "surface": "openrouter.chat_completions",
+    "scenario": "source_adapter",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "source:openrouter-models",
+      "source_adapter"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "usage_ledger": {
       "schema_version": "0.1",

@@ -1,0 +1,177 @@
+{
+  "name": "xai-responses-raw-cache-reasoning",
+  "description": "Extracts xAI Responses API usage through the OpenAI-compatible Responses shape with cached input and reasoning output tokens.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "xai",
+    "surface": "xai.responses",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "cache",
+      "component:input_cache_read_tokens",
+      "component:input_uncached_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_text_tokens",
+      "raw_provider_response",
+      "reasoning"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "id": "resp_xai_fixture",
+      "object": "response",
+      "model": "grok-4.3",
+      "output": [
+        {
+          "type": "message",
+          "id": "msg_xai_fixture",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "output_text",
+              "text": "fixture"
+            }
+          ]
+        }
+      ],
+      "previous_response_id": "resp_previous_fixture",
+      "usage": {
+        "input_tokens": 125,
+        "input_tokens_details": {
+          "cached_tokens": 98
+        },
+        "output_tokens": 48,
+        "output_tokens_details": {
+          "reasoning_tokens": 12
+        },
+        "total_tokens": 173
+      }
+    },
+    "extract": {
+      "surface": "xai.responses",
+      "model": "grok-4.3"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "xai:grok-4.3:responses:fixture",
+        "provider": "xai",
+        "surface": "xai.responses",
+        "model": "grok-4.3",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "3",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.75",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "15",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "15",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "url": "https://docs.x.ai/developers/model-capabilities/text/generate-text",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "xai",
+      "surface": "xai.responses",
+      "model": {
+        "requested": "grok-4.3",
+        "returned": "grok-4.3",
+        "billed": "grok-4.3",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "27",
+          "unit": "token",
+          "unit_price": "0.000003",
+          "cost": "0.000081",
+          "price_card_id": "xai:grok-4.3:responses:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "98",
+          "unit": "token",
+          "unit_price": "0.00000075",
+          "cost": "0.0000735",
+          "price_card_id": "xai:grok-4.3:responses:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "36",
+          "unit": "token",
+          "unit_price": "0.000015",
+          "cost": "0.00054",
+          "price_card_id": "xai:grok-4.3:responses:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "12",
+          "unit": "token",
+          "unit_price": "0.000015",
+          "cost": "0.00018",
+          "price_card_id": "xai:grok-4.3:responses:fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0008745",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "url": "https://docs.x.ai/developers/model-capabilities/text/generate-text",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

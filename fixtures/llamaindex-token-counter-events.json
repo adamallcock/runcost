@@ -1,6 +1,27 @@
 {
   "name": "llamaindex-token-counter-events",
   "description": "Extracts LlamaIndex TokenCountingHandler LLM token events into prompt and completion cost components.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-FRAMEWORK-ADAPTER"
+    ],
+    "provider": "openai",
+    "surface": "openai.chat_completions",
+    "scenario": "framework_adapter",
+    "tags": [
+      "adapter:llamaindex.token_counter",
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "framework_adapter",
+      "helper:from_llamaindex_token_counter"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "raw_response": {
       "model": "gpt-5-nano-2026-05-24",

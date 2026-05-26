@@ -1,0 +1,136 @@
+{
+  "name": "source-cache-adapter-basic",
+  "description": "Loads canonical price cards from a source-cache envelope while preserving source retrieval metadata.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SOURCE-ADAPTER"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "source_adapter",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "source:source-cache",
+      "source_adapter"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-cache",
+        "returned": "gpt-cache",
+        "billed": "gpt-cache",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token"
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "25",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_source": {
+      "type": "source-cache",
+      "data": {
+        "schema_version": "0.1",
+        "generated_at": "2026-05-25T12:00:00Z",
+        "sources": [
+          {
+            "type": "llm-prices",
+            "url": "https://www.llm-prices.com/current-v1.json",
+            "retrieved_at": "2026-05-25T11:55:00Z",
+            "checksum": "sha256:fixture",
+            "price_cards": [
+              {
+                "schema_version": "0.1",
+                "id": "openai:gpt-cache:source-cache",
+                "provider": "openai",
+                "model": "gpt-cache",
+                "components": [
+                  {
+                    "usage_component": "input_uncached_tokens",
+                    "unit": "token",
+                    "price": {
+                      "amount": "2",
+                      "currency": "USD",
+                      "per": "1000000"
+                    }
+                  },
+                  {
+                    "usage_component": "output_text_tokens",
+                    "unit": "token",
+                    "price": {
+                      "amount": "6",
+                      "currency": "USD",
+                      "per": "1000000"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-cache",
+        "returned": "gpt-cache",
+        "billed": "gpt-cache",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.0002",
+          "price_card_id": "openai:gpt-cache:source-cache",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "25",
+          "unit": "token",
+          "unit_price": "0.000006",
+          "cost": "0.00015",
+          "price_card_id": "openai:gpt-cache:source-cache",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.00035",
+      "price_sources": [
+        {
+          "name": "llm-prices",
+          "url": "https://www.llm-prices.com/current-v1.json",
+          "retrieved_at": "2026-05-25T11:55:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

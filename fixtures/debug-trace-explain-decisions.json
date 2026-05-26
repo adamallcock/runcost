@@ -1,0 +1,201 @@
+{
+  "name": "debug-trace-explain-decisions",
+  "description": "Emits a debug trace for source priority, alias resolution, component pricing, and discounts.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-DEBUG-TRACE",
+      "RC-FIXTURE-CONFORMANCE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "debug_trace",
+    "tags": [
+      "component:input_uncached_tokens",
+      "debug_trace"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "options": {
+      "debug_trace": true,
+      "price_source_priority": [
+        "user-overrides",
+        "vendor-feed"
+      ]
+    },
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-trace-2026",
+        "billed": "gpt-trace-2026",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-trace:vendor",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-trace",
+        "aliases": [
+          "gpt-trace-2026"
+        ],
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "vendor-feed",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-trace:user",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-trace",
+        "aliases": [
+          "gpt-trace-2026"
+        ],
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "user-overrides",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      }
+    ],
+    "discount_policies": [
+      {
+        "schema_version": "0.1",
+        "id": "trace-discount",
+        "match": {
+          "provider": "openai",
+          "components": [
+            "input_uncached_tokens"
+          ]
+        },
+        "adjustment": {
+          "type": "percentage_discount",
+          "value": "5"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-trace-2026",
+        "billed": "gpt-trace",
+        "alias_resolution": "source_exact"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.00095",
+          "price_card_id": "openai:gpt-trace:user",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.00095",
+      "price_sources": [
+        {
+          "name": "user-overrides",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [
+        {
+          "policy_id": "trace-discount",
+          "component": "input_uncached_tokens",
+          "amount": "0.00005"
+        }
+      ],
+      "warnings": [],
+      "debug_trace": {
+        "schema_version": "0.1",
+        "decisions": [
+          {
+            "type": "price_card_candidates",
+            "model": "gpt-trace-2026",
+            "candidate_price_card_ids": [
+              "openai:gpt-trace:user",
+              "openai:gpt-trace:vendor"
+            ],
+            "source_priority": [
+              "user-overrides",
+              "vendor-feed"
+            ]
+          },
+          {
+            "type": "price_component_match",
+            "component": "input_uncached_tokens",
+            "candidate_price_card_ids": [
+              "openai:gpt-trace:user",
+              "openai:gpt-trace:vendor"
+            ],
+            "selected_price_card_id": "openai:gpt-trace:user",
+            "selected_source": "user-overrides"
+          },
+          {
+            "type": "model_alias_resolution",
+            "from": "gpt-trace-2026",
+            "to": "gpt-trace",
+            "price_card_id": "openai:gpt-trace:user",
+            "resolution": "source_exact"
+          },
+          {
+            "type": "discount_application",
+            "component": "input_uncached_tokens",
+            "policy_id": "trace-discount",
+            "amount": "0.00005"
+          }
+        ],
+        "summary": {
+          "priced_components": 1,
+          "unpriced_components": 0,
+          "warnings": 0,
+          "applied_discounts": 1
+        }
+      }
+    }
+  }
+}

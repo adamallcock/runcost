@@ -50,6 +50,9 @@
       "type": "array",
       "items": { "$ref": "#/$defs/warning" }
     },
+    "debug_trace": {
+      "$ref": "#/$defs/debug_trace"
+    },
     "metadata": {
       "type": "object",
       "additionalProperties": true
@@ -99,7 +102,7 @@
     "warning": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["code", "message"],
+      "required": ["code", "message", "metadata"],
       "properties": {
         "code": {
           "type": "string",
@@ -114,6 +117,7 @@
             "usage_field_ignored",
             "inclusive_usage_ambiguous",
             "component_unpriced",
+            "source_capability_unsupported",
             "service_tier_unsupported",
             "long_context_rule_missing",
             "discount_not_applied",
@@ -140,7 +144,71 @@
         "name": { "type": "string" },
         "url": { "type": "string" },
         "retrieved_at": { "type": "string", "format": "date-time" },
-        "version": { "type": "string" }
+        "version": { "type": "string" },
+        "license": { "type": "string" }
+      }
+    },
+    "debug_trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "decisions", "summary"],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "const": "0.1"
+        },
+        "decisions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/debug_decision" }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["priced_components", "unpriced_components", "warnings", "applied_discounts"],
+          "properties": {
+            "priced_components": { "type": "integer", "minimum": 0 },
+            "unpriced_components": { "type": "integer", "minimum": 0 },
+            "warnings": { "type": "integer", "minimum": 0 },
+            "applied_discounts": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "debug_decision": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "price_card_candidates",
+            "price_component_match",
+            "model_alias_resolution",
+            "discount_application",
+            "warning"
+          ]
+        },
+        "component": { "type": "string" },
+        "model": { "type": "string" },
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "resolution": { "type": "string" },
+        "price_card_id": { "type": "string" },
+        "selected_price_card_id": { "type": "string" },
+        "selected_source": { "type": "string" },
+        "candidate_price_card_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "source_priority": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "policy_id": { "type": "string" },
+        "amount": { "type": "string" },
+        "warning_code": { "type": "string" },
+        "message": { "type": "string" }
       }
     }
   }

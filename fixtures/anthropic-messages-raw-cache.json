@@ -1,6 +1,28 @@
 {
   "name": "anthropic-messages-raw-cache",
   "description": "Raw Anthropic Messages response with cache creation, cache read, and output tokens.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "anthropic",
+    "surface": "anthropic.messages",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "cache",
+      "component:input_cache_read_tokens",
+      "component:input_cache_write_tokens",
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "raw_provider_response"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "extract": {
       "provider": "anthropic",
@@ -92,20 +114,20 @@
           "discount_eligible": true
         },
         {
-          "name": "input_cache_write_tokens",
-          "quantity": "2000",
-          "unit": "token",
-          "unit_price": "0.00000375",
-          "cost": "0.0075",
-          "price_card_id": "anthropic:claude-sonnet-4.5:messages:raw-fixture",
-          "discount_eligible": true
-        },
-        {
           "name": "input_cache_read_tokens",
           "quantity": "4000",
           "unit": "token",
           "unit_price": "0.0000003",
           "cost": "0.0012",
+          "price_card_id": "anthropic:claude-sonnet-4.5:messages:raw-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "2000",
+          "unit": "token",
+          "unit_price": "0.00000375",
+          "cost": "0.0075",
           "price_card_id": "anthropic:claude-sonnet-4.5:messages:raw-fixture",
           "discount_eligible": true
         },

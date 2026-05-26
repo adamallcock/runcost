@@ -1,0 +1,131 @@
+{
+  "name": "bedrock-invoke-model-anthropic-messages",
+  "description": "Extracts AWS Bedrock InvokeModel usage from an Anthropic Messages response body.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "bedrock",
+    "surface": "aws.bedrock.invoke_model",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "invoke_model",
+      "raw_provider_response"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "modelId": "anthropic.claude-3-haiku-20240307-v1:0",
+      "contentType": "application/json",
+      "serviceTier": "default",
+      "body": {
+        "id": "msg_bedrock_invoke_fixture",
+        "type": "message",
+        "role": "assistant",
+        "model": "claude-3-haiku-20240307",
+        "content": [
+          {
+            "type": "text",
+            "text": "Hello from InvokeModel."
+          }
+        ],
+        "stop_reason": "end_turn",
+        "usage": {
+          "input_tokens": 123,
+          "output_tokens": 45
+        }
+      }
+    },
+    "extract": {
+      "provider": "bedrock",
+      "surface": "aws.bedrock.invoke_model",
+      "model": "anthropic.claude-3-haiku-20240307-v1:0"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "bedrock:anthropic.claude-3-haiku-20240307-v1:0:invoke-model:fixture",
+        "provider": "bedrock",
+        "surface": "aws.bedrock.invoke_model",
+        "model": "anthropic.claude-3-haiku-20240307-v1:0",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "10",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages-request-response.html",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "bedrock",
+      "surface": "aws.bedrock.invoke_model",
+      "model": {
+        "requested": "anthropic.claude-3-haiku-20240307-v1:0",
+        "returned": "anthropic.claude-3-haiku-20240307-v1:0",
+        "billed": "anthropic.claude-3-haiku-20240307-v1:0",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "123",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.000246",
+          "price_card_id": "bedrock:anthropic.claude-3-haiku-20240307-v1:0:invoke-model:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "45",
+          "unit": "token",
+          "unit_price": "0.00001",
+          "cost": "0.00045",
+          "price_card_id": "bedrock:anthropic.claude-3-haiku-20240307-v1:0:invoke-model:fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.000696",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages-request-response.html",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

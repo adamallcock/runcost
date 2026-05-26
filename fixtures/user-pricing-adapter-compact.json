@@ -1,0 +1,183 @@
+{
+  "name": "user-pricing-adapter-compact",
+  "description": "Maps compact user-owned pricing data into canonical price cards for token, cache, reasoning, request, and web-search units.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SOURCE-ADAPTER",
+      "RC-CUSTOM-PRICING"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "source_adapter",
+    "tags": [
+      "component:input_cache_read_tokens",
+      "component:input_uncached_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_text_tokens",
+      "component:request_units",
+      "component:web_search_units",
+      "source:user-pricing",
+      "source_adapter"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-user",
+        "returned": "gpt-user",
+        "billed": "gpt-user",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token"
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "100",
+          "unit": "token"
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "200",
+          "unit": "token"
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "50",
+          "unit": "token"
+        },
+        {
+          "name": "request_units",
+          "quantity": "1",
+          "unit": "request"
+        },
+        {
+          "name": "web_search_units",
+          "quantity": "2",
+          "unit": "search"
+        }
+      ]
+    },
+    "price_source": {
+      "type": "user-pricing",
+      "data": {
+        "provider": "openai",
+        "surface": "openai.responses",
+        "per": "1000000",
+        "source": {
+          "name": "user-pricing",
+          "url": "file://user-pricing.json",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        },
+        "models": [
+          {
+            "id": "gpt-user",
+            "aliases": [
+              "gpt-user-2026"
+            ],
+            "prices": {
+              "input": "2",
+              "cached_input": "0.2",
+              "output": "8",
+              "reasoning": "8",
+              "request": "0.001",
+              "web_search": "0.004"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-user",
+        "returned": "gpt-user",
+        "billed": "gpt-user",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.002",
+          "price_card_id": "openai:gpt-user:user-pricing",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.0000002",
+          "cost": "0.00002",
+          "price_card_id": "openai:gpt-user:user-pricing",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "200",
+          "unit": "token",
+          "unit_price": "0.000008",
+          "cost": "0.0016",
+          "price_card_id": "openai:gpt-user:user-pricing",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "50",
+          "unit": "token",
+          "unit_price": "0.000008",
+          "cost": "0.0004",
+          "price_card_id": "openai:gpt-user:user-pricing",
+          "discount_eligible": true
+        },
+        {
+          "name": "request_units",
+          "quantity": "1",
+          "unit": "request",
+          "unit_price": "0.001",
+          "cost": "0.001",
+          "price_card_id": "openai:gpt-user:user-pricing",
+          "discount_eligible": true
+        },
+        {
+          "name": "web_search_units",
+          "quantity": "2",
+          "unit": "search",
+          "unit_price": "0.004",
+          "cost": "0.008",
+          "price_card_id": "openai:gpt-user:user-pricing",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.01302",
+      "price_sources": [
+        {
+          "name": "user-pricing",
+          "url": "file://user-pricing.json",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

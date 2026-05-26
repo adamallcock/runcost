@@ -1,6 +1,25 @@
 {
   "name": "unknown-model-compatibility",
   "description": "Compatibility mode returns an unknown_model warning when no price card matches the usage model.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-WARNING-MODE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "warning",
+    "tags": [
+      "component:input_uncached_tokens",
+      "warning",
+      "warning:unknown_model"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "usage_ledger": {
       "schema_version": "0.1",
@@ -41,7 +60,12 @@
       "warnings": [
         {
           "code": "unknown_model",
-          "message": "No price card found for gpt-missing."
+          "message": "No price card found for gpt-missing.",
+          "metadata": {
+            "provider": "openai",
+            "surface": "openai.responses",
+            "model": "gpt-missing"
+          }
         }
       ]
     }

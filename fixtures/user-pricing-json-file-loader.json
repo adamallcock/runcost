@@ -1,0 +1,97 @@
+{
+  "name": "user-pricing-json-file-loader",
+  "description": "Loads a local user-pricing JSON file and maps it into canonical price cards.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SOURCE-ADAPTER"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "source_adapter",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "source:file",
+      "source:user-pricing",
+      "source_adapter"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-file",
+        "returned": "gpt-file",
+        "billed": "gpt-file",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token"
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "50",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_source": {
+      "type": "json-file",
+      "source_type": "user-pricing",
+      "path": "fixtures/source-files/user-pricing-file-basic.json"
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-file",
+        "returned": "gpt-file",
+        "billed": "gpt-file",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.004",
+          "price_card_id": "openai:gpt-file:user-pricing",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "50",
+          "unit": "token",
+          "unit_price": "0.000012",
+          "cost": "0.0006",
+          "price_card_id": "openai:gpt-file:user-pricing",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0046",
+      "price_sources": [
+        {
+          "name": "user-pricing"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

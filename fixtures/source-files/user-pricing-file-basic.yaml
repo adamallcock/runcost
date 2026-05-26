@@ -1,0 +1,8 @@
+provider: openai
+surface: openai.responses
+models:
+  - id: gpt-yaml-file
+    aliases: [gpt-yaml-file-2026-05-25]
+    prices:
+      input: "4"
+      output: "12"

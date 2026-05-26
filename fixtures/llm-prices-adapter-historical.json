@@ -1,0 +1,125 @@
+{
+  "name": "llm-prices-adapter-historical",
+  "description": "Builds price cards from the llm-prices historical feed shape and selects the record effective at usage context priced_at.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SOURCE-ADAPTER"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "source_adapter",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "effective_date",
+      "historical_pricing",
+      "source:llm-prices",
+      "source_adapter"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-history",
+        "returned": "gpt-history",
+        "billed": "gpt-history",
+        "alias_resolution": "none"
+      },
+      "context": {
+        "priced_at": "2026-02-01T12:00:00Z"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token"
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "100",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_source": {
+      "type": "llm-prices",
+      "data": {
+        "prices": [
+          {
+            "id": "gpt-history",
+            "vendor": "openai",
+            "name": "GPT History",
+            "input": 1,
+            "output": 2,
+            "input_cached": null,
+            "from_date": null,
+            "to_date": "2025-12-31"
+          },
+          {
+            "id": "gpt-history",
+            "vendor": "openai",
+            "name": "GPT History",
+            "input": 3,
+            "output": 9,
+            "input_cached": null,
+            "from_date": "2026-01-01",
+            "to_date": null
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-history",
+        "returned": "gpt-history",
+        "billed": "gpt-history",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.000003",
+          "cost": "0.003",
+          "price_card_id": "openai:gpt-history:llm-prices",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.000009",
+          "cost": "0.0009",
+          "price_card_id": "openai:gpt-history:llm-prices",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0039",
+      "price_sources": [
+        {
+          "name": "llm-prices",
+          "url": "https://www.llm-prices.com/historical-v1.json",
+          "retrieved_at": "1970-01-01T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

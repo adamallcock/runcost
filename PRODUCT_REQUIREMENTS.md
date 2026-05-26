@@ -1,3 +1,10 @@
+---
+title: RunCost Product Requirements
+date: 2026-05-25
+type: spec
+status: draft
+---
+
 # RunCost Product Requirements
 
 Status: Draft

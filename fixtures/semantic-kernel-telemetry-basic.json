@@ -1,0 +1,124 @@
+{
+  "name": "semantic-kernel-telemetry-basic",
+  "description": "Extracts Semantic Kernel token telemetry while preserving plugin and function metadata in raw usage.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-FRAMEWORK-ADAPTER"
+    ],
+    "provider": "openai",
+    "surface": "openai.chat_completions",
+    "scenario": "framework_adapter",
+    "tags": [
+      "adapter:semantic_kernel.telemetry",
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "framework:semantic_kernel",
+      "framework_adapter",
+      "helper:from_semantic_kernel_telemetry"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "model": "gpt-5-nano-2026-05-24",
+      "plugin_name": "TravelPlanner",
+      "function_name": "BuildItinerary",
+      "usage": {
+        "prompt_tokens": 120,
+        "completion_tokens": 80,
+        "total_tokens": 200
+      }
+    },
+    "helper": "from_semantic_kernel_telemetry",
+    "extract": {
+      "adapter": "semantic_kernel.telemetry",
+      "provider": "openai",
+      "surface": "openai.chat_completions",
+      "model": "gpt-5-nano"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-5-nano:semantic-kernel-fixture",
+        "provider": "openai",
+        "surface": "openai.chat_completions",
+        "model": "gpt-5-nano",
+        "aliases": [
+          "gpt-5-nano-2026-05-24"
+        ],
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.chat_completions",
+      "model": {
+        "requested": "gpt-5-nano",
+        "returned": "gpt-5-nano-2026-05-24",
+        "billed": "gpt-5-nano",
+        "alias_resolution": "source_exact"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "120",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.00012",
+          "price_card_id": "openai:gpt-5-nano:semantic-kernel-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "80",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.00032",
+          "price_card_id": "openai:gpt-5-nano:semantic-kernel-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.00044",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

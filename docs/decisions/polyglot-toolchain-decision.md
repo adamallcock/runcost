@@ -1,4 +1,11 @@
-# Polyglot Toolchain Decision
+---
+title: RunCost Polyglot Toolchain Decision
+date: 2026-05-25
+type: decision-record
+status: accepted
+---
+
+# RunCost Polyglot Toolchain Decision
 
 Status: Accepted for v0.x
 Date: 2026-05-24
@@ -16,6 +23,21 @@ For v0.x, the canonical contract is:
 - Schema-derived type surfaces where useful, starting with TypeScript declarations and Python `TypedDict` contracts.
 
 The near-term project should not adopt a large SDK generator as the core maintenance model. The important portability surface is not a hosted HTTP API; it is deterministic local behavior across language packages.
+
+Put another way: canonical contracts plus generated types, docs, and validators plus handwritten idiomatic implementations plus shared conformance fixtures is the intended architecture.
+
+## Alignment With Evaluated Alternatives
+
+This decision intentionally separates data contracts from behavior:
+
+- Schemas define data.
+- Fixtures define behavior.
+- Implementations execute behavior.
+- CI prevents drift.
+
+API SDK generators such as Stainless, Fern, Speakeasy, Kiota, and OpenAPI Generator should remain future options for a hosted RunCost API or control plane. They are not the core local-library maintenance model because they do not generate the calculator semantics, extractor behavior, decimal arithmetic, warning policy, or discount logic that make the library trustworthy.
+
+Single-implementation strategies such as jsii, Rust native bindings, Rust/WASM, UniFFI, or SWIG are worth small spikes only if handwritten language implementations begin to drift or packaging remains simple enough for users. They are not the default for v0.x because RunCost needs tiny, boring, idiomatic packages with no hidden runtime machinery in the core path.
 
 ## Rationale
 
@@ -46,7 +68,7 @@ The canonical assets are:
 - `schemas/cost-ledger.schema.json`
 - `fixtures/*.json`
 - `scripts/check_fixtures.py`
-- `docs/API_PARITY_MATRIX.md`
+- `docs/notes/api-parity-matrix.md`
 - `PROJECT_PLAN.md`
 - `PROGRESS_TRACKER.md`
 
@@ -120,7 +142,8 @@ Generation candidates:
 
 - TypeSpec if schemas become repetitive or if the project adds a public service API.
 - Buf and Protocol Buffers if binary serialization, RPC, or generated strongly typed clients become necessary.
-- OpenAPI or Stainless if RunCost ships a hosted API or control plane.
+- OpenAPI, Stainless, Fern, Speakeasy, Kiota, or OpenAPI Generator if RunCost ships a hosted API or control plane.
+- jsii, Rust native bindings, Rust/WASM, UniFFI, or SWIG only if fixture evidence shows handwritten language implementations are drifting enough to justify package-install complexity.
 - Full generated language models after schemas settle and generator output is readable enough to maintain.
 
 ### Avoid for Core v0.x
@@ -139,7 +162,7 @@ Every supported language follows the same change sequence:
 2. Add or update fixtures that prove the behavior.
 3. Update the Python, JavaScript/TypeScript, and Go implementations.
 4. Update type declarations or typed contract models.
-5. Update `docs/API_PARITY_MATRIX.md` if public APIs changed.
+5. Update `docs/notes/api-parity-matrix.md` if public APIs changed.
 6. Run the full verification battery.
 7. Release all language packages together or explicitly mark a language as unsupported for that feature.
 

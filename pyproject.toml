@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,6 +8,25 @@ version = "0.0.0"
 description = "Prototype cost calculator for LLM and agent API responses."
 requires-python = ">=3.9"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["llm", "ai", "pricing", "tokens", "cost"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development :: Libraries"
+]
+
+[project.urls]
+Homepage = "https://github.com/adamallcock/runcost"
+Repository = "https://github.com/adamallcock/runcost"
+Issues = "https://github.com/adamallcock/runcost/issues"
+Changelog = "https://github.com/adamallcock/runcost/blob/main/CHANGELOG.md"
+
+[project.scripts]
+runcost = "runcost.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["packages/python"]

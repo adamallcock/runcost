@@ -1,6 +1,26 @@
 {
   "name": "provider-reported-cost-used",
   "description": "Uses provider-reported cost as authoritative while preserving a reconciliation adjustment component.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-PROVIDER-REPORTED-COST"
+    ],
+    "provider": "openrouter",
+    "surface": "openrouter.chat_completions",
+    "scenario": "provider_reported",
+    "tags": [
+      "component:custom_units",
+      "component:input_uncached_tokens",
+      "provider_reported",
+      "warning:provider_reported_cost_used"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "options": {
       "provider_reported_cost": "0.009",
@@ -95,7 +115,11 @@
       "warnings": [
         {
           "code": "provider_reported_cost_used",
-          "message": "Provider reported cost 0.009 used as authoritative total."
+          "message": "Provider reported cost 0.009 used as authoritative total.",
+          "metadata": {
+            "provider_reported_cost": "0.009",
+            "calculated_total": "0.001"
+          }
         }
       ]
     }

@@ -1,6 +1,25 @@
 {
   "name": "strict-unknown-model",
   "description": "Strict mode raises instead of returning a ledger when the model is unknown.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-STRICT-MODE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "strict_error",
+    "tags": [
+      "component:input_uncached_tokens",
+      "strict_error",
+      "warning:unknown_model"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "mode": "strict",
     "usage_ledger": {

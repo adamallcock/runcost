@@ -1,6 +1,29 @@
 {
   "name": "bedrock-converse-raw-cache",
   "description": "Extracts AWS Bedrock Converse token usage including cache read and cache write details.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "bedrock",
+    "surface": "aws.bedrock.converse",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "cache",
+      "component:input_cache_read_tokens",
+      "component:input_cache_write_1h_tokens",
+      "component:input_cache_write_tokens",
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "raw_provider_response"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "raw_response": {
       "output": {
@@ -120,6 +143,15 @@
           "discount_eligible": true
         },
         {
+          "name": "input_cache_read_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.00001",
+          "price_card_id": "bedrock:anthropic.claude-example:fixture",
+          "discount_eligible": true
+        },
+        {
           "name": "input_cache_write_tokens",
           "quantity": "30",
           "unit": "token",
@@ -134,15 +166,6 @@
           "unit": "token",
           "unit_price": "0.000002",
           "cost": "0.00004",
-          "price_card_id": "bedrock:anthropic.claude-example:fixture",
-          "discount_eligible": true
-        },
-        {
-          "name": "input_cache_read_tokens",
-          "quantity": "100",
-          "unit": "token",
-          "unit_price": "0.0000001",
-          "cost": "0.00001",
           "price_card_id": "bedrock:anthropic.claude-example:fixture",
           "discount_eligible": true
         },

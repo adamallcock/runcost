@@ -1,6 +1,26 @@
 {
   "name": "stale-price-warning",
   "description": "Warns when a selected price source is older than the configured stale threshold.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-WARNING-MODE"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "warning",
+    "tags": [
+      "component:input_uncached_tokens",
+      "stale_price",
+      "warning",
+      "warning:price_stale"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "options": {
       "stale_after_days": 30
@@ -83,7 +103,14 @@
       "warnings": [
         {
           "code": "price_stale",
-          "message": "Price source fixture is 143 days old; threshold is 30 days."
+          "message": "Price source fixture is 143 days old; threshold is 30 days.",
+          "metadata": {
+            "source": "fixture",
+            "age_days": 143,
+            "threshold_days": 30,
+            "retrieved_at": "2026-01-01T00:00:00Z",
+            "priced_at": "2026-05-24"
+          }
         }
       ]
     }

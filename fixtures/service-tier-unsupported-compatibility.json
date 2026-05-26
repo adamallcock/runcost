@@ -1,6 +1,25 @@
 {
   "name": "service-tier-unsupported-compatibility",
   "description": "Warns when a matching model exists but not for the requested service tier.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SERVICE-TIER"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "service_tier",
+    "tags": [
+      "component:input_uncached_tokens",
+      "service_tier",
+      "warning:service_tier_unsupported"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "usage_ledger": {
       "schema_version": "0.1",
@@ -66,7 +85,11 @@
       "warnings": [
         {
           "code": "service_tier_unsupported",
-          "message": "No price card found for service tier priority."
+          "message": "No price card found for service tier priority.",
+          "metadata": {
+            "model": "gpt-tiered",
+            "service_tier": "priority"
+          }
         }
       ]
     }

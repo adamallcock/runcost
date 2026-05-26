@@ -1,6 +1,25 @@
 {
   "name": "long-context-rule-missing",
   "description": "Warns when a matching price card has conditional input pricing but no rule covers the usage token volume.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-LONG-CONTEXT"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "long_context",
+    "tags": [
+      "component:input_uncached_tokens",
+      "long_context",
+      "warning:long_context_rule_missing"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "usage_ledger": {
       "schema_version": "0.1",
@@ -65,7 +84,12 @@
       "warnings": [
         {
           "code": "long_context_rule_missing",
-          "message": "No long-context pricing rule matched input_uncached_tokens at 250000 input tokens."
+          "message": "No long-context pricing rule matched input_uncached_tokens at 250000 input tokens.",
+          "metadata": {
+            "component": "input_uncached_tokens",
+            "unit": "token",
+            "total_input_tokens": "250000"
+          }
         }
       ]
     }

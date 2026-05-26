@@ -1,0 +1,137 @@
+{
+  "name": "ag2-usage-summary-actual",
+  "description": "Extracts AG2 usage_excluding_cached_inference summaries with model token counts and framework-reported cost comparison.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-FRAMEWORK-ADAPTER",
+      "RC-PROVIDER-REPORTED-COST"
+    ],
+    "provider": "openai",
+    "surface": "openai.chat_completions",
+    "scenario": "framework_adapter",
+    "tags": [
+      "adapter:ag2.usage_summary",
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "framework_adapter",
+      "framework:ag2",
+      "helper:from_ag2_usage_summary",
+      "provider_reported"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "usage_including_cached_inference": {
+        "total_cost": "0.00086",
+        "gpt-5-nano-2026-05-24": {
+          "cost": "0.00086",
+          "prompt_tokens": 260,
+          "completion_tokens": 150,
+          "total_tokens": 410
+        }
+      },
+      "usage_excluding_cached_inference": {
+        "total_cost": "0.00043",
+        "gpt-5-nano-2026-05-24": {
+          "cost": "0.00043",
+          "prompt_tokens": 130,
+          "completion_tokens": 75,
+          "total_tokens": 205
+        }
+      }
+    },
+    "helper": "from_ag2_usage_summary",
+    "extract": {
+      "adapter": "ag2.usage_summary",
+      "provider": "openai",
+      "surface": "openai.chat_completions",
+      "model": "gpt-5-nano",
+      "ag2_usage_mode": "actual"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-5-nano:ag2-fixture",
+        "provider": "openai",
+        "surface": "openai.chat_completions",
+        "model": "gpt-5-nano",
+        "aliases": [
+          "gpt-5-nano-2026-05-24"
+        ],
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.chat_completions",
+      "model": {
+        "requested": "gpt-5-nano",
+        "returned": "gpt-5-nano-2026-05-24",
+        "billed": "gpt-5-nano",
+        "alias_resolution": "source_exact"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "130",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.00013",
+          "price_card_id": "openai:gpt-5-nano:ag2-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "75",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.0003",
+          "price_card_id": "openai:gpt-5-nano:ag2-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.00043",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-25T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

@@ -1,6 +1,24 @@
 {
   "name": "long-context-threshold-selection",
   "description": "Selects the long-context price component when total input tokens cross the configured threshold.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-LONG-CONTEXT"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "long_context",
+    "tags": [
+      "component:input_uncached_tokens",
+      "long_context"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "usage_ledger": {
       "schema_version": "0.1",

@@ -1,0 +1,14 @@
+{
+  "provider": "openai",
+  "surface": "openai.responses",
+  "per": "1000000",
+  "models": [
+    {
+      "id": "gpt-file",
+      "prices": {
+        "input": "4",
+        "output": "12"
+      }
+    }
+  ]
+}

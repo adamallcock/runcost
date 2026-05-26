@@ -1,3 +1,10 @@
+---
+title: RunCost Architecture
+date: 2026-05-25
+type: spec
+status: draft
+---
+
 # RunCost Architecture
 
 Status: Draft

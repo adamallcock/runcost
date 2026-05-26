@@ -1,4 +1,11 @@
-# Live Evaluation Protocol
+---
+title: RunCost Live Evaluation Protocol
+date: 2026-05-25
+type: research
+status: draft
+---
+
+# RunCost Live Evaluation Protocol
 
 Research date: 2026-05-24
 

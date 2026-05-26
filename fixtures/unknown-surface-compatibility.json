@@ -1,6 +1,24 @@
 {
   "name": "unknown-surface-compatibility",
   "description": "Compatibility mode returns an unknown_surface warning for unsupported raw response surfaces.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "custom",
+    "surface": "custom.unknown",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "raw_provider_response",
+      "warning:unknown_surface"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
   "input": {
     "extract": {
       "provider": "custom",
@@ -35,7 +53,12 @@
       "warnings": [
         {
           "code": "unknown_surface",
-          "message": "Unsupported surface: custom.unknown."
+          "message": "Unsupported surface: custom.unknown.",
+          "metadata": {
+            "provider": "custom",
+            "surface": "custom.unknown",
+            "model": "custom-model"
+          }
         }
       ]
     }
