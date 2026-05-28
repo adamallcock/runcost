@@ -16,6 +16,17 @@ limitations.
 
 - No unreleased changes yet.
 
+## 0.1.1
+
+- Publish the repository publicly with community files, issue templates,
+  CODEOWNERS, Dependabot, branch protection, secret scanning, and package
+  registry metadata.
+- Add a public price-data strategy that clarifies fixtures as behavioral
+  conformance cases and routes broad catalog data through source adapters and
+  reviewed source-cache snapshots.
+- Release from current `main` so npm, PyPI, and Go module versions align after
+  the earlier private `v0.1.0` tag.
+
 ## 0.1.0
 
 - Add package publish-readiness artifacts: MIT license, contribution guide,
