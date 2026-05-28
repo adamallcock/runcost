@@ -18,7 +18,7 @@ python3 -m pip install git+https://github.com/adamallcock/runcost.git
 
 # JavaScript/TypeScript from a checkout
 npm pack ./packages/javascript/core
-npm install ./runcost-0.1.0.tgz
+npm install ./runcost-0.1.1.tgz
 
 # Go
 go get github.com/adamallcock/runcost/packages/go/ledger

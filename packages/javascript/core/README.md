@@ -17,7 +17,7 @@ Until the first registry release is published, install from a checkout:
 
 ```bash
 npm pack ./packages/javascript/core
-npm install ./runcost-0.1.0.tgz
+npm install ./runcost-0.1.1.tgz
 ```
 
 ## Basic Usage
