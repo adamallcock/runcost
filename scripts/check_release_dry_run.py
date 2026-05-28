@@ -52,8 +52,8 @@ def check_python_build(source_root: Path, workdir: Path) -> None:
     env.setdefault("PIP_DISABLE_PIP_VERSION_CHECK", "1")
     run([str(python), "-m", "pip", "install", "--quiet", "--upgrade", "build"], workdir, env=env)
     run([str(python), "-m", "build", "--outdir", str(dist_dir)], source_root, env=env)
-    wheel = assert_one(dist_dir, "runcost-*.whl", "Python wheel")
-    sdist = assert_one(dist_dir, "runcost-*.tar.gz", "Python source distribution")
+    wheel = assert_one(dist_dir, "runcost_ai-*.whl", "Python wheel")
+    sdist = assert_one(dist_dir, "runcost_ai-*.tar.gz", "Python source distribution")
     print(f"Built Python artifacts: {wheel.name}, {sdist.name}", flush=True)
 
 

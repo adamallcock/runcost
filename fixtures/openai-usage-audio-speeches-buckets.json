@@ -1,0 +1,122 @@
+{
+  "name": "openai-usage-audio-speeches-buckets",
+  "description": "Extracts OpenAI organization usage audio speech buckets into character-based audio generation usage.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-PROVIDER-EXTRACTOR",
+      "RC-FEATURE-PRICING"
+    ],
+    "provider": "openai",
+    "surface": "openai.usage.audio_speeches",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:audio_generation_characters",
+      "generated_media",
+      "audio_generation",
+      "usage_api"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "object": "page",
+      "data": [
+        {
+          "object": "bucket",
+          "start_time": 1730419200,
+          "end_time": 1730505600,
+          "results": [
+            {
+              "object": "organization.usage.audio_speeches.result",
+              "characters": 45,
+              "num_model_requests": 1,
+              "project_id": "proj_redacted",
+              "user_id": null,
+              "api_key_id": null,
+              "model": "tts-1"
+            },
+            {
+              "object": "organization.usage.audio_speeches.result",
+              "characters": 55,
+              "num_model_requests": 1,
+              "project_id": "proj_redacted",
+              "user_id": null,
+              "api_key_id": null,
+              "model": "tts-1"
+            }
+          ]
+        }
+      ],
+      "has_more": false,
+      "next_page": null
+    },
+    "extract": {
+      "provider": "openai",
+      "surface": "openai.usage.audio_speeches",
+      "model": "tts-1"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:tts-1:usage-audio-speeches-fixture",
+        "provider": "openai",
+        "surface": "openai.usage.audio_speeches",
+        "model": "tts-1",
+        "components": [
+          {
+            "usage_component": "audio_generation_characters",
+            "unit": "character",
+            "price": {
+              "amount": "0.015",
+              "currency": "USD",
+              "per": "1000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.usage.audio_speeches",
+      "model": {
+        "requested": "tts-1",
+        "returned": "tts-1",
+        "billed": "tts-1",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "audio_generation_characters",
+          "quantity": "100",
+          "unit": "character",
+          "unit_price": "0.000015",
+          "cost": "0.0015",
+          "price_card_id": "openai:tts-1:usage-audio-speeches-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0015",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

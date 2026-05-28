@@ -1,0 +1,45 @@
+{
+  "schema_version": "0.1",
+  "evidence_type": "template",
+  "safe_to_commit": true,
+  "contains_secret_values": false,
+  "target_version": "1.0.0",
+  "reviewed_at": "",
+  "reviewed_by": "",
+  "prerequisites": {
+    "milestone8_complete": false,
+    "public_beta_complete": false,
+    "packages_published": false,
+    "trusted_publishing_verified": false
+  },
+  "contracts": {
+    "schemas_stable": false,
+    "warning_codes_stable": false,
+    "public_api_stable": false,
+    "compatibility_policy_documented": false,
+    "generated_artifacts_current": true
+  },
+  "packages": {
+    "python_production_ready": false,
+    "javascript_production_ready": false,
+    "go_core_api_stable": false,
+    "post_publish_install_smoke_passed": false
+  },
+  "coverage": {
+    "provider_source_coverage_strong": false,
+    "historical_pricing_path_verified": false,
+    "top_framework_integrations_live_verified": false,
+    "warning_fixture_coverage_complete": true
+  },
+  "operations": {
+    "source_update_process_active": true,
+    "security_policy_current": true,
+    "release_rollback_process_documented": true
+  },
+  "known_correctness_holes": [
+    "Template only. V1 remains blocked until Milestone 8, public beta, publishing, live framework evidence, and provider/source coverage are complete."
+  ],
+  "notes": [
+    "Replace evidence_type with release_candidate_review only when every V1 readiness field is backed by current evidence."
+  ]
+}

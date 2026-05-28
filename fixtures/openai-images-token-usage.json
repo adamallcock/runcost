@@ -1,0 +1,145 @@
+{
+  "name": "openai-images-token-usage",
+  "description": "Extracts OpenAI image generation token usage into text input, image input, and image output token components.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-PROVIDER-EXTRACTOR",
+      "RC-FEATURE-PRICING"
+    ],
+    "provider": "openai",
+    "surface": "openai.images",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:input_image_tokens",
+      "component:output_image_tokens",
+      "generated_media",
+      "image_generation",
+      "token_usage"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "created": 1713833628,
+      "model": "gpt-image-1",
+      "data": [
+        {
+          "b64_json": "redacted"
+        }
+      ],
+      "usage": {
+        "input_tokens": 11,
+        "input_tokens_details": {
+          "text_tokens": 8,
+          "image_tokens": 3
+        },
+        "output_tokens": 200,
+        "total_tokens": 211
+      }
+    },
+    "extract": {
+      "provider": "openai",
+      "surface": "openai.images"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-image-1:image-token-fixture",
+        "provider": "openai",
+        "surface": "openai.images",
+        "model": "gpt-image-1",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_image_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_image_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.images",
+      "model": {
+        "requested": "gpt-image-1",
+        "returned": "gpt-image-1",
+        "billed": "gpt-image-1",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "8",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.000008",
+          "price_card_id": "openai:gpt-image-1:image-token-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_image_tokens",
+          "quantity": "3",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.000006",
+          "price_card_id": "openai:gpt-image-1:image-token-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_image_tokens",
+          "quantity": "200",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.0008",
+          "price_card_id": "openai:gpt-image-1:image-token-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.000814",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

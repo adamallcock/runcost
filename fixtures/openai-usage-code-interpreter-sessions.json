@@ -1,0 +1,114 @@
+{
+  "name": "openai-usage-code-interpreter-sessions",
+  "description": "Extracts OpenAI organization usage code interpreter session buckets into session billing units.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-PROVIDER-EXTRACTOR",
+      "RC-FEATURE-PRICING"
+    ],
+    "provider": "openai",
+    "surface": "openai.usage.code_interpreter_sessions",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:code_interpreter_session_units",
+      "session_pricing",
+      "code_interpreter",
+      "usage_api"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "object": "page",
+      "data": [
+        {
+          "object": "bucket",
+          "start_time": 1730419200,
+          "end_time": 1730505600,
+          "results": [
+            {
+              "object": "organization.usage.code_interpreter_sessions.result",
+              "num_sessions": 1,
+              "project_id": null
+            },
+            {
+              "object": "organization.usage.code_interpreter_sessions.result",
+              "num_sessions": 2,
+              "project_id": "proj_redacted"
+            }
+          ]
+        }
+      ],
+      "has_more": false,
+      "next_page": null
+    },
+    "extract": {
+      "provider": "openai",
+      "surface": "openai.usage.code_interpreter_sessions",
+      "model": "code-interpreter-session"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:code-interpreter-session:fixture",
+        "provider": "openai",
+        "surface": "openai.usage.code_interpreter_sessions",
+        "model": "code-interpreter-session",
+        "components": [
+          {
+            "usage_component": "code_interpreter_session_units",
+            "unit": "session",
+            "price": {
+              "amount": "0.03",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.usage.code_interpreter_sessions",
+      "model": {
+        "requested": "code-interpreter-session",
+        "returned": "code-interpreter-session",
+        "billed": "code-interpreter-session",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "code_interpreter_session_units",
+          "quantity": "3",
+          "unit": "session",
+          "unit_price": "0.03",
+          "cost": "0.09",
+          "price_card_id": "openai:code-interpreter-session:fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.09",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

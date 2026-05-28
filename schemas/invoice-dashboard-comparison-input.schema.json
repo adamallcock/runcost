@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runcost.dev/schemas/invoice-dashboard-comparison-input.schema.json",
+  "title": "RunCost Invoice Dashboard Comparison Input",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "comparison_id",
+    "description",
+    "evidence_type",
+    "safe_to_commit",
+    "contains_private_billing_export",
+    "provider",
+    "runcost",
+    "field_mappings"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1"
+    },
+    "comparison_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_type": {
+      "enum": [
+        "sanitized_sample",
+        "real_provider_export"
+      ]
+    },
+    "safe_to_commit": {
+      "const": true
+    },
+    "contains_private_billing_export": {
+      "const": false
+    },
+    "provider": {
+      "$ref": "#/$defs/provider"
+    },
+    "runcost": {
+      "$ref": "#/$defs/runcost"
+    },
+    "field_mappings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/fieldMapping"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "provider": {
+      "type": "object",
+      "required": [
+        "name",
+        "surface",
+        "model",
+        "source",
+        "window",
+        "values"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "window": {
+          "type": "string",
+          "minLength": 1
+        },
+        "values": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "integer"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "runcost": {
+      "type": "object",
+      "required": [
+        "source",
+        "cost_ledger"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cost_ledger": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    "fieldMapping": {
+      "type": "object",
+      "required": [
+        "field",
+        "provider_path",
+        "status_rule",
+        "notes"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider_path": {
+          "type": "string",
+          "pattern": "^\\$\\.provider\\.values\\.[A-Za-z0-9_]+$"
+        },
+        "runcost_value": {
+          "type": [
+            "string",
+            "number",
+            "integer"
+          ]
+        },
+        "runcost_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "components": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "status_rule": {
+          "enum": [
+            "exact",
+            "estimated",
+            "unsupported"
+          ]
+        },
+        "tolerance": {
+          "type": [
+            "string",
+            "number",
+            "integer"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

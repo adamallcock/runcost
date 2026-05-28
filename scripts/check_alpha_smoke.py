@@ -13,6 +13,9 @@ COMMAND = ROOT / "scripts" / "run_alpha_smoke.py"
 VERCEL_COMMAND = ROOT / "scripts" / "run_vercel_alpha_smoke.mjs"
 LANGCHAIN_COMMAND = ROOT / "scripts" / "run_langchain_alpha_smoke.py"
 
+from check_alpha_smoke_contract import validate_report  # noqa: E402
+from run_alpha_smoke import framework_smoke_result  # noqa: E402
+
 EXPECTED_SCENARIOS = {
     "openai_responses",
     "anthropic_prompt_caching",
@@ -128,6 +131,11 @@ def main() -> int:
         )
         live_report = json.loads(live_output.read_text(encoding="utf-8"))
 
+    validate_report(report)
+    validate_report(vercel_report)
+    validate_report(langchain_report)
+    validate_report(live_report)
+
     assert report["schema_version"] == "0.1"
     assert report["mode"] == "sample"
     assert report["sanitized"] is True
@@ -164,12 +172,24 @@ def main() -> int:
     live_by_scenario = {item["scenario"]: item for item in live_report["scenarios"]}
     assert sorted(live_by_scenario) == sorted(EXPECTED_SCENARIOS)
     assert live_by_scenario["vercel_ai_sdk_stream_text"]["status"] == "skipped"
-    assert live_by_scenario["vercel_ai_sdk_stream_text"]["next_action"]["reason"] == "OPENAI_API_KEY is not set."
+    assert live_by_scenario["vercel_ai_sdk_stream_text"]["next_action"]["reason"] == "OPENAI_API_KEY or OPENROUTER_API_KEY is not set."
     assert live_by_scenario["langchain_agent_run"]["status"] == "skipped"
-    assert live_by_scenario["langchain_agent_run"]["next_action"]["reason"] == "OPENAI_API_KEY is not set."
+    assert live_by_scenario["langchain_agent_run"]["next_action"]["reason"] == "OPENAI_API_KEY or OPENROUTER_API_KEY is not set."
     assert live_by_scenario["multi_provider_discount"]["status"] == "passed"
     assert live_by_scenario["multi_provider_discount"]["evidence"]["source"] == "sample"
     walk(live_report)
+
+    failed_child = framework_smoke_result(
+        "vercel_ai_sdk_stream_text",
+        [sys.executable, "-c", "raise SystemExit(7)"],
+    )
+    assert failed_child["scenario"] == "vercel_ai_sdk_stream_text"
+    assert failed_child["status"] == "needs_product_truth"
+    assert failed_child["evidence"]["raw_response_retained"] is False
+    assert failed_child["evidence"]["exactness"] == "requires_review"
+    assert failed_child["next_action"]["type"] == "fixture_or_warning_or_limitation"
+    assert "CalledProcessError" in failed_child["next_action"]["reason"]
+    walk(failed_child)
 
     print("Alpha smoke sample checks passed.")
     return 0

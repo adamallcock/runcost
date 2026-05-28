@@ -375,6 +375,8 @@ export interface ExtractOptions {
   provider?: string;
   surface: string;
   model?: string;
+  storage_days?: string | number;
+  storageDays?: string | number;
   ag2_usage_mode?: "actual" | "total" | "including_cached" | "usage_excluding_cached_inference" | "usage_including_cached_inference";
   usage_mode?: string;
 }
@@ -449,6 +451,15 @@ export function aggregateCostLedgers(options: AggregateCostLedgersOptions): Cost
 export function extractUsageLedger(response: Record<string, unknown>, options: ExtractOptions): UsageLedger;
 export function extractOpenAIResponsesUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractOpenAIEmbeddingsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAIAudioTranscriptionUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAIImagesUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAIUsageAudioSpeechesUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAIUsageAudioTranscriptionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAIUsageCompletionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAIUsageEmbeddingsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAIUsageImagesUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAIVectorStoreStorageUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
+export function extractOpenAIUsageCodeInterpreterSessionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractOpenAIChatCompletionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractOpenAICompatibleChatCompletionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractOpenRouterChatCompletionsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;

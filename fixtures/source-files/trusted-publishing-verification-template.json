@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1",
+  "generated_at": "2026-05-26T00:00:00Z",
+  "evidence_type": "template",
+  "safe_to_commit": true,
+  "contains_secret_values": false,
+  "repository": "adamallcock/runcost",
+  "workflow": ".github/workflows/release.yml",
+  "environment": "release",
+  "pypi": {
+    "package": "runcost-ai",
+    "registry": "pypi",
+    "trusted_publisher_configured": false,
+    "provenance_or_oidc_configured": false,
+    "stored_registry_token_required": false,
+    "configured_by": "",
+    "verified_at": "",
+    "verification_method": "",
+    "evidence_url": ""
+  },
+  "npm": {
+    "package": "runcost",
+    "registry": "npm",
+    "trusted_publisher_configured": false,
+    "provenance_or_oidc_configured": false,
+    "stored_registry_token_required": false,
+    "configured_by": "",
+    "verified_at": "",
+    "verification_method": "",
+    "evidence_url": ""
+  },
+  "notes": [
+    "Template only. Replace evidence_type with manual_verified after registry-side PyPI and npm trusted publishing settings have been reviewed."
+  ]
+}

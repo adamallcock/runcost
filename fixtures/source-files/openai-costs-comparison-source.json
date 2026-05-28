@@ -1,0 +1,84 @@
+{
+  "schema_version": "0.1",
+  "comparison_id": "openai-costs-api-sample-2026-05-26",
+  "description": "Sanitized OpenAI Costs API sample for generating an invoice/dashboard comparison input.",
+  "evidence_type": "sanitized_sample",
+  "safe_to_commit": true,
+  "contains_private_billing_export": false,
+  "provider": {
+    "name": "openai",
+    "surface": "openai.organization.costs",
+    "model": "multiple",
+    "source": "sanitized_openai_costs_api_sample",
+    "window": "2026-05-26T00:00:00Z/2026-05-27T00:00:00Z"
+  },
+  "openai_costs": {
+    "object": "page",
+    "data": [
+      {
+        "object": "bucket",
+        "start_time": 1779753600,
+        "end_time": 1779840000,
+        "results": [
+          {
+            "object": "organization.costs.result",
+            "amount": {
+              "value": 0.06,
+              "currency": "usd"
+            },
+            "line_item": "Text models",
+            "project_alias": "all_projects"
+          }
+        ]
+      }
+    ],
+    "has_more": false,
+    "next_page": null
+  },
+  "expected_line_item_count": "1",
+  "cost_tolerance": "0.005",
+  "runcost": {
+    "source": "sanitized_openai_usage_fixture_ledger",
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.usage.completions",
+      "model": {
+        "requested": "multiple",
+        "returned": "multiple",
+        "billed": "multiple",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.00001",
+          "cost": "0.01",
+          "price_card_id": "openai:multiple:costs-api-sample",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "2500",
+          "unit": "token",
+          "unit_price": "0.00002",
+          "cost": "0.05",
+          "price_card_id": "openai:multiple:costs-api-sample",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.06",
+      "price_sources": [
+        {
+          "name": "sanitized-openai-costs-sample",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

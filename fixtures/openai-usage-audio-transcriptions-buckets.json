@@ -1,0 +1,122 @@
+{
+  "name": "openai-usage-audio-transcriptions-buckets",
+  "description": "Extracts OpenAI organization usage audio transcription buckets into transcription seconds.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-PROVIDER-EXTRACTOR",
+      "RC-FEATURE-PRICING"
+    ],
+    "provider": "openai",
+    "surface": "openai.usage.audio_transcriptions",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:transcription_seconds",
+      "transcription",
+      "audio_transcription",
+      "usage_api"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "object": "page",
+      "data": [
+        {
+          "object": "bucket",
+          "start_time": 1730419200,
+          "end_time": 1730505600,
+          "results": [
+            {
+              "object": "organization.usage.audio_transcriptions.result",
+              "seconds": 20,
+              "num_model_requests": 1,
+              "project_id": null,
+              "user_id": null,
+              "api_key_id": null,
+              "model": "whisper-1"
+            },
+            {
+              "object": "organization.usage.audio_transcriptions.result",
+              "seconds": 40,
+              "num_model_requests": 2,
+              "project_id": "proj_redacted",
+              "user_id": null,
+              "api_key_id": null,
+              "model": "whisper-1"
+            }
+          ]
+        }
+      ],
+      "has_more": false,
+      "next_page": null
+    },
+    "extract": {
+      "provider": "openai",
+      "surface": "openai.usage.audio_transcriptions",
+      "model": "whisper-1"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:whisper-1:usage-audio-transcriptions-fixture",
+        "provider": "openai",
+        "surface": "openai.usage.audio_transcriptions",
+        "model": "whisper-1",
+        "components": [
+          {
+            "usage_component": "transcription_seconds",
+            "unit": "second",
+            "price": {
+              "amount": "0.0001",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.usage.audio_transcriptions",
+      "model": {
+        "requested": "whisper-1",
+        "returned": "whisper-1",
+        "billed": "whisper-1",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "transcription_seconds",
+          "quantity": "60",
+          "unit": "second",
+          "unit_price": "0.0001",
+          "cost": "0.006",
+          "price_card_id": "openai:whisper-1:usage-audio-transcriptions-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.006",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

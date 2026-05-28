@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runcost.dev/schemas/alpha-smoke-product-truth-register.schema.json",
+  "title": "RunCost Alpha Smoke Product Truth Register",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "description",
+    "entries"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": [
+        "scenario",
+        "status",
+        "next_action_type",
+        "classification",
+        "artifact",
+        "artifact_kind",
+        "resolution"
+      ],
+      "properties": {
+        "scenario": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "passed",
+            "skipped",
+            "needs_product_truth",
+            "failed"
+          ]
+        },
+        "next_action_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason_contains": {
+          "type": "string",
+          "minLength": 1
+        },
+        "classification": {
+          "enum": [
+            "none",
+            "fixture",
+            "structured_warning",
+            "documented_limitation",
+            "extractor_source_fix",
+            "price_source_update"
+          ]
+        },
+        "artifact": {
+          "type": "string"
+        },
+        "artifact_kind": {
+          "enum": [
+            "none",
+            "fixture",
+            "sample_fixture",
+            "report",
+            "docs",
+            "schema",
+            "code",
+            "source_data"
+          ]
+        },
+        "resolution": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "const": "passed"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "classification": {
+                "const": "none"
+              },
+              "next_action_type": {
+                "const": "none"
+              },
+              "artifact_kind": {
+                "enum": [
+                  "none",
+                  "sample_fixture"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "skipped",
+                  "needs_product_truth",
+                  "failed"
+                ]
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "properties": {
+                "classification": {
+                  "const": "none"
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "const": "documented_limitation"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "artifact_kind": {
+                "enum": [
+                  "docs",
+                  "report"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "const": "extractor_source_fix"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "artifact_kind": {
+                "const": "code"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "const": "price_source_update"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "artifact_kind": {
+                "const": "source_data"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

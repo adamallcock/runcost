@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runcost.dev/schemas/trusted-publishing-verification.schema.json",
+  "title": "RunCost Trusted Publishing Verification",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "evidence_type",
+    "safe_to_commit",
+    "contains_secret_values",
+    "repository",
+    "workflow",
+    "environment",
+    "pypi",
+    "npm",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1"
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_type": {
+      "enum": [
+        "template",
+        "manual_verified"
+      ]
+    },
+    "safe_to_commit": {
+      "const": true
+    },
+    "contains_secret_values": {
+      "const": false
+    },
+    "repository": {
+      "const": "adamallcock/runcost"
+    },
+    "workflow": {
+      "const": ".github/workflows/release.yml"
+    },
+    "environment": {
+      "const": "release"
+    },
+    "pypi": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/publisher"
+        },
+        {
+          "properties": {
+            "package": {
+              "const": "runcost-ai"
+            },
+            "registry": {
+              "const": "pypi"
+            }
+          }
+        }
+      ]
+    },
+    "npm": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/publisher"
+        },
+        {
+          "properties": {
+            "package": {
+              "const": "runcost"
+            },
+            "registry": {
+              "const": "npm"
+            }
+          }
+        }
+      ]
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "publisher": {
+      "type": "object",
+      "required": [
+        "package",
+        "registry",
+        "trusted_publisher_configured",
+        "provenance_or_oidc_configured",
+        "stored_registry_token_required",
+        "configured_by",
+        "verified_at",
+        "verification_method",
+        "evidence_url"
+      ],
+      "properties": {
+        "package": {
+          "type": "string",
+          "minLength": 1
+        },
+        "registry": {
+          "enum": [
+            "pypi",
+            "npm"
+          ]
+        },
+        "trusted_publisher_configured": {
+          "type": "boolean"
+        },
+        "provenance_or_oidc_configured": {
+          "type": "boolean"
+        },
+        "stored_registry_token_required": {
+          "type": "boolean"
+        },
+        "configured_by": {
+          "type": "string"
+        },
+        "verified_at": {
+          "type": "string"
+        },
+        "verification_method": {
+          "type": "string"
+        },
+        "evidence_url": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

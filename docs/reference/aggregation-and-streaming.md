@@ -2,7 +2,7 @@
 title: RunCost Aggregation And Streaming
 date: 2026-05-25
 type: guide
-status: draft
+status: active
 ---
 
 # RunCost Aggregation And Streaming

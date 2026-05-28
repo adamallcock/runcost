@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runcost.dev/schemas/invoice-dashboard-comparison.schema.json",
+  "title": "RunCost Invoice Dashboard Comparison",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "comparison_id",
+    "evidence_type",
+    "milestone8_real_evidence",
+    "safe_to_commit",
+    "contains_private_billing_export",
+    "provider",
+    "surface",
+    "model",
+    "provider_source",
+    "provider_window",
+    "runcost_source",
+    "summary",
+    "rows"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1"
+    },
+    "comparison_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_type": {
+      "enum": [
+        "sanitized_sample",
+        "real_provider_export"
+      ]
+    },
+    "milestone8_real_evidence": {
+      "type": "boolean"
+    },
+    "safe_to_commit": {
+      "const": true
+    },
+    "contains_private_billing_export": {
+      "const": false
+    },
+    "provider": {
+      "type": "string",
+      "minLength": 1
+    },
+    "surface": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provider_source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provider_window": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runcost_source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "exact",
+        "estimated",
+        "unsupported"
+      ],
+      "properties": {
+        "exact": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "estimated": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unsupported": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/row"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "status": {
+      "enum": [
+        "exact",
+        "estimated",
+        "unsupported"
+      ]
+    },
+    "row": {
+      "type": "object",
+      "required": [
+        "field",
+        "provider_value",
+        "runcost_value",
+        "status",
+        "notes",
+        "product_truth_action"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider_value": {
+          "type": "string"
+        },
+        "runcost_value": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "product_truth_action": {
+          "$ref": "#/$defs/productTruthAction"
+        }
+      },
+      "additionalProperties": false
+    },
+    "productTruthAction": {
+      "type": "object",
+      "required": [
+        "type",
+        "reason"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "none",
+            "documented_limitation",
+            "fixture",
+            "structured_warning",
+            "extractor_or_source_fix",
+            "price_source_update"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

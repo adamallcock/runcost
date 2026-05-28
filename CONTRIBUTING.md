@@ -39,7 +39,7 @@ npm run example:py
 
 - Use primary provider docs, source repos, official APIs, or preserved source
   snapshots.
-- Follow `docs/process/2026-05-26-source-data-update-process.md` for source
+- Follow `docs/internal/process/2026-05-26-source-data-update-process.md` for source
   update ownership, cadence, review, and release expectations.
 - Preserve source name, URL, retrieval time, and license when available.
 - Do not silently infer ambiguous units.
@@ -50,7 +50,7 @@ npm run example:py
 
 Python, JavaScript/TypeScript, and Go should expose the same core concepts even
 when helper APIs are idiomatic to a single ecosystem. Update
-`docs/notes/api-parity-matrix.md` whenever public APIs change.
+`docs/internal/notes/api-parity-matrix.md` whenever public APIs change.
 
 ## Generated Artifacts
 

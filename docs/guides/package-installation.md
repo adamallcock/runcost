@@ -2,18 +2,18 @@
 title: RunCost Package Installation
 date: 2026-05-25
 type: guide
-status: draft
+status: active
 ---
 
 # RunCost Package Installation
 
-RunCost is currently validated as a source-installable pre-alpha package. Registry publishing is intentionally not marked done until the first release is cut through the guarded release workflow.
+RunCost is currently validated as a source-installable alpha package. Registry publishing is intentionally held until the first release is cut through the guarded release workflow.
 
 ## Current Support Matrix
 
 | Language | Current install path | Validation |
 |---|---|---|
-| Python | `python3 -m pip install .` from repo root | Fresh virtual environment import smoke test |
+| Python | `python3 -m pip install git+https://github.com/adamallcock/runcost.git` or `python3 -m pip install .` from repo root | Fresh virtual environment import smoke test |
 | JavaScript/TypeScript | `npm pack ./packages/javascript/core` then install the tarball | Fresh npm project import smoke test |
 | Go | `go get github.com/adamallcock/runcost/packages/go/ledger` | Fresh Go module import smoke test with local replace in CI |
 
@@ -27,7 +27,15 @@ python3 -c "from runcost import from_response; print(from_response)"
 runcost --help
 ```
 
-The Python package is defined by the root `pyproject.toml` and loads package sources from `packages/python`.
+The Python distribution name is `runcost-ai`, while the import package and CLI
+remain `runcost`. The root `pyproject.toml` loads package sources from
+`packages/python`.
+
+After the first registry release:
+
+```bash
+python3 -m pip install runcost-ai
+```
 
 The installed Python package includes a small `runcost` CLI:
 
@@ -46,11 +54,17 @@ From a cloned checkout:
 
 ```bash
 npm pack ./packages/javascript/core
-npm install ./runcost-0.0.0.tgz
+npm install ./runcost-0.1.0.tgz
 node --input-type=module -e 'import { fromResponse } from "runcost"; console.log(typeof fromResponse)'
 ```
 
 The JavaScript package lives in `packages/javascript/core`. It exposes ESM JavaScript and `index.d.ts` TypeScript declarations.
+
+After the first registry release:
+
+```bash
+npm install runcost
+```
 
 ## Go
 
@@ -82,8 +96,6 @@ That command creates temporary projects for Python, npm, and Go and verifies tha
 
 - MIT license and package license metadata are present.
 - Guarded registry publish workflow exists for PyPI and npm.
-- Go module tag policy is documented in `docs/process/release-process.md`.
-- `npm run check:release` verifies release docs, package version sync, license metadata, changelog presence, and release workflow guardrails.
-- Decide whether the npm package remains in `packages/javascript/core` or moves to a publish-oriented root package.
-- Add changelog automation.
-- Add package README files if registry pages should differ from the monorepo README.
+- Go module tags, PyPI publishing, and npm publishing are guarded by the maintainer release process.
+- `npm run check:release` verifies package version sync, license metadata, changelog presence, registry README policy, and release workflow guardrails.
+- The npm package ships a package-facing README aligned with the root public README.

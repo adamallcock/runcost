@@ -2,7 +2,7 @@
 title: RunCost Warnings And Limitations
 date: 2026-05-25
 type: reference
-status: draft
+status: active
 ---
 
 # RunCost Warnings And Limitations
@@ -55,6 +55,8 @@ The current metadata contract is locked in `schemas/taxonomy.json` under
 `warning_metadata_required_keys` and enforced by the shared fixture runner.
 For fixture-backed warning coverage and V1 warning-code support status, see
 [Generated Warning Coverage](../generated/warning-coverage.md).
+For the current public-beta and V1 caveat register, see
+[Generated Beta And V1 Caveats](../generated/beta-v1-caveats.md).
 
 | Warning code | Required metadata keys |
 |---|---|
@@ -118,7 +120,7 @@ For fixture-backed warning coverage and V1 warning-code support status, see
 - Tool-call pricing coverage exists only for selected fixtures and provider shapes.
 - Historical point-in-time pricing exists in the model but is not comprehensive.
 - Framework adapters cover selected usage metadata objects plus initial LangChain callback/context-manager and Vercel `wrapGenerate` / `onFinish` helpers, not every framework callback or streaming pattern.
-- Semantic Kernel, LangSmith, OpenRouter-compatible SDK paths, OpenAI Agents SDK usage objects, and Vercel `streamText` finish objects now have fixture-backed plain-object adapters. A sanitized Milestone 8 smoke harness exists, but live run evidence and real app validation are still incomplete.
+- Semantic Kernel, LangSmith, OpenRouter-compatible SDK paths, OpenAI Agents SDK usage objects, and Vercel `streamText` finish objects now have fixture-backed plain-object adapters. Sanitized smoke harnesses exist, but real app validation is still expanding.
 - Haystack, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, LangSmith exports, and Semantic Kernel telemetry are covered only for selected metadata or summary shapes.
 - AutoGen/AG2 support compares AG2-reported cost from usage summaries as framework-reported cost; AG2 custom-price and Azure model-version behavior can make that value differ from RunCost price cards.
 

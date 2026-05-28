@@ -3,16 +3,16 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "runcost"
+name = "runcost-ai"
 version = "0.1.0"
-description = "Prototype cost calculator for LLM and agent API responses."
+description = "Alpha cost ledger utility for LLM and agent API responses."
 requires-python = ">=3.9"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 keywords = ["llm", "ai", "pricing", "tokens", "cost"]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
@@ -27,6 +27,12 @@ Changelog = "https://github.com/adamallcock/runcost/blob/main/CHANGELOG.md"
 
 [project.scripts]
 runcost = "runcost.cli:main"
+
+[project.optional-dependencies]
+smoke = [
+  "langchain-core",
+  "langchain-openai"
+]
 
 [tool.setuptools.packages.find]
 where = ["packages/python"]

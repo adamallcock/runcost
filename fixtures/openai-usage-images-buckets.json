@@ -1,0 +1,126 @@
+{
+  "name": "openai-usage-images-buckets",
+  "description": "Extracts OpenAI organization usage image buckets into image generation units.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-PROVIDER-EXTRACTOR",
+      "RC-FEATURE-PRICING"
+    ],
+    "provider": "openai",
+    "surface": "openai.usage.images",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:image_generation_units",
+      "generated_media",
+      "image_generation",
+      "usage_api"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "object": "page",
+      "data": [
+        {
+          "object": "bucket",
+          "start_time": 1730419200,
+          "end_time": 1730505600,
+          "results": [
+            {
+              "object": "organization.usage.images.result",
+              "images": 2,
+              "num_model_requests": 2,
+              "size": "1024x1024",
+              "source": "image.generation",
+              "project_id": null,
+              "user_id": null,
+              "api_key_id": null,
+              "model": "dall-e-3"
+            },
+            {
+              "object": "organization.usage.images.result",
+              "images": 1,
+              "num_model_requests": 1,
+              "size": "1024x1024",
+              "source": "image.generation",
+              "project_id": "proj_redacted",
+              "user_id": null,
+              "api_key_id": null,
+              "model": "dall-e-3"
+            }
+          ]
+        }
+      ],
+      "has_more": false,
+      "next_page": null
+    },
+    "extract": {
+      "provider": "openai",
+      "surface": "openai.usage.images",
+      "model": "dall-e-3"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:dall-e-3:usage-images-fixture",
+        "provider": "openai",
+        "surface": "openai.usage.images",
+        "model": "dall-e-3",
+        "components": [
+          {
+            "usage_component": "image_generation_units",
+            "unit": "image",
+            "price": {
+              "amount": "0.04",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.usage.images",
+      "model": {
+        "requested": "dall-e-3",
+        "returned": "dall-e-3",
+        "billed": "dall-e-3",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "image_generation_units",
+          "quantity": "3",
+          "unit": "image",
+          "unit_price": "0.04",
+          "cost": "0.12",
+          "price_card_id": "openai:dall-e-3:usage-images-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.12",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

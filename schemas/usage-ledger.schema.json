@@ -92,6 +92,7 @@
             "image_generation_units",
             "video_generation_units",
             "audio_generation_units",
+            "audio_generation_characters",
             "transcription_seconds",
             "endpoint_runtime_seconds",
             "endpoint_instance_hours",
@@ -105,7 +106,7 @@
         },
         "unit": {
           "type": "string",
-          "enum": ["token", "request", "call", "session", "search", "file", "image", "video", "audio", "second", "hour", "gb_day", "usd", "custom"]
+          "enum": ["token", "request", "call", "session", "search", "file", "image", "video", "audio", "character", "second", "hour", "gb_day", "usd", "custom"]
         },
         "tool": {
           "type": "object",

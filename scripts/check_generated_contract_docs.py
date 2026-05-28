@@ -12,6 +12,8 @@ EXPECTED = ROOT / "docs" / "generated" / "contract-taxonomy.md"
 EXPECTED_SCHEMA = ROOT / "docs" / "generated" / "schema-fields.md"
 EXPECTED_SUPPORT = ROOT / "docs" / "generated" / "fixture-support-matrix.md"
 EXPECTED_WARNING = ROOT / "docs" / "generated" / "warning-coverage.md"
+EXPECTED_BETA = ROOT / "docs" / "generated" / "beta-v1-caveats.md"
+EXPECTED_API = ROOT / "docs" / "generated" / "public-api-registry.md"
 
 
 def main() -> int:
@@ -20,11 +22,15 @@ def main() -> int:
     assert EXPECTED_SCHEMA.exists(), "missing generated schema-field docs"
     assert EXPECTED_SUPPORT.exists(), "missing generated fixture support matrix docs"
     assert EXPECTED_WARNING.exists(), "missing generated warning coverage docs"
+    assert EXPECTED_BETA.exists(), "missing generated beta/V1 caveats docs"
+    assert EXPECTED_API.exists(), "missing generated public API registry docs"
     with tempfile.TemporaryDirectory() as temp_dir:
         generated = Path(temp_dir) / "contract-taxonomy.md"
         generated_schema = Path(temp_dir) / "schema-fields.md"
         generated_support = Path(temp_dir) / "fixture-support-matrix.md"
         generated_warning = Path(temp_dir) / "warning-coverage.md"
+        generated_beta = Path(temp_dir) / "beta-v1-caveats.md"
+        generated_api = Path(temp_dir) / "public-api-registry.md"
         subprocess.run(
             [
                 sys.executable,
@@ -37,6 +43,10 @@ def main() -> int:
                 str(generated_support),
                 "--warning-output",
                 str(generated_warning),
+                "--beta-output",
+                str(generated_beta),
+                "--api-output",
+                str(generated_api),
             ],
             cwd=ROOT,
             check=True,
@@ -48,10 +58,14 @@ def main() -> int:
         actual_schema = generated_schema.read_text(encoding="utf-8")
         actual_support = generated_support.read_text(encoding="utf-8")
         actual_warning = generated_warning.read_text(encoding="utf-8")
+        actual_beta = generated_beta.read_text(encoding="utf-8")
+        actual_api = generated_api.read_text(encoding="utf-8")
     expected = EXPECTED.read_text(encoding="utf-8")
     expected_schema = EXPECTED_SCHEMA.read_text(encoding="utf-8")
     expected_support = EXPECTED_SUPPORT.read_text(encoding="utf-8")
     expected_warning = EXPECTED_WARNING.read_text(encoding="utf-8")
+    expected_beta = EXPECTED_BETA.read_text(encoding="utf-8")
+    expected_api = EXPECTED_API.read_text(encoding="utf-8")
     if actual != expected:
         raise AssertionError(
             "generated contract docs are stale; run "
@@ -70,6 +84,16 @@ def main() -> int:
     if actual_warning != expected_warning:
         raise AssertionError(
             "generated warning coverage docs are stale; run "
+            "`python3 scripts/generate_contract_docs.py --write`"
+        )
+    if actual_beta != expected_beta:
+        raise AssertionError(
+            "generated beta/V1 caveats docs are stale; run "
+            "`python3 scripts/generate_contract_docs.py --write`"
+        )
+    if actual_api != expected_api:
+        raise AssertionError(
+            "generated public API registry docs are stale; run "
             "`python3 scripts/generate_contract_docs.py --write`"
         )
     print("Generated contract docs checks passed.")
