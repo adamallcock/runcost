@@ -1,0 +1,47 @@
+name: Price source update
+description: Report a provider pricing change or source catalog issue.
+title: "[Price source]: "
+labels: ["pricing", "source-data"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pricing changes need primary-source evidence and fixture-backed behavior.
+        Do not include private contract terms unless you are providing a sanitized custom price-card example.
+  - type: input
+    id: source-url
+    attributes:
+      label: Source URL
+      description: Official provider page, source catalog, or package data URL.
+    validations:
+      required: true
+  - type: textarea
+    id: changed
+    attributes:
+      label: What changed?
+      description: Summarize model, component, unit, tier, region, or effective-date changes.
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source type
+      options:
+        - Official provider pricing page
+        - llm-prices
+        - LiteLLM model prices
+        - OpenRouter models API
+        - models.dev
+        - Portkey
+        - Helicone
+        - User/custom price card
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: expected-fixture
+    attributes:
+      label: Expected fixture or warning
+      description: Describe the fixture, warning, or source-adapter behavior this should create or change.
+    validations:
+      required: false

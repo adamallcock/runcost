@@ -10,7 +10,7 @@ requires-python = ">=3.9"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-keywords = ["llm", "ai", "pricing", "tokens", "cost"]
+keywords = ["llm", "ai", "pricing", "tokens", "cost", "agents", "openai", "anthropic", "usage"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",

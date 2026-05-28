@@ -77,6 +77,7 @@ jobs:
             scripts/check_generated_contract_docs.py \
             scripts/check_public_api_registry.py \
             scripts/check_python_type_surface.py \
+            scripts/check_public_github_readiness.py \
             scripts/check_type_taxonomy_parity.py \
             scripts/check_project_hygiene.py \
             scripts/check_package_installs.py \

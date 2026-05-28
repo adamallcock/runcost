@@ -181,3 +181,6 @@ const ledger = fromResponse(response, {
 ```
 
 The chosen price source is included in the returned cost ledger.
+
+For public catalog data, prefer source adapters and pinned source-cache snapshots
+over copying prices into application code. See [Price Data Strategy](price-data-strategy.md).

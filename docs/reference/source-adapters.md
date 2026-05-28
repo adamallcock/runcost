@@ -7,7 +7,7 @@ status: active
 
 # RunCost Source Adapters
 
-Source adapters convert external pricing catalogs into RunCost price cards. They are useful for bootstrapping, but user overrides and fixture-backed validation remain the trust boundary.
+Source adapters convert external pricing catalogs into RunCost price cards. They are useful for bootstrapping, but user overrides and fixture-backed validation remain the trust boundary. For the difference between fixtures, source adapters, and vendored catalog snapshots, see [Price Data Strategy](price-data-strategy.md).
 
 ## Supported Prototype Adapters
 
