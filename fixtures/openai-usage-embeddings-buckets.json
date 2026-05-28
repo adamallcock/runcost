@@ -1,0 +1,121 @@
+{
+  "name": "openai-usage-embeddings-buckets",
+  "description": "Extracts OpenAI organization usage embeddings buckets into embedding token usage.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-PROVIDER-EXTRACTOR",
+      "RC-FEATURE-PRICING"
+    ],
+    "provider": "openai",
+    "surface": "openai.usage.embeddings",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:embedding_tokens",
+      "embeddings",
+      "usage_api"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "object": "page",
+      "data": [
+        {
+          "object": "bucket",
+          "start_time": 1730419200,
+          "end_time": 1730505600,
+          "results": [
+            {
+              "object": "organization.usage.embeddings.result",
+              "input_tokens": 16,
+              "num_model_requests": 2,
+              "project_id": null,
+              "user_id": null,
+              "api_key_id": null,
+              "model": "text-embedding-3-small"
+            },
+            {
+              "object": "organization.usage.embeddings.result",
+              "input_tokens": 24,
+              "num_model_requests": 3,
+              "project_id": "proj_redacted",
+              "user_id": null,
+              "api_key_id": null,
+              "model": "text-embedding-3-small"
+            }
+          ]
+        }
+      ],
+      "has_more": false,
+      "next_page": null
+    },
+    "extract": {
+      "provider": "openai",
+      "surface": "openai.usage.embeddings",
+      "model": "text-embedding-3-small"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:text-embedding-3-small:usage-embeddings-fixture",
+        "provider": "openai",
+        "surface": "openai.usage.embeddings",
+        "model": "text-embedding-3-small",
+        "components": [
+          {
+            "usage_component": "embedding_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.02",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.usage.embeddings",
+      "model": {
+        "requested": "text-embedding-3-small",
+        "returned": "text-embedding-3-small",
+        "billed": "text-embedding-3-small",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "embedding_tokens",
+          "quantity": "40",
+          "unit": "token",
+          "unit_price": "0.00000002",
+          "cost": "0.0000008",
+          "price_card_id": "openai:text-embedding-3-small:usage-embeddings-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0000008",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

@@ -2,14 +2,13 @@
 title: RunCost Supported Surfaces
 date: 2026-05-25
 type: reference
-status: draft
+status: active
 ---
 
 # RunCost Supported Surfaces
 
-This support matrix describes the current fixture-backed prototype. A provider or framework is considered supported only when it has shared conformance fixtures.
+This support matrix describes the current fixture-backed alpha. A provider or framework is considered supported only when it has shared conformance fixtures.
 
-For mechanical coverage counts, see [Fixture Coverage](../reports/fixture-coverage.md).
 For the full fixture-derived provider/surface/language matrix, see
 [Generated Fixture Support Matrix](../generated/fixture-support-matrix.md).
 
@@ -20,11 +19,22 @@ For the full fixture-derived provider/surface/language matrix, see
 | OpenAI | Responses | Fixture-backed |
 | OpenAI | Responses streaming `response.completed` event | Fixture-backed |
 | OpenAI | Chat Completions | Fixture-backed |
+| OpenAI | Chat Completions streaming final usage chunk | Fixture-backed |
+| OpenAI | Organization usage completions buckets | Fixture-backed |
 | OpenAI | Embeddings | Fixture-backed |
+| OpenAI | Organization usage embeddings buckets | Fixture-backed |
+| OpenAI | Audio Transcriptions duration and token usage | Fixture-backed |
+| OpenAI | Organization usage audio transcription buckets | Fixture-backed |
+| OpenAI | Images token usage and image-unit responses | Fixture-backed |
+| OpenAI | Organization usage image buckets | Fixture-backed |
+| OpenAI | Organization usage audio speech character buckets | Fixture-backed |
+| OpenAI | Vector Stores storage bytes with explicit storage-day conversion | Fixture-backed |
+| OpenAI | Organization usage code-interpreter sessions | Fixture-backed |
 | OpenAI | Conversations state resource | Documented non-cost-bearing surface; price associated Responses |
 | Anthropic | Messages | Fixture-backed |
 | Anthropic | Messages SSE event sequence | Fixture-backed |
 | OpenRouter | Chat Completions | Fixture-backed |
+| OpenRouter | OpenAI-compatible streaming final usage chunk with provider-reported cost | Fixture-backed |
 | Groq | Chat Completions through OpenAI-compatible usage | Fixture-backed |
 | xAI | Chat Completions through OpenAI-compatible usage | Fixture-backed |
 | xAI | Responses through OpenAI-compatible usage | Fixture-backed |
@@ -83,6 +93,6 @@ For the full fixture-derived provider/surface/language matrix, see
 - Support does not mean every model, region, service tier, tool, or historical price is present.
 - OpenAI Conversations are documented as state resources, not standalone usage-bearing model responses. Price Responses calls that attach to Conversations through the fixture-backed OpenAI Responses extractor.
 - OpenAI Responses hosted tool extraction is fixture-backed for web search, file search, code interpreter calls, computer-use action counts, and function-call counts.
-- Tool/feature pricing is complete for the current exit gate: OpenAI-style hosted tools, OpenRouter/provider-reported costs, custom internal tools, normalized generated media, Cohere Rerank search units, transcription, runtime-second, and GB-day storage pricing. Broader provider-specific generated-media, transcription, storage/session extraction, and live validation remain beta hardening.
-- Milestone 6 framework paths are fixture-backed for dependency-free plain-object shapes. Milestone 8 now has a sanitized sample/live smoke harness, but live run evidence and real application validation are not complete yet.
+- Tool/feature pricing is complete for the current exit gate: OpenAI-style hosted tools, OpenRouter/provider-reported costs, custom internal tools, OpenAI organization usage completions text/cache/audio tokens, OpenAI Embeddings per-response and organization usage bucket tokens, OpenAI Images token/image-unit usage, OpenAI organization usage image buckets, OpenAI organization usage audio speech character buckets, normalized generated media, Cohere Rerank search units, OpenAI audio transcription duration/token usage, OpenAI organization usage audio transcription seconds, OpenAI Vector Stores `usage_bytes` to GB-day conversion with an explicit storage-day window, OpenAI organization usage code-interpreter `num_sessions`, runtime-second, and GB-day storage pricing. Broader provider-specific storage/session extraction and live validation remain beta hardening.
+- Framework paths are fixture-backed for dependency-free plain-object shapes. Sanitized sample and live smoke harnesses exist, but real application validation is still expanding.
 - The next support expansion should prioritize live smoke, provider-specific feature breadth, broader streaming usage, and framework findings from real app runs.

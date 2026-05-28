@@ -1,0 +1,79 @@
+{
+  "schema_version": "0.1",
+  "created_at": "2026-05-27T04:51:35Z",
+  "safe_to_commit": true,
+  "contains_private_billing_export": false,
+  "description": "Sanitized operator review packet for checking live smoke requests against provider billing, usage, or activity exports. This is not a provider export.",
+  "source_evidence": [
+    "fixtures/source-files/alpha-smoke-live-all-2026-05-27.json",
+    "fixtures/source-files/alpha-smoke-live-openai-responses-2026-05-27.json",
+    "fixtures/source-files/alpha-smoke-live-vercel-openai-2026-05-27.json",
+    "fixtures/source-files/alpha-smoke-live-langchain-openai-2026-05-27.json",
+    "fixtures/source-files/alpha-smoke-live-direct-2026-05-27.json",
+    "fixtures/source-files/alpha-smoke-live-vercel-openrouter-2026-05-27.json",
+    "fixtures/source-files/alpha-smoke-live-langchain-openrouter-2026-05-27.json"
+  ],
+  "review_window": {
+    "anchor_time_utc": "2026-05-27T04:51:35Z",
+    "recommended_window_utc": "2026-05-27T04:45:00Z/2026-05-27T05:00:00Z",
+    "notes": "Use a wider provider dashboard window if usage exports are delayed or bucketed."
+  },
+  "provider_checks": [
+    {
+      "provider": "openai",
+      "surface": "openai.responses",
+      "scenario": "openai_responses",
+      "expected_models": ["gpt-4.1-mini-2025-04-14"],
+      "expected_request_count": 1,
+      "runcost_exactness": "sample_prices_not_invoice_exact",
+      "fields_to_check": ["request count", "model", "input tokens", "output tokens", "total tokens", "billed cost if available"],
+      "expected_runcost_components": ["input_uncached_tokens", "output_text_tokens"],
+      "notes": "RunCost smoke evidence proves extraction shape. Replace sample prices with provider export values before treating cost as invoice-exact."
+    },
+    {
+      "provider": "openai",
+      "surface": "framework.vercel_ai_sdk",
+      "scenario": "vercel_ai_sdk_stream_text",
+      "expected_models": ["gpt-4.1-mini"],
+      "expected_request_count": 1,
+      "runcost_exactness": "sample_prices_not_invoice_exact",
+      "fields_to_check": ["request count", "model", "input tokens", "output tokens", "total tokens", "billed cost if available"],
+      "expected_runcost_components": ["input_uncached_tokens", "output_text_tokens"],
+      "notes": "This is a real Vercel AI SDK streamText call routed to OpenAI. Provider dashboard rows may group it with normal OpenAI API usage."
+    },
+    {
+      "provider": "openai",
+      "surface": "framework.langchain.chat",
+      "scenario": "langchain_agent_run",
+      "expected_models": ["gpt-4.1-mini-2025-04-14"],
+      "expected_request_count": 1,
+      "runcost_exactness": "sample_prices_not_invoice_exact",
+      "fields_to_check": ["request count", "model", "input tokens", "output tokens", "total tokens", "billed cost if available"],
+      "expected_runcost_components": ["input_uncached_tokens", "output_text_tokens"],
+      "notes": "This is a real LangChain ChatOpenAI call. Provider dashboard rows may group it with normal OpenAI API usage."
+    },
+    {
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "scenario": "anthropic_prompt_caching",
+      "expected_models": ["claude-sonnet-4-5-20250929"],
+      "expected_request_count": 1,
+      "runcost_exactness": "sample_prices_not_invoice_exact",
+      "fields_to_check": ["request count", "model", "input tokens", "output tokens", "cache creation tokens if available", "cache read tokens if available", "billed cost if available"],
+      "expected_runcost_components": ["input_uncached_tokens", "output_text_tokens"],
+      "notes": "The live response exposed cache-related usage field names; the smoke result had no warning codes."
+    },
+    {
+      "provider": "openrouter",
+      "surface": "openrouter.chat_completions",
+      "scenario": "openrouter_cost_compare",
+      "expected_models": ["nvidia/nemotron-3-super-120b-a12b-20230311:free"],
+      "expected_request_count": 1,
+      "runcost_exactness": "sample_prices_not_invoice_exact",
+      "fields_to_check": ["request count", "model", "prompt tokens", "completion tokens", "provider-reported cost", "cost details if available"],
+      "expected_runcost_components": ["input_uncached_tokens", "output_reasoning_tokens"],
+      "notes": "The OpenRouter smoke saw usage cost fields in the response and used the free Nemotron model requested for this milestone."
+    }
+  ],
+  "next_step_for_real_invoice_gate": "Create a sanitized invoice-dashboard comparison input from a real provider export or dashboard row using docs/internal/process/invoice-dashboard-comparison.md, then run python3 scripts/compare_invoice_dashboard.py and python3 scripts/check_invoice_comparison.py --comparison <output> --require-real."
+}

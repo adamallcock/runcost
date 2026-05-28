@@ -2,7 +2,7 @@
 title: RunCost Debug Trace
 date: 2026-05-25
 type: reference
-status: draft
+status: active
 ---
 
 # RunCost Debug Trace

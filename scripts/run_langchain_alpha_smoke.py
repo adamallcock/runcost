@@ -15,13 +15,14 @@ SAMPLE_FILE = ROOT / "fixtures" / "source-files" / "alpha-smoke-samples.json"
 SAMPLE_RETRIEVED_AT = "2026-05-26T00:00:00Z"
 
 from runcost import from_langchain_message  # noqa: E402
+from check_alpha_smoke_contract import validate_report as validate_alpha_smoke_report  # noqa: E402
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def price_card(model: str) -> dict[str, Any]:
+def price_card(model: str, provider: str = "openai") -> dict[str, Any]:
     components = {
         "input_uncached_tokens": ("token", "1", "1000000"),
         "input_cache_read_tokens": ("token", "0.1", "1000000"),
@@ -31,8 +32,8 @@ def price_card(model: str) -> dict[str, Any]:
     }
     return {
         "schema_version": "0.1",
-        "id": f"openai:{model}:langchain-alpha-smoke-sample",
-        "provider": "openai",
+        "id": f"{provider}:{model}:langchain-alpha-smoke-sample",
+        "provider": provider,
         "surface": "framework.langchain.chat",
         "model": model,
         "components": [
@@ -81,6 +82,7 @@ def report(
         "status": status,
         "sanitized": True,
         "safe_to_attach_to_issue": True,
+        "sample_prices": True,
         "evidence": evidence(ledger, usage_fields, source, exactness),
         "next_action": next_action,
     }
@@ -95,6 +97,7 @@ def skipped(reason: str) -> dict[str, Any]:
         "status": "skipped",
         "sanitized": True,
         "safe_to_attach_to_issue": True,
+        "sample_prices": True,
         "evidence": {
             "component_names": [],
             "warning_codes": [],
@@ -145,24 +148,34 @@ def _message_to_mapping(message: Any, model: str) -> dict[str, Any]:
 
 
 def live_report() -> dict[str, Any]:
-    if not os.environ.get("OPENAI_API_KEY"):
-        return skipped("OPENAI_API_KEY is not set.")
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    openrouter_key = os.environ.get("OPENROUTER_API_KEY")
+    if not openai_key and not openrouter_key:
+        return skipped("OPENAI_API_KEY or OPENROUTER_API_KEY is not set.")
     try:
         from langchain_core.messages import HumanMessage
         from langchain_openai import ChatOpenAI
     except ImportError:
         return skipped("Install optional packages `langchain-openai` and `langchain-core` to run the live LangChain smoke.")
 
-    model = os.environ.get("RUNCOST_SMOKE_OPENAI_MODEL", "gpt-4.1-mini")
+    provider = "openai" if openai_key else "openrouter"
+    model = (
+        os.environ.get("RUNCOST_SMOKE_OPENAI_MODEL", "gpt-4.1-mini")
+        if openai_key
+        else os.environ.get("RUNCOST_SMOKE_OPENROUTER_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
+    )
     try:
-        llm = ChatOpenAI(model=model, max_tokens=16)
+        llm_kwargs = {"model": model, "max_tokens": 16}
+        if openrouter_key and not openai_key:
+            llm_kwargs.update({"api_key": openrouter_key, "base_url": "https://openrouter.ai/api/v1"})
+        llm = ChatOpenAI(**llm_kwargs)
         message = llm.invoke([HumanMessage(content="Return exactly the word pong.")])
         payload = _message_to_mapping(message, model)
         ledger = from_langchain_message(
             payload,
-            provider="openai",
+            provider=provider,
             surface="framework.langchain.chat",
-            price_cards=[price_card(payload["response_metadata"].get("model_name", model))],
+            price_cards=[price_card(payload["response_metadata"].get("model_name", model), provider)],
         )
         return report(
             mode="live",
@@ -198,6 +211,7 @@ def main() -> int:
         raise SystemExit("--allow-sample-prices is required so smoke output is not mistaken for invoice-exact pricing.")
 
     result = sample_report() if args.mode == "sample" else live_report()
+    validate_alpha_smoke_report(result)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")

@@ -9,10 +9,15 @@ import sys
 import tempfile
 from pathlib import Path
 
+from check_invoice_comparison_contract import validate_comparison_contract
+
 ROOT = Path(__file__).resolve().parents[1]
 COMMAND = ROOT / "scripts" / "compare_invoice_dashboard.py"
+OPENAI_COSTS_CONVERTER = ROOT / "scripts" / "create_openai_costs_comparison_input.py"
+OPENAI_COSTS_RUNNER = ROOT / "scripts" / "run_openai_costs_invoice_comparison.py"
 SAMPLE = ROOT / "fixtures" / "source-files" / "invoice-dashboard-comparison-sample.json"
-REPORT = ROOT / "docs" / "reports" / "2026-05-26-invoice-dashboard-comparison-sample.md"
+OPENAI_COSTS_SAMPLE = ROOT / "fixtures" / "source-files" / "openai-costs-comparison-source.json"
+REPORT = ROOT / "docs" / "internal" / "reports" / "2026-05-26-invoice-dashboard-comparison-sample.md"
 
 EXPECTED_FIELDS = {
     "request_count",
@@ -80,6 +85,45 @@ def generated_sample_comparison() -> dict[str, object]:
         return json.loads(output.read_text(encoding="utf-8"))
 
 
+def generated_openai_costs_sample_comparison() -> dict[str, object]:
+    assert OPENAI_COSTS_CONVERTER.exists(), "missing OpenAI Costs API comparison-input converter"
+    assert OPENAI_COSTS_SAMPLE.exists(), "missing sanitized OpenAI Costs API comparison sample"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        comparison_input = Path(temp_dir) / "comparison-input.json"
+        comparison_output = Path(temp_dir) / "comparison-output.json"
+        subprocess.run(
+            [
+                sys.executable,
+                str(OPENAI_COSTS_CONVERTER),
+                "--input",
+                str(OPENAI_COSTS_SAMPLE),
+                "--output",
+                str(comparison_input),
+            ],
+            cwd=ROOT,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        subprocess.run(
+            [
+                sys.executable,
+                str(COMMAND),
+                "--input",
+                str(comparison_input),
+                "--output",
+                str(comparison_output),
+            ],
+            cwd=ROOT,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        return json.loads(comparison_output.read_text(encoding="utf-8"))
+
+
 def walk_sanitized(value: object, path: str = "$") -> None:
     if isinstance(value, dict):
         for key, child in value.items():
@@ -130,6 +174,7 @@ def validate_rows(comparison: dict[str, object]) -> None:
 
 
 def validate_common(comparison: dict[str, object]) -> None:
+    validate_comparison_contract(comparison)
     walk_sanitized(comparison)
     assert comparison["schema_version"] == "0.1"
     assert isinstance(comparison.get("comparison_id"), str) and comparison["comparison_id"]
@@ -207,6 +252,80 @@ def self_check_real_validation() -> None:
         raise AssertionError("real comparison validation must reject discrepancies without product-truth actions")
 
 
+def self_check_input_safety() -> None:
+    sample = json.loads(SAMPLE.read_text(encoding="utf-8"))
+
+    unsafe_private = json.loads(json.dumps(sample))
+    unsafe_private["safe_to_commit"] = False
+    unsafe_private["contains_private_billing_export"] = True
+
+    unsafe_secret = json.loads(json.dumps(sample))
+    unsafe_secret["provider"]["values"]["provider_reported_cost"] = "sk-test-secret"
+
+    for unsafe in [unsafe_private, unsafe_secret]:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            unsafe_input = Path(temp_dir) / "unsafe-input.json"
+            unsafe_output = Path(temp_dir) / "unsafe-output.json"
+            unsafe_input.write_text(json.dumps(unsafe), encoding="utf-8")
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(COMMAND),
+                    "--input",
+                    str(unsafe_input),
+                    "--output",
+                    str(unsafe_output),
+                ],
+                cwd=ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            assert result.returncode != 0, "invoice comparison command must reject unsafe inputs"
+            assert not unsafe_output.exists(), "invoice comparison command must not write output for unsafe inputs"
+
+
+def self_check_openai_costs_converter() -> None:
+    comparison = generated_openai_costs_sample_comparison()
+    validate_common(comparison)
+    assert comparison["comparison_id"] == "openai-costs-api-sample-2026-05-26"
+    assert comparison["provider"] == "openai"
+    assert comparison["surface"] == "openai.organization.costs"
+    assert comparison["evidence_type"] == "sanitized_sample"
+    assert comparison["milestone8_real_evidence"] is False
+    fields = {row["field"] for row in comparison["rows"]}
+    assert fields == {"line_item_count", "provider_reported_cost", "runcost_total"}
+    assert comparison["summary"]["exact"] >= 2
+    assert comparison["summary"]["estimated"] >= 1
+
+
+def self_check_openai_costs_runner() -> None:
+    assert OPENAI_COSTS_RUNNER.exists(), "missing OpenAI Costs API invoice comparison runner"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        output = Path(temp_dir) / "openai-costs-runner-comparison.json"
+        subprocess.run(
+            [
+                sys.executable,
+                str(OPENAI_COSTS_RUNNER),
+                "--mode",
+                "sample",
+                "--output",
+                str(output),
+                "--allow-sample-prices",
+            ],
+            cwd=ROOT,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        comparison = json.loads(output.read_text(encoding="utf-8"))
+    validate_common(comparison)
+    assert comparison["comparison_id"] == "openai-costs-api-sample-2026-05-26"
+    assert comparison["milestone8_real_evidence"] is False
+    assert comparison["evidence_type"] == "sanitized_sample"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Check invoice/dashboard comparison mechanics or a real comparison artifact.")
     parser.add_argument("--comparison", help="Existing comparison JSON to validate instead of generating the checked-in sample.")
@@ -215,6 +334,9 @@ def main() -> int:
 
     assert REPORT.exists(), "missing dated invoice/dashboard comparison report"
     self_check_real_validation()
+    self_check_input_safety()
+    self_check_openai_costs_converter()
+    self_check_openai_costs_runner()
     if args.comparison:
         comparison = json.loads(Path(args.comparison).read_text(encoding="utf-8"))
     else:

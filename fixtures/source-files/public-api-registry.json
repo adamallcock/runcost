@@ -1,0 +1,165 @@
+{
+  "schema_version": "0.1",
+  "updated_at": "2026-05-27",
+  "description": "Machine-readable registry for the public RunCost package APIs. Schemas define data contracts; this registry defines exported capability parity.",
+  "capabilities": [
+    {
+      "id": "core_calculate_cost",
+      "category": "core",
+      "status": "polyglot",
+      "evidence": ["fixtures/openai-responses-basic.json", "fixtures/decimal-arithmetic-adversarial.json"],
+      "languages": {
+        "python": { "runtime": ["calculate_cost"], "types": [] },
+        "javascript": { "runtime": ["calculateCost"], "types": ["CalculateCostOptions"] },
+        "go": { "runtime": ["CalculateCost", "CalculateCostWithMode", "CalculateCostWithOptions"], "types": ["CostOptions"] }
+      }
+    },
+    {
+      "id": "core_typed_calculate_cost",
+      "category": "language_specific",
+      "status": "language_specific",
+      "notes": "Go-only typed wrapper for the canonical normalized usage, price-card, and discount path.",
+      "evidence": ["packages/go/ledger/typed_api_test.go", "packages/go/ledger/example_test.go"],
+      "languages": {
+        "python": { "runtime": [], "types": [] },
+        "javascript": { "runtime": [], "types": [] },
+        "go": { "runtime": ["CalculateCostTyped", "CalculateCostTypedWithMode", "CalculateCostTypedWithOptions"], "types": ["UsageLedger", "PriceCard", "DiscountPolicy"] }
+      }
+    },
+    {
+      "id": "core_from_response",
+      "category": "core",
+      "status": "polyglot",
+      "evidence": ["fixtures/openai-responses-raw-cached-reasoning.json"],
+      "languages": {
+        "python": { "runtime": ["from_response"], "types": [] },
+        "javascript": { "runtime": ["fromResponse"], "types": ["FromResponseOptions"] },
+        "go": { "runtime": ["FromResponse"], "types": [] }
+      }
+    },
+    {
+      "id": "core_extract_usage_ledger",
+      "category": "core",
+      "status": "polyglot",
+      "evidence": ["fixtures/openai-responses-raw-cached-reasoning.json"],
+      "languages": {
+        "python": { "runtime": ["extract_usage_ledger"], "types": [] },
+        "javascript": { "runtime": ["extractUsageLedger"], "types": ["ExtractOptions"] },
+        "go": { "runtime": ["ExtractUsageLedger"], "types": [] }
+      }
+    },
+    {
+      "id": "core_aggregate_cost_ledgers",
+      "category": "core",
+      "status": "polyglot",
+      "evidence": ["fixtures/cost-ledger-aggregation-basic.json"],
+      "languages": {
+        "python": { "runtime": ["aggregate_cost_ledgers"], "types": [] },
+        "javascript": { "runtime": ["aggregateCostLedgers"], "types": ["AggregateCostLedgersOptions"] },
+        "go": { "runtime": ["AggregateCostLedgers"], "types": [] }
+      }
+    },
+    {
+      "id": "contract_types",
+      "category": "type_contract",
+      "status": "partial",
+      "notes": "Python and TypeScript expose broader schema-shaped contract types; Go has typed normalized usage, price-card, and discount inputs, while map-backed cost-ledger/debug surfaces remain V1 hardening work.",
+      "evidence": ["schemas/usage-ledger.schema.json", "schemas/price-card.schema.json", "schemas/discount-policy.schema.json", "schemas/cost-ledger.schema.json"],
+      "languages": {
+        "python": { "runtime": [], "types": ["UsageLedger", "PriceCard", "DiscountPolicy", "CostLedger", "DebugTrace"] },
+        "javascript": { "runtime": [], "types": ["UsageLedger", "PriceCard", "DiscountPolicy", "CostLedger", "DebugTrace"] },
+        "go": { "runtime": [], "types": ["UsageLedger", "PriceCard", "DiscountPolicy"] }
+      }
+    },
+    {
+      "id": "taxonomy_types",
+      "category": "type_contract",
+      "status": "partial",
+      "notes": "Python and TypeScript expose generated literal/union taxonomy types. Go currently consumes generated taxonomy slices internally for validation and ordering but does not expose public enum-like taxonomy types.",
+      "evidence": ["schemas/taxonomy.json", "scripts/check_type_taxonomy_parity.py"],
+      "languages": {
+        "python": { "runtime": [], "types": ["UsageComponentName", "UsageUnit", "WarningCode", "AliasResolution", "DebugDecisionType"] },
+        "javascript": { "runtime": [], "types": ["UsageComponentName", "UsageUnit", "WarningCode", "AliasResolution", "DebugDecisionType"] },
+        "go": { "runtime": [], "types": [] }
+      }
+    },
+    {
+      "id": "provider_extractors_openai",
+      "category": "provider_extractor",
+      "status": "polyglot",
+      "evidence": ["fixtures/openai-responses-raw-cached-reasoning.json", "fixtures/openai-embeddings-raw-basic.json", "fixtures/openai-images-token-usage.json"],
+      "languages": {
+        "python": { "runtime": ["extract_openai_responses_usage", "extract_openai_chat_completions_usage", "extract_openai_embeddings_usage", "extract_openai_audio_transcription_usage", "extract_openai_images_usage"], "types": [] },
+        "javascript": { "runtime": ["extractOpenAIResponsesUsage", "extractOpenAIChatCompletionsUsage", "extractOpenAIEmbeddingsUsage", "extractOpenAIAudioTranscriptionUsage", "extractOpenAIImagesUsage"], "types": [] },
+        "go": { "runtime": ["ExtractUsageLedger"], "types": [] }
+      }
+    },
+    {
+      "id": "provider_extractors_openai_usage_api",
+      "category": "provider_extractor",
+      "status": "polyglot",
+      "evidence": ["fixtures/openai-usage-completions-buckets.json", "fixtures/openai-usage-images-buckets.json", "fixtures/openai-vector-store-storage-gb-days.json"],
+      "languages": {
+        "python": { "runtime": ["extract_openai_usage_completions_usage", "extract_openai_usage_embeddings_usage", "extract_openai_usage_images_usage", "extract_openai_usage_audio_speeches_usage", "extract_openai_usage_audio_transcriptions_usage", "extract_openai_vector_store_storage_usage", "extract_openai_usage_code_interpreter_sessions_usage"], "types": [] },
+        "javascript": { "runtime": ["extractOpenAIUsageCompletionsUsage", "extractOpenAIUsageEmbeddingsUsage", "extractOpenAIUsageImagesUsage", "extractOpenAIUsageAudioSpeechesUsage", "extractOpenAIUsageAudioTranscriptionsUsage", "extractOpenAIVectorStoreStorageUsage", "extractOpenAIUsageCodeInterpreterSessionsUsage"], "types": [] },
+        "go": { "runtime": ["ExtractUsageLedger"], "types": [] }
+      }
+    },
+    {
+      "id": "provider_extractors_openai_compatible",
+      "category": "provider_extractor",
+      "status": "polyglot",
+      "evidence": ["fixtures/openai-chat-raw-cached-reasoning.json", "fixtures/openrouter-chat-raw-basic.json"],
+      "languages": {
+        "python": { "runtime": ["extract_openai_compatible_chat_completions_usage", "extract_openrouter_chat_completions_usage"], "types": [] },
+        "javascript": { "runtime": ["extractOpenAICompatibleChatCompletionsUsage", "extractOpenRouterChatCompletionsUsage"], "types": [] },
+        "go": { "runtime": ["ExtractUsageLedger"], "types": [] }
+      }
+    },
+    {
+      "id": "provider_extractors_core_vendors",
+      "category": "provider_extractor",
+      "status": "polyglot",
+      "evidence": ["fixtures/anthropic-messages-raw-cache.json", "fixtures/gemini-generate-content-raw-reasoning-cache.json", "fixtures/bedrock-converse-raw-cache.json", "fixtures/cohere-chat-raw-usage-billed-units.json"],
+      "languages": {
+        "python": { "runtime": ["extract_anthropic_messages_usage", "extract_gemini_generate_content_usage", "extract_bedrock_converse_usage", "extract_bedrock_invoke_model_usage", "extract_cohere_chat_usage", "extract_cohere_rerank_usage"], "types": [] },
+        "javascript": { "runtime": ["extractAnthropicMessagesUsage", "extractGeminiGenerateContentUsage", "extractBedrockConverseUsage", "extractBedrockInvokeModelUsage", "extractCohereChatUsage", "extractCohereRerankUsage"], "types": [] },
+        "go": { "runtime": ["ExtractUsageLedger"], "types": [] }
+      }
+    },
+    {
+      "id": "framework_adapters_common",
+      "category": "framework_adapter",
+      "status": "polyglot",
+      "evidence": ["fixtures/langchain-chat-message-usage-metadata.json", "fixtures/vercel-ai-sdk-stream-text-finish.json", "fixtures/openai-agents-sdk-usage.json", "fixtures/openrouter-openai-sdk-response.json"],
+      "languages": {
+        "python": { "runtime": ["from_langchain_message", "from_vercel_ai_sdk_result", "from_vercel_ai_sdk_stream_finish", "from_llamaindex_token_counter", "from_haystack_generator_result", "from_litellm_response", "from_ag2_usage_summary", "from_openai_agents_usage", "from_langsmith_run", "from_semantic_kernel_telemetry", "from_openrouter_sdk_response"], "types": [] },
+        "javascript": { "runtime": ["fromLangChainMessage", "fromVercelAISDKResult", "fromVercelAISDKStreamFinish", "fromLlamaIndexTokenCounter", "fromHaystackGeneratorResult", "fromLiteLLMResponse", "fromAG2UsageSummary", "fromOpenAIAgentsUsage", "fromLangSmithRun", "fromSemanticKernelTelemetry", "fromOpenRouterSDKResponse"], "types": [] },
+        "go": { "runtime": ["FromLangChainMessage", "FromVercelAISDKResult", "FromVercelAISDKStreamFinish", "FromLlamaIndexTokenCounter", "FromHaystackGeneratorResult", "FromLiteLLMResponse", "FromAG2UsageSummary", "FromOpenAIAgentsUsage", "FromLangSmithRun", "FromSemanticKernelTelemetry", "FromOpenRouterSDKResponse"], "types": [] }
+      }
+    },
+    {
+      "id": "framework_adapters_language_specific",
+      "category": "language_specific",
+      "status": "language_specific",
+      "notes": "Ergonomic helpers that intentionally match one framework's host language.",
+      "evidence": ["fixtures/langchain-callback-context-manager.json", "fixtures/vercel-ai-sdk-middleware-wrap-generate.json", "fixtures/openrouter-agent-sdk-response.json"],
+      "languages": {
+        "python": { "runtime": ["track_langchain_costs", "RunCostLangChainCallback"], "types": [] },
+        "javascript": { "runtime": ["createRunCostVercelMiddleware", "createRunCostVercelOnFinish", "fromOpenRouterAgentResult"], "types": ["RunCostVercelMiddleware", "RunCostVercelOnFinish"] },
+        "go": { "runtime": [], "types": [] }
+      }
+    },
+    {
+      "id": "source_adapters",
+      "category": "source_adapter",
+      "status": "polyglot",
+      "evidence": ["fixtures/llm-prices-adapter-basic.json", "fixtures/litellm-adapter-basic.json", "fixtures/openrouter-models-adapter-basic.json", "fixtures/models-dev-adapter-basic.json"],
+      "languages": {
+        "python": { "runtime": ["price_cards_from_llm_prices", "price_cards_from_litellm", "price_cards_from_openrouter_models", "price_cards_from_models_dev", "price_cards_from_official_snapshot", "price_cards_from_portkey", "price_cards_from_source_cache", "price_cards_from_user_pricing", "price_cards_from_helicone", "price_cards_from_json_file", "price_cards_from_yaml_file"], "types": [] },
+        "javascript": { "runtime": ["priceCardsFromLlmPrices", "priceCardsFromLiteLLM", "priceCardsFromOpenRouterModels", "priceCardsFromModelsDev", "priceCardsFromOfficialSnapshot", "priceCardsFromPortkey", "priceCardsFromSourceCache", "priceCardsFromUserPricing", "priceCardsFromHelicone", "priceCardsFromJSONFile", "priceCardsFromYAMLFile"], "types": ["SourceAdapterOptions"] },
+        "go": { "runtime": ["PriceCardsFromLlmPrices", "PriceCardsFromLiteLLM", "PriceCardsFromOpenRouterModels", "PriceCardsFromModelsDev", "PriceCardsFromOfficialSnapshot", "PriceCardsFromPortkey", "PriceCardsFromSourceCache", "PriceCardsFromUserPricing", "PriceCardsFromHelicone", "PriceCardsFromJSONFile", "PriceCardsFromYAMLFile"], "types": [] }
+      }
+    }
+  ]
+}

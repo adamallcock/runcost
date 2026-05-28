@@ -27,6 +27,7 @@ from runcost import (  # noqa: E402
     from_response,
     from_vercel_ai_sdk_stream_finish,
 )
+from check_alpha_smoke_contract import validate_report as validate_alpha_smoke_report  # noqa: E402
 
 ScenarioResult = dict[str, Any]
 
@@ -363,7 +364,7 @@ def live_openrouter_cost_compare(args: argparse.Namespace) -> ScenarioResult:
     api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
         return skipped("openrouter_cost_compare", "OPENROUTER_API_KEY is not set.")
-    model = os.environ.get("RUNCOST_SMOKE_OPENROUTER_MODEL", "openai/gpt-4.1-mini")
+    model = os.environ.get("RUNCOST_SMOKE_OPENROUTER_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
     try:
         response = post_json(
             "https://openrouter.ai/api/v1/chat/completions",
@@ -388,30 +389,42 @@ def live_openrouter_cost_compare(args: argparse.Namespace) -> ScenarioResult:
 
 
 def framework_smoke_result(scenario: str, command: list[str]) -> ScenarioResult:
-    with tempfile.TemporaryDirectory() as temp_dir:
-        output = Path(temp_dir) / f"{scenario}.json"
-        subprocess.run(
-            [
-                *command,
-                "--mode",
-                "live",
-                "--output",
-                str(output),
-                "--allow-sample-prices",
-            ],
-            cwd=ROOT,
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
+    try:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / f"{scenario}.json"
+            subprocess.run(
+                [
+                    *command,
+                    "--mode",
+                    "live",
+                    "--output",
+                    str(output),
+                    "--allow-sample-prices",
+                ],
+                cwd=ROOT,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            report = json.loads(output.read_text(encoding="utf-8"))
+        return {
+            "scenario": report["scenario"],
+            "status": report["status"],
+            "evidence": report["evidence"],
+            "next_action": report["next_action"],
+        }
+    except (
+        FileNotFoundError,
+        json.JSONDecodeError,
+        KeyError,
+        OSError,
+        subprocess.CalledProcessError,
+    ) as exc:
+        return needs_product_truth(
+            scenario,
+            f"Framework smoke child process failed with sanitized error type {type(exc).__name__}.",
         )
-        report = json.loads(output.read_text(encoding="utf-8"))
-    return {
-        "scenario": report["scenario"],
-        "status": report["status"],
-        "evidence": report["evidence"],
-        "next_action": report["next_action"],
-    }
 
 
 def live_vercel_ai_sdk_stream_text(_args: argparse.Namespace) -> ScenarioResult:
@@ -493,6 +506,7 @@ def main() -> int:
         raise SystemExit("--allow-sample-prices is required so smoke output is not mistaken for invoice-exact pricing.")
 
     report = build_report(args)
+    validate_alpha_smoke_report(report)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

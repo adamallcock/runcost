@@ -1,0 +1,248 @@
+{
+  "generated_at": "2026-05-27T04:51:35Z",
+  "mode": "live",
+  "product_truth_policy": {
+    "needs_product_truth": "Convert every live discrepancy into a fixture, structured warning, documented limitation, or extractor/source-adapter fix.",
+    "privacy": "The report intentionally omits prompts, messages, response content, headers, account identifiers, and raw provider responses."
+  },
+  "safe_to_attach_to_issue": true,
+  "sample_prices": true,
+  "sanitized": true,
+  "scenarios": [
+    {
+      "evidence": {
+        "component_names": [
+          "input_uncached_tokens",
+          "output_text_tokens"
+        ],
+        "exactness": "sample_prices_not_invoice_exact",
+        "model": {
+          "alias_resolution": "none",
+          "billed": "gpt-4.1-mini-2025-04-14",
+          "requested": "gpt-4.1-mini-2025-04-14",
+          "returned": "gpt-4.1-mini-2025-04-14"
+        },
+        "price_source_names": [
+          "alpha-smoke-sample"
+        ],
+        "provider": "openai",
+        "raw_response_retained": false,
+        "source": "live",
+        "surface": "openai.responses",
+        "total": "0.000017",
+        "usage_fields_present": [
+          "input_tokens",
+          "input_tokens_details",
+          "output_tokens",
+          "output_tokens_details",
+          "total_tokens"
+        ],
+        "warning_codes": []
+      },
+      "next_action": {
+        "reason": "Sanitized smoke output matched an existing extractor path.",
+        "type": "none"
+      },
+      "scenario": "openai_responses",
+      "status": "passed"
+    },
+    {
+      "evidence": {
+        "component_names": [
+          "input_uncached_tokens",
+          "output_text_tokens"
+        ],
+        "exactness": "sample_prices_not_invoice_exact",
+        "model": {
+          "alias_resolution": "none",
+          "billed": "claude-sonnet-4-5-20250929",
+          "requested": "claude-sonnet-4-5-20250929",
+          "returned": "claude-sonnet-4-5-20250929"
+        },
+        "price_source_names": [
+          "alpha-smoke-sample"
+        ],
+        "provider": "anthropic",
+        "raw_response_retained": false,
+        "source": "live",
+        "surface": "anthropic.messages",
+        "total": "0.000153",
+        "usage_fields_present": [
+          "cache_creation",
+          "cache_creation_input_tokens",
+          "cache_read_input_tokens",
+          "inference_geo",
+          "input_tokens",
+          "output_tokens",
+          "service_tier"
+        ],
+        "warning_codes": []
+      },
+      "next_action": {
+        "reason": "Sanitized smoke output matched an existing extractor path.",
+        "type": "none"
+      },
+      "scenario": "anthropic_prompt_caching",
+      "status": "passed"
+    },
+    {
+      "evidence": {
+        "component_names": [
+          "input_uncached_tokens",
+          "output_reasoning_tokens"
+        ],
+        "exactness": "sample_prices_not_invoice_exact",
+        "model": {
+          "alias_resolution": "none",
+          "billed": "nvidia/nemotron-3-super-120b-a12b-20230311:free",
+          "requested": "nvidia/nemotron-3-super-120b-a12b-20230311:free",
+          "returned": "nvidia/nemotron-3-super-120b-a12b-20230311:free"
+        },
+        "price_source_names": [
+          "alpha-smoke-sample"
+        ],
+        "provider": "openrouter",
+        "raw_response_retained": false,
+        "source": "live",
+        "surface": "openrouter.chat_completions",
+        "total": "0.00019",
+        "usage_fields_present": [
+          "completion_tokens",
+          "completion_tokens_details",
+          "cost",
+          "cost_details",
+          "is_byok",
+          "prompt_tokens",
+          "prompt_tokens_details",
+          "total_tokens"
+        ],
+        "warning_codes": []
+      },
+      "next_action": {
+        "reason": "Sanitized smoke output matched an existing extractor path.",
+        "type": "none"
+      },
+      "scenario": "openrouter_cost_compare",
+      "status": "passed"
+    },
+    {
+      "evidence": {
+        "component_names": [
+          "input_uncached_tokens",
+          "output_text_tokens"
+        ],
+        "exactness": "sample_prices_not_invoice_exact",
+        "model": {
+          "alias_resolution": "none",
+          "billed": "gpt-4.1-mini",
+          "requested": "gpt-4.1-mini",
+          "returned": "gpt-4.1-mini"
+        },
+        "price_source_names": [
+          "alpha-smoke-sample"
+        ],
+        "provider": "openai",
+        "raw_response_retained": false,
+        "source": "live",
+        "surface": "framework.vercel_ai_sdk",
+        "total": "0.000017",
+        "usage_fields_present": [
+          "usage.cachedInputTokens",
+          "usage.inputTokenDetails",
+          "usage.inputTokens",
+          "usage.outputTokenDetails",
+          "usage.outputTokens",
+          "usage.raw",
+          "usage.reasoningTokens",
+          "usage.totalTokens"
+        ],
+        "warning_codes": []
+      },
+      "next_action": {
+        "reason": "Live Vercel AI SDK streamText usage produced a sanitized RunCost ledger.",
+        "type": "none"
+      },
+      "scenario": "vercel_ai_sdk_stream_text",
+      "status": "passed"
+    },
+    {
+      "evidence": {
+        "component_names": [
+          "input_uncached_tokens",
+          "output_text_tokens"
+        ],
+        "exactness": "sample_prices_not_invoice_exact",
+        "model": {
+          "alias_resolution": "none",
+          "billed": "gpt-4.1-mini-2025-04-14",
+          "requested": "gpt-4.1-mini-2025-04-14",
+          "returned": "gpt-4.1-mini-2025-04-14"
+        },
+        "price_source_names": [
+          "alpha-smoke-sample"
+        ],
+        "provider": "openai",
+        "raw_response_retained": false,
+        "source": "live",
+        "surface": "framework.langchain.chat",
+        "total": "0.000015",
+        "usage_fields_present": [
+          "input_token_details",
+          "input_tokens",
+          "output_token_details",
+          "output_tokens",
+          "total_tokens"
+        ],
+        "warning_codes": []
+      },
+      "next_action": {
+        "reason": "Live LangChain invoke produced a sanitized RunCost ledger.",
+        "type": "none"
+      },
+      "scenario": "langchain_agent_run",
+      "status": "passed"
+    },
+    {
+      "evidence": {
+        "component_names": [
+          "input_uncached_tokens",
+          "output_text_tokens"
+        ],
+        "exactness": "synthetic_sample",
+        "model": {
+          "alias_resolution": "none",
+          "billed": "multiple",
+          "requested": "multiple",
+          "returned": "multiple"
+        },
+        "price_source_names": [
+          "alpha-smoke-sample"
+        ],
+        "provider": "aggregate",
+        "raw_response_retained": false,
+        "source": "sample",
+        "surface": "aggregate.cost_ledgers",
+        "total": "0.000846",
+        "usage_fields_present": [
+          "discount_policies.match.provider",
+          "usage_ledger.components"
+        ],
+        "warning_codes": []
+      },
+      "next_action": {
+        "reason": "Sanitized smoke output matched an existing extractor path.",
+        "type": "none"
+      },
+      "scenario": "multi_provider_discount",
+      "status": "passed"
+    }
+  ],
+  "schema_version": "0.1",
+  "summary": {
+    "failed": 0,
+    "needs_product_truth": 0,
+    "passed": 6,
+    "skipped": 0,
+    "total": 6
+  }
+}

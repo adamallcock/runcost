@@ -2,7 +2,7 @@
   "name": "runcost",
   "version": "0.1.0",
   "type": "module",
-  "description": "Prototype cost calculator for LLM and agent API responses.",
+  "description": "Alpha cost ledger utility for LLM and agent API responses.",
   "license": "MIT",
   "homepage": "https://github.com/adamallcock/runcost#readme",
   "bugs": {

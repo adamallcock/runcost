@@ -2,7 +2,7 @@
 title: RunCost API Reference
 date: 2026-05-25
 type: reference
-status: draft
+status: active
 ---
 
 # RunCost API Reference
@@ -153,7 +153,7 @@ Strict mode raises or fails fixture validation when the calculator would otherwi
 
 Set `debug_trace=True` in Python, `debugTrace: true` or `debug_trace: true` in JavaScript, or `"debug_trace": true` in Go options to include `debug_trace` in the returned ledger.
 
-The trace records price-card candidates, selected component prices, alias resolution, discount applications, and warnings. See [Debug Trace](2026-05-25-debug-trace.md).
+The trace records price-card candidates, selected component prices, alias resolution, discount applications, and warnings. See [Debug Trace](debug-trace.md).
 
 ## Canonical Schemas
 

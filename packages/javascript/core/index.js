@@ -30,6 +30,7 @@ const COMPONENT_ORDER_NAMES = [
   "image_generation_units",
   "video_generation_units",
   "audio_generation_units",
+  "audio_generation_characters",
   "transcription_seconds",
   "endpoint_runtime_seconds",
   "endpoint_instance_hours",
@@ -49,6 +50,7 @@ const TOOL_OR_FEATURE_COMPONENTS = new Set([
   "image_generation_units",
   "video_generation_units",
   "audio_generation_units",
+  "audio_generation_characters",
   "transcription_seconds",
   "endpoint_runtime_seconds",
   "storage_gb_days"
@@ -1215,6 +1217,375 @@ export function extractOpenAIEmbeddingsUsage(response, options = {}) {
   });
 }
 
+export function extractOpenAIAudioTranscriptionUsage(response, options = {}) {
+  const usage = response.usage && typeof response.usage === "object" ? response.usage : {};
+  const components = [];
+  if (usage.type === "duration" || hasOwn(usage, "seconds")) {
+    components.push(positiveComponent("transcription_seconds", usage.seconds || 0, "second", "$.usage.seconds"));
+  } else if (Object.keys(usage).length > 0) {
+    const inputDetails = usage.input_token_details || {};
+    const audioTokens = inputDetails.audio_tokens || 0;
+    const inputTokens = usage.input_tokens || 0;
+    const textTokens = hasOwn(inputDetails, "text_tokens") ? inputDetails.text_tokens : inputTokens - audioTokens;
+    const outputTokens = usage.output_tokens || 0;
+    components.push(
+      positiveComponent("input_uncached_tokens", textTokens, "token", "$.usage.input_token_details.text_tokens"),
+      positiveComponent("input_audio_tokens", audioTokens, "token", "$.usage.input_token_details.audio_tokens"),
+      positiveComponent("output_text_tokens", outputTokens, "token", "$.usage.output_tokens")
+    );
+  } else if (response.duration !== undefined && response.duration !== null) {
+    components.push(positiveComponent("transcription_seconds", response.duration, "second", "$.duration"));
+  }
+
+  const returnedModel = response.model || options.model;
+  return baseUsageLedger({
+    provider: options.provider || "openai",
+    surface: options.surface || "openai.audio_transcriptions",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage: Object.keys(usage).length > 0 ? usage : { duration: response.duration },
+    components: compactComponents(components)
+  });
+}
+
+export function extractOpenAIImagesUsage(response, options = {}) {
+  const usage = response.usage && typeof response.usage === "object" ? response.usage : {};
+  const components = [];
+  if (Object.keys(usage).length > 0) {
+    const inputDetails = usage.input_tokens_details || {};
+    const inputImageTokens = inputDetails.image_tokens || 0;
+    const inputTokens = usage.input_tokens || 0;
+    const inputTextTokens = hasOwn(inputDetails, "text_tokens") ? inputDetails.text_tokens : inputTokens - inputImageTokens;
+    const outputDetails = usage.output_tokens_details || {};
+    const outputImageTokens = hasOwn(outputDetails, "image_tokens") ? outputDetails.image_tokens : usage.output_tokens || 0;
+    components.push(
+      positiveComponent("input_uncached_tokens", inputTextTokens, "token", "$.usage.input_tokens_details.text_tokens"),
+      positiveComponent("input_image_tokens", inputImageTokens, "token", "$.usage.input_tokens_details.image_tokens"),
+      positiveComponent("output_image_tokens", outputImageTokens, "token", "$.usage.output_tokens")
+    );
+  } else {
+    const images = Array.isArray(response.data) ? response.data : [];
+    components.push(positiveComponent("image_generation_units", images.length, "image", "$.data"));
+  }
+
+  const returnedModel = response.model || options.model;
+  return baseUsageLedger({
+    provider: options.provider || "openai",
+    surface: options.surface || "openai.images",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage: Object.keys(usage).length > 0 ? usage : { image_count: Array.isArray(response.data) ? response.data.length : 0 },
+    components: compactComponents(components)
+  });
+}
+
+function openAIUsageImagesCount(response) {
+  if (response.object === "organization.usage.images.result") {
+    return response.images ?? 0;
+  }
+  let total = "0";
+  if (Array.isArray(response.data)) {
+    for (const bucket of response.data) {
+      const results = bucket && Array.isArray(bucket.results) ? bucket.results : [];
+      for (const result of results) {
+        total = addDecimal(total, result && result.images !== undefined ? result.images : 0);
+      }
+    }
+  }
+  if (parseDecimal(total).value === 0n && response.images !== undefined) {
+    total = addDecimal(total, response.images);
+  }
+  return total;
+}
+
+function openAIUsageFirstResultValue(response, key) {
+  if (response[key] !== undefined && response[key] !== null) {
+    return response[key];
+  }
+  if (Array.isArray(response.data)) {
+    for (const bucket of response.data) {
+      const results = bucket && Array.isArray(bucket.results) ? bucket.results : [];
+      for (const result of results) {
+        if (result && result[key] !== undefined && result[key] !== null) {
+          return result[key];
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
+function openAIUsageSumResultValue(response, key) {
+  if (response[key] !== undefined && response[key] !== null) {
+    return response[key];
+  }
+  let total = "0";
+  if (Array.isArray(response.data)) {
+    for (const bucket of response.data) {
+      const results = bucket && Array.isArray(bucket.results) ? bucket.results : [];
+      for (const result of results) {
+        total = addDecimal(total, result && result[key] !== undefined ? result[key] : 0);
+      }
+    }
+  }
+  return total;
+}
+
+export function extractOpenAIUsageCompletionsUsage(response, options = {}) {
+  const inputTokens = openAIUsageSumResultValue(response, "input_tokens");
+  const cachedTokens = openAIUsageSumResultValue(response, "input_cached_tokens");
+  const uncachedDifference = subtractDecimal(inputTokens, cachedTokens);
+  const uncachedTokens = parseDecimal(uncachedDifference).value < 0n ? "0" : uncachedDifference;
+  const outputTokens = openAIUsageSumResultValue(response, "output_tokens");
+  const inputAudioTokens = openAIUsageSumResultValue(response, "input_audio_tokens");
+  const outputAudioTokens = openAIUsageSumResultValue(response, "output_audio_tokens");
+  const numModelRequests = openAIUsageSumResultValue(response, "num_model_requests");
+  const returnedModel = response.model || options.model || openAIUsageFirstResultValue(response, "model") || "completions";
+  const rawUsage = {
+    input_tokens: inputTokens,
+    input_cached_tokens: cachedTokens,
+    output_tokens: outputTokens,
+    input_audio_tokens: inputAudioTokens,
+    output_audio_tokens: outputAudioTokens,
+    num_model_requests: numModelRequests,
+    batch: openAIUsageFirstResultValue(response, "batch"),
+    service_tier: openAIUsageFirstResultValue(response, "service_tier")
+  };
+  Object.keys(rawUsage).forEach((key) => {
+    if (rawUsage[key] === undefined || rawUsage[key] === null) {
+      delete rawUsage[key];
+    }
+  });
+  return baseUsageLedger({
+    provider: options.provider || "openai",
+    surface: options.surface || "openai.usage.completions",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage,
+    components: compactComponents([
+      positiveComponent("input_uncached_tokens", uncachedTokens, "token", "$..input_tokens"),
+      positiveComponent("input_cache_read_tokens", cachedTokens, "token", "$..input_cached_tokens"),
+      positiveComponent("input_audio_tokens", inputAudioTokens, "token", "$..input_audio_tokens"),
+      positiveComponent("output_text_tokens", outputTokens, "token", "$..output_tokens"),
+      positiveComponent("output_audio_tokens", outputAudioTokens, "token", "$..output_audio_tokens")
+    ])
+  });
+}
+
+export function extractOpenAIUsageImagesUsage(response, options = {}) {
+  const images = openAIUsageImagesCount(response);
+  const returnedModel = response.model || options.model || openAIUsageFirstResultValue(response, "model") || "image-generation";
+  const rawUsage = {
+    images,
+    num_model_requests: openAIUsageFirstResultValue(response, "num_model_requests"),
+    source: openAIUsageFirstResultValue(response, "source"),
+    size: openAIUsageFirstResultValue(response, "size")
+  };
+  Object.keys(rawUsage).forEach((key) => {
+    if (rawUsage[key] === undefined || rawUsage[key] === null) {
+      delete rawUsage[key];
+    }
+  });
+  return baseUsageLedger({
+    provider: options.provider || "openai",
+    surface: options.surface || "openai.usage.images",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage,
+    components: compactComponents([
+      positiveComponent("image_generation_units", images, "image", "$..images")
+    ])
+  });
+}
+
+function openAIUsageAudioSpeechCharacters(response) {
+  if (response.object === "organization.usage.audio_speeches.result") {
+    return response.characters ?? 0;
+  }
+  let total = "0";
+  if (Array.isArray(response.data)) {
+    for (const bucket of response.data) {
+      const results = bucket && Array.isArray(bucket.results) ? bucket.results : [];
+      for (const result of results) {
+        total = addDecimal(total, result && result.characters !== undefined ? result.characters : 0);
+      }
+    }
+  }
+  if (parseDecimal(total).value === 0n && response.characters !== undefined) {
+    total = addDecimal(total, response.characters);
+  }
+  return total;
+}
+
+export function extractOpenAIUsageAudioSpeechesUsage(response, options = {}) {
+  const characters = openAIUsageAudioSpeechCharacters(response);
+  const returnedModel = response.model || options.model || openAIUsageFirstResultValue(response, "model") || "audio-speech";
+  const rawUsage = {
+    characters,
+    num_model_requests: openAIUsageFirstResultValue(response, "num_model_requests")
+  };
+  Object.keys(rawUsage).forEach((key) => {
+    if (rawUsage[key] === undefined || rawUsage[key] === null) {
+      delete rawUsage[key];
+    }
+  });
+  return baseUsageLedger({
+    provider: options.provider || "openai",
+    surface: options.surface || "openai.usage.audio_speeches",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage,
+    components: compactComponents([
+      positiveComponent("audio_generation_characters", characters, "character", "$..characters")
+    ])
+  });
+}
+
+function openAIUsageAudioTranscriptionSeconds(response) {
+  if (response.object === "organization.usage.audio_transcriptions.result") {
+    return response.seconds ?? 0;
+  }
+  let total = "0";
+  if (Array.isArray(response.data)) {
+    for (const bucket of response.data) {
+      const results = bucket && Array.isArray(bucket.results) ? bucket.results : [];
+      for (const result of results) {
+        total = addDecimal(total, result && result.seconds !== undefined ? result.seconds : 0);
+      }
+    }
+  }
+  if (parseDecimal(total).value === 0n && response.seconds !== undefined) {
+    total = addDecimal(total, response.seconds);
+  }
+  return total;
+}
+
+export function extractOpenAIUsageAudioTranscriptionsUsage(response, options = {}) {
+  const seconds = openAIUsageAudioTranscriptionSeconds(response);
+  const returnedModel = response.model || options.model || openAIUsageFirstResultValue(response, "model") || "audio-transcription";
+  const rawUsage = {
+    seconds,
+    num_model_requests: openAIUsageFirstResultValue(response, "num_model_requests")
+  };
+  Object.keys(rawUsage).forEach((key) => {
+    if (rawUsage[key] === undefined || rawUsage[key] === null) {
+      delete rawUsage[key];
+    }
+  });
+  return baseUsageLedger({
+    provider: options.provider || "openai",
+    surface: options.surface || "openai.usage.audio_transcriptions",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage,
+    components: compactComponents([
+      positiveComponent("transcription_seconds", seconds, "second", "$..seconds")
+    ])
+  });
+}
+
+function openAIUsageEmbeddingTokens(response) {
+  if (response.object === "organization.usage.embeddings.result") {
+    return response.input_tokens ?? 0;
+  }
+  let total = "0";
+  if (Array.isArray(response.data)) {
+    for (const bucket of response.data) {
+      const results = bucket && Array.isArray(bucket.results) ? bucket.results : [];
+      for (const result of results) {
+        total = addDecimal(total, result && result.input_tokens !== undefined ? result.input_tokens : 0);
+      }
+    }
+  }
+  if (parseDecimal(total).value === 0n && response.input_tokens !== undefined) {
+    total = addDecimal(total, response.input_tokens);
+  }
+  return total;
+}
+
+export function extractOpenAIUsageEmbeddingsUsage(response, options = {}) {
+  const inputTokens = openAIUsageEmbeddingTokens(response);
+  const returnedModel = response.model || options.model || openAIUsageFirstResultValue(response, "model") || "embedding";
+  const rawUsage = {
+    input_tokens: inputTokens,
+    num_model_requests: openAIUsageFirstResultValue(response, "num_model_requests")
+  };
+  Object.keys(rawUsage).forEach((key) => {
+    if (rawUsage[key] === undefined || rawUsage[key] === null) {
+      delete rawUsage[key];
+    }
+  });
+  return baseUsageLedger({
+    provider: options.provider || "openai",
+    surface: options.surface || "openai.usage.embeddings",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage,
+    components: compactComponents([
+      positiveComponent("embedding_tokens", inputTokens, "token", "$..input_tokens")
+    ])
+  });
+}
+
+export function extractOpenAIVectorStoreStorageUsage(response, options = {}) {
+  const usageBytes = response.usage_bytes ?? 0;
+  const storageDays = options.storage_days ?? options.storageDays ?? 0;
+  const components = [];
+  if (storageDays) {
+    const quantity = multiplyDivideDecimal(usageBytes, storageDays, "1000000000");
+    components.push(positiveComponent("storage_gb_days", quantity, "gb_day", "$.usage_bytes"));
+  }
+
+  const returnedModel = response.model || options.model || "vector-store-storage";
+  return baseUsageLedger({
+    provider: options.provider || "openai",
+    surface: options.surface || "openai.vector_stores",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage: {
+      usage_bytes: usageBytes,
+      storage_days: storageDays
+    },
+    components: compactComponents(components)
+  });
+}
+
+function openAIUsageCodeInterpreterSessionCount(response) {
+  if (response.object === "organization.usage.code_interpreter_sessions.result") {
+    return response.num_sessions ?? 0;
+  }
+  let total = "0";
+  if (Array.isArray(response.data)) {
+    for (const bucket of response.data) {
+      const results = bucket && Array.isArray(bucket.results) ? bucket.results : [];
+      for (const result of results) {
+        total = addDecimal(total, result && result.num_sessions !== undefined ? result.num_sessions : 0);
+      }
+    }
+  }
+  if (parseDecimal(total).value === 0n && response.num_sessions !== undefined) {
+    total = addDecimal(total, response.num_sessions);
+  }
+  return total;
+}
+
+export function extractOpenAIUsageCodeInterpreterSessionsUsage(response, options = {}) {
+  const numSessions = openAIUsageCodeInterpreterSessionCount(response);
+  const returnedModel = response.model || options.model || "code-interpreter-session";
+  return baseUsageLedger({
+    provider: options.provider || "openai",
+    surface: options.surface || "openai.usage.code_interpreter_sessions",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage: {
+      num_sessions: numSessions
+    },
+    components: compactComponents([
+      positiveComponent("code_interpreter_session_units", numSessions, "session", "$..num_sessions")
+    ])
+  });
+}
+
 const OPENAI_COMPATIBLE_CHAT_PROVIDERS = {
   "openai.chat_completions": "openai",
   "openrouter.chat_completions": "openrouter",
@@ -1264,7 +1635,25 @@ function openAICompatibleReasoningOutput(usage) {
   };
 }
 
+function openAICompatibleChatPayload(response) {
+  const chunks = response.chunks || response.stream;
+  if (!Array.isArray(chunks)) {
+    return response;
+  }
+  for (let index = chunks.length - 1; index >= 0; index -= 1) {
+    const chunk = chunks[index];
+    if (chunk && typeof chunk === "object" && chunk.usage && typeof chunk.usage === "object") {
+      return {
+        ...chunk,
+        model: chunk.model ?? response.model
+      };
+    }
+  }
+  return response;
+}
+
 export function extractOpenAICompatibleChatCompletionsUsage(response, options = {}) {
+  response = openAICompatibleChatPayload(response);
   const usage = response.usage || {};
   const cachedInput = openAICompatibleCachedInput(usage);
   const reasoning = openAICompatibleReasoningOutput(usage);
@@ -2146,6 +2535,33 @@ export function extractUsageLedger(response, options = {}) {
   }
   if (surface === "openai.embeddings") {
     return extractOpenAIEmbeddingsUsage(response, options);
+  }
+  if (surface === "openai.audio_transcriptions") {
+    return extractOpenAIAudioTranscriptionUsage(response, options);
+  }
+  if (surface === "openai.images") {
+    return extractOpenAIImagesUsage(response, options);
+  }
+  if (surface === "openai.usage.images") {
+    return extractOpenAIUsageImagesUsage(response, options);
+  }
+  if (surface === "openai.usage.completions") {
+    return extractOpenAIUsageCompletionsUsage(response, options);
+  }
+  if (surface === "openai.usage.audio_speeches") {
+    return extractOpenAIUsageAudioSpeechesUsage(response, options);
+  }
+  if (surface === "openai.usage.audio_transcriptions") {
+    return extractOpenAIUsageAudioTranscriptionsUsage(response, options);
+  }
+  if (surface === "openai.usage.embeddings") {
+    return extractOpenAIUsageEmbeddingsUsage(response, options);
+  }
+  if (surface === "openai.vector_stores") {
+    return extractOpenAIVectorStoreStorageUsage(response, options);
+  }
+  if (surface === "openai.usage.code_interpreter_sessions") {
+    return extractOpenAIUsageCodeInterpreterSessionsUsage(response, options);
   }
   if (surface === "openai.chat_completions") {
     return extractOpenAIChatCompletionsUsage(response, options);
@@ -3104,7 +3520,7 @@ export function fromSemanticKernelTelemetry(telemetry, options = {}) {
 }
 
 function openRouterReportedCost(response) {
-  const payload = openRouterSDKResponsePayload(response);
+  const payload = openAICompatibleChatPayload(openRouterSDKResponsePayload(response));
   const usage = payload.usage && typeof payload.usage === "object" ? payload.usage : {};
   return usage.cost ?? usage.totalCost ?? payload.cost ?? payload.totalCost;
 }

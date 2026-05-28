@@ -1,0 +1,58 @@
+{
+  "generated_at": "2026-05-27T04:50:43Z",
+  "mode": "live",
+  "product_truth_policy": {
+    "needs_product_truth": "Convert every live discrepancy into a fixture, structured warning, documented limitation, or extractor/source-adapter fix.",
+    "privacy": "The report intentionally omits prompts, messages, response content, headers, account identifiers, and raw provider responses."
+  },
+  "safe_to_attach_to_issue": true,
+  "sample_prices": true,
+  "sanitized": true,
+  "scenarios": [
+    {
+      "evidence": {
+        "component_names": [
+          "input_uncached_tokens",
+          "output_text_tokens"
+        ],
+        "exactness": "sample_prices_not_invoice_exact",
+        "model": {
+          "alias_resolution": "none",
+          "billed": "gpt-4.1-mini-2025-04-14",
+          "requested": "gpt-4.1-mini-2025-04-14",
+          "returned": "gpt-4.1-mini-2025-04-14"
+        },
+        "price_source_names": [
+          "alpha-smoke-sample"
+        ],
+        "provider": "openai",
+        "raw_response_retained": false,
+        "source": "live",
+        "surface": "openai.responses",
+        "total": "0.000017",
+        "usage_fields_present": [
+          "input_tokens",
+          "input_tokens_details",
+          "output_tokens",
+          "output_tokens_details",
+          "total_tokens"
+        ],
+        "warning_codes": []
+      },
+      "next_action": {
+        "reason": "Sanitized smoke output matched an existing extractor path.",
+        "type": "none"
+      },
+      "scenario": "openai_responses",
+      "status": "passed"
+    }
+  ],
+  "schema_version": "0.1",
+  "summary": {
+    "failed": 0,
+    "needs_product_truth": 0,
+    "passed": 1,
+    "skipped": 0,
+    "total": 1
+  }
+}

@@ -35,6 +35,7 @@ _COMPONENT_ORDER_NAMES = [
     "image_generation_units",
     "video_generation_units",
     "audio_generation_units",
+    "audio_generation_characters",
     "transcription_seconds",
     "endpoint_runtime_seconds",
     "endpoint_instance_hours",
@@ -54,6 +55,7 @@ _TOOL_OR_FEATURE_COMPONENTS = {
     "image_generation_units",
     "video_generation_units",
     "audio_generation_units",
+    "audio_generation_characters",
     "transcription_seconds",
     "endpoint_runtime_seconds",
     "storage_gb_days",
@@ -1169,6 +1171,329 @@ def extract_openai_embeddings_usage(response: Dict[str, Any], **options: Any) ->
     )
 
 
+def extract_openai_audio_transcription_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage = response.get("usage") if isinstance(response.get("usage"), dict) else {}
+    components: List[Dict[str, Any]] = []
+
+    if usage.get("type") == "duration" or "seconds" in usage:
+        components.append(_positive_component("transcription_seconds", usage.get("seconds", 0), "second", "$.usage.seconds"))
+    elif usage:
+        input_details = usage.get("input_token_details", {})
+        audio_tokens = input_details.get("audio_tokens", 0)
+        input_tokens = usage.get("input_tokens", 0)
+        text_tokens = input_details.get("text_tokens", input_tokens - audio_tokens)
+        output_tokens = usage.get("output_tokens", 0)
+        components.extend(
+            [
+                _positive_component("input_uncached_tokens", text_tokens, "token", "$.usage.input_token_details.text_tokens"),
+                _positive_component("input_audio_tokens", audio_tokens, "token", "$.usage.input_token_details.audio_tokens"),
+                _positive_component("output_text_tokens", output_tokens, "token", "$.usage.output_tokens"),
+            ]
+        )
+    elif response.get("duration") is not None:
+        components.append(_positive_component("transcription_seconds", response.get("duration", 0), "second", "$.duration"))
+
+    returned_model = response.get("model") or options.get("model")
+    return _base_usage_ledger(
+        provider=options.get("provider", "openai"),
+        surface=options.get("surface", "openai.audio_transcriptions"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=usage or {"duration": response.get("duration")},
+        components=_compact_components(components),
+    )
+
+
+def extract_openai_images_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage = response.get("usage") if isinstance(response.get("usage"), dict) else {}
+    components: List[Dict[str, Any]] = []
+
+    if usage:
+        input_details = usage.get("input_tokens_details", {})
+        input_image_tokens = input_details.get("image_tokens", 0)
+        input_tokens = usage.get("input_tokens", 0)
+        input_text_tokens = input_details.get("text_tokens", input_tokens - input_image_tokens)
+        output_details = usage.get("output_tokens_details", {})
+        output_image_tokens = output_details.get("image_tokens", usage.get("output_tokens", 0))
+        components.extend(
+            [
+                _positive_component("input_uncached_tokens", input_text_tokens, "token", "$.usage.input_tokens_details.text_tokens"),
+                _positive_component("input_image_tokens", input_image_tokens, "token", "$.usage.input_tokens_details.image_tokens"),
+                _positive_component("output_image_tokens", output_image_tokens, "token", "$.usage.output_tokens"),
+            ]
+        )
+    else:
+        images = response.get("data") if isinstance(response.get("data"), list) else []
+        components.append(_positive_component("image_generation_units", len(images), "image", "$.data"))
+
+    returned_model = response.get("model") or options.get("model")
+    return _base_usage_ledger(
+        provider=options.get("provider", "openai"),
+        surface=options.get("surface", "openai.images"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=usage or {"image_count": len(response.get("data", [])) if isinstance(response.get("data"), list) else 0},
+        components=_compact_components(components),
+    )
+
+
+def _openai_usage_images_count(response: Dict[str, Any]) -> Decimal:
+    if response.get("object") == "organization.usage.images.result":
+        return _decimal(response.get("images", 0))
+    total = Decimal("0")
+    for bucket in response.get("data", []) if isinstance(response.get("data"), list) else []:
+        results = bucket.get("results", []) if isinstance(bucket, dict) else []
+        for result in results if isinstance(results, list) else []:
+            if isinstance(result, dict):
+                total += _decimal(result.get("images", 0))
+    if total == 0 and response.get("images") is not None:
+        total += _decimal(response.get("images", 0))
+    return total
+
+
+def _openai_usage_first_result_value(response: Dict[str, Any], key: str) -> Optional[Any]:
+    if response.get(key) is not None:
+        return response.get(key)
+    for bucket in response.get("data", []) if isinstance(response.get("data"), list) else []:
+        results = bucket.get("results", []) if isinstance(bucket, dict) else []
+        for result in results if isinstance(results, list) else []:
+            if isinstance(result, dict) and result.get(key) is not None:
+                return result.get(key)
+    return None
+
+
+def _openai_usage_sum_result_value(response: Dict[str, Any], key: str) -> Decimal:
+    if response.get(key) is not None:
+        return _decimal(response.get(key, 0))
+    total = Decimal("0")
+    for bucket in response.get("data", []) if isinstance(response.get("data"), list) else []:
+        results = bucket.get("results", []) if isinstance(bucket, dict) else []
+        for result in results if isinstance(results, list) else []:
+            if isinstance(result, dict):
+                total += _decimal(result.get(key, 0))
+    return total
+
+
+def extract_openai_usage_completions_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    input_tokens = _openai_usage_sum_result_value(response, "input_tokens")
+    cached_tokens = _openai_usage_sum_result_value(response, "input_cached_tokens")
+    uncached_tokens = max(Decimal("0"), input_tokens - cached_tokens)
+    output_tokens = _openai_usage_sum_result_value(response, "output_tokens")
+    input_audio_tokens = _openai_usage_sum_result_value(response, "input_audio_tokens")
+    output_audio_tokens = _openai_usage_sum_result_value(response, "output_audio_tokens")
+    num_model_requests = _openai_usage_sum_result_value(response, "num_model_requests")
+    returned_model = response.get("model") or options.get("model") or _openai_usage_first_result_value(response, "model") or "completions"
+    raw_usage = {
+        "input_tokens": _format_decimal(input_tokens),
+        "input_cached_tokens": _format_decimal(cached_tokens),
+        "output_tokens": _format_decimal(output_tokens),
+        "input_audio_tokens": _format_decimal(input_audio_tokens),
+        "output_audio_tokens": _format_decimal(output_audio_tokens),
+        "num_model_requests": _format_decimal(num_model_requests),
+        "batch": _openai_usage_first_result_value(response, "batch"),
+        "service_tier": _openai_usage_first_result_value(response, "service_tier"),
+    }
+    return _base_usage_ledger(
+        provider=options.get("provider", "openai"),
+        surface=options.get("surface", "openai.usage.completions"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage={key: value for key, value in raw_usage.items() if value is not None},
+        components=_compact_components(
+            [
+                _positive_component("input_uncached_tokens", _format_decimal(uncached_tokens), "token", "$..input_tokens"),
+                _positive_component("input_cache_read_tokens", _format_decimal(cached_tokens), "token", "$..input_cached_tokens"),
+                _positive_component("input_audio_tokens", _format_decimal(input_audio_tokens), "token", "$..input_audio_tokens"),
+                _positive_component("output_text_tokens", _format_decimal(output_tokens), "token", "$..output_tokens"),
+                _positive_component("output_audio_tokens", _format_decimal(output_audio_tokens), "token", "$..output_audio_tokens"),
+            ]
+        ),
+    )
+
+
+def extract_openai_usage_images_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    images = _format_decimal(_openai_usage_images_count(response))
+    returned_model = response.get("model") or options.get("model") or _openai_usage_first_result_value(response, "model") or "image-generation"
+    raw_usage = {
+        "images": images,
+        "num_model_requests": _openai_usage_first_result_value(response, "num_model_requests"),
+        "source": _openai_usage_first_result_value(response, "source"),
+        "size": _openai_usage_first_result_value(response, "size"),
+    }
+    return _base_usage_ledger(
+        provider=options.get("provider", "openai"),
+        surface=options.get("surface", "openai.usage.images"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage={key: value for key, value in raw_usage.items() if value is not None},
+        components=_compact_components(
+            [
+                _positive_component("image_generation_units", images, "image", "$..images"),
+            ]
+        ),
+    )
+
+
+def _openai_usage_audio_speech_characters(response: Dict[str, Any]) -> Decimal:
+    if response.get("object") == "organization.usage.audio_speeches.result":
+        return _decimal(response.get("characters", 0))
+    total = Decimal("0")
+    for bucket in response.get("data", []) if isinstance(response.get("data"), list) else []:
+        results = bucket.get("results", []) if isinstance(bucket, dict) else []
+        for result in results if isinstance(results, list) else []:
+            if isinstance(result, dict):
+                total += _decimal(result.get("characters", 0))
+    if total == 0 and response.get("characters") is not None:
+        total += _decimal(response.get("characters", 0))
+    return total
+
+
+def extract_openai_usage_audio_speeches_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    characters = _format_decimal(_openai_usage_audio_speech_characters(response))
+    returned_model = response.get("model") or options.get("model") or _openai_usage_first_result_value(response, "model") or "audio-speech"
+    raw_usage = {
+        "characters": characters,
+        "num_model_requests": _openai_usage_first_result_value(response, "num_model_requests"),
+    }
+    return _base_usage_ledger(
+        provider=options.get("provider", "openai"),
+        surface=options.get("surface", "openai.usage.audio_speeches"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage={key: value for key, value in raw_usage.items() if value is not None},
+        components=_compact_components(
+            [
+                _positive_component("audio_generation_characters", characters, "character", "$..characters"),
+            ]
+        ),
+    )
+
+
+def _openai_usage_audio_transcription_seconds(response: Dict[str, Any]) -> Decimal:
+    if response.get("object") == "organization.usage.audio_transcriptions.result":
+        return _decimal(response.get("seconds", 0))
+    total = Decimal("0")
+    for bucket in response.get("data", []) if isinstance(response.get("data"), list) else []:
+        results = bucket.get("results", []) if isinstance(bucket, dict) else []
+        for result in results if isinstance(results, list) else []:
+            if isinstance(result, dict):
+                total += _decimal(result.get("seconds", 0))
+    if total == 0 and response.get("seconds") is not None:
+        total += _decimal(response.get("seconds", 0))
+    return total
+
+
+def extract_openai_usage_audio_transcriptions_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    seconds = _format_decimal(_openai_usage_audio_transcription_seconds(response))
+    returned_model = response.get("model") or options.get("model") or _openai_usage_first_result_value(response, "model") or "audio-transcription"
+    raw_usage = {
+        "seconds": seconds,
+        "num_model_requests": _openai_usage_first_result_value(response, "num_model_requests"),
+    }
+    return _base_usage_ledger(
+        provider=options.get("provider", "openai"),
+        surface=options.get("surface", "openai.usage.audio_transcriptions"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage={key: value for key, value in raw_usage.items() if value is not None},
+        components=_compact_components(
+            [
+                _positive_component("transcription_seconds", seconds, "second", "$..seconds"),
+            ]
+        ),
+    )
+
+
+def _openai_usage_embedding_tokens(response: Dict[str, Any]) -> Decimal:
+    if response.get("object") == "organization.usage.embeddings.result":
+        return _decimal(response.get("input_tokens", 0))
+    total = Decimal("0")
+    for bucket in response.get("data", []) if isinstance(response.get("data"), list) else []:
+        results = bucket.get("results", []) if isinstance(bucket, dict) else []
+        for result in results if isinstance(results, list) else []:
+            if isinstance(result, dict):
+                total += _decimal(result.get("input_tokens", 0))
+    if total == 0 and response.get("input_tokens") is not None:
+        total += _decimal(response.get("input_tokens", 0))
+    return total
+
+
+def extract_openai_usage_embeddings_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    input_tokens = _format_decimal(_openai_usage_embedding_tokens(response))
+    returned_model = response.get("model") or options.get("model") or _openai_usage_first_result_value(response, "model") or "embedding"
+    raw_usage = {
+        "input_tokens": input_tokens,
+        "num_model_requests": _openai_usage_first_result_value(response, "num_model_requests"),
+    }
+    return _base_usage_ledger(
+        provider=options.get("provider", "openai"),
+        surface=options.get("surface", "openai.usage.embeddings"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage={key: value for key, value in raw_usage.items() if value is not None},
+        components=_compact_components(
+            [
+                _positive_component("embedding_tokens", input_tokens, "token", "$..input_tokens"),
+            ]
+        ),
+    )
+
+
+def extract_openai_vector_store_storage_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage_bytes = response.get("usage_bytes", 0)
+    storage_days = options.get("storage_days", options.get("storageDays", 0))
+    components: List[Dict[str, Any]] = []
+
+    if storage_days:
+        quantity = _multiply_divide(usage_bytes, storage_days, "1000000000")
+        components.append(_positive_component("storage_gb_days", quantity, "gb_day", "$.usage_bytes"))
+
+    returned_model = response.get("model") or options.get("model") or "vector-store-storage"
+    raw_usage = {
+        "usage_bytes": usage_bytes,
+        "storage_days": storage_days,
+    }
+    return _base_usage_ledger(
+        provider=options.get("provider", "openai"),
+        surface=options.get("surface", "openai.vector_stores"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=raw_usage,
+        components=_compact_components(components),
+    )
+
+
+def _openai_usage_code_interpreter_session_count(response: Dict[str, Any]) -> Decimal:
+    if response.get("object") == "organization.usage.code_interpreter_sessions.result":
+        return _decimal(response.get("num_sessions", 0))
+    total = Decimal("0")
+    for bucket in response.get("data", []) if isinstance(response.get("data"), list) else []:
+        results = bucket.get("results", []) if isinstance(bucket, dict) else []
+        for result in results if isinstance(results, list) else []:
+            if isinstance(result, dict):
+                total += _decimal(result.get("num_sessions", 0))
+    if total == 0 and response.get("num_sessions") is not None:
+        total += _decimal(response.get("num_sessions", 0))
+    return total
+
+
+def extract_openai_usage_code_interpreter_sessions_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    num_sessions = _format_decimal(_openai_usage_code_interpreter_session_count(response))
+    returned_model = response.get("model") or options.get("model") or "code-interpreter-session"
+    return _base_usage_ledger(
+        provider=options.get("provider", "openai"),
+        surface=options.get("surface", "openai.usage.code_interpreter_sessions"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage={"num_sessions": num_sessions},
+        components=_compact_components(
+            [
+                _positive_component("code_interpreter_session_units", num_sessions, "session", "$..num_sessions"),
+            ]
+        ),
+    )
+
+
 OPENAI_COMPATIBLE_CHAT_PROVIDERS = {
     "openai.chat_completions": "openai",
     "openrouter.chat_completions": "openrouter",
@@ -1200,7 +1525,24 @@ def _openai_compatible_reasoning_output(usage: Dict[str, Any]) -> tuple[Any, str
     return 0, "$.usage.completion_tokens_details.reasoning_tokens"
 
 
+def _openai_compatible_chat_payload(response: Dict[str, Any]) -> Dict[str, Any]:
+    chunks = response.get("chunks") or response.get("stream")
+    if not isinstance(chunks, list):
+        return response
+    fallback_model = response.get("model")
+    for chunk in reversed(chunks):
+        if not isinstance(chunk, dict):
+            continue
+        if isinstance(chunk.get("usage"), dict):
+            payload = dict(chunk)
+            if payload.get("model") is None and fallback_model is not None:
+                payload["model"] = fallback_model
+            return payload
+    return response
+
+
 def extract_openai_compatible_chat_completions_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    response = _openai_compatible_chat_payload(response)
     usage = response.get("usage", {})
     cached_input, cached_source = _openai_compatible_cached_input(usage)
     reasoning, reasoning_source = _openai_compatible_reasoning_output(usage)
@@ -2032,6 +2374,24 @@ def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, 
         return extract_openai_responses_usage(response, **options)
     if surface == "openai.embeddings":
         return extract_openai_embeddings_usage(response, **options)
+    if surface == "openai.audio_transcriptions":
+        return extract_openai_audio_transcription_usage(response, **options)
+    if surface == "openai.images":
+        return extract_openai_images_usage(response, **options)
+    if surface == "openai.usage.images":
+        return extract_openai_usage_images_usage(response, **options)
+    if surface == "openai.usage.completions":
+        return extract_openai_usage_completions_usage(response, **options)
+    if surface == "openai.usage.audio_speeches":
+        return extract_openai_usage_audio_speeches_usage(response, **options)
+    if surface == "openai.usage.audio_transcriptions":
+        return extract_openai_usage_audio_transcriptions_usage(response, **options)
+    if surface == "openai.usage.embeddings":
+        return extract_openai_usage_embeddings_usage(response, **options)
+    if surface == "openai.vector_stores":
+        return extract_openai_vector_store_storage_usage(response, **options)
+    if surface == "openai.usage.code_interpreter_sessions":
+        return extract_openai_usage_code_interpreter_sessions_usage(response, **options)
     if surface == "openai.chat_completions":
         return extract_openai_chat_completions_usage(response, **options)
     if surface in OPENAI_COMPATIBLE_CHAT_PROVIDERS:
@@ -2944,6 +3304,8 @@ def from_response(
     provider: Optional[str] = None,
     surface: str,
     model: Optional[str] = None,
+    storage_days: Optional[Any] = None,
+    storageDays: Optional[Any] = None,
     ag2_usage_mode: Optional[str] = None,
     price_cards: Iterable[Dict[str, Any]],
     discount_policies: Optional[Iterable[Dict[str, Any]]] = None,
@@ -2963,6 +3325,10 @@ def from_response(
         options["provider"] = provider
     if model:
         options["model"] = model
+    if storage_days is not None:
+        options["storage_days"] = storage_days
+    if storageDays is not None:
+        options["storageDays"] = storageDays
     if ag2_usage_mode:
         options["ag2_usage_mode"] = ag2_usage_mode
     try:
@@ -3075,6 +3441,7 @@ def from_semantic_kernel_telemetry(telemetry: Dict[str, Any], **options: Any) ->
 
 def _openrouter_reported_cost(response: Dict[str, Any]) -> Any:
     payload = _openrouter_sdk_response_payload(response)
+    payload = _openai_compatible_chat_payload(payload)
     usage = payload.get("usage") if isinstance(payload.get("usage"), dict) else {}
     return usage.get("cost") or usage.get("totalCost") or payload.get("cost") or payload.get("totalCost")
 

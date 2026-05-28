@@ -33,6 +33,7 @@ var toolOrFeatureComponents = map[string]bool{
 	"image_generation_units":         true,
 	"video_generation_units":         true,
 	"audio_generation_units":         true,
+	"audio_generation_characters":    true,
 	"transcription_seconds":          true,
 	"endpoint_runtime_seconds":       true,
 	"storage_gb_days":                true,
@@ -1983,6 +1984,34 @@ func openAICompatibleReasoningOutput(usage Object) (any, string) {
 	return json.Number("0"), "$.usage.completion_tokens_details.reasoning_tokens"
 }
 
+func openAICompatibleChatPayload(response Object) Object {
+	chunks := asSlice(response["chunks"])
+	if len(chunks) == 0 {
+		chunks = asSlice(response["stream"])
+	}
+	if len(chunks) == 0 {
+		return response
+	}
+	for index := len(chunks) - 1; index >= 0; index-- {
+		chunk := asObject(chunks[index])
+		if _, ok := chunk["usage"]; ok {
+			usage := asObject(chunk["usage"])
+			if len(usage) == 0 {
+				continue
+			}
+			payload := Object{}
+			for key, value := range chunk {
+				payload[key] = value
+			}
+			if asString(payload["model"]) == "" && asString(response["model"]) != "" {
+				payload["model"] = response["model"]
+			}
+			return payload
+		}
+	}
+	return response
+}
+
 // ExtractUsageLedger normalizes a raw provider response into the canonical usage
 // ledger shape for supported surfaces.
 //
@@ -2025,6 +2054,24 @@ func ExtractUsageLedger(response Object, options Object) Object {
 		return extractOpenAIResponsesUsage(response, options)
 	case "openai.embeddings":
 		return extractOpenAIEmbeddingsUsage(response, options)
+	case "openai.audio_transcriptions":
+		return extractOpenAIAudioTranscriptionUsage(response, options)
+	case "openai.images":
+		return extractOpenAIImagesUsage(response, options)
+	case "openai.usage.images":
+		return extractOpenAIUsageImagesUsage(response, options)
+	case "openai.usage.completions":
+		return extractOpenAIUsageCompletionsUsage(response, options)
+	case "openai.usage.audio_speeches":
+		return extractOpenAIUsageAudioSpeechesUsage(response, options)
+	case "openai.usage.audio_transcriptions":
+		return extractOpenAIUsageAudioTranscriptionsUsage(response, options)
+	case "openai.usage.embeddings":
+		return extractOpenAIUsageEmbeddingsUsage(response, options)
+	case "openai.vector_stores":
+		return extractOpenAIVectorStoreStorageUsage(response, options)
+	case "openai.usage.code_interpreter_sessions":
+		return extractOpenAIUsageCodeInterpreterSessionsUsage(response, options)
 	case "openai.chat_completions":
 		return extractOpenAIChatCompletionsUsage(response, options)
 	case "anthropic.messages":
@@ -2184,7 +2231,478 @@ func extractOpenAIEmbeddingsUsage(response Object, options Object) Object {
 	}), usage)
 }
 
+func extractOpenAIAudioTranscriptionUsage(response Object, options Object) Object {
+	usage := asObject(response["usage"])
+	components := []any{}
+	if asString(usage["type"]) == "duration" || usage["seconds"] != nil {
+		components = append(components, positiveComponent("transcription_seconds", getNumber(usage, "seconds"), "second", "$.usage.seconds"))
+	} else if len(usage) > 0 {
+		inputDetails := asObject(usage["input_token_details"])
+		audioTokens := getNumber(inputDetails, "audio_tokens")
+		inputTokens := getNumber(usage, "input_tokens")
+		textTokens := getNumber(inputDetails, "text_tokens")
+		if _, ok := inputDetails["text_tokens"]; !ok {
+			textTokens = subtract(inputTokens, audioTokens)
+		}
+		components = append(components,
+			positiveComponent("input_uncached_tokens", textTokens, "token", "$.usage.input_token_details.text_tokens"),
+			positiveComponent("input_audio_tokens", audioTokens, "token", "$.usage.input_token_details.audio_tokens"),
+			positiveComponent("output_text_tokens", getNumber(usage, "output_tokens"), "token", "$.usage.output_tokens"),
+		)
+	} else if response["duration"] != nil {
+		components = append(components, positiveComponent("transcription_seconds", response["duration"], "second", "$.duration"))
+		usage = Object{"duration": response["duration"]}
+	}
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "openai"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.audio_transcriptions"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(response["model"])
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents(components), usage)
+}
+
+func extractOpenAIImagesUsage(response Object, options Object) Object {
+	usage := asObject(response["usage"])
+	components := []any{}
+	if len(usage) > 0 {
+		inputDetails := asObject(usage["input_tokens_details"])
+		inputImageTokens := getNumber(inputDetails, "image_tokens")
+		inputTokens := getNumber(usage, "input_tokens")
+		inputTextTokens := getNumber(inputDetails, "text_tokens")
+		if _, ok := inputDetails["text_tokens"]; !ok {
+			inputTextTokens = subtract(inputTokens, inputImageTokens)
+		}
+		outputDetails := asObject(usage["output_tokens_details"])
+		outputImageTokens := getNumber(outputDetails, "image_tokens")
+		if _, ok := outputDetails["image_tokens"]; !ok {
+			outputImageTokens = getNumber(usage, "output_tokens")
+		}
+		components = append(components,
+			positiveComponent("input_uncached_tokens", inputTextTokens, "token", "$.usage.input_tokens_details.text_tokens"),
+			positiveComponent("input_image_tokens", inputImageTokens, "token", "$.usage.input_tokens_details.image_tokens"),
+			positiveComponent("output_image_tokens", outputImageTokens, "token", "$.usage.output_tokens"),
+		)
+	} else {
+		images := asSlice(response["data"])
+		components = append(components, positiveComponent("image_generation_units", strconv.Itoa(len(images)), "image", "$.data"))
+		usage = Object{"image_count": len(images)}
+	}
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "openai"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.images"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(response["model"])
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents(components), usage)
+}
+
+func openAIUsageImagesCount(response Object) string {
+	if asString(response["object"]) == "organization.usage.images.result" {
+		return numberString(response["images"])
+	}
+	total := "0"
+	for _, bucketValue := range asSlice(response["data"]) {
+		bucket := asObject(bucketValue)
+		for _, resultValue := range asSlice(bucket["results"]) {
+			result := asObject(resultValue)
+			total = add(total, getNumber(result, "images"))
+		}
+	}
+	if rat(total).Sign() == 0 && response["images"] != nil {
+		total = add(total, response["images"])
+	}
+	return total
+}
+
+func openAIUsageFirstResultValue(response Object, key string) any {
+	if response[key] != nil {
+		return response[key]
+	}
+	for _, bucketValue := range asSlice(response["data"]) {
+		bucket := asObject(bucketValue)
+		for _, resultValue := range asSlice(bucket["results"]) {
+			result := asObject(resultValue)
+			if result[key] != nil {
+				return result[key]
+			}
+		}
+	}
+	return nil
+}
+
+func openAIUsageSumResultValue(response Object, key string) string {
+	if response[key] != nil {
+		return numberString(response[key])
+	}
+	total := "0"
+	for _, bucketValue := range asSlice(response["data"]) {
+		bucket := asObject(bucketValue)
+		for _, resultValue := range asSlice(bucket["results"]) {
+			result := asObject(resultValue)
+			total = add(total, getNumber(result, key))
+		}
+	}
+	return total
+}
+
+func extractOpenAIUsageCompletionsUsage(response Object, options Object) Object {
+	inputTokens := openAIUsageSumResultValue(response, "input_tokens")
+	cachedTokens := openAIUsageSumResultValue(response, "input_cached_tokens")
+	uncachedTokens := subtract(inputTokens, cachedTokens)
+	if rat(uncachedTokens).Sign() < 0 {
+		uncachedTokens = "0"
+	}
+	outputTokens := openAIUsageSumResultValue(response, "output_tokens")
+	inputAudioTokens := openAIUsageSumResultValue(response, "input_audio_tokens")
+	outputAudioTokens := openAIUsageSumResultValue(response, "output_audio_tokens")
+	numModelRequests := openAIUsageSumResultValue(response, "num_model_requests")
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "openai"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.usage.completions"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(response["model"])
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if returnedModel == "" {
+		returnedModel = asString(openAIUsageFirstResultValue(response, "model"))
+	}
+	if returnedModel == "" {
+		returnedModel = "completions"
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+	rawUsage := Object{
+		"input_tokens":        inputTokens,
+		"input_cached_tokens": cachedTokens,
+		"output_tokens":       outputTokens,
+		"input_audio_tokens":  inputAudioTokens,
+		"output_audio_tokens": outputAudioTokens,
+		"num_model_requests":  numModelRequests,
+	}
+	if value := openAIUsageFirstResultValue(response, "batch"); value != nil {
+		rawUsage["batch"] = value
+	}
+	if value := openAIUsageFirstResultValue(response, "service_tier"); value != nil {
+		rawUsage["service_tier"] = value
+	}
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("input_uncached_tokens", uncachedTokens, "token", "$..input_tokens"),
+		positiveComponent("input_cache_read_tokens", cachedTokens, "token", "$..input_cached_tokens"),
+		positiveComponent("input_audio_tokens", inputAudioTokens, "token", "$..input_audio_tokens"),
+		positiveComponent("output_text_tokens", outputTokens, "token", "$..output_tokens"),
+		positiveComponent("output_audio_tokens", outputAudioTokens, "token", "$..output_audio_tokens"),
+	}), rawUsage)
+}
+
+func extractOpenAIUsageImagesUsage(response Object, options Object) Object {
+	images := openAIUsageImagesCount(response)
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "openai"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.usage.images"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(response["model"])
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if returnedModel == "" {
+		returnedModel = asString(openAIUsageFirstResultValue(response, "model"))
+	}
+	if returnedModel == "" {
+		returnedModel = "image-generation"
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+	rawUsage := Object{"images": images}
+	if value := openAIUsageFirstResultValue(response, "num_model_requests"); value != nil {
+		rawUsage["num_model_requests"] = value
+	}
+	if value := openAIUsageFirstResultValue(response, "source"); value != nil {
+		rawUsage["source"] = value
+	}
+	if value := openAIUsageFirstResultValue(response, "size"); value != nil {
+		rawUsage["size"] = value
+	}
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("image_generation_units", images, "image", "$..images"),
+	}), rawUsage)
+}
+
+func openAIUsageAudioSpeechCharacters(response Object) string {
+	if asString(response["object"]) == "organization.usage.audio_speeches.result" {
+		return numberString(response["characters"])
+	}
+	total := "0"
+	for _, bucketValue := range asSlice(response["data"]) {
+		bucket := asObject(bucketValue)
+		for _, resultValue := range asSlice(bucket["results"]) {
+			result := asObject(resultValue)
+			total = add(total, getNumber(result, "characters"))
+		}
+	}
+	if rat(total).Sign() == 0 && response["characters"] != nil {
+		total = add(total, response["characters"])
+	}
+	return total
+}
+
+func extractOpenAIUsageAudioSpeechesUsage(response Object, options Object) Object {
+	characters := openAIUsageAudioSpeechCharacters(response)
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "openai"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.usage.audio_speeches"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(response["model"])
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if returnedModel == "" {
+		returnedModel = asString(openAIUsageFirstResultValue(response, "model"))
+	}
+	if returnedModel == "" {
+		returnedModel = "audio-speech"
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+	rawUsage := Object{"characters": characters}
+	if value := openAIUsageFirstResultValue(response, "num_model_requests"); value != nil {
+		rawUsage["num_model_requests"] = value
+	}
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("audio_generation_characters", characters, "character", "$..characters"),
+	}), rawUsage)
+}
+
+func openAIUsageAudioTranscriptionSeconds(response Object) string {
+	if asString(response["object"]) == "organization.usage.audio_transcriptions.result" {
+		return numberString(response["seconds"])
+	}
+	total := "0"
+	for _, bucketValue := range asSlice(response["data"]) {
+		bucket := asObject(bucketValue)
+		for _, resultValue := range asSlice(bucket["results"]) {
+			result := asObject(resultValue)
+			total = add(total, getNumber(result, "seconds"))
+		}
+	}
+	if rat(total).Sign() == 0 && response["seconds"] != nil {
+		total = add(total, response["seconds"])
+	}
+	return total
+}
+
+func extractOpenAIUsageAudioTranscriptionsUsage(response Object, options Object) Object {
+	seconds := openAIUsageAudioTranscriptionSeconds(response)
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "openai"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.usage.audio_transcriptions"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(response["model"])
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if returnedModel == "" {
+		returnedModel = asString(openAIUsageFirstResultValue(response, "model"))
+	}
+	if returnedModel == "" {
+		returnedModel = "audio-transcription"
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+	rawUsage := Object{"seconds": seconds}
+	if value := openAIUsageFirstResultValue(response, "num_model_requests"); value != nil {
+		rawUsage["num_model_requests"] = value
+	}
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("transcription_seconds", seconds, "second", "$..seconds"),
+	}), rawUsage)
+}
+
+func openAIUsageEmbeddingTokens(response Object) string {
+	if asString(response["object"]) == "organization.usage.embeddings.result" {
+		return numberString(response["input_tokens"])
+	}
+	total := "0"
+	for _, bucketValue := range asSlice(response["data"]) {
+		bucket := asObject(bucketValue)
+		for _, resultValue := range asSlice(bucket["results"]) {
+			result := asObject(resultValue)
+			total = add(total, getNumber(result, "input_tokens"))
+		}
+	}
+	if rat(total).Sign() == 0 && response["input_tokens"] != nil {
+		total = add(total, response["input_tokens"])
+	}
+	return total
+}
+
+func extractOpenAIUsageEmbeddingsUsage(response Object, options Object) Object {
+	inputTokens := openAIUsageEmbeddingTokens(response)
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "openai"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.usage.embeddings"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(response["model"])
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if returnedModel == "" {
+		returnedModel = asString(openAIUsageFirstResultValue(response, "model"))
+	}
+	if returnedModel == "" {
+		returnedModel = "embedding"
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+	rawUsage := Object{"input_tokens": inputTokens}
+	if value := openAIUsageFirstResultValue(response, "num_model_requests"); value != nil {
+		rawUsage["num_model_requests"] = value
+	}
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("embedding_tokens", inputTokens, "token", "$..input_tokens"),
+	}), rawUsage)
+}
+
+func extractOpenAIVectorStoreStorageUsage(response Object, options Object) Object {
+	usageBytes := response["usage_bytes"]
+	if usageBytes == nil {
+		usageBytes = json.Number("0")
+	}
+	storageDays := options["storage_days"]
+	if storageDays == nil {
+		storageDays = options["storageDays"]
+	}
+	if storageDays == nil {
+		storageDays = json.Number("0")
+	}
+	components := []any{}
+	if rat(storageDays).Sign() > 0 {
+		quantity := multiplyDivide(usageBytes, storageDays, "1000000000")
+		components = append(components, positiveComponent("storage_gb_days", quantity, "gb_day", "$.usage_bytes"))
+	}
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "openai"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.vector_stores"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(response["model"])
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if returnedModel == "" {
+		returnedModel = "vector-store-storage"
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+	usage := Object{
+		"usage_bytes":  usageBytes,
+		"storage_days": storageDays,
+	}
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents(components), usage)
+}
+
+func openAIUsageCodeInterpreterSessionCount(response Object) string {
+	if asString(response["object"]) == "organization.usage.code_interpreter_sessions.result" {
+		return numberString(response["num_sessions"])
+	}
+	total := "0"
+	for _, bucketValue := range asSlice(response["data"]) {
+		bucket := asObject(bucketValue)
+		for _, resultValue := range asSlice(bucket["results"]) {
+			result := asObject(resultValue)
+			total = add(total, getNumber(result, "num_sessions"))
+		}
+	}
+	if rat(total).Sign() == 0 && response["num_sessions"] != nil {
+		total = add(total, response["num_sessions"])
+	}
+	return total
+}
+
+func extractOpenAIUsageCodeInterpreterSessionsUsage(response Object, options Object) Object {
+	numSessions := openAIUsageCodeInterpreterSessionCount(response)
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "openai"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "openai.usage.code_interpreter_sessions"
+	}
+	requestedModel := asString(options["model"])
+	returnedModel := asString(response["model"])
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	if returnedModel == "" {
+		returnedModel = "code-interpreter-session"
+	}
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("code_interpreter_session_units", numSessions, "session", "$..num_sessions"),
+	}), Object{"num_sessions": numSessions})
+}
+
 func extractOpenAICompatibleChatCompletionsUsage(response Object, options Object) Object {
+	response = openAICompatibleChatPayload(response)
 	usage := asObject(response["usage"])
 	cachedInput, cachedSourcePath := openAICompatibleCachedInput(usage)
 	reasoning, reasoningSourcePath := openAICompatibleReasoningOutput(usage)
@@ -4468,6 +4986,15 @@ func FromResponse(response Object, options Object, priceCards []any, discountPol
 	if surface != "openai.responses" &&
 		surface != "xai.responses" &&
 		surface != "openai.embeddings" &&
+		surface != "openai.audio_transcriptions" &&
+		surface != "openai.images" &&
+		surface != "openai.usage.images" &&
+		surface != "openai.usage.completions" &&
+		surface != "openai.usage.audio_speeches" &&
+		surface != "openai.usage.audio_transcriptions" &&
+		surface != "openai.usage.embeddings" &&
+		surface != "openai.vector_stores" &&
+		surface != "openai.usage.code_interpreter_sessions" &&
 		surface != "anthropic.messages" &&
 		surface != "google.gemini.generate_content" &&
 		surface != "vertex.gemini.generate_content" &&
@@ -4608,6 +5135,7 @@ func FromSemanticKernelTelemetry(telemetry Object, options Object, priceCards []
 
 func openRouterReportedCost(response Object) (any, bool) {
 	payload := openRouterSDKResponsePayload(response)
+	payload = openAICompatibleChatPayload(payload)
 	usage := asObject(payload["usage"])
 	for _, value := range []any{
 		usage["cost"],

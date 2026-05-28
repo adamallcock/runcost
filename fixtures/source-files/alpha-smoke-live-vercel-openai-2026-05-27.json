@@ -1,0 +1,46 @@
+{
+  "schema_version": "0.1",
+  "generated_at": "2026-05-27T04:50:43Z",
+  "mode": "live",
+  "scenario": "vercel_ai_sdk_stream_text",
+  "status": "passed",
+  "sanitized": true,
+  "safe_to_attach_to_issue": true,
+  "sample_prices": true,
+  "evidence": {
+    "provider": "openai",
+    "surface": "framework.vercel_ai_sdk",
+    "model": {
+      "requested": "gpt-4.1-mini",
+      "returned": "gpt-4.1-mini",
+      "billed": "gpt-4.1-mini",
+      "alias_resolution": "none"
+    },
+    "component_names": [
+      "input_uncached_tokens",
+      "output_text_tokens"
+    ],
+    "warning_codes": [],
+    "total": "0.000017",
+    "price_source_names": [
+      "alpha-smoke-sample"
+    ],
+    "usage_fields_present": [
+      "usage.cachedInputTokens",
+      "usage.inputTokenDetails",
+      "usage.inputTokens",
+      "usage.outputTokenDetails",
+      "usage.outputTokens",
+      "usage.raw",
+      "usage.reasoningTokens",
+      "usage.totalTokens"
+    ],
+    "raw_response_retained": false,
+    "exactness": "sample_prices_not_invoice_exact",
+    "source": "live"
+  },
+  "next_action": {
+    "type": "none",
+    "reason": "Live Vercel AI SDK streamText usage produced a sanitized RunCost ledger."
+  }
+}

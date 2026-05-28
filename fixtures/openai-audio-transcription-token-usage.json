@@ -1,0 +1,140 @@
+{
+  "name": "openai-audio-transcription-token-usage",
+  "description": "Extracts OpenAI audio transcription token usage into text, audio, and output token components.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-PROVIDER-EXTRACTOR",
+      "RC-FEATURE-PRICING"
+    ],
+    "provider": "openai",
+    "surface": "openai.audio_transcriptions",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:input_audio_tokens",
+      "component:output_text_tokens",
+      "transcription",
+      "token_usage"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "text": "Imagine the wildest idea that you have ever had.",
+      "usage": {
+        "type": "tokens",
+        "input_tokens": 14,
+        "input_token_details": {
+          "text_tokens": 10,
+          "audio_tokens": 4
+        },
+        "output_tokens": 101,
+        "total_tokens": 115
+      }
+    },
+    "extract": {
+      "provider": "openai",
+      "surface": "openai.audio_transcriptions",
+      "model": "gpt-4o-transcribe"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-4o-transcribe:transcription-token-fixture",
+        "provider": "openai",
+        "surface": "openai.audio_transcriptions",
+        "model": "gpt-4o-transcribe",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_audio_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "5",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.audio_transcriptions",
+      "model": {
+        "requested": "gpt-4o-transcribe",
+        "returned": "gpt-4o-transcribe",
+        "billed": "gpt-4o-transcribe",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "10",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.00001",
+          "price_card_id": "openai:gpt-4o-transcribe:transcription-token-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_audio_tokens",
+          "quantity": "4",
+          "unit": "token",
+          "unit_price": "0.000005",
+          "cost": "0.00002",
+          "price_card_id": "openai:gpt-4o-transcribe:transcription-token-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "101",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.000202",
+          "price_card_id": "openai:gpt-4o-transcribe:transcription-token-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.000232",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

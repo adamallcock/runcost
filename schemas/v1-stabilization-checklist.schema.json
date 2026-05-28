@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runcost.dev/schemas/v1-stabilization-checklist.schema.json",
+  "title": "RunCost V1 Stabilization Checklist",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "evidence_type",
+    "safe_to_commit",
+    "contains_secret_values",
+    "target_version",
+    "reviewed_at",
+    "reviewed_by",
+    "prerequisites",
+    "contracts",
+    "packages",
+    "coverage",
+    "operations",
+    "known_correctness_holes",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1"
+    },
+    "evidence_type": {
+      "enum": [
+        "template",
+        "release_candidate_review"
+      ]
+    },
+    "safe_to_commit": {
+      "const": true
+    },
+    "contains_secret_values": {
+      "const": false
+    },
+    "target_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewed_at": {
+      "type": "string"
+    },
+    "reviewed_by": {
+      "type": "string"
+    },
+    "prerequisites": {
+      "$ref": "#/$defs/prerequisites"
+    },
+    "contracts": {
+      "$ref": "#/$defs/contracts"
+    },
+    "packages": {
+      "$ref": "#/$defs/packages"
+    },
+    "coverage": {
+      "$ref": "#/$defs/coverage"
+    },
+    "operations": {
+      "$ref": "#/$defs/operations"
+    },
+    "known_correctness_holes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "prerequisites": {
+      "type": "object",
+      "required": [
+        "milestone8_complete",
+        "public_beta_complete",
+        "packages_published",
+        "trusted_publishing_verified"
+      ],
+      "properties": {
+        "milestone8_complete": {
+          "type": "boolean"
+        },
+        "public_beta_complete": {
+          "type": "boolean"
+        },
+        "packages_published": {
+          "type": "boolean"
+        },
+        "trusted_publishing_verified": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "contracts": {
+      "type": "object",
+      "required": [
+        "schemas_stable",
+        "warning_codes_stable",
+        "public_api_stable",
+        "compatibility_policy_documented",
+        "generated_artifacts_current"
+      ],
+      "properties": {
+        "schemas_stable": {
+          "type": "boolean"
+        },
+        "warning_codes_stable": {
+          "type": "boolean"
+        },
+        "public_api_stable": {
+          "type": "boolean"
+        },
+        "compatibility_policy_documented": {
+          "type": "boolean"
+        },
+        "generated_artifacts_current": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "packages": {
+      "type": "object",
+      "required": [
+        "python_production_ready",
+        "javascript_production_ready",
+        "go_core_api_stable",
+        "post_publish_install_smoke_passed"
+      ],
+      "properties": {
+        "python_production_ready": {
+          "type": "boolean"
+        },
+        "javascript_production_ready": {
+          "type": "boolean"
+        },
+        "go_core_api_stable": {
+          "type": "boolean"
+        },
+        "post_publish_install_smoke_passed": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "provider_source_coverage_strong",
+        "historical_pricing_path_verified",
+        "top_framework_integrations_live_verified",
+        "warning_fixture_coverage_complete"
+      ],
+      "properties": {
+        "provider_source_coverage_strong": {
+          "type": "boolean"
+        },
+        "historical_pricing_path_verified": {
+          "type": "boolean"
+        },
+        "top_framework_integrations_live_verified": {
+          "type": "boolean"
+        },
+        "warning_fixture_coverage_complete": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "operations": {
+      "type": "object",
+      "required": [
+        "source_update_process_active",
+        "security_policy_current",
+        "release_rollback_process_documented"
+      ],
+      "properties": {
+        "source_update_process_active": {
+          "type": "boolean"
+        },
+        "security_policy_current": {
+          "type": "boolean"
+        },
+        "release_rollback_process_documented": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

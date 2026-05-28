@@ -8,35 +8,38 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_FILES = [
-    "PROJECT_PLAN.md",
-    "PROGRESS_TRACKER.md",
+    "docs/internal/project-plan.md",
+    "docs/internal/progress-tracker.md",
     "docs/reference/api-reference.md",
     "docs/reference/aggregation-and-streaming.md",
     "docs/reference/custom-pricing-and-discounts.md",
     "docs/reference/debug-trace.md",
-    "docs/reports/fixture-coverage.md",
+    "docs/internal/reports/fixture-coverage.md",
     "docs/generated/contract-taxonomy.md",
     "docs/generated/fixture-support-matrix.md",
     "docs/generated/warning-coverage.md",
-    "docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md",
-    "docs/reports/2026-05-26-release-workflow-no-publish-blocked.md",
-    "docs/reports/2026-05-26-release-workflow-0-1-0-no-publish-rehearsal.md",
-    "docs/reports/2026-05-26-go-tag-verification-0-1-0.md",
+    "docs/internal/reports/2026-05-26-invoice-dashboard-comparison-sample.md",
+    "docs/internal/reports/2026-05-26-release-workflow-no-publish-blocked.md",
+    "docs/internal/reports/2026-05-26-release-workflow-0-1-0-no-publish-rehearsal.md",
+    "docs/internal/reports/2026-05-26-go-tag-verification-0-1-0.md",
     "docs/guides/package-installation.md",
     "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     "docs/guides/quickstart.md",
-    "docs/process/release-process.md",
-    "docs/process/alpha-smoke-runbook.md",
-    "docs/process/invoice-dashboard-comparison.md",
-    "docs/process/2026-05-26-source-data-update-process.md",
-    "docs/process/beta-v1-hardening-roadmap.md",
+    "docs/internal/process/release-process.md",
+    "docs/internal/process/alpha-smoke-runbook.md",
+    "docs/internal/process/invoice-dashboard-comparison.md",
+    "docs/internal/process/2026-05-26-source-data-update-process.md",
+    "docs/internal/process/beta-v1-hardening-roadmap.md",
+    "docs/README.md",
+    "docs/internal/README.md",
     "docs/reference/source-adapters.md",
     "docs/reference/supported-surfaces.md",
     "docs/reference/warnings-and-limitations.md",
-    "docs/decisions/polyglot-toolchain-decision.md",
-    "docs/notes/api-parity-matrix.md",
-    "docs/notes/provider-extractor-notes.md",
-    "docs/notes/framework-adapter-notes.md",
+    "docs/internal/decisions/polyglot-toolchain-decision.md",
+    "docs/internal/decisions/2026-05-27-python-distribution-name.md",
+    "docs/internal/notes/api-parity-matrix.md",
+    "docs/internal/notes/provider-extractor-notes.md",
+    "docs/internal/notes/framework-adapter-notes.md",
     "scripts/check_fixture_coverage.py",
     "scripts/check_fixture_generator.py",
     "scripts/check_package_installs.py",
@@ -44,18 +47,28 @@ REQUIRED_FILES = [
     "scripts/check_schema_taxonomy.py",
     "scripts/check_source_refresh.py",
     "scripts/check_alpha_smoke.py",
+    "scripts/check_go_fixtures.py",
+    "scripts/check_alpha_evidence_collector.py",
     "scripts/check_invoice_comparison.py",
     "scripts/check_project_completion_gates.py",
     "scripts/check_generated_contract_docs.py",
+    "scripts/check_public_api_registry.py",
+    "scripts/check_python_type_surface.py",
     "scripts/compare_invoice_dashboard.py",
+    "scripts/collect_alpha_evidence_bundle.py",
+    "scripts/create_openai_costs_comparison_input.py",
     "scripts/create_fixture.py",
     "scripts/run_langchain_alpha_smoke.py",
     "scripts/run_alpha_smoke.py",
+    "scripts/run_openai_costs_invoice_comparison.py",
     "scripts/run_vercel_alpha_smoke.mjs",
     "scripts/generate_contract_docs.py",
     "scripts/refresh_price_sources.py",
+    "examples/javascript_framework_adapters.mjs",
+    "examples/python_framework_adapters.py",
     "fixtures/source-files/alpha-smoke-samples.json",
     "fixtures/source-files/invoice-dashboard-comparison-sample.json",
+    "fixtures/source-files/openai-costs-comparison-source.json",
     "fixtures/source-files/project-completion-gates.json",
     "packages/python/runcost/cli.py",
     "LICENSE",
@@ -66,7 +79,10 @@ REQUIRED_FILES = [
     "packages/python/runcost/types.py",
     "schemas/debug-trace.schema.json",
     "schemas/fixture.schema.json",
+    "schemas/public-api-registry.schema.json",
     "schemas/taxonomy.json",
+    "fixtures/source-files/public-api-registry.json",
+    "docs/generated/public-api-registry.md",
     "packages/go/ledger/example_test.go",
     ".github/workflows/ci.yml",
     ".github/workflows/release.yml",
@@ -201,6 +217,8 @@ def check_package_metadata() -> None:
     root_package = load_json(ROOT / "package.json")
     scripts = root_package.get("scripts", {})
     assert_true("check_fixtures.py" in scripts.get("test", ""), "root npm test must run fixture checks")
+    assert_true("check_go_fixtures.py" in scripts.get("test", ""), "root npm test must run explicit Go fixture checks")
+    assert_true("check_go_fixtures.py" in scripts.get("check:fixtures:go", ""), "root check:fixtures:go must run explicit Go fixture checks")
     assert_true(
         "check_fixture_generator.py" in scripts.get("test", ""),
         "root npm test must run fixture generator checks",
@@ -210,12 +228,32 @@ def check_package_metadata() -> None:
         "root npm test must run schema taxonomy checks",
     )
     assert_true(
+        "check_public_api_registry.py" in scripts.get("test", ""),
+        "root npm test must run public API registry checks",
+    )
+    assert_true(
+        "check_public_api_registry.py" in scripts.get("check:api-registry", ""),
+        "root check:api-registry must run public API registry checks",
+    )
+    assert_true(
+        "check_python_type_surface.py" in scripts.get("test", ""),
+        "root npm test must run Python type surface checks",
+    )
+    assert_true(
+        "check_python_type_surface.py" in scripts.get("check:types:python", ""),
+        "root check:types:python must run Python type surface checks",
+    )
+    assert_true(
         "check_source_refresh.py" in scripts.get("test", ""),
         "root npm test must run source refresh command checks",
     )
     assert_true(
         "check_alpha_smoke.py" in scripts.get("test", ""),
         "root npm test must run alpha smoke sample checks",
+    )
+    assert_true(
+        "check_alpha_evidence_collector.py" in scripts.get("test", ""),
+        "root npm test must run alpha evidence collector checks",
     )
     assert_true(
         "check_invoice_comparison.py" in scripts.get("test", ""),
@@ -261,6 +299,10 @@ def check_package_metadata() -> None:
         "root smoke:alpha must run alpha smoke harness",
     )
     assert_true(
+        "collect_alpha_evidence_bundle.py" in scripts.get("alpha:bundle", ""),
+        "root alpha:bundle must run alpha evidence bundle collector",
+    )
+    assert_true(
         "compare_invoice_dashboard.py" in scripts.get("compare:invoice", ""),
         "root compare:invoice must run invoice/dashboard comparison command",
     )
@@ -271,6 +313,14 @@ def check_package_metadata() -> None:
     assert_true(
         "generate_contract_docs.py --write" in scripts.get("generate:contracts", ""),
         "root generate:contracts must regenerate contract docs",
+    )
+    assert_true(
+        "javascript_framework_adapters.mjs" in scripts.get("example:framework:js", ""),
+        "root example:framework:js must run JavaScript framework examples",
+    )
+    assert_true(
+        "python_framework_adapters.py" in scripts.get("example:framework:py", ""),
+        "root example:framework:py must run Python framework examples",
     )
 
     js_package_path = ROOT / "packages/javascript/core/package.json"
@@ -284,11 +334,12 @@ def check_package_metadata() -> None:
     assert_true(js_package.get("license") == "MIT", "JavaScript package must declare MIT license")
 
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert_true('name = "runcost-ai"' in pyproject, "Python distribution name must be runcost-ai")
     assert_true('runcost = "runcost.cli:main"' in pyproject, "Python package must install runcost CLI")
 
 
 def check_public_api_artifacts() -> None:
-    parity = (ROOT / "docs/notes/api-parity-matrix.md").read_text(encoding="utf-8")
+    parity = (ROOT / "docs/internal/notes/api-parity-matrix.md").read_text(encoding="utf-8")
     typescript = (ROOT / "packages/javascript/core/index.d.ts").read_text(encoding="utf-8")
     python_init = (ROOT / "packages/python/runcost/__init__.py").read_text(encoding="utf-8")
     python_types = (ROOT / "packages/python/runcost/types.py").read_text(encoding="utf-8")
@@ -440,11 +491,19 @@ def check_ci_workflow() -> None:
         "check_fixture_generator.py",
         "check_source_refresh.py",
         "check_alpha_smoke.py",
+        "check_alpha_smoke_contract.py",
+        "check_alpha_smoke_preflight.py",
+        "check_alpha_evidence_bundle.py",
+        "check_alpha_evidence_collector.py",
+        "check_invoice_comparison_contract.py",
         "check_invoice_comparison.py",
         "check_project_completion_gates.py",
         "check_generated_contract_docs.py",
+        "collect_alpha_evidence_bundle.py",
         "compare_invoice_dashboard.py",
+        "create_openai_costs_comparison_input.py",
         "generate_contract_docs.py",
+        "run_openai_costs_invoice_comparison.py",
         "run_langchain_alpha_smoke.py",
         "run_vercel_alpha_smoke.mjs",
         "check_schema_taxonomy.py",
@@ -453,6 +512,8 @@ def check_ci_workflow() -> None:
         "npm run check:release",
         "npm run example:js",
         "npm run example:py",
+        "npm run example:framework:js",
+        "npm run example:framework:py",
         "python3 -m py_compile",
     ]:
         assert_true(command in workflow, f"CI workflow missing command: {command}")
@@ -460,20 +521,41 @@ def check_ci_workflow() -> None:
 
 def check_packaging_docs() -> None:
     root_readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    npm_readme = (ROOT / "packages/javascript/core/README.md").read_text(encoding="utf-8")
     quickstart = (ROOT / "docs/guides/quickstart.md").read_text(encoding="utf-8")
     installation = (ROOT / "docs/guides/package-installation.md").read_text(encoding="utf-8")
     migration = (ROOT / "docs/guides/2026-05-26-migration-from-hand-written-formulas.md").read_text(encoding="utf-8")
     api_reference = (ROOT / "docs/reference/api-reference.md").read_text(encoding="utf-8")
-    release_process = (ROOT / "docs/process/release-process.md").read_text(encoding="utf-8")
-    beta_roadmap = (ROOT / "docs/process/beta-v1-hardening-roadmap.md").read_text(encoding="utf-8")
-    source_update = (ROOT / "docs/process/2026-05-26-source-data-update-process.md").read_text(encoding="utf-8")
+    framework_notes = (ROOT / "docs/internal/notes/framework-adapter-notes.md").read_text(encoding="utf-8")
+    release_process = (ROOT / "docs/internal/process/release-process.md").read_text(encoding="utf-8")
+    beta_roadmap = (ROOT / "docs/internal/process/beta-v1-hardening-roadmap.md").read_text(encoding="utf-8")
+    source_update = (ROOT / "docs/internal/process/2026-05-26-source-data-update-process.md").read_text(encoding="utf-8")
     warnings = (ROOT / "docs/reference/warnings-and-limitations.md").read_text(encoding="utf-8")
     gates = load_json(ROOT / "fixtures/source-files/project-completion-gates.json")
 
-    assert_true(
-        "2026-05-26-migration-from-hand-written-formulas.md" in root_readme,
-        "README must link to migration guide",
-    )
+    for phrase in [
+        "What did this LLM or agent API call cost, and why?",
+        "pip install runcost-ai",
+        "npm install runcost",
+        "go get github.com/adamallcock/runcost/packages/go/ledger",
+        "from_response",
+        "fromResponse",
+        "FromResponse",
+        "calculate_cost",
+        "Main APIs",
+        "Custom Prices And Discounts",
+        "Warnings",
+    ]:
+        assert_true(phrase in root_readme, f"README missing public user-facing phrase: {phrase}")
+    assert_true("docs/guides/2026-05-26-migration-from-hand-written-formulas.md" in root_readme, "README must link to migration guide")
+    assert_true("docs/internal/" not in root_readme, "README must not link to internal docs")
+    for forbidden in ["Project State", "Project plan", "Progress tracker", "market-gap-validation", "docs/internal/process/", "docs/internal/reports/"]:
+        assert_true(forbidden not in root_readme, f"README must not expose internal project state: {forbidden}")
+    for phrase in ["What did this LLM or agent API call cost, and why?", "npm install runcost", "fromResponse", "calculateCost", "Main APIs"]:
+        assert_true(phrase in npm_readme, f"npm README missing aligned package guidance: {phrase}")
+    assert_true("prototype" not in npm_readme.lower(), "npm README must not use prototype positioning")
+    assert_true("pre-alpha" not in root_readme.lower(), "README must not use pre-alpha positioning")
+    assert_true("pre-alpha" not in npm_readme.lower(), "npm README must not use pre-alpha positioning")
     assert_true("npm test" in quickstart, "quickstart must mention npm test")
     assert_true("npm run check:packages" in installation, "package installation guide must mention package checks")
     assert_true("runcost.cli:main" in (ROOT / "pyproject.toml").read_text(encoding="utf-8"), "pyproject missing CLI entry")
@@ -483,12 +565,10 @@ def check_packaging_docs() -> None:
         assert_true(phrase in api_reference, f"API reference missing CLI command: {phrase}")
         assert_true(phrase in migration, f"migration guide missing CLI command: {phrase}")
         assert_true(phrase in release_process, f"release process missing CLI command: {phrase}")
+    for phrase in ["examples/python_framework_adapters.py", "examples/javascript_framework_adapters.mjs"]:
+        assert_true(phrase in framework_notes, f"framework adapter notes missing framework example link: {phrase}")
     for phrase in ["Ownership", "Cadence", "Review Checklist", "Product Truth Loop"]:
         assert_true(phrase in source_update, f"source data update process missing section: {phrase}")
-    assert_true(
-        "2026-05-26-source-data-update-process.md" in root_readme,
-        "README must link to source data update process",
-    )
     assert_true(
         "2026-05-26-source-data-update-process.md" in release_process,
         "release process must link to source data update process",
@@ -496,6 +576,14 @@ def check_packaging_docs() -> None:
     assert_true(
         "warning-coverage.md" in warnings,
         "warnings and limitations docs must link generated warning coverage",
+    )
+    assert_true(
+        "beta-v1-caveats.md" in warnings,
+        "warnings and limitations docs must link generated beta/V1 caveats",
+    )
+    assert_true(
+        "beta-v1-caveats.md" in beta_roadmap,
+        "beta/V1 roadmap must link generated beta/V1 caveats",
     )
     assert_true(
         "2026-05-26-release-workflow-0-1-0-no-publish-rehearsal.md" in beta_roadmap,
@@ -519,10 +607,60 @@ def check_packaging_docs() -> None:
         )
 
 
+def check_public_markdown_layout() -> None:
+    public_paths = [
+        ROOT / "README.md",
+        ROOT / "packages/javascript/core/README.md",
+        ROOT / "docs/README.md",
+        *sorted((ROOT / "docs/guides").glob("*.md")),
+        *sorted((ROOT / "docs/reference").glob("*.md")),
+        *sorted((ROOT / "docs/generated").glob("*.md")),
+    ]
+    forbidden_public_patterns = [
+        "PROJECT_PLAN.md",
+        "PROGRESS_TRACKER.md",
+        "VALIDATION_REPORT.md",
+        "PRODUCT_REQUIREMENTS.md",
+        "ARCHITECTURE.md",
+        "LIVE_EVALUATION_PROTOCOL.md",
+        "RESULTS_MATRIX.md",
+        "2026-05-25-",
+    ]
+    root_readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    for forbidden in ["docs/internal/", "docs/process/", "docs/notes/", "docs/reports/"]:
+        assert_true(forbidden not in root_readme, f"root README must not link internal path {forbidden}")
+
+    for path in public_paths:
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        relative = path.relative_to(ROOT)
+        for forbidden in forbidden_public_patterns:
+            assert_true(forbidden not in text, f"{relative} contains stale public-doc reference {forbidden}")
+        for match in re.finditer(r"\[[^\]]+\]\(([^)]+)\)", text):
+            target = match.group(1).strip()
+            if (
+                not target
+                or target.startswith("#")
+                or "://" in target
+                or target.startswith("mailto:")
+                or target.startswith("<")
+            ):
+                continue
+            link_path = target.split("#", 1)[0]
+            if not link_path:
+                continue
+            candidate = (path.parent / link_path).resolve()
+            assert_true(
+                candidate.exists(),
+                f"{relative} has broken markdown link {target}",
+            )
+
+
 def check_framework_adapter_paths() -> None:
-    framework_notes = (ROOT / "docs/notes/framework-adapter-notes.md").read_text(encoding="utf-8")
+    framework_notes = (ROOT / "docs/internal/notes/framework-adapter-notes.md").read_text(encoding="utf-8")
     supported_surfaces = (ROOT / "docs/reference/supported-surfaces.md").read_text(encoding="utf-8")
-    parity = (ROOT / "docs/notes/api-parity-matrix.md").read_text(encoding="utf-8")
+    parity = (ROOT / "docs/internal/notes/api-parity-matrix.md").read_text(encoding="utf-8")
 
     framework_note_terms = [
         "OpenAI Agents SDK Usage",
@@ -575,6 +713,7 @@ def main() -> int:
     check_fixture_floor()
     check_ci_workflow()
     check_packaging_docs()
+    check_public_markdown_layout()
     check_framework_adapter_paths()
     print("Project hygiene checks passed.")
     return 0

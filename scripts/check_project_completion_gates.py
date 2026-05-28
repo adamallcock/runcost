@@ -10,6 +10,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REGISTER = ROOT / "fixtures" / "source-files" / "project-completion-gates.json"
+REGISTER_SCHEMA = ROOT / "schemas" / "project-completion-gates.schema.json"
 
 ALLOWED_STATUSES = {
     "satisfied",
@@ -27,6 +28,17 @@ ALLOWED_AREAS = {
     "v1",
 }
 ALLOWED_REQUIREMENTS = {"milestone8", "public_beta", "v1"}
+ALLOWED_EVIDENCE_KINDS = {
+    "code",
+    "docs",
+    "fixture",
+    "register",
+    "report",
+    "schema",
+    "script",
+    "workflow",
+}
+INCOMPLETE_STATUSES = {"partial", "pending_external_evidence", "not_started"}
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -45,6 +57,7 @@ def validate_evidence(gate_id: str, evidence: object) -> None:
         kind = item.get("kind")
         proves = item.get("proves")
         assert_true(isinstance(kind, str) and kind, f"{gate_id}: evidence entry missing kind")
+        assert_true(kind in ALLOWED_EVIDENCE_KINDS, f"{gate_id}: invalid evidence kind {kind!r}")
         assert_true(isinstance(proves, str) and proves, f"{gate_id}: evidence entry missing proves")
         path = item.get("path")
         if path is not None:
@@ -103,6 +116,7 @@ def validate_gate(gate: object, seen: set[str]) -> dict[str, Any]:
 
 
 def validate_register(register: dict[str, Any]) -> list[dict[str, Any]]:
+    validate_register_schema(load_json(REGISTER_SCHEMA))
     assert_true(register.get("schema_version") == "0.1", "completion gate register must use schema_version 0.1")
     assert_true(isinstance(register.get("updated_at"), str) and register["updated_at"], "register missing updated_at")
     status_scale = register.get("status_scale")
@@ -113,6 +127,53 @@ def validate_register(register: dict[str, Any]) -> list[dict[str, Any]]:
     assert_true(isinstance(gates, list) and gates, "register must contain gates")
     seen: set[str] = set()
     return [validate_gate(gate, seen) for gate in gates]
+
+
+def validate_register_schema(schema: dict[str, Any]) -> None:
+    assert_true(schema.get("title") == "RunCost Project Completion Gates", "unexpected completion gate schema title")
+    assert_true(schema.get("properties", {}).get("schema_version", {}).get("const") == "0.1", "schema version const drifted")
+
+    defs = schema.get("$defs")
+    assert_true(isinstance(defs, dict), "completion gate schema missing $defs")
+    assert_true(set(defs.get("status", {}).get("enum", [])) == ALLOWED_STATUSES, "schema status enum drifted")
+    assert_true(set(defs.get("area", {}).get("enum", [])) == ALLOWED_AREAS, "schema area enum drifted")
+    assert_true(
+        set(defs.get("requirement", {}).get("enum", [])) == ALLOWED_REQUIREMENTS,
+        "schema requirement enum drifted",
+    )
+    evidence_kind = defs.get("evidence", {}).get("properties", {}).get("kind", {})
+    assert_true(set(evidence_kind.get("enum", [])) == ALLOWED_EVIDENCE_KINDS, "schema evidence kind enum drifted")
+
+    gate_schema = defs.get("gate")
+    assert_true(isinstance(gate_schema, dict), "completion gate schema missing gate definition")
+    assert_true(gate_schema.get("additionalProperties") is False, "gate schema must reject unknown fields")
+    required = set(gate_schema.get("required", []))
+    expected_required = {
+        "id",
+        "area",
+        "requirement",
+        "status",
+        "required_for",
+        "required_evidence",
+        "current_evidence",
+        "completion_check",
+    }
+    assert_true(required == expected_required, "gate required fields drifted")
+
+    rules = gate_schema.get("allOf")
+    assert_true(isinstance(rules, list) and len(rules) == 3, "gate schema must encode status-dependent rules")
+    rule_statuses: set[str] = set()
+    for rule in rules:
+        assert_true(isinstance(rule, dict), "status-dependent rules must be objects")
+        status_schema = rule.get("if", {}).get("properties", {}).get("status", {})
+        if "const" in status_schema:
+            rule_statuses.add(status_schema["const"])
+        else:
+            rule_statuses.update(status_schema.get("enum", []))
+    assert_true(
+        rule_statuses == ALLOWED_STATUSES,
+        "gate schema status-dependent rules must cover every allowed status",
+    )
 
 
 def require_complete(gates: list[dict[str, Any]], requirement: str) -> None:

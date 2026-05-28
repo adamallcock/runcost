@@ -1,0 +1,198 @@
+{
+  "name": "openrouter-sdk-stream-provider-cost",
+  "description": "Compares OpenRouter provider-reported cost from an OpenAI-compatible final streaming usage chunk.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-PROVIDER-REPORTED-COST",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "openrouter",
+    "surface": "openrouter.chat_completions",
+    "scenario": "provider_reported",
+    "tags": [
+      "component:input_cache_read_tokens",
+      "component:input_uncached_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_text_tokens",
+      "helper:from_openrouter_sdk_response",
+      "provider_reported",
+      "raw_provider_response",
+      "streaming",
+      "warning:provider_reported_cost_mismatch"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "helper": "from_openrouter_sdk_response",
+    "extract": {
+      "provider": "openrouter",
+      "surface": "openrouter.chat_completions"
+    },
+    "raw_response": {
+      "id": "openrouter-stream-fixture",
+      "object": "chat.completion.chunk.stream",
+      "model": "openai/gpt-5-nano",
+      "chunks": [
+        {
+          "id": "openrouter-stream-fixture",
+          "object": "chat.completion.chunk",
+          "model": "openai/gpt-5-nano",
+          "choices": [
+            {
+              "index": 0,
+              "delta": {
+                "content": "pong"
+              },
+              "finish_reason": null
+            }
+          ],
+          "usage": null
+        },
+        {
+          "id": "openrouter-stream-fixture",
+          "object": "chat.completion.chunk",
+          "model": "openai/gpt-5-nano",
+          "choices": [],
+          "usage": {
+            "prompt_tokens": 100,
+            "prompt_tokens_details": {
+              "cached_tokens": 25
+            },
+            "completion_tokens": 40,
+            "completion_tokens_details": {
+              "reasoning_tokens": 5
+            },
+            "total_tokens": 140,
+            "cost": "0.001"
+          }
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openrouter:openai/gpt-5-nano:chat-stream-fixture",
+        "provider": "openrouter",
+        "surface": "openrouter.chat_completions",
+        "model": "openai/gpt-5-nano",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000001",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.0000001",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000004",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000004",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openrouter",
+      "surface": "openrouter.chat_completions",
+      "model": {
+        "requested": "openai/gpt-5-nano",
+        "returned": "openai/gpt-5-nano",
+        "billed": "openai/gpt-5-nano",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "75",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.000075",
+          "price_card_id": "openrouter:openai/gpt-5-nano:chat-stream-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "25",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.0000025",
+          "price_card_id": "openrouter:openai/gpt-5-nano:chat-stream-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "35",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.00014",
+          "price_card_id": "openrouter:openai/gpt-5-nano:chat-stream-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "5",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.00002",
+          "price_card_id": "openrouter:openai/gpt-5-nano:chat-stream-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0002375",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "provider_reported_cost_mismatch",
+          "message": "Provider reported cost 0.001 differs from calculated total 0.0002375.",
+          "metadata": {
+            "provider_reported_cost": "0.001",
+            "calculated_total": "0.0002375"
+          }
+        }
+      ]
+    }
+  }
+}

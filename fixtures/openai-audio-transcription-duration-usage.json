@@ -1,0 +1,99 @@
+{
+  "name": "openai-audio-transcription-duration-usage",
+  "description": "Extracts OpenAI audio transcription duration usage into transcription seconds.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-PROVIDER-EXTRACTOR",
+      "RC-FEATURE-PRICING"
+    ],
+    "provider": "openai",
+    "surface": "openai.audio_transcriptions",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:transcription_seconds",
+      "transcription",
+      "duration_usage"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "task": "transcribe",
+      "language": "english",
+      "duration": 8.47,
+      "text": "The beach was a popular spot on a hot summer day.",
+      "usage": {
+        "type": "duration",
+        "seconds": 9
+      }
+    },
+    "extract": {
+      "provider": "openai",
+      "surface": "openai.audio_transcriptions",
+      "model": "whisper-1"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:whisper-1:transcription-duration-fixture",
+        "provider": "openai",
+        "surface": "openai.audio_transcriptions",
+        "model": "whisper-1",
+        "components": [
+          {
+            "usage_component": "transcription_seconds",
+            "unit": "second",
+            "price": {
+              "amount": "0.0001",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.audio_transcriptions",
+      "model": {
+        "requested": "whisper-1",
+        "returned": "whisper-1",
+        "billed": "whisper-1",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "transcription_seconds",
+          "quantity": "9",
+          "unit": "second",
+          "unit_price": "0.0001",
+          "cost": "0.0009",
+          "price_card_id": "openai:whisper-1:transcription-duration-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0009",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

@@ -13,7 +13,7 @@
       "id": "milestone8_live_smoke_openai_responses",
       "area": "milestone8",
       "requirement": "Run an API-key-gated OpenAI Responses live smoke and keep only sanitized evidence.",
-      "status": "pending_external_evidence",
+      "status": "satisfied",
       "required_for": ["milestone8", "public_beta", "v1"],
       "required_evidence": [
         "Sanitized live smoke JSON with scenario openai_responses and status passed.",
@@ -22,28 +22,58 @@
       "current_evidence": [
         {
           "kind": "report",
-          "path": "docs/reports/2026-05-26-alpha-smoke-live-no-credentials.md",
+          "path": "docs/internal/reports/2026-05-27-live-framework-and-billing-review.md",
+          "proves": "A sanitized OpenAI Responses live smoke passed with raw responses omitted."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/alpha-smoke-live-openai-responses-2026-05-27.json",
+          "proves": "The reviewed smoke evidence includes scenario openai_responses with status passed."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/alpha-smoke-live-all-2026-05-27.json",
+          "proves": "The complete reviewed live smoke bundle includes OpenAI Responses with status passed."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-27-operator-action-completion-audit.md",
+          "proves": "The remaining OpenAI Responses live-smoke gap requires operator-provided OpenAI credentials."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-26-alpha-smoke-live-no-credentials.md",
           "proves": "The live harness skips safely when OPENAI_API_KEY is absent; it does not prove live provider behavior."
         },
         {
           "kind": "script",
           "path": "scripts/run_alpha_smoke.py",
-          "proves": "The optional live smoke entrypoint exists."
+          "proves": "The optional live smoke entrypoint exists and validates sanitized report shape before writing output."
         },
         {
           "kind": "script",
           "path": "scripts/run_alpha_smoke_preflight.py",
-          "proves": "Credential and optional dependency readiness can be checked without emitting secret values."
+          "proves": "Credential and optional dependency readiness can be checked with sanitized next-action guidance and without emitting secret values."
+        },
+        {
+          "kind": "schema",
+          "path": "schemas/alpha-smoke-report.schema.json",
+          "proves": "Alpha smoke and preflight evidence share a documented sanitized report contract with mode-specific aggregate smoke, framework, preflight, and sample-price acknowledgement rules."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_alpha_smoke_contract.py",
+          "proves": "Alpha smoke evidence contract checks reject forbidden keys, secret-like values, raw responses, summary drift, and schema/checker drift."
         }
       ],
       "completion_check": "python3 scripts/check_alpha_product_truth.py --smoke-report <sanitized-live-report.json>",
-      "remaining_action": "Run live mode with OPENAI_API_KEY, review sanitized output, and convert any finding into product truth."
+      "remaining_action": "Watch future OpenAI Responses live smoke findings and convert any non-passing result into product truth."
     },
     {
       "id": "milestone8_live_smoke_anthropic_caching",
       "area": "milestone8",
       "requirement": "Run an API-key-gated Anthropic prompt-caching live smoke and keep only sanitized evidence.",
-      "status": "pending_external_evidence",
+      "status": "satisfied",
       "required_for": ["milestone8", "public_beta", "v1"],
       "required_evidence": [
         "Sanitized live smoke JSON with scenario anthropic_prompt_caching and status passed.",
@@ -52,7 +82,17 @@
       "current_evidence": [
         {
           "kind": "report",
-          "path": "docs/reports/2026-05-26-alpha-smoke-live-no-credentials.md",
+          "path": "docs/internal/reports/2026-05-27-alpha-smoke-live-direct.md",
+          "proves": "A sanitized live Anthropic prompt-caching smoke passed with raw responses omitted."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/alpha-smoke-live-direct-2026-05-27.json",
+          "proves": "The reviewed smoke evidence includes scenario anthropic_prompt_caching with status passed."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-26-alpha-smoke-live-no-credentials.md",
           "proves": "The live harness skips safely when ANTHROPIC_API_KEY is absent; it does not prove live provider behavior."
         },
         {
@@ -62,18 +102,23 @@
         },
         {
           "kind": "script",
+          "path": "scripts/run_alpha_smoke.py",
+          "proves": "The optional live Anthropic scenario runs through an aggregate smoke entrypoint that validates sanitized report shape before writing output."
+        },
+        {
+          "kind": "script",
           "path": "scripts/run_alpha_smoke_preflight.py",
-          "proves": "Credential readiness can be checked without emitting secret values."
+          "proves": "Credential readiness can be checked with sanitized next-action guidance and without emitting secret values."
         }
       ],
       "completion_check": "python3 scripts/check_alpha_product_truth.py --smoke-report <sanitized-live-report.json>",
-      "remaining_action": "Run live mode with ANTHROPIC_API_KEY, review sanitized output, and convert any finding into product truth."
+      "remaining_action": "Watch future Anthropic live smoke findings and convert any non-passing result into product truth."
     },
     {
       "id": "milestone8_live_smoke_vercel_streaming",
       "area": "milestone8",
       "requirement": "Run a Vercel AI SDK streamText smoke beside a real SDK flow without making the SDK a core dependency.",
-      "status": "pending_external_evidence",
+      "status": "satisfied",
       "required_for": ["milestone8", "public_beta", "v1"],
       "required_evidence": [
         "Sanitized framework smoke JSON with scenario vercel_ai_sdk_stream_text and status passed.",
@@ -81,9 +126,29 @@
       ],
       "current_evidence": [
         {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-27-live-framework-and-billing-review.md",
+          "proves": "A sanitized Vercel AI SDK streamText live smoke passed against OpenAI with raw responses omitted."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/alpha-smoke-live-vercel-openai-2026-05-27.json",
+          "proves": "The reviewed framework smoke evidence includes scenario vercel_ai_sdk_stream_text with status passed."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/alpha-smoke-live-all-2026-05-27.json",
+          "proves": "The complete reviewed live smoke bundle includes Vercel AI SDK streamText with status passed."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-27-operator-action-completion-audit.md",
+          "proves": "The remaining Vercel live-smoke gap requires operator-provided OpenAI credentials and optional SDK dependencies."
+        },
+        {
           "kind": "script",
           "path": "scripts/run_vercel_alpha_smoke.mjs",
-          "proves": "A dependency-optional Vercel sample/live smoke entrypoint exists."
+          "proves": "A dependency-optional Vercel sample/live smoke entrypoint exists and validates sanitized report shape before writing output."
         },
         {
           "kind": "fixture",
@@ -93,17 +158,17 @@
         {
           "kind": "script",
           "path": "scripts/run_alpha_smoke_preflight.py",
-          "proves": "Credential and optional Vercel SDK dependency readiness can be checked without emitting secret values."
+          "proves": "Credential and optional Vercel SDK dependency readiness can be checked with sanitized next-action guidance and without emitting secret values."
         }
       ],
       "completion_check": "node scripts/run_vercel_alpha_smoke.mjs --mode live --output <sanitized-report.json> --allow-sample-prices",
-      "remaining_action": "Run the Vercel live smoke with required SDK dependencies and credentials, then classify any finding."
+      "remaining_action": "Watch future Vercel live smoke findings and convert any non-passing result into product truth."
     },
     {
       "id": "milestone8_live_smoke_langchain_agent",
       "area": "milestone8",
       "requirement": "Run a LangChain agent or callback smoke beside a real SDK/framework flow.",
-      "status": "pending_external_evidence",
+      "status": "satisfied",
       "required_for": ["milestone8", "public_beta", "v1"],
       "required_evidence": [
         "Sanitized framework smoke JSON with scenario langchain_agent_run and status passed.",
@@ -111,9 +176,29 @@
       ],
       "current_evidence": [
         {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-27-live-framework-and-billing-review.md",
+          "proves": "A sanitized LangChain live smoke passed against OpenAI with raw responses omitted."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/alpha-smoke-live-langchain-openai-2026-05-27.json",
+          "proves": "The reviewed framework smoke evidence includes scenario langchain_agent_run with status passed."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/alpha-smoke-live-all-2026-05-27.json",
+          "proves": "The complete reviewed live smoke bundle includes LangChain with status passed."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-27-operator-action-completion-audit.md",
+          "proves": "The remaining LangChain live-smoke gap requires operator-provided OpenAI credentials and optional SDK dependencies."
+        },
+        {
           "kind": "script",
           "path": "scripts/run_langchain_alpha_smoke.py",
-          "proves": "A dependency-optional LangChain sample/live smoke entrypoint exists."
+          "proves": "A dependency-optional LangChain sample/live smoke entrypoint exists and validates sanitized report shape before writing output."
         },
         {
           "kind": "fixture",
@@ -123,17 +208,17 @@
         {
           "kind": "script",
           "path": "scripts/run_alpha_smoke_preflight.py",
-          "proves": "Credential and optional LangChain dependency readiness can be checked without emitting secret values."
+          "proves": "Credential and optional LangChain dependency readiness can be checked with sanitized next-action guidance and without emitting secret values."
         }
       ],
       "completion_check": "python3 scripts/run_langchain_alpha_smoke.py --mode live --output <sanitized-report.json> --allow-sample-prices",
-      "remaining_action": "Run the LangChain live smoke with required framework dependencies and credentials, then classify any finding."
+      "remaining_action": "Watch future LangChain live smoke findings and convert any non-passing result into product truth."
     },
     {
       "id": "milestone8_live_smoke_openrouter_cost_compare",
       "area": "milestone8",
       "requirement": "Run an OpenRouter live smoke and compare RunCost output to provider-reported cost where present.",
-      "status": "pending_external_evidence",
+      "status": "satisfied",
       "required_for": ["milestone8", "public_beta", "v1"],
       "required_evidence": [
         "Sanitized live smoke JSON with scenario openrouter_cost_compare and status passed.",
@@ -142,7 +227,17 @@
       "current_evidence": [
         {
           "kind": "report",
-          "path": "docs/reports/2026-05-26-alpha-smoke-live-no-credentials.md",
+          "path": "docs/internal/reports/2026-05-27-alpha-smoke-live-direct.md",
+          "proves": "A sanitized live OpenRouter cost-comparison smoke passed against nvidia/nemotron-3-super-120b-a12b:free."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/alpha-smoke-live-direct-2026-05-27.json",
+          "proves": "The reviewed smoke evidence includes scenario openrouter_cost_compare with status passed and provider usage/cost fields present."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-26-alpha-smoke-live-no-credentials.md",
           "proves": "The live harness skips safely when OPENROUTER_API_KEY is absent; it does not prove live provider behavior."
         },
         {
@@ -152,24 +247,39 @@
         },
         {
           "kind": "script",
+          "path": "scripts/run_alpha_smoke.py",
+          "proves": "The optional live OpenRouter scenario runs through an aggregate smoke entrypoint that validates sanitized report shape before writing output."
+        },
+        {
+          "kind": "script",
           "path": "scripts/run_alpha_smoke_preflight.py",
-          "proves": "Credential readiness can be checked without emitting secret values."
+          "proves": "Credential readiness can be checked with sanitized next-action guidance and without emitting secret values."
         }
       ],
       "completion_check": "python3 scripts/check_alpha_product_truth.py --smoke-report <sanitized-live-report.json>",
-      "remaining_action": "Run live mode with OPENROUTER_API_KEY and classify any provider-reported cost delta."
+      "remaining_action": "Watch future OpenRouter live smoke findings and convert any provider-reported cost delta into product truth."
     },
     {
       "id": "milestone8_multi_provider_discount_case",
       "area": "milestone8",
       "requirement": "Validate a multi-provider custom-discount case in the alpha smoke harness.",
-      "status": "partial",
+      "status": "satisfied",
       "required_for": ["milestone8", "public_beta", "v1"],
       "required_evidence": [
         "Smoke evidence showing a multi-provider discount case in the same review set as at least one live provider run.",
         "Fixture or documented limitation for any discount behavior discrepancy."
       ],
       "current_evidence": [
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-27-alpha-smoke-live-direct.md",
+          "proves": "The multi-provider discount case passed in the same reviewed report as live Anthropic and OpenRouter provider scenarios."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/alpha-smoke-live-direct-2026-05-27.json",
+          "proves": "The reviewed smoke evidence includes scenario multi_provider_discount with status passed."
+        },
         {
           "kind": "fixture",
           "path": "fixtures/source-files/alpha-smoke-samples.json",
@@ -178,7 +288,7 @@
         {
           "kind": "script",
           "path": "scripts/check_alpha_smoke.py",
-          "proves": "CI verifies the sample multi-provider discount smoke shape."
+          "proves": "CI verifies the sample multi-provider discount smoke shape and sanitized framework child-failure capture."
         },
         {
           "kind": "script",
@@ -187,13 +297,13 @@
         }
       ],
       "completion_check": "python3 scripts/check_alpha_smoke.py",
-      "remaining_action": "Include the discount scenario in the reviewed live smoke report and classify any issues discovered beside live provider evidence."
+      "remaining_action": "Keep the discount scenario in future reviewed live smoke bundles."
     },
     {
       "id": "milestone8_product_truth_loop",
       "area": "milestone8",
       "requirement": "Every live smoke finding becomes a fixture, structured warning, documented limitation, extractor/source fix, or price-source update.",
-      "status": "partial",
+      "status": "satisfied",
       "required_for": ["milestone8", "public_beta", "v1"],
       "required_evidence": [
         "Product-truth register entries matching every non-passing item in the reviewed live smoke report.",
@@ -201,18 +311,68 @@
       ],
       "current_evidence": [
         {
+          "kind": "fixture",
+          "path": "fixtures/source-files/alpha-smoke-live-all-2026-05-27.json",
+          "proves": "The complete reviewed live smoke bundle has no non-passing smoke findings to convert into additional product-truth artifacts."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-27-live-framework-and-billing-review.md",
+          "proves": "The live smoke review records all six scenarios as passed and keeps the remaining billing/export limitation separate."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-27-operator-action-completion-audit.md",
+          "proves": "The product-truth loop is complete for available live evidence and remains dependent on operator-provided missing live/invoice evidence."
+        },
+        {
           "kind": "register",
           "path": "fixtures/source-files/alpha-smoke-product-truth-register.json",
           "proves": "The product-truth loop is machine-checkable for current no-credential findings."
         },
         {
+          "kind": "schema",
+          "path": "schemas/alpha-smoke-product-truth-register.schema.json",
+          "proves": "The product-truth register has a documented schema-backed contract for status, classification, and artifact-kind compatibility."
+        },
+        {
           "kind": "script",
           "path": "scripts/check_alpha_product_truth.py",
-          "proves": "Live smoke reports can be checked against the register."
+          "proves": "Live smoke reports can be checked against the register, and non-passing findings must resolve to a compatible product-truth artifact."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/create_alpha_product_truth_entry.py",
+          "proves": "Sanitized smoke findings can be converted into schema-valid product-truth register entries without hand-authoring the JSON fields."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_alpha_evidence_bundle.py",
+          "proves": "The reviewed Milestone 8 evidence set can be checked as one bundle with required smoke scenarios, product-truth classifications, sample-price acknowledgement, and invoice comparison evidence."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/collect_alpha_evidence_bundle.py",
+          "proves": "A sanitized evidence bundle collector can create the reviewed artifact directory shape and run the bundle checker across aggregate smoke, Vercel, LangChain, and invoice comparison artifacts."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_alpha_evidence_collector.py",
+          "proves": "The sample-mode evidence bundle collector is exercised in CI without credentials and rejects leakage of secret-like values, timestamps, or local ledger paths."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_alpha_smoke.py",
+          "proves": "Framework child-script failures become sanitized needs_product_truth findings instead of raw aggregate-runner crashes."
+        },
+        {
+          "kind": "schema",
+          "path": "schemas/project-completion-gates.schema.json",
+          "proves": "The completion gate register itself has a documented schema-backed contract."
         }
       ],
-      "completion_check": "python3 scripts/check_alpha_product_truth.py --smoke-report <sanitized-live-report.json>",
-      "remaining_action": "After real live smoke runs, update the register and artifacts for any non-passing findings."
+      "completion_check": "python3 scripts/check_alpha_evidence_bundle.py --smoke-report <sanitized-live-report.json> --smoke-report <sanitized-vercel-report.json> --smoke-report <sanitized-langchain-report.json> --invoice-comparison <sanitized-real-comparison.json> --require-real",
+      "remaining_action": "Add product-truth entries for any future non-passing live smoke findings."
     },
     {
       "id": "milestone8_invoice_dashboard_real_comparison",
@@ -226,17 +386,77 @@
       ],
       "current_evidence": [
         {
-          "kind": "script",
-          "path": "scripts/check_invoice_comparison.py",
-          "proves": "The real-evidence check exists, rejects sanitized samples as completion evidence, and requires sanitized classified rows with product-truth actions for discrepancies."
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-27-live-framework-and-billing-review.md",
+          "proves": "A billing/export review packet exists for operator dashboard comparison against the live smoke window."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/billing-export-review-packet-2026-05-27.json",
+          "proves": "The review packet lists provider, surface, model, expected request count, and fields to inspect in provider billing or usage exports."
         },
         {
           "kind": "report",
-          "path": "docs/reports/2026-05-26-invoice-dashboard-comparison-sample.md",
+          "path": "docs/internal/reports/2026-05-27-operator-action-completion-audit.md",
+          "proves": "The remaining invoice/dashboard comparison gap requires operator-provided provider billing or usage-export evidence."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_invoice_comparison.py",
+          "proves": "The real-evidence check exists, rejects sanitized samples as completion evidence, requires sanitized classified rows with product-truth actions for discrepancies, and verifies unsafe comparison inputs do not produce output."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/compare_invoice_dashboard.py",
+          "proves": "The comparison producer rejects unsafe/private/secret-like input before writing output."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/create_openai_costs_comparison_input.py",
+          "proves": "A sanitized OpenAI Costs API page can be reduced into the generic invoice/dashboard comparison input contract."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/run_openai_costs_invoice_comparison.py",
+          "proves": "An API-key-gated OpenAI Costs API runner can generate sanitized comparison artifacts in sample mode or live mode with OPENAI_ADMIN_KEY and a supplied RunCost ledger."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/run_alpha_smoke_preflight.py",
+          "proves": "The sanitized live preflight includes OpenAI Costs invoice comparison readiness, requiring OPENAI_ADMIN_KEY plus the openai_costs_start_time and openai_costs_runcost_ledger input names without printing values or local paths."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/openai-costs-comparison-source.json",
+          "proves": "A sanitized OpenAI Costs API sample exercises the provider-reported cost comparison-input path without private billing exports."
+        },
+        {
+          "kind": "schema",
+          "path": "schemas/invoice-dashboard-comparison.schema.json",
+          "proves": "Invoice/dashboard comparison outputs share a documented sanitized comparison contract."
+        },
+        {
+          "kind": "schema",
+          "path": "schemas/invoice-dashboard-comparison-input.schema.json",
+          "proves": "Sanitized provider dashboard/export reductions have a documented input contract before comparison output is written."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_invoice_comparison_contract.py",
+          "proves": "Invoice/dashboard comparison contract checks reject invalid sanitized inputs, forbidden keys, secret-like values, private export flags, summary drift, and discrepancies without product-truth actions."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-26-invoice-dashboard-comparison-sample.md",
           "proves": "A sanitized sample proves the workflow shape, not real invoice completion."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_alpha_evidence_bundle.py",
+          "proves": "The real comparison must pass together with all required smoke evidence before Milestone 8 can close."
         }
       ],
-      "completion_check": "python3 scripts/check_invoice_comparison.py --comparison <sanitized-real-comparison.json> --require-real",
+      "completion_check": "python3 scripts/check_alpha_evidence_bundle.py --smoke-report <sanitized-live-report.json> --smoke-report <sanitized-vercel-report.json> --smoke-report <sanitized-langchain-report.json> --invoice-comparison <sanitized-real-comparison.json> --require-real",
       "remaining_action": "Run the comparison against a sanitized real provider dashboard, invoice, or usage export."
     },
     {
@@ -251,18 +471,58 @@
       ],
       "current_evidence": [
         {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-27-operator-action-completion-audit.md",
+          "proves": "The remaining PyPI trusted-publishing gap requires operator-side registry configuration."
+        },
+        {
           "kind": "docs",
-          "path": "docs/process/release-process.md",
+          "path": "docs/internal/process/release-process.md",
           "proves": "The required PyPI trusted-publisher settings are documented."
         },
         {
           "kind": "workflow",
           "path": ".github/workflows/release.yml",
-          "proves": "The workflow requests id-token permissions and uses PyPI trusted publishing."
+          "proves": "The workflow requests id-token permissions, uses PyPI trusted publishing, and requires typed publish approval before publish=true can proceed."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_release_readiness.py",
+          "proves": "Release readiness checks reject stored PyPI/npm registry-token dependencies in the release workflow."
+        },
+        {
+          "kind": "schema",
+          "path": "schemas/trusted-publishing-verification.schema.json",
+          "proves": "Registry-side trusted publisher verification has a sanitized machine-readable evidence contract."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_trusted_publishing_verification.py",
+          "proves": "Trusted-publishing verification checks validate template evidence in CI and provide a strict real-evidence mode for public beta."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/trusted-publishing-verification-template.json",
+          "proves": "The current checked-in trusted-publishing artifact is an explicit template, not real registry setup evidence."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-26-package-name-availability-check.md",
+          "proves": "Live registry checks showed PyPI `runcost` is occupied and `runcost-ai` had no matching distribution, so the Python distribution target is `runcost-ai`."
+        },
+        {
+          "kind": "docs",
+          "path": "docs/internal/decisions/2026-05-27-python-distribution-name.md",
+          "proves": "The Python distribution-name decision is recorded: publish `runcost-ai`, while preserving import package and CLI name `runcost`."
+        },
+        {
+          "kind": "code",
+          "path": "pyproject.toml",
+          "proves": "The Python package metadata uses distribution name `runcost-ai`."
         }
       ],
-      "completion_check": "Manual registry setting verification plus guarded release workflow evidence.",
-      "remaining_action": "Configure and verify the PyPI trusted publisher outside the repository."
+      "completion_check": "python3 scripts/check_trusted_publishing_verification.py --verification <sanitized-manual-verification.json> --require-real plus guarded release workflow evidence.",
+      "remaining_action": "Configure and verify the PyPI trusted publisher for project `runcost-ai` outside the repository."
     },
     {
       "id": "milestone9_npm_trusted_publishing",
@@ -276,17 +536,47 @@
       ],
       "current_evidence": [
         {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-27-operator-action-completion-audit.md",
+          "proves": "The remaining npm trusted-publishing gap requires operator-side registry configuration."
+        },
+        {
           "kind": "docs",
-          "path": "docs/process/release-process.md",
+          "path": "docs/internal/process/release-process.md",
           "proves": "The required npm trusted-publisher settings are documented."
         },
         {
           "kind": "workflow",
           "path": ".github/workflows/release.yml",
-          "proves": "The workflow publishes npm with provenance when publishing is enabled."
+          "proves": "The workflow publishes npm with provenance when publishing is enabled and requires typed publish approval before publish=true can proceed."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_release_readiness.py",
+          "proves": "Release readiness checks reject stored PyPI/npm registry-token dependencies in the release workflow."
+        },
+        {
+          "kind": "schema",
+          "path": "schemas/trusted-publishing-verification.schema.json",
+          "proves": "Registry-side trusted publisher verification has a sanitized machine-readable evidence contract."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_trusted_publishing_verification.py",
+          "proves": "Trusted-publishing verification checks validate template evidence in CI and provide a strict real-evidence mode for public beta."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/trusted-publishing-verification-template.json",
+          "proves": "The current checked-in trusted-publishing artifact is an explicit template, not real registry setup evidence."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-05-26-package-name-availability-check.md",
+          "proves": "npm `runcost` returned E404 during the registry availability check, so npm trusted-publishing setup can proceed after registry-side ownership/settings are configured."
         }
       ],
-      "completion_check": "Manual registry setting verification plus guarded release workflow evidence.",
+      "completion_check": "python3 scripts/check_trusted_publishing_verification.py --verification <sanitized-manual-verification.json> --require-real plus guarded release workflow evidence.",
       "remaining_action": "Configure and verify npm trusted publishing outside the repository."
     },
     {
@@ -302,12 +592,12 @@
       "current_evidence": [
         {
           "kind": "report",
-          "path": "docs/reports/2026-05-26-release-workflow-no-publish-rehearsal.md",
+          "path": "docs/internal/reports/2026-05-26-release-workflow-no-publish-rehearsal.md",
           "proves": "A publish=false rehearsal succeeded for version 0.0.0, but not for the real intended beta version."
         },
         {
           "kind": "report",
-          "path": "docs/reports/2026-05-26-release-workflow-0-1-0-no-publish-rehearsal.md",
+          "path": "docs/internal/reports/2026-05-26-release-workflow-0-1-0-no-publish-rehearsal.md",
           "proves": "A publish=false guarded release workflow rehearsal succeeded for real intended beta version 0.1.0, artifacts were reviewed, and publishing stayed disabled."
         }
       ],
@@ -327,7 +617,7 @@
       "current_evidence": [
         {
           "kind": "docs",
-          "path": "docs/process/release-process.md",
+          "path": "docs/internal/process/release-process.md",
           "proves": "The real Go tag verification command is documented."
         },
         {
@@ -337,7 +627,7 @@
         },
         {
           "kind": "report",
-          "path": "docs/reports/2026-05-26-go-tag-verification-0-1-0.md",
+          "path": "docs/internal/reports/2026-05-26-go-tag-verification-0-1-0.md",
           "proves": "Remote tag v0.1.0 was verified from a clean Go module without a local replace in guarded release workflow run 26467656634."
         }
       ],
@@ -352,11 +642,12 @@
       "required_for": ["public_beta", "v1"],
       "required_evidence": [
         "Explicit user approval to publish.",
+        "Workflow dispatch includes publish=true and publish_approval=publish-runcost.",
         "PyPI and npm package pages for the released version.",
         "Post-publish install smoke evidence."
       ],
       "current_evidence": [],
-      "completion_check": "Guarded release workflow with publish=true after explicit approval.",
+      "completion_check": "Guarded release workflow with publish=true and publish_approval=publish-runcost after explicit approval.",
       "deferred_reason": "The current objective says to leave packages unpublished for now.",
       "remaining_action": "Do not publish until the user explicitly approves publication."
     },
@@ -364,7 +655,7 @@
       "id": "public_beta_hardening_docs",
       "area": "public_beta",
       "requirement": "Tighten schemas, source update process, contribution docs, caveats, public support matrix, and dependency/publishing story.",
-      "status": "partial",
+      "status": "satisfied",
       "required_for": ["public_beta", "v1"],
       "required_evidence": [
         "Generated schema docs and taxonomy drift checks pass.",
@@ -373,7 +664,37 @@
       "current_evidence": [
         {
           "kind": "docs",
-          "path": "docs/process/beta-v1-hardening-roadmap.md",
+          "path": "docs/generated/beta-v1-caveats.md",
+          "proves": "Known public beta and V1 caveats are generated from the completion gate register."
+        },
+        {
+          "kind": "docs",
+          "path": "docs/generated/schema-fields.md",
+          "proves": "Stable v0.x schema fields are documented from the JSON schemas."
+        },
+        {
+          "kind": "docs",
+          "path": "docs/generated/public-api-registry.md",
+          "proves": "Public API parity and package-surface caveats are generated from the machine-readable API registry."
+        },
+        {
+          "kind": "docs",
+          "path": "docs/internal/process/2026-05-26-source-data-update-process.md",
+          "proves": "The source-data update process has an owner, cadence, review path, and release gate."
+        },
+        {
+          "kind": "docs",
+          "path": "CONTRIBUTING.md",
+          "proves": "Contribution guidance exists for public beta contributors."
+        },
+        {
+          "kind": "docs",
+          "path": "docs/internal/process/release-process.md",
+          "proves": "The dependency-light package and trusted-publishing story is documented."
+        },
+        {
+          "kind": "docs",
+          "path": "docs/internal/process/beta-v1-hardening-roadmap.md",
           "proves": "The beta/V1 hardening gates are documented."
         },
         {
@@ -388,7 +709,7 @@
         }
       ],
       "completion_check": "npm test && npm run check:release",
-      "remaining_action": "Refresh public caveats and support docs after live smoke and invoice comparison findings."
+      "remaining_action": "Refresh public caveats and support docs if future live smoke or invoice comparison findings add new limitations."
     },
     {
       "id": "polyglot_schema_derived_type_hardening",
@@ -463,17 +784,17 @@
           "proves": "Warning coverage docs are drift-checked with the other generated contract docs."
         },
         {
-          "kind": "fixtures",
+          "kind": "fixture",
           "path": "fixtures/unknown-provider-compatibility.json",
           "proves": "The unknown_provider warning has shared conformance coverage."
         },
         {
-          "kind": "fixtures",
+          "kind": "fixture",
           "path": "fixtures/usage-field-ignored-warning.json",
           "proves": "The usage_field_ignored warning has shared conformance coverage."
         },
         {
-          "kind": "fixtures",
+          "kind": "fixture",
           "path": "fixtures/inclusive-usage-ambiguous-warning.json",
           "proves": "The inclusive_usage_ambiguous warning has shared conformance coverage."
         }
@@ -504,13 +825,88 @@
         },
         {
           "kind": "fixture",
+          "path": "fixtures/openai-audio-transcription-duration-usage.json",
+          "proves": "OpenAI audio transcription duration usage is fixture-backed across Python, JavaScript, and Go."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/openai-audio-transcription-token-usage.json",
+          "proves": "OpenAI audio transcription token usage is fixture-backed across Python, JavaScript, and Go."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/openai-usage-embeddings-buckets.json",
+          "proves": "OpenAI organization usage embeddings buckets extract input tokens into embedding tokens across Python, JavaScript, and Go."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/openai-usage-completions-buckets.json",
+          "proves": "OpenAI organization usage completions buckets extract text input, cached input, text output, and audio tokens across Python, JavaScript, and Go."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/openai-usage-audio-transcriptions-buckets.json",
+          "proves": "OpenAI organization usage audio transcription buckets extract seconds into transcription seconds across Python, JavaScript, and Go."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/openai-images-token-usage.json",
+          "proves": "OpenAI Images token usage is fixture-backed across Python, JavaScript, and Go."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/openai-images-unit-usage.json",
+          "proves": "OpenAI Images usage-less per-image generation responses are fixture-backed across Python, JavaScript, and Go."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/openai-usage-images-buckets.json",
+          "proves": "OpenAI organization usage image buckets extract image counts into generated image units across Python, JavaScript, and Go."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/openai-usage-audio-speeches-buckets.json",
+          "proves": "OpenAI organization usage audio speech buckets extract character counts into audio generation characters across Python, JavaScript, and Go."
+        },
+        {
+          "kind": "fixture",
           "path": "fixtures/storage-gb-day-pricing.json",
           "proves": "Normalized GB-day storage pricing exists."
         },
         {
+          "kind": "fixture",
+          "path": "fixtures/openai-vector-store-storage-gb-days.json",
+          "proves": "OpenAI Vector Stores usage_bytes extraction into explicit GB-day storage usage is fixture-backed across Python, JavaScript, and Go."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/openai-usage-code-interpreter-sessions.json",
+          "proves": "OpenAI organization usage code-interpreter num_sessions extraction into session usage is fixture-backed across Python, JavaScript, and Go."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/openai-chat-stream-final-usage-chunk.json",
+          "proves": "OpenAI-compatible chat completion streaming final-usage chunks are fixture-backed across Python, JavaScript, and Go."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/openrouter-sdk-stream-provider-cost.json",
+          "proves": "OpenRouter SDK/OpenAI-compatible streaming final-usage chunks can carry provider-reported cost comparison evidence."
+        },
+        {
           "kind": "docs",
-          "path": "docs/notes/framework-adapter-notes.md",
+          "path": "docs/internal/notes/framework-adapter-notes.md",
           "proves": "Framework adapter coverage and remaining limitations are documented."
+        },
+        {
+          "kind": "code",
+          "path": "examples/python_framework_adapters.py",
+          "proves": "Dependency-free Python framework examples exercise OpenAI Agents SDK and LangSmith usage-shaped objects with provider-reported cost comparison warnings."
+        },
+        {
+          "kind": "code",
+          "path": "examples/javascript_framework_adapters.mjs",
+          "proves": "Dependency-free JavaScript framework examples exercise Vercel streamText finish/onFinish handling and OpenRouter SDK provider-reported cost comparison warnings."
         }
       ],
       "completion_check": "python3 scripts/check_fixtures.py && python3 scripts/check_fixture_coverage.py",
@@ -520,7 +916,7 @@
       "id": "v1_stabilization",
       "area": "v1",
       "requirement": "Stabilize schemas, warning codes, APIs, provider/source coverage, historical pricing, and top framework integrations with no known correctness holes.",
-      "status": "not_started",
+      "status": "partial",
       "required_for": ["v1"],
       "required_evidence": [
         "Stable schema and warning-code compatibility policy.",
@@ -528,9 +924,30 @@
         "Historical-pricing path and strong coverage for every surface marked supported.",
         "No known correctness holes in supported surfaces."
       ],
-      "current_evidence": [],
-      "completion_check": "Future V1 release checklist.",
-      "remaining_action": "Finish Milestone 8 and public beta first, then promote stable APIs and contracts toward V1."
+      "current_evidence": [
+        {
+          "kind": "schema",
+          "path": "schemas/v1-stabilization-checklist.schema.json",
+          "proves": "V1 release-candidate readiness has a machine-readable contract."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_v1_stabilization_checklist.py",
+          "proves": "The V1 checklist is validated in template mode and has a strict release-candidate mode."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/v1-stabilization-checklist-template.json",
+          "proves": "The current checked-in V1 checklist is an explicit template, not release-candidate evidence."
+        },
+        {
+          "kind": "docs",
+          "path": "docs/internal/process/beta-v1-hardening-roadmap.md",
+          "proves": "The V1 checklist process and strict command are documented."
+        }
+      ],
+      "completion_check": "python3 scripts/check_v1_stabilization_checklist.py --checklist <release-candidate-checklist.json> --require-real",
+      "remaining_action": "Finish Milestone 8 and public beta first, then complete a release-candidate V1 checklist with all readiness fields true and no known correctness holes."
     }
   ]
 }

@@ -2,7 +2,7 @@
 title: RunCost Quickstart
 date: 2026-05-25
 type: guide
-status: draft
+status: active
 ---
 
 # RunCost Quickstart
@@ -25,7 +25,7 @@ JavaScript and TypeScript from a cloned checkout:
 
 ```bash
 npm pack ./packages/javascript/core
-npm install ./runcost-0.0.0.tgz
+npm install ./runcost-0.1.0.tgz
 ```
 
 Go:
@@ -34,7 +34,7 @@ Go:
 go get github.com/adamallcock/runcost/packages/go/ledger
 ```
 
-The package is pre-alpha. Until registry publishing is wired, the repo and tarball install paths are the supported validation path.
+The package is alpha. Until registry publishing is enabled, the repo and tarball install paths are the supported validation path.
 
 ## Python
 
@@ -186,9 +186,9 @@ the full multi-language conformance suite.
 
 ## Read Next
 
-- [Package Installation](2026-05-25-package-installation.md)
+- [Package Installation](package-installation.md)
 - [Migration From Hand-Written Formulas](2026-05-26-migration-from-hand-written-formulas.md)
-- [API Reference](2026-05-25-api-reference.md)
-- [Custom Pricing And Discounts](2026-05-25-custom-pricing-and-discounts.md)
-- [Source Adapters](2026-05-25-source-adapters.md)
-- [Warnings And Limitations](2026-05-25-warnings-and-limitations.md)
+- [API Reference](../reference/api-reference.md)
+- [Custom Pricing And Discounts](../reference/custom-pricing-and-discounts.md)
+- [Source Adapters](../reference/source-adapters.md)
+- [Warnings And Limitations](../reference/warnings-and-limitations.md)

@@ -1,0 +1,459 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runcost.dev/schemas/alpha-smoke-report.schema.json",
+  "title": "RunCost Alpha Smoke Report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "mode",
+    "sanitized",
+    "safe_to_attach_to_issue"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "mode": {
+      "enum": [
+        "sample",
+        "live",
+        "live_preflight"
+      ]
+    },
+    "sanitized": {
+      "const": true
+    },
+    "safe_to_attach_to_issue": {
+      "const": true
+    },
+    "sample_prices": {
+      "type": "boolean"
+    },
+    "live_ready": {
+      "type": "boolean"
+    },
+    "summary": {
+      "type": "object"
+    },
+    "scenario": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "$ref": "#/$defs/scenarioStatus"
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/scenario"
+      }
+    },
+    "evidence": {
+      "$ref": "#/$defs/evidence"
+    },
+    "next_action": {
+      "$ref": "#/$defs/nextAction"
+    },
+    "product_truth_policy": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "mode",
+          "scenarios"
+        ],
+        "properties": {
+          "mode": {
+            "const": "live_preflight"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "live_ready",
+          "summary",
+          "scenarios",
+          "next_action"
+        ],
+        "properties": {
+          "summary": {
+            "$ref": "#/$defs/preflightSummary"
+          },
+          "scenarios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/preflightScenario"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "mode"
+        ],
+        "properties": {
+          "mode": {
+            "enum": [
+              "sample",
+              "live"
+            ]
+          },
+          "scenarios": {
+            "type": "array"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "sample_prices",
+          "summary",
+          "scenarios",
+          "product_truth_policy"
+        ],
+        "properties": {
+          "summary": {
+            "$ref": "#/$defs/smokeSummary"
+          },
+          "scenarios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/smokeScenario"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "mode",
+          "scenario"
+        ],
+        "properties": {
+          "mode": {
+            "enum": [
+              "sample",
+              "live"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "scenario",
+          "status",
+          "sample_prices",
+          "evidence",
+          "next_action"
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "scenarioStatus": {
+      "enum": [
+        "passed",
+        "skipped",
+        "needs_product_truth",
+        "failed",
+        "ready",
+        "not_ready"
+      ]
+    },
+    "scenario": {
+      "type": "object",
+      "required": [
+        "scenario",
+        "status"
+      ],
+      "properties": {
+        "scenario": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "$ref": "#/$defs/scenarioStatus"
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "next_action": {
+          "$ref": "#/$defs/nextAction"
+        },
+        "required_env": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "env_present": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "env_missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required_inputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "inputs_present": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "inputs_missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "optional_dependencies_present": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "optional_dependencies_missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "secret_values_emitted": {
+          "const": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "smokeScenario": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/scenario"
+        },
+        {
+          "required": [
+            "evidence",
+            "next_action"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "passed",
+                "skipped",
+                "needs_product_truth",
+                "failed"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "preflightScenario": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/scenario"
+        },
+        {
+          "required": [
+            "required_env",
+            "env_present",
+            "env_missing",
+            "required_inputs",
+            "inputs_present",
+            "inputs_missing",
+            "optional_dependencies_present",
+            "optional_dependencies_missing",
+            "secret_values_emitted",
+            "next_action"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "ready",
+                "not_ready"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "smokeSummary": {
+      "type": "object",
+      "required": [
+        "total",
+        "passed",
+        "skipped",
+        "needs_product_truth",
+        "failed"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "passed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "skipped": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "needs_product_truth": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "preflightSummary": {
+      "type": "object",
+      "required": [
+        "ready_count",
+        "not_ready_count",
+        "ready_scenarios",
+        "not_ready_scenarios"
+      ],
+      "properties": {
+        "ready_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "not_ready_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ready_scenarios": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "not_ready_scenarios": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "component_names",
+        "warning_codes",
+        "total",
+        "usage_fields_present",
+        "raw_response_retained",
+        "exactness",
+        "source"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "surface": {
+          "type": "string"
+        },
+        "model": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "component_names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warning_codes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "total": {
+          "type": "string"
+        },
+        "price_source_names": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "usage_fields_present": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "raw_response_retained": {
+          "const": false
+        },
+        "exactness": {
+          "enum": [
+            "synthetic_sample",
+            "sample_prices_not_invoice_exact",
+            "not_run",
+            "requires_review"
+          ]
+        },
+        "source": {
+          "enum": [
+            "sample",
+            "live"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "nextAction": {
+      "type": "object",
+      "required": [
+        "type",
+        "reason"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

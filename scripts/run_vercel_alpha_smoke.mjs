@@ -8,6 +8,22 @@ import { fromVercelAISDKStreamFinish } from "../packages/javascript/core/index.j
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SAMPLE_FILE = path.join(ROOT, "fixtures/source-files/alpha-smoke-samples.json");
 const SAMPLE_RETRIEVED_AT = "2026-05-26T00:00:00Z";
+const FORBIDDEN_KEYS = new Set([
+  "api_key",
+  "authorization",
+  "headers",
+  "prompt",
+  "messages",
+  "input",
+  "output",
+  "content",
+  "raw_response",
+  "request_body"
+]);
+const SECRET_PATTERNS = [
+  /\bsk-[A-Za-z0-9_-]{8,}\b/,
+  /\bBearer\s+[A-Za-z0-9._-]{8,}\b/i
+];
 
 function parseArgs(argv) {
   const args = { mode: "sample", allowSamplePrices: false };
@@ -35,7 +51,7 @@ function sampleFinish() {
   return samples.scenarios.vercel_ai_sdk_stream_text.finish;
 }
 
-function priceCard(model) {
+function priceCard(model, provider = "openai") {
   const components = {
     input_uncached_tokens: ["token", "1", "1000000"],
     input_cache_read_tokens: ["token", "0.1", "1000000"],
@@ -45,8 +61,8 @@ function priceCard(model) {
   };
   return {
     schema_version: "0.1",
-    id: `openai:${model}:vercel-alpha-smoke-sample`,
-    provider: "openai",
+    id: `${provider}:${model}:vercel-alpha-smoke-sample`,
+    provider,
     surface: "framework.vercel_ai_sdk",
     model,
     components: Object.entries(components).map(([name, [unit, amount, per]]) => ({
@@ -86,9 +102,47 @@ function result(status, ledger, usageFields, source, nextAction, exactness) {
     status,
     sanitized: true,
     safe_to_attach_to_issue: true,
+    sample_prices: true,
     evidence: evidence(ledger, usageFields, source, exactness),
     next_action: nextAction
   };
+}
+
+function assertSanitized(value, location = "$") {
+  if (Array.isArray(value)) {
+    value.forEach((child, index) => assertSanitized(child, `${location}[${index}]`));
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const [key, child] of Object.entries(value)) {
+      const normalized = key.toLowerCase().replaceAll("-", "_");
+      if (FORBIDDEN_KEYS.has(normalized)) throw new Error(`Forbidden alpha smoke key ${location}.${key}`);
+      assertSanitized(child, `${location}.${key}`);
+    }
+    return;
+  }
+  if (typeof value === "string") {
+    for (const pattern of SECRET_PATTERNS) {
+      if (pattern.test(value)) throw new Error(`Secret-like value found in alpha smoke report at ${location}`);
+    }
+  }
+}
+
+function validateReport(report) {
+  if (report.schema_version !== "0.1") throw new Error("Alpha smoke report must use schema_version 0.1");
+  if (!["sample", "live"].includes(report.mode)) throw new Error("Alpha smoke report mode must be sample or live");
+  if (report.sanitized !== true) throw new Error("Alpha smoke report must be sanitized");
+  if (report.safe_to_attach_to_issue !== true) throw new Error("Alpha smoke report must be safe to attach");
+  if (!["passed", "skipped", "needs_product_truth", "failed"].includes(report.status)) {
+    throw new Error("Alpha smoke report status is invalid");
+  }
+  if (!report.evidence || typeof report.evidence !== "object") throw new Error("Alpha smoke evidence is required");
+  if (report.evidence.raw_response_retained !== false) throw new Error("Alpha smoke report must not retain raw responses");
+  if (!["sample", "live"].includes(report.evidence.source)) throw new Error("Alpha smoke evidence source is invalid");
+  if (!["synthetic_sample", "sample_prices_not_invoice_exact", "not_run", "requires_review"].includes(report.evidence.exactness)) {
+    throw new Error("Alpha smoke evidence exactness is invalid");
+  }
+  assertSanitized(report);
 }
 
 function skipped(reason) {
@@ -100,6 +154,7 @@ function skipped(reason) {
     status: "skipped",
     sanitized: true,
     safe_to_attach_to_issue: true,
+    sample_prices: true,
     evidence: {
       component_names: [],
       warning_codes: [],
@@ -139,8 +194,9 @@ function sampleReport() {
 }
 
 async function liveReport() {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return skipped("OPENAI_API_KEY is not set.");
+  const openAIKey = process.env.OPENAI_API_KEY;
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  if (!openAIKey && !openRouterKey) return skipped("OPENAI_API_KEY or OPENROUTER_API_KEY is not set.");
   let streamText;
   let createOpenAI;
   try {
@@ -150,9 +206,16 @@ async function liveReport() {
     return skipped("Install optional packages `ai` and `@ai-sdk/openai` to run the live Vercel AI SDK smoke.");
   }
 
-  const model = process.env.RUNCOST_SMOKE_OPENAI_MODEL || "gpt-4.1-mini";
+  const provider = openAIKey ? "openai" : "openrouter";
+  const apiKey = openAIKey || openRouterKey;
+  const model = openAIKey
+    ? process.env.RUNCOST_SMOKE_OPENAI_MODEL || "gpt-4.1-mini"
+    : process.env.RUNCOST_SMOKE_OPENROUTER_MODEL || "nvidia/nemotron-3-super-120b-a12b:free";
   try {
-    const openai = createOpenAI({ apiKey });
+    const openai = createOpenAI({
+      apiKey,
+      ...(openAIKey ? {} : { baseURL: "https://openrouter.ai/api/v1" })
+    });
     const response = streamText({
       model: openai(model),
       prompt: "Return exactly the word pong.",
@@ -163,13 +226,13 @@ async function liveReport() {
     const finishReason = await response.finishReason;
     const finish = {
       finishReason,
-      model: { provider: "openai", modelId: model },
+      model: { provider, modelId: model },
       totalUsage: usage
     };
     const ledger = fromVercelAISDKStreamFinish(finish, {
-      provider: "openai",
+      provider,
       surface: "framework.vercel_ai_sdk",
-      priceCards: [priceCard(model)]
+      priceCards: [priceCard(model, provider)]
     });
     return result(
       "passed",
@@ -194,6 +257,7 @@ async function liveReport() {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const report = args.mode === "sample" ? sampleReport() : await liveReport();
+  validateReport(report);
   fs.mkdirSync(path.dirname(args.output), { recursive: true });
   fs.writeFileSync(args.output, `${JSON.stringify(report, null, 2)}\n`);
   console.log(`Wrote sanitized Vercel alpha smoke report to ${args.output}`);

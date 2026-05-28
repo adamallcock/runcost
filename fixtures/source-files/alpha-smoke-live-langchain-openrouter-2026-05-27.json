@@ -1,0 +1,43 @@
+{
+  "evidence": {
+    "component_names": [
+      "input_uncached_tokens",
+      "output_reasoning_tokens"
+    ],
+    "exactness": "sample_prices_not_invoice_exact",
+    "model": {
+      "alias_resolution": "none",
+      "billed": "nvidia/nemotron-3-super-120b-a12b-20230311:free",
+      "requested": "nvidia/nemotron-3-super-120b-a12b-20230311:free",
+      "returned": "nvidia/nemotron-3-super-120b-a12b-20230311:free"
+    },
+    "price_source_names": [
+      "alpha-smoke-sample"
+    ],
+    "provider": "openrouter",
+    "raw_response_retained": false,
+    "source": "live",
+    "surface": "framework.langchain.chat",
+    "total": "0.000059",
+    "usage_fields_present": [
+      "input_token_details",
+      "input_tokens",
+      "output_token_details",
+      "output_tokens",
+      "total_tokens"
+    ],
+    "warning_codes": []
+  },
+  "generated_at": "2026-05-27T04:49:23Z",
+  "mode": "live",
+  "next_action": {
+    "reason": "Live LangChain invoke produced a sanitized RunCost ledger.",
+    "type": "none"
+  },
+  "safe_to_attach_to_issue": true,
+  "sample_prices": true,
+  "sanitized": true,
+  "scenario": "langchain_agent_run",
+  "schema_version": "0.1",
+  "status": "passed"
+}

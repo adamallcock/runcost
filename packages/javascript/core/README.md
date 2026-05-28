@@ -1,19 +1,56 @@
 # RunCost
 
-RunCost is a small, dependency-free cost ledger for LLM and agent API calls.
+RunCost is a small alpha utility for answering:
 
-It turns provider SDK responses, framework usage objects, or normalized usage
-ledgers into a componentized cost ledger: input, cached input, output,
-reasoning, tool and feature units, discounts, price sources, and warnings.
+> What did this LLM or agent API call cost, and why?
 
-```js
-import { calculateCost, fromResponse } from "runcost";
+This npm package exposes the JavaScript/TypeScript implementation. It is
+validated against the same shared fixtures as the Python and Go packages.
+
+## Install
+
+```bash
+npm install runcost
 ```
 
-The JavaScript package is part of the polyglot RunCost release train. Python,
-JavaScript/TypeScript, and Go are validated against shared fixtures.
+Until the first registry release is published, install from a checkout:
 
-Full documentation, examples, schemas, and the release process live in the
-GitHub repository:
+```bash
+npm pack ./packages/javascript/core
+npm install ./runcost-0.1.0.tgz
+```
+
+## Basic Usage
+
+```ts
+import { fromResponse } from "runcost";
+
+const ledger = fromResponse(response, {
+  provider: "openai",
+  surface: "openai.responses",
+  model: "gpt-4.1-mini",
+  priceCards
+});
+
+console.log(ledger.total);
+console.log(ledger.components);
+console.log(ledger.warnings);
+```
+
+## Main APIs
+
+| Job | API |
+|---|---|
+| Price normalized usage | `calculateCost(options)` |
+| Price a provider response | `fromResponse(response, options)` |
+| Aggregate call ledgers | `aggregateCostLedgers(options)` |
+| Use framework outputs | `fromVercelAISDKStreamFinish(...)`, `fromLangSmithRun(...)`, `createRunCostVercelOnFinish(...)`, and more |
+| Load price sources | `priceCardsFromJSONFile(...)`, `priceCardsFromOpenRouterModels(...)`, and more |
+| Add custom prices | Pass `priceCards` |
+| Apply discounts | Pass `discountPolicies` |
+| Audit decisions | `debugTrace: true` |
+| Fail on ambiguity | `mode: "strict"` |
+
+Full documentation, Python and Go examples, supported surfaces, and caveats:
 
 <https://github.com/adamallcock/runcost>

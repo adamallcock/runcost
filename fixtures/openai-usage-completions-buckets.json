@@ -1,0 +1,193 @@
+{
+  "name": "openai-usage-completions-buckets",
+  "description": "Extracts OpenAI organization usage completions buckets into text, cached-text, and audio token usage.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-PROVIDER-EXTRACTOR",
+      "RC-FEATURE-PRICING"
+    ],
+    "provider": "openai",
+    "surface": "openai.usage.completions",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:input_cache_read_tokens",
+      "component:output_text_tokens",
+      "component:input_audio_tokens",
+      "component:output_audio_tokens",
+      "usage_api"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "object": "page",
+      "data": [
+        {
+          "object": "bucket",
+          "start_time": 1730419200,
+          "end_time": 1730505600,
+          "results": [
+            {
+              "object": "organization.usage.completions.result",
+              "input_tokens": 1000,
+              "output_tokens": 400,
+              "input_cached_tokens": 300,
+              "input_audio_tokens": 50,
+              "output_audio_tokens": 20,
+              "num_model_requests": 5,
+              "project_id": null,
+              "user_id": null,
+              "api_key_id": null,
+              "model": "gpt-4o-mini-2024-07-18",
+              "batch": false,
+              "service_tier": "default"
+            }
+          ]
+        }
+      ],
+      "has_more": false,
+      "next_page": null
+    },
+    "extract": {
+      "provider": "openai",
+      "surface": "openai.usage.completions",
+      "model": "gpt-4o-mini-2024-07-18"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-4o-mini-2024-07-18:usage-completions-fixture",
+        "provider": "openai",
+        "surface": "openai.usage.completions",
+        "model": "gpt-4o-mini-2024-07-18",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1.00",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.10",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2.00",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_audio_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "5.00",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_audio_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "10.00",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.usage.completions",
+      "model": {
+        "requested": "gpt-4o-mini-2024-07-18",
+        "returned": "gpt-4o-mini-2024-07-18",
+        "billed": "gpt-4o-mini-2024-07-18",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "700",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.0007",
+          "price_card_id": "openai:gpt-4o-mini-2024-07-18:usage-completions-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "300",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.00003",
+          "price_card_id": "openai:gpt-4o-mini-2024-07-18:usage-completions-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_audio_tokens",
+          "quantity": "50",
+          "unit": "token",
+          "unit_price": "0.000005",
+          "cost": "0.00025",
+          "price_card_id": "openai:gpt-4o-mini-2024-07-18:usage-completions-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "400",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.0008",
+          "price_card_id": "openai:gpt-4o-mini-2024-07-18:usage-completions-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_audio_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.00001",
+          "cost": "0.0002",
+          "price_card_id": "openai:gpt-4o-mini-2024-07-18:usage-completions-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.00198",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-05-26T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

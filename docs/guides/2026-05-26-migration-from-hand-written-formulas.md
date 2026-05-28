@@ -2,7 +2,7 @@
 title: Migration From Hand-Written Formulas
 date: 2026-05-26
 type: guide
-status: draft
+status: active
 ---
 
 # Migration From Hand-Written Formulas

@@ -19,13 +19,16 @@ REQUIRED_FILES = [
     "CHANGELOG.md",
     "CONTRIBUTING.md",
     "SECURITY.md",
-    "docs/process/release-process.md",
-    "docs/process/2026-05-26-source-data-update-process.md",
+    "docs/internal/process/release-process.md",
+    "docs/internal/process/2026-05-26-source-data-update-process.md",
     "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     ".github/workflows/release.yml",
     "scripts/check_release_dry_run.py",
     "scripts/check_project_completion_gates.py",
+    "scripts/check_trusted_publishing_verification.py",
     "packages/javascript/core/README.md",
+    "schemas/trusted-publishing-verification.schema.json",
+    "fixtures/source-files/trusted-publishing-verification-template.json",
 ]
 
 
@@ -54,6 +57,10 @@ def check_versions_and_license() -> None:
     python_project = pyproject["project"]
 
     version = root_package["version"]
+    assert_true(
+        python_project.get("name") == "runcost-ai",
+        "Python distribution name must be runcost-ai while PyPI runcost is occupied",
+    )
     assert_true(js_package["version"] == version, "JavaScript package version must match root package version")
     assert_true(python_project["version"] == version, "Python package version must match root package version")
     expected_version = os.environ.get("EXPECTED_VERSION")
@@ -79,6 +86,7 @@ def check_registry_metadata() -> None:
     python_project = pyproject["project"]
 
     assert_true(python_project.get("readme") == "README.md", "Python package must publish the root README")
+    assert_true(python_project.get("name") == "runcost-ai", "Python distribution name must be runcost-ai")
     assert_true("README.md" in js_package.get("files", []), "npm package files must include README.md")
     assert_true(js_package.get("homepage") == "https://github.com/adamallcock/runcost#readme", "npm homepage must point at the project README")
     assert_true(
@@ -89,7 +97,11 @@ def check_registry_metadata() -> None:
     npm_readme = (ROOT / "packages/javascript/core/README.md").read_text(encoding="utf-8")
     assert_true("github.com/adamallcock/runcost" in npm_readme, "npm README must link to full repository docs")
     root_readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert_true("npm run check:release-dry-run" in root_readme, "root README must include release dry-run check")
+    assert_true("pip install runcost-ai" in root_readme, "root README must include Python registry install command")
+    assert_true("npm install runcost" in root_readme, "root README must include npm registry install command")
+    assert_true("docs/internal/" not in root_readme, "root README must not expose internal docs")
+    assert_true("fromResponse" in npm_readme, "npm README must include JavaScript usage")
+    assert_true("pre-alpha" not in root_readme.lower(), "root README must use alpha positioning")
 
 
 def check_release_workflow() -> None:
@@ -99,26 +111,54 @@ def check_release_workflow() -> None:
         "EXPECTED_VERSION: ${{ inputs.version }}",
         "publish:",
         "default: false",
+        "publish_approval:",
+        "publish=true requires publish_approval=publish-runcost",
         "Verify Go module from published tag",
         "go list -m -versions github.com/adamallcock/runcost",
         "go get github.com/adamallcock/runcost/packages/go/ledger@v${{ inputs.version }}",
         "No-publish artifact review checklist",
         "npm run check:release",
         "npm run check:release-dry-run",
+        "npm run example:framework:js",
+        "npm run example:framework:py",
         "python3 -m build",
         "npm pack ./packages/javascript/core",
         "id-token: write",
         "pypa/gh-action-pypi-publish@release/v1",
         "npm publish --provenance --access public",
         "environment: release",
+        "registry-url: \"https://registry.npmjs.org\"",
     ]
     for snippet in required_snippets:
         assert_true(snippet in workflow, f"release workflow missing {snippet!r}")
 
+    forbidden_registry_tokens = [
+        "PYPI_API_TOKEN",
+        "NPM_TOKEN",
+        "NODE_AUTH_TOKEN",
+        "TWINE_USERNAME",
+        "TWINE_PASSWORD",
+        "password:",
+        "api-token:",
+        "secrets.PYPI",
+        "secrets.NPM",
+    ]
+    for snippet in forbidden_registry_tokens:
+        assert_true(snippet not in workflow, f"release workflow must not depend on stored registry token {snippet!r}")
+
+    publish_section = workflow.split("  publish:", 1)[1]
+    assert_true("id-token: write" in publish_section, "publish job must request OIDC id-token permission")
+    assert_true("pypa/gh-action-pypi-publish@release/v1" in publish_section, "publish job must use PyPI trusted publishing action")
+    assert_true("npm publish --provenance --access public" in publish_section, "publish job must publish npm with provenance")
+    assert_true(
+        "inputs.publish && inputs.publish_approval != 'publish-runcost'" in workflow,
+        "release workflow must require typed publish approval before publish=true can proceed",
+    )
+
 
 def check_release_docs() -> None:
-    release_doc = (ROOT / "docs/process/release-process.md").read_text(encoding="utf-8")
-    source_update_doc = (ROOT / "docs/process/2026-05-26-source-data-update-process.md").read_text(encoding="utf-8")
+    release_doc = (ROOT / "docs/internal/process/release-process.md").read_text(encoding="utf-8")
+    source_update_doc = (ROOT / "docs/internal/process/2026-05-26-source-data-update-process.md").read_text(encoding="utf-8")
     for phrase in [
         "trusted publishing",
         "Go module",
@@ -137,6 +177,9 @@ def check_release_docs() -> None:
         "real Go tag",
         "artifact review",
         "source-data-update-process",
+        "check:trusted-publishing",
+        "trusted-publishing-verification",
+        "runcost-ai",
     ]:
         assert_true(re.search(re.escape(phrase), release_doc, re.IGNORECASE), f"release process missing {phrase}")
 
