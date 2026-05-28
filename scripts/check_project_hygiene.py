@@ -29,12 +29,23 @@ REQUIRED_FILES = [
     "docs/internal/process/alpha-smoke-runbook.md",
     "docs/internal/process/invoice-dashboard-comparison.md",
     "docs/internal/process/2026-05-26-source-data-update-process.md",
+    "docs/internal/process/2026-05-28-public-github-readiness.md",
     "docs/internal/process/beta-v1-hardening-roadmap.md",
     "docs/README.md",
     "docs/internal/README.md",
     "docs/reference/source-adapters.md",
     "docs/reference/supported-surfaces.md",
     "docs/reference/warnings-and-limitations.md",
+    "docs/reference/price-data-strategy.md",
+    "CODE_OF_CONDUCT.md",
+    "SUPPORT.md",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/ISSUE_TEMPLATE/bug_report.yml",
+    ".github/ISSUE_TEMPLATE/feature_request.yml",
+    ".github/ISSUE_TEMPLATE/price_source_update.yml",
+    ".github/ISSUE_TEMPLATE/config.yml",
+    ".github/CODEOWNERS",
+    ".github/dependabot.yml",
     "docs/internal/decisions/polyglot-toolchain-decision.md",
     "docs/internal/decisions/2026-05-27-python-distribution-name.md",
     "docs/internal/notes/api-parity-matrix.md",
@@ -53,6 +64,7 @@ REQUIRED_FILES = [
     "scripts/check_project_completion_gates.py",
     "scripts/check_generated_contract_docs.py",
     "scripts/check_public_api_registry.py",
+    "scripts/check_public_github_readiness.py",
     "scripts/check_python_type_surface.py",
     "scripts/compare_invoice_dashboard.py",
     "scripts/collect_alpha_evidence_bundle.py",
@@ -234,6 +246,14 @@ def check_package_metadata() -> None:
     assert_true(
         "check_public_api_registry.py" in scripts.get("check:api-registry", ""),
         "root check:api-registry must run public API registry checks",
+    )
+    assert_true(
+        "check_public_github_readiness.py" in scripts.get("test", ""),
+        "root npm test must run public GitHub readiness checks",
+    )
+    assert_true(
+        "check_public_github_readiness.py" in scripts.get("check:public-github", ""),
+        "root check:public-github must run public GitHub readiness checks",
     )
     assert_true(
         "check_python_type_surface.py" in scripts.get("test", ""),

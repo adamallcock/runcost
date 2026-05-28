@@ -219,6 +219,10 @@ discounts = [{
 The returned ledger records selected price sources, applied discounts, and any
 warning that prevents the total from being fully explained.
 
+Fixtures are behavioral conformance tests, not a complete model-price database.
+Use source adapters and reviewed source-cache snapshots for upstream catalog
+data; see [price data strategy](docs/reference/price-data-strategy.md).
+
 ## Warnings
 
 RunCost is designed to be boring. When it cannot confidently price something, it
@@ -244,6 +248,7 @@ runcost fixture-check fixtures/my-case.json
 - [Supported surfaces](docs/reference/supported-surfaces.md)
 - [Custom pricing and discounts](docs/reference/custom-pricing-and-discounts.md)
 - [Source adapters](docs/reference/source-adapters.md)
+- [Price data strategy](docs/reference/price-data-strategy.md)
 - [Aggregation and streaming](docs/reference/aggregation-and-streaming.md)
 - [Warnings and limitations](docs/reference/warnings-and-limitations.md)
 - [Contributing](CONTRIBUTING.md)

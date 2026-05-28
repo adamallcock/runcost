@@ -15,6 +15,7 @@ Start here if you are using RunCost in an application:
 - [Supported surfaces](reference/supported-surfaces.md)
 - [Custom pricing and discounts](reference/custom-pricing-and-discounts.md)
 - [Source adapters](reference/source-adapters.md)
+- [Price data strategy](reference/price-data-strategy.md)
 - [Aggregation and streaming](reference/aggregation-and-streaming.md)
 - [Warnings and limitations](reference/warnings-and-limitations.md)
 - [Debug trace](reference/debug-trace.md)

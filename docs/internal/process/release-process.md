@@ -60,11 +60,13 @@ npm run example:framework:py
    `--require-public-beta`, or `--require-v1`.
 6. Confirm source-data updates, if any, followed
    `docs/internal/process/2026-05-26-source-data-update-process.md`.
-7. Confirm `git diff --check` is clean.
-8. Create and push a semantic version tag, for example `v0.1.0`.
-9. Run the manual `release` workflow with publishing disabled first.
-10. Review the no-publish artifact review checklist in the workflow summary.
-11. Enable publishing only after the dry run artifacts look correct, PyPI/npm
+7. Confirm `npm run check:public-github` passes and the public-github settings
+   in `docs/internal/process/2026-05-28-public-github-readiness.md` are current.
+8. Confirm `git diff --check` is clean.
+9. Create and push a semantic version tag, for example `v0.1.0`.
+10. Run the manual `release` workflow with publishing disabled first.
+11. Review the no-publish artifact review checklist in the workflow summary.
+12. Enable publishing only after the dry run artifacts look correct, PyPI/npm
     trusted publishers are configured, and the user has explicitly approved
     publication. The manual workflow requires both `publish=true` and
     `publish_approval=publish-runcost`.

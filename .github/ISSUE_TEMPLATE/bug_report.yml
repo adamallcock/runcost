@@ -1,0 +1,51 @@
+name: Bug report
+description: Report incorrect extraction, pricing, warnings, or package behavior.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping make RunCost boring and trustworthy.
+        Do not include API keys, private prompts, invoices, or account identifiers.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the incorrect behavior and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: minimal-input
+    attributes:
+      label: Minimal sanitized input
+      description: Paste a sanitized response, usage object, price card, or fixture shape if possible.
+      render: json
+    validations:
+      required: false
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options:
+        - Python
+        - JavaScript/TypeScript
+        - Go
+        - Multiple
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: RunCost version or commit
+      placeholder: "0.1.0 or commit SHA"
+    validations:
+      required: false
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation run
+      description: Include any relevant `npm test`, fixture-check, package-check, or strict-mode output.
+    validations:
+      required: false

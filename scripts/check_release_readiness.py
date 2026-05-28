@@ -19,8 +19,18 @@ REQUIRED_FILES = [
     "CHANGELOG.md",
     "CONTRIBUTING.md",
     "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
+    "SUPPORT.md",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/ISSUE_TEMPLATE/bug_report.yml",
+    ".github/ISSUE_TEMPLATE/feature_request.yml",
+    ".github/ISSUE_TEMPLATE/price_source_update.yml",
+    ".github/CODEOWNERS",
+    ".github/dependabot.yml",
     "docs/internal/process/release-process.md",
     "docs/internal/process/2026-05-26-source-data-update-process.md",
+    "docs/internal/process/2026-05-28-public-github-readiness.md",
+    "docs/reference/price-data-strategy.md",
     "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     ".github/workflows/release.yml",
     "scripts/check_release_dry_run.py",
@@ -180,6 +190,7 @@ def check_release_docs() -> None:
         "check:trusted-publishing",
         "trusted-publishing-verification",
         "runcost-ai",
+        "public-github",
     ]:
         assert_true(re.search(re.escape(phrase), release_doc, re.IGNORECASE), f"release process missing {phrase}")
 

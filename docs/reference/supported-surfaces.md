@@ -80,12 +80,15 @@ For the full fixture-derived provider/surface/language matrix, see
 
 | Source | Status |
 |---|---|
-| Simon Willison `llm-prices` current and historical data | Prototype adapter |
-| LiteLLM model price JSON | Prototype adapter |
-| OpenRouter models API | Prototype adapter |
-| Portkey pricing data | Prototype adapter |
-| User compact pricing data | Prototype adapter |
-| Helicone model-registry endpoint data | Prototype adapter |
+| Simon Willison `llm-prices` current and historical data | Fixture-backed representative adapter |
+| LiteLLM model price JSON | Fixture-backed representative adapter |
+| OpenRouter models API | Fixture-backed representative adapter |
+| models.dev API catalog | Fixture-backed representative adapter |
+| Reviewed official pricing snapshots | Fixture-backed representative adapter |
+| Portkey pricing data | Fixture-backed representative adapter |
+| User compact pricing data | Fixture-backed representative adapter |
+| Helicone model-registry endpoint data | Fixture-backed representative adapter |
+| RunCost source-cache envelopes | Fixture-backed representative adapter |
 
 ## Notes
 
@@ -95,4 +98,5 @@ For the full fixture-derived provider/surface/language matrix, see
 - OpenAI Responses hosted tool extraction is fixture-backed for web search, file search, code interpreter calls, computer-use action counts, and function-call counts.
 - Tool/feature pricing is complete for the current exit gate: OpenAI-style hosted tools, OpenRouter/provider-reported costs, custom internal tools, OpenAI organization usage completions text/cache/audio tokens, OpenAI Embeddings per-response and organization usage bucket tokens, OpenAI Images token/image-unit usage, OpenAI organization usage image buckets, OpenAI organization usage audio speech character buckets, normalized generated media, Cohere Rerank search units, OpenAI audio transcription duration/token usage, OpenAI organization usage audio transcription seconds, OpenAI Vector Stores `usage_bytes` to GB-day conversion with an explicit storage-day window, OpenAI organization usage code-interpreter `num_sessions`, runtime-second, and GB-day storage pricing. Broader provider-specific storage/session extraction and live validation remain beta hardening.
 - Framework paths are fixture-backed for dependency-free plain-object shapes. Sanitized sample and live smoke harnesses exist, but real application validation is still expanding.
+- Price-source fixtures prove representative adapter mappings. They are not a complete vendored model-price database; see [Price Data Strategy](price-data-strategy.md).
 - The next support expansion should prioritize live smoke, provider-specific feature breadth, broader streaming usage, and framework findings from real app runs.

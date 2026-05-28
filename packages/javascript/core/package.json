@@ -18,7 +18,11 @@
     "ai",
     "pricing",
     "tokens",
-    "cost"
+    "cost",
+    "agents",
+    "openai",
+    "anthropic",
+    "usage"
   ],
   "sideEffects": false,
   "main": "index.js",
