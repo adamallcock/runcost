@@ -1,6 +1,7 @@
 package ledger
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -12,6 +13,12 @@ import (
 	"strings"
 	"time"
 )
+
+//go:embed data/default-source-cache.json
+var defaultSourceCacheJSON []byte
+
+// DefaultPriceSourcePriority is the recommended source priority for the bundled catalog.
+var DefaultPriceSourcePriority = []string{"llm-prices", "models.dev", "litellm", "openrouter"}
 
 var componentOrder = func() map[string]int {
 	orders := map[string]int{}
@@ -4349,6 +4356,20 @@ func PriceCardsFromSourceCache(data Object) []any {
 		}
 	}
 	return cards
+}
+
+// DefaultSourceCache returns the bundled reviewed default source-cache catalog.
+func DefaultSourceCache() Object {
+	var data Object
+	if err := json.Unmarshal(defaultSourceCacheJSON, &data); err != nil {
+		return Object{}
+	}
+	return data
+}
+
+// DefaultPriceCards returns price cards from the bundled reviewed default catalog.
+func DefaultPriceCards() []any {
+	return PriceCardsFromSourceCache(DefaultSourceCache())
 }
 
 func fileURL(path string) string {

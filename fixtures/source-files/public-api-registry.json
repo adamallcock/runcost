@@ -154,11 +154,11 @@
       "id": "source_adapters",
       "category": "source_adapter",
       "status": "polyglot",
-      "evidence": ["fixtures/llm-prices-adapter-basic.json", "fixtures/litellm-adapter-basic.json", "fixtures/openrouter-models-adapter-basic.json", "fixtures/models-dev-adapter-basic.json"],
+      "evidence": ["fixtures/llm-prices-adapter-basic.json", "fixtures/litellm-adapter-basic.json", "fixtures/openrouter-models-adapter-basic.json", "fixtures/models-dev-adapter-basic.json", "scripts/check_default_price_catalog.py"],
       "languages": {
-        "python": { "runtime": ["price_cards_from_llm_prices", "price_cards_from_litellm", "price_cards_from_openrouter_models", "price_cards_from_models_dev", "price_cards_from_official_snapshot", "price_cards_from_portkey", "price_cards_from_source_cache", "price_cards_from_user_pricing", "price_cards_from_helicone", "price_cards_from_json_file", "price_cards_from_yaml_file"], "types": [] },
-        "javascript": { "runtime": ["priceCardsFromLlmPrices", "priceCardsFromLiteLLM", "priceCardsFromOpenRouterModels", "priceCardsFromModelsDev", "priceCardsFromOfficialSnapshot", "priceCardsFromPortkey", "priceCardsFromSourceCache", "priceCardsFromUserPricing", "priceCardsFromHelicone", "priceCardsFromJSONFile", "priceCardsFromYAMLFile"], "types": ["SourceAdapterOptions"] },
-        "go": { "runtime": ["PriceCardsFromLlmPrices", "PriceCardsFromLiteLLM", "PriceCardsFromOpenRouterModels", "PriceCardsFromModelsDev", "PriceCardsFromOfficialSnapshot", "PriceCardsFromPortkey", "PriceCardsFromSourceCache", "PriceCardsFromUserPricing", "PriceCardsFromHelicone", "PriceCardsFromJSONFile", "PriceCardsFromYAMLFile"], "types": [] }
+        "python": { "runtime": ["price_cards_from_llm_prices", "price_cards_from_litellm", "price_cards_from_openrouter_models", "price_cards_from_models_dev", "price_cards_from_official_snapshot", "price_cards_from_portkey", "price_cards_from_source_cache", "default_source_cache", "default_price_cards", "price_cards_from_user_pricing", "price_cards_from_helicone", "price_cards_from_json_file", "price_cards_from_yaml_file"], "types": [] },
+        "javascript": { "runtime": ["priceCardsFromLlmPrices", "priceCardsFromLiteLLM", "priceCardsFromOpenRouterModels", "priceCardsFromModelsDev", "priceCardsFromOfficialSnapshot", "priceCardsFromPortkey", "priceCardsFromSourceCache", "defaultSourceCache", "defaultPriceCards", "priceCardsFromUserPricing", "priceCardsFromHelicone", "priceCardsFromJSONFile", "priceCardsFromYAMLFile"], "types": ["SourceAdapterOptions"] },
+        "go": { "runtime": ["PriceCardsFromLlmPrices", "PriceCardsFromLiteLLM", "PriceCardsFromOpenRouterModels", "PriceCardsFromModelsDev", "PriceCardsFromOfficialSnapshot", "PriceCardsFromPortkey", "PriceCardsFromSourceCache", "DefaultSourceCache", "DefaultPriceCards", "PriceCardsFromUserPricing", "PriceCardsFromHelicone", "PriceCardsFromJSONFile", "PriceCardsFromYAMLFile"], "types": [] }
       }
     }
   ]

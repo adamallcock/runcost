@@ -18,7 +18,7 @@ python3 -m pip install git+https://github.com/adamallcock/runcost.git
 
 # JavaScript/TypeScript from a checkout
 npm pack ./packages/javascript/core
-npm install ./runcost-0.1.1.tgz
+npm install ./runcost-0.1.2.tgz
 
 # Go
 go get github.com/adamallcock/runcost/packages/go/ledger
@@ -182,6 +182,7 @@ ledger = calculate_cost(
 | Aggregate call ledgers | `aggregate_cost_ledgers(...)` | `aggregateCostLedgers(options)` | `AggregateCostLedgers(...)` |
 | Use framework outputs | `from_langsmith_run(...)`, `track_langchain_costs(...)`, and more | `fromVercelAISDKStreamFinish(...)`, `createRunCostVercelOnFinish(...)`, and more | `FromLangSmithRun(...)`, `FromSemanticKernelTelemetry(...)`, and more |
 | Load price sources | `price_cards_from_json_file(...)`, `price_cards_from_openrouter_models(...)` | `priceCardsFromJSONFile(...)`, `priceCardsFromOpenRouterModels(...)` | `PriceCardsFromJSONFile(...)`, `PriceCardsFromOpenRouterModels(...)` |
+| Use bundled default catalog | `default_price_cards()` | `defaultPriceCards()` | `DefaultPriceCards()` |
 | Add custom prices | Pass `price_cards` | Pass `priceCards` | Pass `price_cards` in options |
 | Apply discounts | Pass `discount_policies` | Pass `discountPolicies` | Pass `discount_policies` in options |
 | Audit decisions | `debug_trace=True` | `debugTrace: true` | `"debug_trace": true` |
@@ -220,8 +221,37 @@ The returned ledger records selected price sources, applied discounts, and any
 warning that prevents the total from being fully explained.
 
 Fixtures are behavioral conformance tests, not a complete model-price database.
-Use source adapters and reviewed source-cache snapshots for upstream catalog
-data; see [price data strategy](docs/reference/price-data-strategy.md).
+Use source adapters, reviewed source-cache snapshots, or the optional bundled
+default catalog for upstream catalog data; see [price data strategy](docs/reference/price-data-strategy.md).
+
+Python:
+
+```python
+from runcost import DEFAULT_PRICE_SOURCE_PRIORITY, default_price_cards, from_response
+
+ledger = from_response(
+    response,
+    provider="openai",
+    surface="openai.responses",
+    model="gpt-4.1-mini",
+    price_cards=default_price_cards(),
+    price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+)
+```
+
+TypeScript:
+
+```ts
+import { DEFAULT_PRICE_SOURCE_PRIORITY, defaultPriceCards, fromResponse } from "runcost";
+
+const ledger = fromResponse(response, {
+  provider: "openai",
+  surface: "openai.responses",
+  model: "gpt-4.1-mini",
+  priceCards: defaultPriceCards(),
+  priceSourcePriority: DEFAULT_PRICE_SOURCE_PRIORITY
+});
+```
 
 ## Warnings
 

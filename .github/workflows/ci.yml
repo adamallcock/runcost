@@ -65,6 +65,7 @@ jobs:
             scripts/check_fixture_coverage.py \
             scripts/check_fixture_generator.py \
             scripts/check_source_refresh.py \
+            scripts/check_default_price_catalog.py \
             scripts/check_alpha_smoke_contract.py \
             scripts/check_alpha_smoke.py \
             scripts/check_alpha_smoke_preflight.py \
@@ -90,6 +91,7 @@ jobs:
             scripts/run_alpha_smoke.py \
             scripts/run_openai_costs_invoice_comparison.py \
             scripts/refresh_price_sources.py \
+            scripts/build_default_price_catalog.py \
             scripts/check_schema_taxonomy.py \
             scripts/create_fixture.py \
             examples/python_framework_adapters.py \

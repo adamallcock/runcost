@@ -17,7 +17,7 @@ Until the first registry release is published, install from a checkout:
 
 ```bash
 npm pack ./packages/javascript/core
-npm install ./runcost-0.1.1.tgz
+npm install ./runcost-0.1.2.tgz
 ```
 
 ## Basic Usage
@@ -46,6 +46,7 @@ console.log(ledger.warnings);
 | Aggregate call ledgers | `aggregateCostLedgers(options)` |
 | Use framework outputs | `fromVercelAISDKStreamFinish(...)`, `fromLangSmithRun(...)`, `createRunCostVercelOnFinish(...)`, and more |
 | Load price sources | `priceCardsFromJSONFile(...)`, `priceCardsFromOpenRouterModels(...)`, and more |
+| Use bundled default catalog | `defaultPriceCards()` |
 | Add custom prices | Pass `priceCards` |
 | Apply discounts | Pass `discountPolicies` |
 | Audit decisions | `debugTrace: true` |

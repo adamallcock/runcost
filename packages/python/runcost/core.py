@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+from importlib.resources import files
 from datetime import date
 from decimal import Decimal, getcontext
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 getcontext().prec = 50
+
+DEFAULT_PRICE_SOURCE_PRIORITY = ["llm-prices", "models.dev", "litellm", "openrouter"]
 
 _COMPONENT_ORDER_NAMES = [
     "input_uncached_tokens",
@@ -2902,6 +2905,17 @@ def price_cards_from_source_cache(data: Any, **_: Any) -> List[Dict[str, Any]]:
             card["metadata"] = metadata
             cards.append(card)
     return cards
+
+
+def default_source_cache() -> Dict[str, Any]:
+    """Return the bundled reviewed default source-cache catalog."""
+    resource = files("runcost").joinpath("data/default-source-cache.json")
+    return json.loads(resource.read_text(encoding="utf-8"))
+
+
+def default_price_cards() -> List[Dict[str, Any]]:
+    """Return price cards from the bundled reviewed default catalog."""
+    return price_cards_from_source_cache(default_source_cache())
 
 
 def price_cards_from_json_file(path: Any, source_type: str = "user-pricing", **options: Any) -> List[Dict[str, Any]]:

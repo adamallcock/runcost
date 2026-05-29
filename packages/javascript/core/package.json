@@ -1,6 +1,6 @@
 {
   "name": "runcost",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "Alpha cost ledger utility for LLM and agent API responses.",
   "license": "MIT",
@@ -31,6 +31,7 @@
     "index.js",
     "index.d.ts",
     "generated",
+    "data",
     "README.md",
     "package.json"
   ],

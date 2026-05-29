@@ -16,6 +16,15 @@ limitations.
 
 - No unreleased changes yet.
 
+## 0.1.2
+
+- Add a bundled reviewed default source-cache catalog generated from
+  `llm-prices`, LiteLLM, OpenRouter, and models.dev.
+- Add optional default catalog loaders across Python, JavaScript/TypeScript, and
+  Go.
+- Add drift checks and package install smoke coverage proving the default
+  catalog ships with each package.
+
 ## 0.1.1
 
 - Publish the repository publicly with community files, issue templates,
