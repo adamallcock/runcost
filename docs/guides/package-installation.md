@@ -54,7 +54,7 @@ From a cloned checkout:
 
 ```bash
 npm pack ./packages/javascript/core
-npm install ./runcost-0.1.1.tgz
+npm install ./runcost-0.1.2.tgz
 node --input-type=module -e 'import { fromResponse } from "runcost"; console.log(typeof fromResponse)'
 ```
 

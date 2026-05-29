@@ -492,3 +492,21 @@ func TestFixtures(t *testing.T) {
 		})
 	}
 }
+
+func TestDefaultPriceCatalog(t *testing.T) {
+	cache := DefaultSourceCache()
+	metadata := asObject(cache["metadata"])
+	if metadata["price_card_count"] == nil {
+		t.Fatal("default source cache missing price_card_count")
+	}
+	cards := DefaultPriceCards()
+	if len(cards) < 7000 {
+		t.Fatalf("default price catalog is unexpectedly small: %d", len(cards))
+	}
+	if fmt.Sprint(len(cards)) != fmt.Sprint(metadata["price_card_count"]) {
+		t.Fatalf("default catalog count mismatch: cards=%d metadata=%v", len(cards), metadata["price_card_count"])
+	}
+	if len(DefaultPriceSourcePriority) == 0 || DefaultPriceSourcePriority[0] != "llm-prices" {
+		t.Fatalf("unexpected default source priority: %#v", DefaultPriceSourcePriority)
+	}
+}

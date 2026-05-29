@@ -42,6 +42,7 @@ the release mechanism. Do not use subdirectory tags for the current layout.
 ```bash
 npm test
 npm run check:coverage
+npm run check:default-prices
 npm run check:gates
 npm run check:packages
 npm run check:release
@@ -60,13 +61,16 @@ npm run example:framework:py
    `--require-public-beta`, or `--require-v1`.
 6. Confirm source-data updates, if any, followed
    `docs/internal/process/2026-05-26-source-data-update-process.md`.
-7. Confirm `npm run check:public-github` passes and the public-github settings
+7. Confirm the bundled default source-cache catalog is intentionally refreshed
+   or intentionally unchanged. If refreshed, run `npm run prices:build-default`
+   and record the review in `docs/internal/reports/`.
+8. Confirm `npm run check:public-github` passes and the public-github settings
    in `docs/internal/process/2026-05-28-public-github-readiness.md` are current.
-8. Confirm `git diff --check` is clean.
-9. Create and push a semantic version tag, for example `v0.1.0`.
-10. Run the manual `release` workflow with publishing disabled first.
-11. Review the no-publish artifact review checklist in the workflow summary.
-12. Enable publishing only after the dry run artifacts look correct, PyPI/npm
+9. Confirm `git diff --check` is clean.
+10. Create and push a semantic version tag, for example `v0.1.0`.
+11. Run the manual `release` workflow with publishing disabled first.
+12. Review the no-publish artifact review checklist in the workflow summary.
+13. Enable publishing only after the dry run artifacts look correct, PyPI/npm
     trusted publishers are configured, and the user has explicitly approved
     publication. The manual workflow requires both `publish=true` and
     `publish_approval=publish-runcost`.

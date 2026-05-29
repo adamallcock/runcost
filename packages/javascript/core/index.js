@@ -55,6 +55,7 @@ const TOOL_OR_FEATURE_COMPONENTS = new Set([
   "endpoint_runtime_seconds",
   "storage_gb_days"
 ]);
+export const DEFAULT_PRICE_SOURCE_PRIORITY = ["llm-prices", "models.dev", "litellm", "openrouter"];
 
 function parseDecimal(value) {
   const text = String(value);
@@ -3024,6 +3025,15 @@ export function priceCardsFromSourceCache(data) {
       }
     }));
   });
+}
+
+export function defaultSourceCache() {
+  const url = new URL("./data/default-source-cache.json", import.meta.url);
+  return JSON.parse(fs.readFileSync(url, "utf8"));
+}
+
+export function defaultPriceCards() {
+  return priceCardsFromSourceCache(defaultSourceCache());
 }
 
 export function priceCardsFromJSONFile(filePath, options = {}) {

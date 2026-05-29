@@ -90,7 +90,7 @@ def check_readmes() -> None:
         assert_true(phrase in npm_readme, f"npm README missing package readiness phrase: {phrase}")
 
     assert_true("reference/price-data-strategy.md" in docs_index, "docs index must link price data strategy")
-    for phrase in ["Source Adapters Convert Catalogs", "Source Cache Is The Offline Boundary", "not currently ship a complete vendored catalog"]:
+    for phrase in ["Source Adapters Convert Catalogs", "Source Cache Is The Offline Boundary", "optional reviewed default source-cache catalog"]:
         assert_true(phrase in price_strategy, f"price data strategy missing phrase: {phrase}")
 
 

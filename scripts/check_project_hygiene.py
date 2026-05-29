@@ -53,6 +53,7 @@ REQUIRED_FILES = [
     "docs/internal/notes/framework-adapter-notes.md",
     "scripts/check_fixture_coverage.py",
     "scripts/check_fixture_generator.py",
+    "scripts/check_default_price_catalog.py",
     "scripts/check_package_installs.py",
     "scripts/check_release_readiness.py",
     "scripts/check_schema_taxonomy.py",
@@ -76,6 +77,7 @@ REQUIRED_FILES = [
     "scripts/run_vercel_alpha_smoke.mjs",
     "scripts/generate_contract_docs.py",
     "scripts/refresh_price_sources.py",
+    "scripts/build_default_price_catalog.py",
     "examples/javascript_framework_adapters.mjs",
     "examples/python_framework_adapters.py",
     "fixtures/source-files/alpha-smoke-samples.json",
@@ -94,6 +96,10 @@ REQUIRED_FILES = [
     "schemas/public-api-registry.schema.json",
     "schemas/taxonomy.json",
     "fixtures/source-files/public-api-registry.json",
+    "packages/python/runcost/data/default-source-cache.json",
+    "packages/javascript/core/data/default-source-cache.json",
+    "packages/go/ledger/data/default-source-cache.json",
+    "docs/internal/reports/2026-05-28-default-price-catalog-review.md",
     "docs/generated/public-api-registry.md",
     "packages/go/ledger/example_test.go",
     ".github/workflows/ci.yml",
@@ -183,6 +189,12 @@ PUBLIC_API_NAMES = [
     "price_cards_from_source_cache",
     "priceCardsFromSourceCache",
     "PriceCardsFromSourceCache",
+    "default_source_cache",
+    "defaultSourceCache",
+    "DefaultSourceCache",
+    "default_price_cards",
+    "defaultPriceCards",
+    "DefaultPriceCards",
     "price_cards_from_user_pricing",
     "priceCardsFromUserPricing",
     "PriceCardsFromUserPricing",
@@ -268,6 +280,14 @@ def check_package_metadata() -> None:
         "root npm test must run source refresh command checks",
     )
     assert_true(
+        "check_default_price_catalog.py" in scripts.get("test", ""),
+        "root npm test must run default price catalog checks",
+    )
+    assert_true(
+        "check_default_price_catalog.py" in scripts.get("check:default-prices", ""),
+        "root check:default-prices must run default price catalog checks",
+    )
+    assert_true(
         "check_alpha_smoke.py" in scripts.get("test", ""),
         "root npm test must run alpha smoke sample checks",
     )
@@ -313,6 +333,10 @@ def check_package_metadata() -> None:
     assert_true(
         "refresh_price_sources.py" in scripts.get("prices:refresh", ""),
         "root prices:refresh must run source refresh command",
+    )
+    assert_true(
+        "build_default_price_catalog.py" in scripts.get("prices:build-default", ""),
+        "root prices:build-default must run default catalog builder",
     )
     assert_true(
         "run_alpha_smoke.py" in scripts.get("smoke:alpha", ""),

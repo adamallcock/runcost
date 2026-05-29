@@ -105,6 +105,7 @@ exports.
 | Local YAML price-source file | Yes | Yes | Yes | `price_cards_from_yaml_file`, `priceCardsFromYAMLFile`, `PriceCardsFromYAMLFile`; `user-pricing-yaml-file-loader.json` |
 | User compact pricing data | Yes | Yes | Yes | `price_cards_from_user_pricing`, `priceCardsFromUserPricing`, `PriceCardsFromUserPricing`; `user-pricing-adapter-compact.json` |
 | Helicone cost package data | Yes | Yes | Yes | `price_cards_from_helicone`, `priceCardsFromHelicone`, `PriceCardsFromHelicone`; `helicone-adapter-basic.json` |
+| Bundled reviewed default source-cache catalog | Yes | Yes | Yes | `default_source_cache`, `default_price_cards`, `defaultSourceCache`, `defaultPriceCards`, `DefaultSourceCache`, `DefaultPriceCards`; `scripts/check_default_price_catalog.py`; `docs/internal/reports/2026-05-28-default-price-catalog-review.md` |
 
 ## Usage Components
 

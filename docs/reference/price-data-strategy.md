@@ -58,9 +58,12 @@ The envelope records source URL, retrieval time, checksum, generated time, and
 canonical price cards. Applications can commit their own reviewed source-cache
 files, pin them by checksum, and combine them with user overrides.
 
-RunCost does not currently ship a complete vendored catalog in the package. That
-is intentional for alpha: upstream pricing changes frequently, source licensing
-varies, and invoice-exact usage still requires provider export reconciliation.
+RunCost also ships an optional reviewed default source-cache catalog in each
+package. It is generated from `llm-prices`, LiteLLM, OpenRouter, and
+`models.dev`, and can be loaded without network access through
+`default_price_cards()` / `defaultPriceCards()` / `DefaultPriceCards()`.
+Applications with stricter review requirements can still commit their own
+source-cache files and pass those cards explicitly.
 
 ## Trust Order
 
@@ -68,9 +71,10 @@ Recommended production order:
 
 1. User contract price cards.
 2. Reviewed source-cache snapshots pinned in your app.
-3. Public catalog adapters such as `llm-prices`, LiteLLM, OpenRouter, or
+3. The bundled reviewed default catalog.
+4. Public catalog adapters such as `llm-prices`, LiteLLM, OpenRouter, or
    models.dev.
-4. Provider-reported cost comparison when the provider exposes an authoritative
+5. Provider-reported cost comparison when the provider exposes an authoritative
    cost field.
 
 Use `price_source_priority` / `priceSourcePriority` to make this deterministic.
