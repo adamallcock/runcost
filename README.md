@@ -1,5 +1,14 @@
 # RunCost
 
+[![CI](https://github.com/adamallcock/runcost/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/adamallcock/runcost/actions/workflows/ci.yml)
+[![GitHub release](https://img.shields.io/github/v/release/adamallcock/runcost?include_prereleases)](https://github.com/adamallcock/runcost/releases)
+[![npm](https://img.shields.io/npm/v/runcost)](https://www.npmjs.com/package/runcost)
+[![PyPI](https://img.shields.io/pypi/v/runcost-ai)](https://pypi.org/project/runcost-ai/)
+[![Go Reference](https://pkg.go.dev/badge/github.com/adamallcock/runcost/packages/go/ledger.svg)](https://pkg.go.dev/github.com/adamallcock/runcost/packages/go/ledger)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](pyproject.toml)
+[![TypeScript types](https://img.shields.io/npm/types/runcost)](packages/javascript/core/index.d.ts)
+
 RunCost is a small alpha utility for answering one question:
 
 > What did this LLM or agent API call cost, and why?
@@ -10,21 +19,7 @@ units, discounts, price sources, and warnings.
 
 ## Install
 
-Current alpha install paths:
-
-```bash
-# Python from the repo
-python3 -m pip install git+https://github.com/adamallcock/runcost.git
-
-# JavaScript/TypeScript from a checkout
-npm pack ./packages/javascript/core
-npm install ./runcost-0.1.2.tgz
-
-# Go
-go get github.com/adamallcock/runcost/packages/go/ledger
-```
-
-First registry release commands, once publishing is enabled:
+Install from package registries:
 
 ```bash
 pip install runcost-ai
@@ -32,8 +27,29 @@ npm install runcost
 go get github.com/adamallcock/runcost/packages/go/ledger
 ```
 
+Source checkout development paths:
+
+```bash
+python3 -m pip install git+https://github.com/adamallcock/runcost.git
+npm pack ./packages/javascript/core
+npm install ./runcost-0.1.2.tgz
+```
+
 The Python distribution name is `runcost-ai`; the import package and CLI are
-`runcost`.
+`runcost`. The npm package is `runcost`. The Go package is
+`github.com/adamallcock/runcost/packages/go/ledger`.
+
+## Default Price Catalog
+
+RunCost includes an optional bundled source-cache catalog generated from
+`llm-prices`, LiteLLM, OpenRouter, and `models.dev`. It is package data, not
+fixture data.
+
+Python: `default_price_cards()` / `default_source_cache()`
+
+JavaScript/TypeScript: `defaultPriceCards()` / `defaultSourceCache()`
+
+Go: `DefaultPriceCards()` / `DefaultSourceCache()`
 
 ## One-Minute Examples
 
