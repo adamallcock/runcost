@@ -14,6 +14,7 @@ if str(PYTHON_PACKAGE) not in sys.path:
 
 from runcost import (  # noqa: E402
     DEFAULT_PRICE_SOURCE_PRIORITY,
+    calculate_cost,
     default_price_cards,
     default_source_cache,
 )
@@ -29,6 +30,7 @@ EXPECTED_SOURCES = {
     "litellm": "litellm",
     "openrouter": "openrouter-models",
     "models.dev": "models-dev",
+    "xai-official": "official-snapshot",
 }
 
 
@@ -103,10 +105,42 @@ def check_language_loaders() -> None:
     assert_true(int(js.stdout.strip()) == len(python_cards), "JavaScript default_price_cards count mismatch")
 
 
+def check_xai_aliases() -> None:
+    cards = default_price_cards()
+    aliases = [
+        "grok-4.3-latest",
+        "grok-latest",
+        "grok-3-latest",
+        "grok-4-fast-reasoning-latest",
+        "grok-4-1-fast-non-reasoning-latest",
+    ]
+    for alias in aliases:
+        usage_ledger = {
+            "schema_version": "0.1",
+            "provider": "xai",
+            "surface": "xai.chat",
+            "model": {"requested": alias, "returned": alias, "billed": alias},
+            "components": [
+                {"name": "input_uncached_tokens", "quantity": "1000", "unit": "token", "source_path": "$.usage.input_tokens"},
+                {"name": "output_text_tokens", "quantity": "1000", "unit": "token", "source_path": "$.usage.output_tokens"},
+            ],
+        }
+        ledger = calculate_cost(
+            usage_ledger=usage_ledger,
+            price_cards=cards,
+            price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+        )
+        warning_codes = [warning["code"] for warning in ledger.get("warnings", [])]
+        assert_true("unknown_model" not in warning_codes, f"xAI alias {alias} must resolve through the default catalog")
+        assert_true(ledger["model"]["billed"] == "grok-4.3", f"xAI alias {alias} must bill as grok-4.3")
+        assert_true(ledger["total"] != "0", f"xAI alias {alias} must produce a non-zero price")
+
+
 def main() -> int:
     catalog = check_files_match()
     check_catalog_shape(catalog)
     check_language_loaders()
+    check_xai_aliases()
     print(f"Default price catalog checks passed for {catalog['metadata']['price_card_count']} price cards.")
     return 0
 

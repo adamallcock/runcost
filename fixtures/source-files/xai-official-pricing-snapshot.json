@@ -1,0 +1,61 @@
+{
+  "schema_version": "0.1",
+  "provider": "xai",
+  "source": {
+    "name": "xAI official pricing snapshot",
+    "url": "https://docs.x.ai/developers/models/grok-4.3",
+    "retrieved_at": "2026-06-01T19:20:31Z",
+    "version": "2026-06-01",
+    "license": "reviewed"
+  },
+  "rows": [
+    {
+      "model": "grok-4.3",
+      "aliases": [
+        "grok-4.3-latest",
+        "grok-latest",
+        "grok-3",
+        "grok-3-latest",
+        "grok-3-beta",
+        "grok-3-fast",
+        "grok-3-fast-latest",
+        "grok-3-fast-beta",
+        "grok-3-mini",
+        "grok-3-mini-latest",
+        "grok-3-mini-beta",
+        "grok-3-mini-fast",
+        "grok-3-mini-fast-latest",
+        "grok-3-mini-fast-beta",
+        "grok-3-mini-high",
+        "grok-3-mini-high-beta",
+        "grok-3-mini-fast-high",
+        "grok-3-mini-fast-high-beta",
+        "grok-4-0709",
+        "grok-4",
+        "grok-4-latest",
+        "grok-4-fast-reasoning",
+        "grok-4-fast",
+        "grok-4-fast-reasoning-latest",
+        "grok-4-fast-non-reasoning",
+        "grok-4-fast-non-reasoning-latest",
+        "grok-4-1-fast-reasoning",
+        "grok-4-1-fast",
+        "grok-4-1-fast-reasoning-latest",
+        "grok-4-1-fast-non-reasoning",
+        "grok-4-1-fast-non-reasoning-latest"
+      ],
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "aliases_reviewed": true
+      },
+      "notes": "Reviewed alias list from xAI Grok 4.3 docs. Public source catalogs currently omit several xAI aliases."
+    }
+  ]
+}

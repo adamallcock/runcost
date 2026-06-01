@@ -42,6 +42,13 @@ DEFAULT_SOURCES: list[dict[str, str]] = [
         "name": "models.dev",
         "license": "MIT",
     },
+    {
+        "source_type": "official-snapshot",
+        "name": "xai-official",
+        "url": "https://docs.x.ai/developers/models/grok-4.3",
+        "input": "fixtures/source-files/xai-official-pricing-snapshot.json",
+        "license": "reviewed",
+    },
 ]
 
 DEFAULT_OUTPUTS = [
@@ -72,7 +79,8 @@ def build_catalog(retrieved_at: str | None = None, generated_at: str | None = No
     sources = []
     for raw_config in DEFAULT_SOURCES:
         config = source_config(raw_config)
-        raw = read_snapshot(None, config["url"])
+        input_path = ROOT / config["input"] if config.get("input") else None
+        raw = read_snapshot(input_path, config["url"])
         snapshot = load_json_snapshot(raw, config["url"])
         envelope = build_source_cache(
             raw,
