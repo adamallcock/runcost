@@ -18,7 +18,7 @@ import (
 var defaultSourceCacheJSON []byte
 
 // DefaultPriceSourcePriority is the recommended source priority for the bundled catalog.
-var DefaultPriceSourcePriority = []string{"llm-prices", "models.dev", "litellm", "openrouter"}
+var DefaultPriceSourcePriority = []string{"xai-official", "llm-prices", "models.dev", "litellm", "openrouter"}
 
 var componentOrder = func() map[string]int {
 	orders := map[string]int{}

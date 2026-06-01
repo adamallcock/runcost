@@ -55,7 +55,7 @@ const TOOL_OR_FEATURE_COMPONENTS = new Set([
   "endpoint_runtime_seconds",
   "storage_gb_days"
 ]);
-export const DEFAULT_PRICE_SOURCE_PRIORITY = ["llm-prices", "models.dev", "litellm", "openrouter"];
+export const DEFAULT_PRICE_SOURCE_PRIORITY = ["xai-official", "llm-prices", "models.dev", "litellm", "openrouter"];
 
 function parseDecimal(value) {
   const text = String(value);

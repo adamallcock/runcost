@@ -13,36 +13,7 @@
       "model": "grok-4.3",
       "aliases": [
         "grok-4.3-latest",
-        "grok-latest",
-        "grok-3",
-        "grok-3-latest",
-        "grok-3-beta",
-        "grok-3-fast",
-        "grok-3-fast-latest",
-        "grok-3-fast-beta",
-        "grok-3-mini",
-        "grok-3-mini-latest",
-        "grok-3-mini-beta",
-        "grok-3-mini-fast",
-        "grok-3-mini-fast-latest",
-        "grok-3-mini-fast-beta",
-        "grok-3-mini-high",
-        "grok-3-mini-high-beta",
-        "grok-3-mini-fast-high",
-        "grok-3-mini-fast-high-beta",
-        "grok-4-0709",
-        "grok-4",
-        "grok-4-latest",
-        "grok-4-fast-reasoning",
-        "grok-4-fast",
-        "grok-4-fast-reasoning-latest",
-        "grok-4-fast-non-reasoning",
-        "grok-4-fast-non-reasoning-latest",
-        "grok-4-1-fast-reasoning",
-        "grok-4-1-fast",
-        "grok-4-1-fast-reasoning-latest",
-        "grok-4-1-fast-non-reasoning",
-        "grok-4-1-fast-non-reasoning-latest"
+        "grok-latest"
       ],
       "input": "1.25",
       "cached_input": "0.20",
@@ -55,7 +26,558 @@
         ],
         "aliases_reviewed": true
       },
-      "notes": "Reviewed alias list from xAI Grok 4.3 docs. Public source catalogs currently omit several xAI aliases."
+      "notes": "Only current Grok 4.3 rolling aliases are modeled as aliases. Older Grok slugs listed on the xAI model page are modeled as separate redirect pricing rows so distinct models do not collapse into one alias set."
+    },
+    {
+      "model": "grok-3",
+      "effective": {
+        "from": "2026-05-15"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI May 15, 2026 model retirement guide",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "xAI says requests to this retired slug redirect to grok-4.3 after May 15, 2026 and are billed at Grok 4.3 prices."
+    },
+    {
+      "model": "grok-3-latest",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-3-beta",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-3-fast",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-3-fast-latest",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-3-fast-beta",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-3-mini",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-3-mini-latest",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-3-mini-beta",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-3-mini-fast",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-3-mini-fast-latest",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-3-mini-fast-beta",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-3-mini-high",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-3-mini-high-beta",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-3-mini-fast-high",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-3-mini-fast-high-beta",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-4-0709",
+      "effective": {
+        "from": "2026-05-15"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI May 15, 2026 model retirement guide",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "xAI says requests to this retired slug redirect to grok-4.3 after May 15, 2026 and are billed at Grok 4.3 prices."
+    },
+    {
+      "model": "grok-4",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-4-latest",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-4-fast-reasoning",
+      "effective": {
+        "from": "2026-05-15"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI May 15, 2026 model retirement guide",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "xAI says requests to this retired slug redirect to grok-4.3 after May 15, 2026 and are billed at Grok 4.3 prices."
+    },
+    {
+      "model": "grok-4-fast",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-4-fast-reasoning-latest",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-4-fast-non-reasoning",
+      "effective": {
+        "from": "2026-05-15"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI May 15, 2026 model retirement guide",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "xAI says requests to this retired slug redirect to grok-4.3 after May 15, 2026 and are billed at Grok 4.3 prices."
+    },
+    {
+      "model": "grok-4-fast-non-reasoning-latest",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-4-1-fast-reasoning",
+      "effective": {
+        "from": "2026-05-15"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI May 15, 2026 model retirement guide",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "xAI says requests to this retired slug redirect to grok-4.3 after May 15, 2026 and are billed at Grok 4.3 prices."
+    },
+    {
+      "model": "grok-4-1-fast",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-4-1-fast-reasoning-latest",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
+    },
+    {
+      "model": "grok-4-1-fast-non-reasoning",
+      "effective": {
+        "from": "2026-05-15"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI May 15, 2026 model retirement guide",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "xAI says requests to this retired slug redirect to grok-4.3 after May 15, 2026 and are billed at Grok 4.3 prices."
+    },
+    {
+      "model": "grok-4-1-fast-non-reasoning-latest",
+      "effective": {
+        "from": "2026-06-01"
+      },
+      "input": "1.25",
+      "cached_input": "0.20",
+      "output": "2.50",
+      "source_label": "xAI Grok 4.3 model page",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input"
+        ],
+        "redirect_target": "grok-4.3",
+        "redirect_pricing": true
+      },
+      "notes": "Listed by xAI under Grok 4.3 aliases, but modeled as a separate redirect pricing row rather than an alias."
     }
   ]
 }

@@ -506,7 +506,7 @@ func TestDefaultPriceCatalog(t *testing.T) {
 	if fmt.Sprint(len(cards)) != fmt.Sprint(metadata["price_card_count"]) {
 		t.Fatalf("default catalog count mismatch: cards=%d metadata=%v", len(cards), metadata["price_card_count"])
 	}
-	if len(DefaultPriceSourcePriority) == 0 || DefaultPriceSourcePriority[0] != "llm-prices" {
+	if len(DefaultPriceSourcePriority) == 0 || DefaultPriceSourcePriority[0] != "xai-official" {
 		t.Fatalf("unexpected default source priority: %#v", DefaultPriceSourcePriority)
 	}
 }

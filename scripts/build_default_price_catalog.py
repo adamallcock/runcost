@@ -57,7 +57,7 @@ DEFAULT_OUTPUTS = [
     ROOT / "packages" / "go" / "ledger" / "data" / "default-source-cache.json",
 ]
 
-DEFAULT_PRIORITY = ["llm-prices", "models.dev", "litellm", "openrouter"]
+DEFAULT_PRIORITY = ["xai-official", "llm-prices", "models.dev", "litellm", "openrouter"]
 
 
 def source_config(raw_config: dict[str, str]) -> dict[str, str]:

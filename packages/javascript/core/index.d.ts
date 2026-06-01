@@ -486,7 +486,7 @@ export function priceCardsFromModelsDev(data: Record<string, unknown>, options?:
 export function priceCardsFromOfficialSnapshot(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromPortkey(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromSourceCache(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
-export const DEFAULT_PRICE_SOURCE_PRIORITY: readonly ["llm-prices", "models.dev", "litellm", "openrouter"];
+export const DEFAULT_PRICE_SOURCE_PRIORITY: readonly ["xai-official", "llm-prices", "models.dev", "litellm", "openrouter"];
 export function defaultSourceCache(): Record<string, unknown>;
 export function defaultPriceCards(): PriceCard[];
 export function priceCardsFromJSONFile(path: string, options?: SourceAdapterOptions & { sourceType?: string; source_type?: string }): PriceCard[];

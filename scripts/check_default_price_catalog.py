@@ -93,7 +93,7 @@ def check_language_loaders() -> None:
                 "const cache = defaultSourceCache();"
                 "const cards = defaultPriceCards();"
                 "if (cache.metadata.price_card_count !== cards.length) throw new Error('JS count mismatch');"
-                "if (DEFAULT_PRICE_SOURCE_PRIORITY[0] !== 'llm-prices') throw new Error('JS priority mismatch');"
+                "if (DEFAULT_PRICE_SOURCE_PRIORITY[0] !== 'xai-official') throw new Error('JS priority mismatch');"
                 "console.log(cards.length);"
             ),
         ],
@@ -107,14 +107,32 @@ def check_language_loaders() -> None:
 
 def check_xai_aliases() -> None:
     cards = default_price_cards()
-    aliases = [
-        "grok-4.3-latest",
-        "grok-latest",
+    official_cards = [
+        card for card in cards
+        if card.get("provider") == "xai" and (card.get("source") or {}).get("name") == "xai-official"
+    ]
+    by_model = {card.get("model"): card for card in official_cards}
+    assert_true("grok-4.3" in by_model, "xAI official catalog must include grok-4.3")
+    assert_true(by_model["grok-4.3"].get("aliases") == ["grok-4.3-latest", "grok-latest"], "grok-4.3 must only carry true rolling aliases")
+
+    redirected_slugs = [
+        "grok-3",
         "grok-3-latest",
+        "grok-4",
+        "grok-4-fast-reasoning",
         "grok-4-fast-reasoning-latest",
         "grok-4-1-fast-non-reasoning-latest",
     ]
-    for alias in aliases:
+    for slug in redirected_slugs:
+        card = by_model.get(slug)
+        assert_true(card is not None, f"xAI redirected slug {slug} must have its own price card")
+        assert_true(slug not in by_model["grok-4.3"].get("aliases", []), f"xAI redirected slug {slug} must not be an alias on grok-4.3")
+        official = (card.get("metadata") or {}).get("official_snapshot") or {}
+        capabilities = official.get("capabilities") or {}
+        assert_true(capabilities.get("redirect_target") == "grok-4.3", f"xAI redirected slug {slug} must record redirect target metadata")
+
+    true_aliases = ["grok-4.3-latest", "grok-latest"]
+    for alias in true_aliases:
         usage_ledger = {
             "schema_version": "0.1",
             "provider": "xai",
@@ -134,6 +152,27 @@ def check_xai_aliases() -> None:
         assert_true("unknown_model" not in warning_codes, f"xAI alias {alias} must resolve through the default catalog")
         assert_true(ledger["model"]["billed"] == "grok-4.3", f"xAI alias {alias} must bill as grok-4.3")
         assert_true(ledger["total"] != "0", f"xAI alias {alias} must produce a non-zero price")
+
+    for slug in redirected_slugs:
+        usage_ledger = {
+            "schema_version": "0.1",
+            "provider": "xai",
+            "surface": "xai.chat",
+            "model": {"requested": slug, "returned": slug, "billed": slug},
+            "components": [
+                {"name": "input_uncached_tokens", "quantity": "1000", "unit": "token", "source_path": "$.usage.input_tokens"},
+                {"name": "output_text_tokens", "quantity": "1000", "unit": "token", "source_path": "$.usage.output_tokens"},
+            ],
+        }
+        ledger = calculate_cost(
+            usage_ledger=usage_ledger,
+            price_cards=cards,
+            price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+        )
+        warning_codes = [warning["code"] for warning in ledger.get("warnings", [])]
+        assert_true("unknown_model" not in warning_codes, f"xAI redirected slug {slug} must resolve through the default catalog")
+        assert_true(ledger["model"]["billed"] == slug, f"xAI redirected slug {slug} must not masquerade as grok-4.3 alias")
+        assert_true(ledger["total"] == "0.00375", f"xAI redirected slug {slug} must use Grok 4.3 token rates")
 
 
 def main() -> int:
