@@ -42,8 +42,8 @@ The Python distribution name is `runcost-ai`; the import package and CLI are
 ## Default Price Catalog
 
 RunCost includes an optional bundled source-cache catalog generated from
-`llm-prices`, LiteLLM, OpenRouter, and `models.dev`. It is package data, not
-fixture data.
+`llm-prices`, LiteLLM, OpenRouter, `models.dev`, and reviewed official
+snapshots for targeted alias gaps. It is package data, not fixture data.
 
 Python: `default_price_cards()` / `default_source_cache()`
 
