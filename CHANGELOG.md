@@ -16,6 +16,17 @@ limitations.
 
 - No unreleased changes yet.
 
+## 0.1.3
+
+- Correct the bundled xAI Grok catalog so `grok-4.3` only carries true rolling
+  aliases (`grok-4.3-latest`, `grok-latest`), while older Grok 3/4/4.1 slugs
+  are modeled as separate redirect-priced cards with `redirect_target`
+  metadata.
+- Prioritize the reviewed `xai-official` source in the default catalog so
+  official xAI rows win over stale third-party catalog entries.
+- Add catalog checks that prevent redirected Grok slugs from being collapsed
+  back into the `grok-4.3` alias list.
+
 ## 0.1.2
 
 - Add a bundled reviewed default source-cache catalog generated from
