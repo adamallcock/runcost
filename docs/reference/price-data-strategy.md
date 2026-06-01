@@ -60,8 +60,8 @@ files, pin them by checksum, and combine them with user overrides.
 
 RunCost also ships an optional reviewed default source-cache catalog in each
 package. It is generated from `llm-prices`, LiteLLM, OpenRouter,
-`models.dev`, and reviewed official snapshots for targeted alias gaps, and can
-be loaded without network access through
+`models.dev`, and reviewed official snapshots for targeted provider pricing gaps
+and redirects, and can be loaded without network access through
 `default_price_cards()` / `defaultPriceCards()` / `DefaultPriceCards()`.
 Applications with stricter review requirements can still commit their own
 source-cache files and pass those cards explicitly.

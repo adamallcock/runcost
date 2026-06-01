@@ -167,7 +167,7 @@ func TestImport(t *testing.T) {
     if len(ledger.DefaultPriceCards()) < 7000 {
         t.Fatalf("unexpected bundled default price card count: %d", len(ledger.DefaultPriceCards()))
     }
-    if len(ledger.DefaultPriceSourcePriority) == 0 || ledger.DefaultPriceSourcePriority[0] != "llm-prices" {
+    if len(ledger.DefaultPriceSourcePriority) == 0 || ledger.DefaultPriceSourcePriority[0] != "xai-official" {
         t.Fatalf("unexpected default price priority: %#v", ledger.DefaultPriceSourcePriority)
     }
     result := ledger.AggregateCostLedgers([]any{}, ledger.Object{

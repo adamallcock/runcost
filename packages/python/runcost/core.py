@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 getcontext().prec = 50
 
-DEFAULT_PRICE_SOURCE_PRIORITY = ["llm-prices", "models.dev", "litellm", "openrouter"]
+DEFAULT_PRICE_SOURCE_PRIORITY = ["xai-official", "llm-prices", "models.dev", "litellm", "openrouter"]
 
 _COMPONENT_ORDER_NAMES = [
     "input_uncached_tokens",
