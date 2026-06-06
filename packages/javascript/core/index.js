@@ -439,15 +439,21 @@ function longContextRuleMissingWarning(usageLedger, candidates, component) {
   };
 }
 
+function sourceCapabilityUnsupported(card, componentName) {
+  const metadata = card.metadata && typeof card.metadata === "object" ? card.metadata : {};
+  const capabilities = metadata.source_capabilities && typeof metadata.source_capabilities === "object"
+    ? metadata.source_capabilities
+    : null;
+  if (!capabilities) {
+    return false;
+  }
+  const unsupported = capabilities.unsupported_components || capabilities.unsupportedComponents || [];
+  return unsupported.includes(componentName);
+}
+
 function sourceCapabilityWarning(matchingCards, component) {
   for (const card of matchingCards) {
-    const metadata = card.metadata && typeof card.metadata === "object" ? card.metadata : {};
-    const capabilities = metadata.source_capabilities && typeof metadata.source_capabilities === "object"
-      ? metadata.source_capabilities
-      : null;
-    if (!capabilities) continue;
-    const unsupported = capabilities.unsupported_components || capabilities.unsupportedComponents || [];
-    if (unsupported.includes(component.name)) {
+    if (sourceCapabilityUnsupported(card, component.name)) {
       const source = card.source && typeof card.source === "object" ? card.source : {};
       return {
         code: "source_capability_unsupported",
@@ -461,6 +467,50 @@ function sourceCapabilityWarning(matchingCards, component) {
     }
   }
   return null;
+}
+
+function modelNameLooksGemini(value) {
+  return String(value || "").toLowerCase().startsWith("gemini-") ||
+    String(value || "").toLowerCase().startsWith("google/gemini-");
+}
+
+function geminiThinkingPricedAsOutputApplies(usageLedger, card) {
+  const provider = String(usageLedger.provider || card.provider || "").toLowerCase();
+  const surface = String(usageLedger.surface || card.surface || "").toLowerCase();
+  if (!["google", "vertex", "google-vertex"].includes(provider) && !surface.includes("gemini.generate_content")) {
+    return false;
+  }
+  const modelNames = [
+    billedModel(usageLedger),
+    card.model,
+    ...(card.aliases || [])
+  ];
+  return modelNames.some(modelNameLooksGemini);
+}
+
+function geminiThinkingPricedAsOutputMatches(usageLedger, candidateCards, component) {
+  if (component.name !== "output_reasoning_tokens" || component.unit !== "token") {
+    return [];
+  }
+  const outputComponent = {
+    name: "output_text_tokens",
+    unit: component.unit
+  };
+  return findPriceComponents(usageLedger, candidateCards, outputComponent)
+    .filter(({ card }) => geminiThinkingPricedAsOutputApplies(usageLedger, card))
+    .filter(({ card }) => !sourceCapabilityUnsupported(card, "output_reasoning_tokens"))
+    .map(({ card, priceComponent }) => ({
+      card,
+      priceComponent: {
+        ...priceComponent,
+        usage_component: "output_reasoning_tokens",
+        notes: priceComponent.notes || "Gemini thinking tokens are priced at the output-token rate."
+      },
+      componentMetadata: {
+        pricing_policy: "gemini_thinking_tokens_priced_as_output_tokens",
+        priced_as_component: "output_text_tokens"
+      }
+    }));
 }
 
 function noMatchingCardWarning(usageLedger, priceCards) {
@@ -833,9 +883,12 @@ export function calculateCost({
     }
 
     const candidates = candidatePriceComponents(candidateCards, component);
-    const matches = candidates.filter(({ priceComponent }) => {
+    let matches = candidates.filter(({ priceComponent }) => {
       return conditionsMatch(usageLedger, priceComponent);
     });
+    if (matches.length === 0 && candidates.length === 0) {
+      matches = geminiThinkingPricedAsOutputMatches(usageLedger, candidateCards, component);
+    }
     if (matches.length === 0) {
       const capabilityWarning = sourceCapabilityWarning(candidateCards, component);
       const longContextWarning = longContextRuleMissingWarning(usageLedger, candidates, component);
@@ -857,7 +910,7 @@ export function calculateCost({
       warnings.push(disagreementWarning);
     }
     const match = matches[0];
-    const { card, priceComponent } = match;
+    const { card, priceComponent, componentMetadata } = match;
     if (trace) {
       trace.decisions.push({
         type: "price_component_match",
@@ -923,7 +976,7 @@ export function calculateCost({
       }
     }
 
-    components.push({
+    const costComponent = {
       name: component.name,
       quantity: component.quantity,
       unit: component.unit,
@@ -931,7 +984,11 @@ export function calculateCost({
       cost: discounted.cost,
       price_card_id: card.id,
       discount_eligible: discountEligible
-    });
+    };
+    if (componentMetadata) {
+      costComponent.metadata = componentMetadata;
+    }
+    components.push(costComponent);
     if (trace) {
       trace.summary.priced_components += 1;
     }

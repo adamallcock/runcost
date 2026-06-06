@@ -1,0 +1,166 @@
+{
+  "name": "gemini-3-1-flash-lite-reasoning-output-pricing",
+  "description": "Prices reported Gemini 3.1 Flash-Lite thinking tokens at the output-token rate when the direct Google price card omits a separate reasoning component.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-GEMINI-THINKING-PRICING"
+    ],
+    "provider": "google",
+    "surface": "google.gemini.generate_content",
+    "scenario": "normalized_usage",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_text_tokens",
+      "gemini",
+      "reasoning"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "google",
+      "surface": "google.gemini.generate_content",
+      "model": {
+        "requested": "google/gemini-3.1-flash-lite",
+        "returned": "google/gemini-3.1-flash-lite",
+        "billed": "google/gemini-3.1-flash-lite",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token"
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "100",
+          "unit": "token"
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "5000",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "google:gemini-3.1-flash-lite:models-dev",
+        "provider": "google",
+        "surface": "google.gemini.generate_content",
+        "model": "gemini-3.1-flash-lite",
+        "aliases": [
+          "Gemini 3.1 Flash Lite",
+          "google/gemini-3.1-flash-lite"
+        ],
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.25",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1.5",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "models.dev",
+          "url": "https://models.dev/api.json",
+          "retrieved_at": "2026-05-29T00:19:51Z"
+        },
+        "metadata": {
+          "models_dev": {
+            "provider_name": "Google",
+            "reasoning": true,
+            "family": "gemini-flash-lite"
+          }
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "google",
+      "surface": "google.gemini.generate_content",
+      "model": {
+        "requested": "google/gemini-3.1-flash-lite",
+        "returned": "google/gemini-3.1-flash-lite",
+        "billed": "gemini-3.1-flash-lite",
+        "alias_resolution": "source_exact"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.00000025",
+          "cost": "0.00025",
+          "price_card_id": "google:gemini-3.1-flash-lite:models-dev",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.0000015",
+          "cost": "0.00015",
+          "price_card_id": "google:gemini-3.1-flash-lite:models-dev",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "5000",
+          "unit": "token",
+          "unit_price": "0.0000015",
+          "cost": "0.0075",
+          "price_card_id": "google:gemini-3.1-flash-lite:models-dev",
+          "discount_eligible": true,
+          "metadata": {
+            "pricing_policy": "gemini_thinking_tokens_priced_as_output_tokens",
+            "priced_as_component": "output_text_tokens"
+          }
+        }
+      ],
+      "total": "0.0079",
+      "price_sources": [
+        {
+          "name": "models.dev",
+          "url": "https://models.dev/api.json",
+          "retrieved_at": "2026-05-29T00:19:51Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "alias_inferred",
+          "message": "Resolved model alias google/gemini-3.1-flash-lite to billed model gemini-3.1-flash-lite.",
+          "metadata": {
+            "requested_model": "google/gemini-3.1-flash-lite",
+            "billed_model": "gemini-3.1-flash-lite"
+          }
+        }
+      ]
+    }
+  }
+}

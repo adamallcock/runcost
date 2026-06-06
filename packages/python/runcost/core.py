@@ -338,12 +338,7 @@ def _source_capability_warning(
 ) -> Optional[Dict[str, Any]]:
     component_name = component["name"]
     for card in matching_cards:
-        metadata = card.get("metadata") if isinstance(card.get("metadata"), dict) else {}
-        capabilities = metadata.get("source_capabilities")
-        if not isinstance(capabilities, dict):
-            continue
-        unsupported = capabilities.get("unsupported_components") or capabilities.get("unsupportedComponents") or []
-        if component_name in unsupported:
+        if _source_capability_unsupported(card, component_name):
             source = card.get("source") if isinstance(card.get("source"), dict) else {}
             return {
                 "code": "source_capability_unsupported",
@@ -355,6 +350,63 @@ def _source_capability_warning(
                 },
             }
     return None
+
+
+def _source_capability_unsupported(card: Dict[str, Any], component_name: str) -> bool:
+    metadata = card.get("metadata") if isinstance(card.get("metadata"), dict) else {}
+    capabilities = metadata.get("source_capabilities")
+    if not isinstance(capabilities, dict):
+        return False
+    unsupported = capabilities.get("unsupported_components") or capabilities.get("unsupportedComponents") or []
+    return component_name in unsupported
+
+
+def _model_name_looks_gemini(value: Any) -> bool:
+    text = str(value or "").lower()
+    return text.startswith("gemini-") or text.startswith("google/gemini-")
+
+
+def _gemini_thinking_priced_as_output_applies(
+    usage_ledger: Dict[str, Any],
+    card: Dict[str, Any],
+) -> bool:
+    provider = str(usage_ledger.get("provider") or card.get("provider") or "").lower()
+    surface = str(usage_ledger.get("surface") or card.get("surface") or "").lower()
+    if provider not in {"google", "vertex", "google-vertex"} and "gemini.generate_content" not in surface:
+        return False
+    model_names = [_billed_model(usage_ledger), card.get("model"), *card.get("aliases", [])]
+    return any(_model_name_looks_gemini(model_name) for model_name in model_names)
+
+
+def _gemini_thinking_priced_as_output_matches(
+    usage_ledger: Dict[str, Any],
+    matching_cards: List[Dict[str, Any]],
+    component: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    if component.get("name") != "output_reasoning_tokens" or component.get("unit") != "token":
+        return []
+    output_component = {"name": "output_text_tokens", "unit": component.get("unit")}
+    matches: List[Dict[str, Any]] = []
+    for match in _find_price_components(usage_ledger, matching_cards, output_component):
+        card = match["card"]
+        if not _gemini_thinking_priced_as_output_applies(usage_ledger, card):
+            continue
+        if _source_capability_unsupported(card, "output_reasoning_tokens"):
+            continue
+        price_component = dict(match["price_component"])
+        price_component["usage_component"] = "output_reasoning_tokens"
+        price_component.setdefault("notes", "Gemini thinking tokens are priced at the output-token rate.")
+        matches.append(
+            {
+                "card": card,
+                "price_component": price_component,
+                "component_metadata": {
+                    "pricing_policy": "gemini_thinking_tokens_priced_as_output_tokens",
+                    "priced_as_component": "output_text_tokens",
+                },
+            }
+        )
+    return matches
 
 
 def _has_price_card_for_usage(
@@ -749,6 +801,8 @@ def calculate_cost(
             for match in candidates
             if _conditions_match(usage_ledger, match["price_component"])
         ]
+        if not matches and not candidates:
+            matches = _gemini_thinking_priced_as_output_matches(usage_ledger, matching_cards, component)
         if not matches:
             capability_warning = _source_capability_warning(matching_cards, component)
             long_context_warning = _long_context_rule_missing_warning(usage_ledger, candidates, component)
@@ -768,6 +822,7 @@ def calculate_cost(
         match = matches[0]
         card = match["card"]
         price_component = match["price_component"]
+        component_metadata = match.get("component_metadata")
         if trace is not None:
             trace["decisions"].append(
                 {
@@ -827,17 +882,18 @@ def calculate_cost(
                 warnings.append(stale_warning)
                 warned_stale_cards.add(card["id"])
 
-        components.append(
-            {
-                "name": component["name"],
-                "quantity": component["quantity"],
-                "unit": component["unit"],
-                "unit_price": _multiply_divide(price["amount"], "1", price["per"]),
-                "cost": discounted["cost"],
-                "price_card_id": card["id"],
-                "discount_eligible": discount_eligible,
-            }
-        )
+        cost_component = {
+            "name": component["name"],
+            "quantity": component["quantity"],
+            "unit": component["unit"],
+            "unit_price": _multiply_divide(price["amount"], "1", price["per"]),
+            "cost": discounted["cost"],
+            "price_card_id": card["id"],
+            "discount_eligible": discount_eligible,
+        }
+        if component_metadata:
+            cost_component["metadata"] = component_metadata
+        components.append(cost_component)
         if trace is not None:
             trace["summary"]["priced_components"] += 1
 
