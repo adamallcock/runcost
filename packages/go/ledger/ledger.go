@@ -901,35 +901,109 @@ func longContextRuleMissingWarning(usageLedger Object, candidates []Object, comp
 func sourceCapabilityWarning(matchingCards []Object, component Object) (Object, bool) {
 	componentName := asString(component["name"])
 	for _, card := range matchingCards {
-		metadata := asObject(card["metadata"])
-		capabilities := asObject(metadata["source_capabilities"])
-		if len(capabilities) == 0 {
-			continue
-		}
-		unsupported := asSlice(capabilities["unsupported_components"])
-		if unsupported == nil {
-			unsupported = asSlice(capabilities["unsupportedComponents"])
-		}
-		for _, rawUnsupported := range unsupported {
-			if asString(rawUnsupported) == componentName {
-				source := asObject(card["source"])
-				sourceName := asString(source["name"])
-				if sourceName == "" {
-					sourceName = asString(card["id"])
-				}
-				return Object{
-					"code":    "source_capability_unsupported",
-					"message": fmt.Sprintf("Price source %s explicitly does not price %s.", sourceName, componentName),
-					"metadata": Object{
-						"component":     componentName,
-						"price_card_id": card["id"],
-						"source":        asString(source["name"]),
-					},
-				}, true
+		if sourceCapabilityUnsupported(card, componentName) {
+			source := asObject(card["source"])
+			sourceName := asString(source["name"])
+			if sourceName == "" {
+				sourceName = asString(card["id"])
 			}
+			return Object{
+				"code":    "source_capability_unsupported",
+				"message": fmt.Sprintf("Price source %s explicitly does not price %s.", sourceName, componentName),
+				"metadata": Object{
+					"component":     componentName,
+					"price_card_id": card["id"],
+					"source":        asString(source["name"]),
+				},
+			}, true
 		}
 	}
 	return nil, false
+}
+
+func sourceCapabilityUnsupported(card Object, componentName string) bool {
+	metadata := asObject(card["metadata"])
+	capabilities := asObject(metadata["source_capabilities"])
+	if len(capabilities) == 0 {
+		return false
+	}
+	unsupported := asSlice(capabilities["unsupported_components"])
+	if unsupported == nil {
+		unsupported = asSlice(capabilities["unsupportedComponents"])
+	}
+	for _, rawUnsupported := range unsupported {
+		if asString(rawUnsupported) == componentName {
+			return true
+		}
+	}
+	return false
+}
+
+func cloneObject(object Object) Object {
+	cloned := Object{}
+	for key, value := range object {
+		cloned[key] = value
+	}
+	return cloned
+}
+
+func modelNameLooksGemini(value any) bool {
+	text := strings.ToLower(fmt.Sprint(value))
+	return strings.HasPrefix(text, "gemini-") || strings.HasPrefix(text, "google/gemini-")
+}
+
+func geminiThinkingPricedAsOutputApplies(usageLedger Object, card Object) bool {
+	provider := strings.ToLower(asString(usageLedger["provider"]))
+	if provider == "" {
+		provider = strings.ToLower(asString(card["provider"]))
+	}
+	surface := strings.ToLower(asString(usageLedger["surface"]))
+	if surface == "" {
+		surface = strings.ToLower(asString(card["surface"]))
+	}
+	if provider != "google" && provider != "vertex" && provider != "google-vertex" && !strings.Contains(surface, "gemini.generate_content") {
+		return false
+	}
+	if modelNameLooksGemini(billedModel(usageLedger)) || modelNameLooksGemini(card["model"]) {
+		return true
+	}
+	for _, alias := range asSlice(card["aliases"]) {
+		if modelNameLooksGemini(alias) {
+			return true
+		}
+	}
+	return false
+}
+
+func geminiThinkingPricedAsOutputMatches(usageLedger Object, matchingCards []Object, component Object) []Object {
+	if asString(component["name"]) != "output_reasoning_tokens" || asString(component["unit"]) != "token" {
+		return nil
+	}
+	outputComponent := Object{"name": "output_text_tokens", "unit": component["unit"]}
+	matches := []Object{}
+	for _, match := range findPriceComponents(usageLedger, matchingCards, outputComponent) {
+		card := asObject(match["card"])
+		if !geminiThinkingPricedAsOutputApplies(usageLedger, card) {
+			continue
+		}
+		if sourceCapabilityUnsupported(card, "output_reasoning_tokens") {
+			continue
+		}
+		priceComponent := cloneObject(asObject(match["price_component"]))
+		priceComponent["usage_component"] = "output_reasoning_tokens"
+		if asString(priceComponent["notes"]) == "" {
+			priceComponent["notes"] = "Gemini thinking tokens are priced at the output-token rate."
+		}
+		matches = append(matches, Object{
+			"card":            card,
+			"price_component": priceComponent,
+			"component_metadata": Object{
+				"pricing_policy":      "gemini_thinking_tokens_priced_as_output_tokens",
+				"priced_as_component": "output_text_tokens",
+			},
+		})
+	}
+	return matches
 }
 
 func hasPriceCardForUsage(usageLedger Object, priceCards []any) bool {
@@ -1478,6 +1552,9 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 				matches = append(matches, match)
 			}
 		}
+		if len(matches) == 0 && len(candidates) == 0 {
+			matches = geminiThinkingPricedAsOutputMatches(usageLedger, candidateCards, component)
+		}
 		if len(matches) == 0 {
 			if warning, ok := sourceCapabilityWarning(candidateCards, component); ok {
 				warnings = append(warnings, warning)
@@ -1495,6 +1572,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		}
 		card := asObject(matches[0]["card"])
 		priceComponent := asObject(matches[0]["price_component"])
+		componentMetadata := asObject(matches[0]["component_metadata"])
 		appendTraceDecision(trace, Object{
 			"type":                     "price_component_match",
 			"component":                asString(component["name"]),
@@ -1551,7 +1629,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 			}
 		}
 
-		components = append(components, Object{
+		costComponent := Object{
 			"name":              asString(component["name"]),
 			"quantity":          numberString(component["quantity"]),
 			"unit":              asString(component["unit"]),
@@ -1559,7 +1637,11 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 			"cost":              finalCost,
 			"price_card_id":     asString(card["id"]),
 			"discount_eligible": eligible,
-		})
+		}
+		if len(componentMetadata) > 0 {
+			costComponent["metadata"] = componentMetadata
+		}
+		components = append(components, costComponent)
 		incrementTraceSummary(trace, "priced_components")
 	}
 

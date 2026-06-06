@@ -13,20 +13,20 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 106
+- Fixtures: 108
 - Providers: 17
 - Provider surfaces: 31
 - Usage components covered: 32
 - Warning/error codes covered: 19
-- Requirement IDs covered: 20
+- Requirement IDs covered: 21
 
 ## Expected Languages
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 104 |
-| `javascript` | 105 |
-| `python` | 105 |
+| `go` | 106 |
+| `javascript` | 107 |
+| `python` | 107 |
 
 ## Scenarios
 
@@ -37,7 +37,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `discount` | 2 |
 | `framework_adapter` | 16 |
 | `long_context` | 2 |
-| `normalized_usage` | 8 |
+| `normalized_usage` | 10 |
 | `provider_reported` | 3 |
 | `raw_provider_response` | 40 |
 | `service_mode` | 3 |
@@ -61,7 +61,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `custom` | `custom.unknown` | 1 |
 | `custom-provider` | `openai.responses` | 1 |
 | `deepseek` | `deepseek.chat_completions` | 1 |
-| `google` | `google.gemini.generate_content` | 3 |
+| `google` | `google.gemini.generate_content` | 5 |
 | `groq` | `groq.chat_completions` | 1 |
 | `huggingface` | `huggingface.chat_completions` | 1 |
 | `mistral` | `mistral.chat_completions` | 1 |
@@ -104,12 +104,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `input_cache_write_tokens` | 14 |
 | `input_image_tokens` | 3 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 86 |
+| `input_uncached_tokens` | 88 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 3 |
 | `output_image_tokens` | 3 |
-| `output_reasoning_tokens` | 32 |
-| `output_text_tokens` | 68 |
+| `output_reasoning_tokens` | 34 |
+| `output_text_tokens` | 70 |
 | `output_video_tokens` | 1 |
 | `request_units` | 3 |
 | `rerank_search_units` | 2 |
@@ -124,7 +124,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Code | Fixtures |
 |---|---:|
-| `alias_inferred` | 17 |
+| `alias_inferred` | 19 |
 | `component_unpriced` | 1 |
 | `discount_not_applied` | 1 |
 | `historical_price_missing` | 1 |
@@ -188,9 +188,10 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-DEBUG-TRACE` | 1 |
 | `RC-DISCOUNT-POLICY` | 2 |
 | `RC-FEATURE-PRICING` | 15 |
-| `RC-FIXTURE-CONFORMANCE` | 106 |
+| `RC-FIXTURE-CONFORMANCE` | 108 |
 | `RC-FRAMEWORK-ADAPTER` | 14 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
+| `RC-GEMINI-THINKING-PRICING` | 2 |
 | `RC-LONG-CONTEXT` | 2 |
 | `RC-PROVIDER-EXTRACTOR` | 11 |
 | `RC-PROVIDER-REPORTED-COST` | 9 |
@@ -242,12 +243,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:input_cache_write_tokens` | 14 |
 | `component:input_image_tokens` | 3 |
 | `component:input_image_units` | 1 |
-| `component:input_uncached_tokens` | 84 |
+| `component:input_uncached_tokens` | 86 |
 | `component:input_video_tokens` | 1 |
 | `component:output_audio_tokens` | 3 |
 | `component:output_image_tokens` | 3 |
-| `component:output_reasoning_tokens` | 32 |
-| `component:output_text_tokens` | 68 |
+| `component:output_reasoning_tokens` | 34 |
+| `component:output_text_tokens` | 70 |
 | `component:output_video_tokens` | 1 |
 | `component:request_units` | 3 |
 | `component:rerank_search_units` | 2 |
@@ -275,6 +276,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `framework:vercel_ai_sdk` | 1 |
 | `framework_adapter` | 16 |
 | `gb_day` | 1 |
+| `gemini` | 2 |
 | `generated_media` | 5 |
 | `helper:from_ag2_usage_summary` | 2 |
 | `helper:from_haystack_generator_result` | 1 |
@@ -298,7 +300,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `normalized_usage` | 3 |
 | `provider_reported` | 8 |
 | `raw_provider_response` | 30 |
-| `reasoning` | 10 |
+| `reasoning` | 12 |
 | `rerank` | 2 |
 | `service_mode` | 3 |
 | `service_tier` | 2 |
