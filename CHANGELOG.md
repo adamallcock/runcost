@@ -16,6 +16,17 @@ limitations.
 
 - No unreleased changes yet.
 
+## 0.1.4
+
+- Price reported Gemini thinking/reasoning tokens at the matching output-token
+  rate for direct Google/Vertex Gemini cards when no dedicated reasoning price
+  component is present.
+- Add explicit ledger metadata for this treatment so downstream reports can
+  distinguish priced Gemini thinking tokens from unsupported or unpriced
+  reasoning components.
+- Add Gemini 3.5 Flash and Gemini 3.1 Flash-Lite regression fixtures across
+  Python, JavaScript, and Go.
+
 ## 0.1.3
 
 - Correct the bundled xAI Grok catalog so `grok-4.3` only carries true rolling
