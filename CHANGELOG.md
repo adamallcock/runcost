@@ -16,6 +16,17 @@ limitations.
 
 - No unreleased changes yet.
 
+## 0.1.5
+
+- Price reported xAI/Grok reasoning tokens at the matching output-token rate
+  when xAI price cards do not publish a dedicated reasoning component.
+- Extract xAI provider-reported `cost_in_usd_ticks` for exact billed-cost
+  reconciliation in `compare` and `use` modes.
+- Price xAI typed server-side tool usage for Web Search, X Search, code
+  execution, collection/file search, and attachment search from
+  `server_side_tool_usage`, with generic tool-count fallback only when typed
+  billable usage is absent.
+
 ## 0.1.4
 
 - Price reported Gemini thinking/reasoning tokens at the matching output-token
