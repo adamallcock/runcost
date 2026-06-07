@@ -70,7 +70,7 @@ For the current public-beta and V1 caveat register, see
 | `usage_field_ignored` | `field` |
 | `inclusive_usage_ambiguous` | `field` |
 | `component_unpriced` | `component`, `unit`, `model` |
-| `source_capability_unsupported` | `component`, `price_card_id`, `source` |
+| `source_capability_unsupported` | `component`, `unit`, `price_card_id`, `source` |
 | `service_tier_unsupported` | `model`, `service_tier` |
 | `long_context_rule_missing` | `component`, `unit`, `total_input_tokens` |
 | `discount_not_applied` | `policy_id` |

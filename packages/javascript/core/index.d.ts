@@ -206,6 +206,7 @@ export interface ComponentUnpricedWarningMetadata {
 
 export interface SourceCapabilityUnsupportedWarningMetadata {
   component: string;
+  unit: string;
   price_card_id: string;
   source: string;
   [key: string]: unknown;

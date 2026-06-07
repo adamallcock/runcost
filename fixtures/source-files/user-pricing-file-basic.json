@@ -7,7 +7,10 @@
       "id": "gpt-file",
       "prices": {
         "input": "4",
-        "output": "12"
+        "cached_input": "0.4",
+        "output": "12",
+        "reasoning": "12",
+        "web_search": "0.01"
       }
     }
   ]

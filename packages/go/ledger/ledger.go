@@ -912,6 +912,7 @@ func sourceCapabilityWarning(matchingCards []Object, component Object) (Object, 
 				"message": fmt.Sprintf("Price source %s explicitly does not price %s.", sourceName, componentName),
 				"metadata": Object{
 					"component":     componentName,
+					"unit":          asString(component["unit"]),
 					"price_card_id": card["id"],
 					"source":        asString(source["name"]),
 				},
