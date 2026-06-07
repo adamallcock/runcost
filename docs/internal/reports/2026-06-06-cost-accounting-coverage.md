@@ -13,9 +13,9 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 
 ## Summary
 
-- Fixtures scanned: 110
+- Fixtures scanned: 115
 - Public API capabilities scanned: 14
-- Provider/surface component rows: 31
+- Provider/surface component rows: 32
 - Price-source component rows: 11
 - Gemini separate output/thinking fixtures: 6
 
@@ -29,8 +29,8 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `framework_adapter` | 16 |
 | `long_context` | 2 |
 | `normalized_usage` | 10 |
-| `provider_reported` | 3 |
-| `raw_provider_response` | 42 |
+| `provider_reported` | 4 |
+| `raw_provider_response` | 46 |
 | `service_mode` | 3 |
 | `service_tier` | 2 |
 | `source_adapter` | 13 |
@@ -42,38 +42,40 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 
 | Component | Fixtures |
 |---|---:|
+| `attachment_search_units` | 2 |
 | `audio_generation_characters` | 1 |
 | `audio_generation_units` | 1 |
-| `code_interpreter_call_units` | 1 |
+| `code_interpreter_call_units` | 2 |
 | `code_interpreter_session_units` | 2 |
 | `computer_use_action_units` | 2 |
-| `custom_units` | 2 |
+| `custom_units` | 3 |
 | `embedding_tokens` | 3 |
 | `endpoint_instance_hours` | 1 |
 | `endpoint_runtime_seconds` | 2 |
-| `file_search_units` | 1 |
+| `file_search_units` | 2 |
 | `image_generation_units` | 3 |
 | `input_audio_tokens` | 4 |
-| `input_cache_read_tokens` | 41 |
+| `input_cache_read_tokens` | 43 |
 | `input_cache_write_1h_tokens` | 2 |
 | `input_cache_write_tokens` | 14 |
 | `input_image_tokens` | 3 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 90 |
+| `input_uncached_tokens` | 95 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 3 |
 | `output_image_tokens` | 3 |
-| `output_reasoning_tokens` | 38 |
-| `output_text_tokens` | 72 |
+| `output_reasoning_tokens` | 40 |
+| `output_text_tokens` | 77 |
 | `output_video_tokens` | 1 |
 | `request_units` | 3 |
 | `rerank_search_units` | 2 |
 | `storage_gb_days` | 2 |
-| `tool_call_units` | 1 |
+| `tool_call_units` | 2 |
 | `tool_execution_seconds` | 1 |
 | `transcription_seconds` | 3 |
 | `video_generation_units` | 1 |
-| `web_search_units` | 10 |
+| `web_search_units` | 11 |
+| `x_search_units` | 3 |
 
 ## Price Source Component Coverage
 
@@ -84,7 +86,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `litellm` | `input_cache_read_tokens`, `input_cache_write_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
 | `llm-prices` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_text_tokens` |
 | `models-dev` | `input_audio_tokens`, `input_cache_read_tokens`, `input_cache_write_tokens`, `input_uncached_tokens`, `output_audio_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
-| `official-snapshot` | `input_cache_read_tokens`, `input_cache_write_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `web_search_units` |
+| `official-snapshot` | `attachment_search_units`, `input_cache_read_tokens`, `input_cache_write_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `web_search_units`, `x_search_units` |
 | `openrouter-models` | `input_cache_read_tokens`, `input_image_units`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `request_units`, `web_search_units` |
 | `portkey` | `input_cache_read_tokens`, `input_cache_write_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `web_search_units` |
 | `source-cache` | `input_uncached_tokens`, `output_text_tokens` |
@@ -114,7 +116,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `openai` | `openai.chat_completions` | `input_cache_read_tokens`, `input_cache_write_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
 | `openai` | `openai.embeddings` | `embedding_tokens` |
 | `openai` | `openai.images` | `image_generation_units`, `input_image_tokens`, `input_uncached_tokens`, `output_image_tokens` |
-| `openai` | `openai.responses` | `code_interpreter_call_units`, `code_interpreter_session_units`, `computer_use_action_units`, `custom_units`, `file_search_units`, `input_audio_tokens`, `input_cache_read_tokens`, `input_cache_write_tokens`, `input_image_tokens`, `input_uncached_tokens`, `output_audio_tokens`, `output_image_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `request_units`, `storage_gb_days`, `tool_call_units`, `web_search_units` |
+| `openai` | `openai.responses` | `attachment_search_units`, `code_interpreter_call_units`, `code_interpreter_session_units`, `computer_use_action_units`, `custom_units`, `file_search_units`, `input_audio_tokens`, `input_cache_read_tokens`, `input_cache_write_tokens`, `input_image_tokens`, `input_uncached_tokens`, `output_audio_tokens`, `output_image_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `request_units`, `storage_gb_days`, `tool_call_units`, `web_search_units`, `x_search_units` |
 | `openai` | `openai.usage.audio_speeches` | `audio_generation_characters` |
 | `openai` | `openai.usage.audio_transcriptions` | `transcription_seconds` |
 | `openai` | `openai.usage.code_interpreter_sessions` | `code_interpreter_session_units` |
@@ -124,6 +126,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `openai` | `openai.vector_stores` | `storage_gb_days` |
 | `openrouter` | `openrouter.chat_completions` | `custom_units`, `input_cache_read_tokens`, `input_image_units`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `request_units`, `web_search_units` |
 | `vertex` | `vertex.gemini.generate_content` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
+| `xai` | `openai.responses` | `attachment_search_units`, `code_interpreter_call_units`, `custom_units`, `file_search_units`, `input_cache_read_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `tool_call_units`, `web_search_units`, `x_search_units` |
 | `xai` | `xai.chat_completions` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
 | `xai` | `xai.responses` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
 

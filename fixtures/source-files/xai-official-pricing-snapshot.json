@@ -8,6 +8,13 @@
     "version": "2026-06-01",
     "license": "reviewed"
   },
+  "tool_prices": {
+    "web_search": "0.005",
+    "x_search": "0.005",
+    "code_interpreter": "0.005",
+    "attachment_search": "0.01",
+    "file_search": "0.0025"
+  },
   "rows": [
     {
       "model": "grok-4.3",
