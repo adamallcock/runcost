@@ -460,6 +460,7 @@ function sourceCapabilityWarning(matchingCards, component) {
         message: `Price source ${source.name || card.id || "unknown"} explicitly does not price ${component.name}.`,
         metadata: {
           component: component.name,
+          unit: component.unit,
           price_card_id: card.id,
           source: source.name
         }

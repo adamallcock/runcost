@@ -30,7 +30,7 @@ All warning codes currently have shared fixture coverage.
 | `usage_field_ignored` | `field` | 1 | [usage-field-ignored-warning.json](../../fixtures/usage-field-ignored-warning.json) | fixture-backed |
 | `inclusive_usage_ambiguous` | `field` | 1 | [inclusive-usage-ambiguous-warning.json](../../fixtures/inclusive-usage-ambiguous-warning.json) | fixture-backed |
 | `component_unpriced` | `component`, `unit`, `model` | 1 | [unpriced-component-compatibility.json](../../fixtures/unpriced-component-compatibility.json) | fixture-backed |
-| `source_capability_unsupported` | `component`, `price_card_id`, `source` | 1 | [source-capability-warning.json](../../fixtures/source-capability-warning.json) | fixture-backed |
+| `source_capability_unsupported` | `component`, `unit`, `price_card_id`, `source` | 1 | [source-capability-warning.json](../../fixtures/source-capability-warning.json) | fixture-backed |
 | `service_tier_unsupported` | `model`, `service_tier` | 1 | [service-tier-unsupported-compatibility.json](../../fixtures/service-tier-unsupported-compatibility.json) | fixture-backed |
 | `long_context_rule_missing` | `component`, `unit`, `total_input_tokens` | 1 | [long-context-rule-missing.json](../../fixtures/long-context-rule-missing.json) | fixture-backed |
 | `discount_not_applied` | `policy_id` | 1 | [discount-not-applied-warning.json](../../fixtures/discount-not-applied-warning.json) | fixture-backed |

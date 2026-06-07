@@ -5,4 +5,7 @@ models:
     aliases: [gpt-yaml-file-2026-05-25]
     prices:
       input: "4"
+      cached_input: "0.4"
       output: "12"
+      reasoning: "12"
+      web_search: "0.01"

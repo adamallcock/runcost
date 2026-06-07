@@ -130,6 +130,7 @@
           "message": "Price source OpenAI pricing page snapshot explicitly does not price web_search_units.",
           "metadata": {
             "component": "web_search_units",
+            "unit": "search",
             "price_card_id": "openai:gpt-official-capability:official-snapshot",
             "source": "OpenAI pricing page snapshot"
           }

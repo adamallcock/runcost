@@ -196,6 +196,7 @@ class ComponentUnpricedWarningMetadata(TypedDict):
 
 class SourceCapabilityUnsupportedWarningMetadata(TypedDict):
     component: str
+    unit: str
     price_card_id: str
     source: str
 

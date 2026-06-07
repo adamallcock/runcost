@@ -99,7 +99,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `file_search_units` | 1 |
 | `image_generation_units` | 3 |
 | `input_audio_tokens` | 4 |
-| `input_cache_read_tokens` | 39 |
+| `input_cache_read_tokens` | 41 |
 | `input_cache_write_1h_tokens` | 2 |
 | `input_cache_write_tokens` | 14 |
 | `input_image_tokens` | 3 |
@@ -108,7 +108,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 3 |
 | `output_image_tokens` | 3 |
-| `output_reasoning_tokens` | 34 |
+| `output_reasoning_tokens` | 36 |
 | `output_text_tokens` | 70 |
 | `output_video_tokens` | 1 |
 | `request_units` | 3 |
@@ -118,7 +118,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `tool_execution_seconds` | 1 |
 | `transcription_seconds` | 3 |
 | `video_generation_units` | 1 |
-| `web_search_units` | 8 |
+| `web_search_units` | 10 |
 
 ## Warning And Error Codes
 
@@ -238,7 +238,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:file_search_units` | 1 |
 | `component:image_generation_units` | 3 |
 | `component:input_audio_tokens` | 4 |
-| `component:input_cache_read_tokens` | 39 |
+| `component:input_cache_read_tokens` | 41 |
 | `component:input_cache_write_1h_tokens` | 2 |
 | `component:input_cache_write_tokens` | 14 |
 | `component:input_image_tokens` | 3 |
@@ -247,7 +247,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:input_video_tokens` | 1 |
 | `component:output_audio_tokens` | 3 |
 | `component:output_image_tokens` | 3 |
-| `component:output_reasoning_tokens` | 34 |
+| `component:output_reasoning_tokens` | 36 |
 | `component:output_text_tokens` | 70 |
 | `component:output_video_tokens` | 1 |
 | `component:request_units` | 3 |
@@ -257,7 +257,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:tool_execution_seconds` | 1 |
 | `component:transcription_seconds` | 3 |
 | `component:video_generation_units` | 1 |
-| `component:web_search_units` | 8 |
+| `component:web_search_units` | 10 |
 | `context:region` | 1 |
 | `debug_trace` | 1 |
 | `decimal_precision` | 1 |

@@ -345,6 +345,7 @@ def _source_capability_warning(
                 "message": f"Price source {source.get('name', card.get('id', 'unknown'))} explicitly does not price {component_name}.",
                 "metadata": {
                     "component": component_name,
+                    "unit": component["unit"],
                     "price_card_id": card.get("id"),
                     "source": source.get("name"),
                 },
