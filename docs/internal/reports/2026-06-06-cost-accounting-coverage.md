@@ -13,10 +13,11 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 
 ## Summary
 
-- Fixtures scanned: 108
+- Fixtures scanned: 110
 - Public API capabilities scanned: 14
 - Provider/surface component rows: 31
 - Price-source component rows: 11
+- Gemini separate output/thinking fixtures: 6
 
 ## Scenarios
 
@@ -29,7 +30,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `long_context` | 2 |
 | `normalized_usage` | 10 |
 | `provider_reported` | 3 |
-| `raw_provider_response` | 40 |
+| `raw_provider_response` | 42 |
 | `service_mode` | 3 |
 | `service_tier` | 2 |
 | `source_adapter` | 13 |
@@ -58,12 +59,12 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `input_cache_write_tokens` | 14 |
 | `input_image_tokens` | 3 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 88 |
+| `input_uncached_tokens` | 90 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 3 |
 | `output_image_tokens` | 3 |
-| `output_reasoning_tokens` | 36 |
-| `output_text_tokens` | 70 |
+| `output_reasoning_tokens` | 38 |
+| `output_text_tokens` | 72 |
 | `output_video_tokens` | 1 |
 | `request_units` | 3 |
 | `rerank_search_units` | 2 |

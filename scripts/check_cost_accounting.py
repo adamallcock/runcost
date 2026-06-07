@@ -105,6 +105,20 @@ def usage_components(fixture: dict[str, Any]) -> list[dict[str, Any]]:
     return [component for component in usage.get("components", []) if is_positive(component.get("quantity", "0"))]
 
 
+def raw_gemini_usage_metadata(fixture: dict[str, Any]) -> dict[str, Any]:
+    response = fixture.get("input", {}).get("raw_response")
+    if not isinstance(response, dict):
+        return {}
+    if isinstance(response.get("usageMetadata"), dict):
+        return response["usageMetadata"]
+    chunks = response.get("chunks") or response.get("stream")
+    if isinstance(chunks, list):
+        for chunk in reversed(chunks):
+            if isinstance(chunk, dict) and isinstance(chunk.get("usageMetadata"), dict):
+                return chunk["usageMetadata"]
+    return {}
+
+
 def ledger_components(ledger: dict[str, Any]) -> list[dict[str, Any]]:
     return [component for component in ledger.get("components", []) if is_positive(component.get("quantity", "0"))]
 
@@ -135,6 +149,25 @@ def component_treatments(ledger: dict[str, Any]) -> set[tuple[str, str]]:
         if key:
             treatments.add(key)
     return treatments
+
+
+def ledger_component_quantity(ledger: dict[str, Any], component_name: str) -> Decimal:
+    total = Decimal("0")
+    for component in ledger_components(ledger):
+        if component.get("name") == component_name and component.get("unit") == "token":
+            total += decimal(component.get("quantity", "0"))
+    return total
+
+
+def ledger_non_reasoning_output_token_quantity(ledger: dict[str, Any]) -> Decimal:
+    total = Decimal("0")
+    for component in ledger_components(ledger):
+        name = component.get("name")
+        if name == "output_reasoning_tokens":
+            continue
+        if isinstance(name, str) and name.startswith("output_") and component.get("unit") == "token":
+            total += decimal(component.get("quantity", "0"))
+    return total
 
 
 def fixture_components(fixture: dict[str, Any]) -> set[str]:
@@ -207,6 +240,59 @@ def check_component_tags_accounted(path: Path, fixture: dict[str, Any]) -> list[
     return errors
 
 
+def price_cards_include_component(fixture: dict[str, Any], component_name: str) -> bool:
+    for card in fixture.get("input", {}).get("price_cards", []):
+        for component in card.get("components", []):
+            if component.get("usage_component") == component_name:
+                return True
+    return False
+
+
+def check_gemini_reported_output_thinking_split(path: Path, fixture: dict[str, Any]) -> list[str]:
+    metadata = fixture.get("metadata", {})
+    surface = metadata.get("surface")
+    if surface not in {"google.gemini.generate_content", "vertex.gemini.generate_content"}:
+        return []
+    usage = raw_gemini_usage_metadata(fixture)
+    if not usage:
+        return []
+    candidates = usage.get("candidatesTokenCount")
+    thoughts = usage.get("thoughtsTokenCount")
+    if candidates is None or thoughts is None:
+        return []
+    if not is_positive(candidates) or not is_positive(thoughts):
+        return []
+
+    ledger = fixture.get("expected", {}).get("cost_ledger") or {}
+    errors = []
+    output_quantity = ledger_non_reasoning_output_token_quantity(ledger)
+    reasoning_quantity = ledger_component_quantity(ledger, "output_reasoning_tokens")
+    if output_quantity != decimal(candidates):
+        errors.append(
+            f"{path.name}: Gemini candidatesTokenCount {candidates} must stay separate from thoughts and equal non-reasoning output token quantity {output_quantity}"
+        )
+    if reasoning_quantity != decimal(thoughts):
+        errors.append(
+            f"{path.name}: Gemini thoughtsTokenCount {thoughts} must equal output_reasoning_tokens quantity {reasoning_quantity}"
+        )
+
+    if not price_cards_include_component(fixture, "output_reasoning_tokens"):
+        reasoning_components = [
+            component
+            for component in ledger_components(ledger)
+            if component.get("name") == "output_reasoning_tokens" and component.get("unit") == "token"
+        ]
+        if not reasoning_components:
+            errors.append(f"{path.name}: Gemini thoughtsTokenCount is reported but output_reasoning_tokens component is missing")
+        for component in reasoning_components:
+            component_metadata = component.get("metadata") or {}
+            if component_metadata.get("pricing_policy") != "gemini_thinking_tokens_priced_as_output_tokens":
+                errors.append(f"{path.name}: Gemini output-rate thinking fallback must set pricing_policy metadata")
+            if component_metadata.get("priced_as_component") != "output_text_tokens":
+                errors.append(f"{path.name}: Gemini output-rate thinking fallback must set priced_as_component=output_text_tokens")
+    return errors
+
+
 def check_source_component_requirements(fixtures: list[dict[str, Any]]) -> list[str]:
     by_source: dict[str, set[str]] = defaultdict(set)
     for fixture in fixtures:
@@ -271,6 +357,7 @@ def build_report(fixtures: list[dict[str, Any]], registry: dict[str, Any]) -> st
     source_components: dict[str, set[str]] = defaultdict(set)
     surface_components: dict[tuple[str, str], set[str]] = defaultdict(set)
     public_api_categories: Counter[str] = Counter()
+    gemini_split_count = 0
 
     for fixture in fixtures:
         metadata = fixture["metadata"]
@@ -281,6 +368,10 @@ def build_report(fixtures: list[dict[str, Any]], registry: dict[str, Any]) -> st
         fixture_source = source_type(fixture)
         if fixture_source:
             source_components[fixture_source].update(components)
+        usage = raw_gemini_usage_metadata(fixture)
+        if usage.get("candidatesTokenCount") is not None and usage.get("thoughtsTokenCount") is not None:
+            if is_positive(usage.get("candidatesTokenCount")) and is_positive(usage.get("thoughtsTokenCount")):
+                gemini_split_count += 1
 
     for capability in registry.get("capabilities", []):
         public_api_categories[capability.get("category", "unknown")] += 1
@@ -305,6 +396,7 @@ def build_report(fixtures: list[dict[str, Any]], registry: dict[str, Any]) -> st
         f"- Public API capabilities scanned: {len(registry.get('capabilities', []))}",
         f"- Provider/surface component rows: {len(surface_components)}",
         f"- Price-source component rows: {len(source_components)}",
+        f"- Gemini separate output/thinking fixtures: {gemini_split_count}",
         "",
         "## Scenarios",
         "",
@@ -348,6 +440,7 @@ def main() -> int:
         errors.extend(check_component_warning_metadata(path, fixture))
         errors.extend(check_normalized_usage_accounting(path, fixture))
         errors.extend(check_component_tags_accounted(path, fixture))
+        errors.extend(check_gemini_reported_output_thinking_split(path, fixture))
     errors.extend(check_source_component_requirements(fixtures))
     errors.extend(check_public_api_evidence(registry, {path.name for path, _ in loaded}))
 

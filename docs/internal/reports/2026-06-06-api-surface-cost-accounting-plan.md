@@ -27,6 +27,10 @@ metadata policy.
 
 - A fixture-backed gate fails if any nonzero usage component disappears from the
   cost ledger without an explicit treatment.
+- Gemini raw responses that report `candidatesTokenCount` and
+  `thoughtsTokenCount` separately must preserve that split as non-reasoning
+  output components and `output_reasoning_tokens`; if the price card lacks a
+  separate reasoning price, the output-rate fallback metadata must be present.
 - The gate runs across Python, JavaScript, and Go fixture outputs where the
   fixture declares those languages.
 - Public API registry entries must have cost-accounting fixture evidence, or an
