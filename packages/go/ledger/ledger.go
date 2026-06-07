@@ -30,9 +30,11 @@ var componentOrder = func() map[string]int {
 
 var toolOrFeatureComponents = map[string]bool{
 	"web_search_units":               true,
+	"x_search_units":                 true,
 	"file_search_units":              true,
 	"code_interpreter_session_units": true,
 	"code_interpreter_call_units":    true,
+	"attachment_search_units":        true,
 	"computer_use_action_units":      true,
 	"tool_call_units":                true,
 	"tool_execution_seconds":         true,
@@ -953,6 +955,11 @@ func modelNameLooksGemini(value any) bool {
 	return strings.HasPrefix(text, "gemini-") || strings.HasPrefix(text, "google/gemini-")
 }
 
+func modelNameLooksXAI(value any) bool {
+	text := strings.ToLower(fmt.Sprint(value))
+	return strings.HasPrefix(text, "grok-") || strings.HasPrefix(text, "xai/")
+}
+
 func geminiThinkingPricedAsOutputApplies(usageLedger Object, card Object) bool {
 	provider := strings.ToLower(asString(usageLedger["provider"]))
 	if provider == "" {
@@ -1004,6 +1011,67 @@ func geminiThinkingPricedAsOutputMatches(usageLedger Object, matchingCards []Obj
 			},
 		})
 	}
+	return matches
+}
+
+func xaiReasoningPricedAsOutputApplies(usageLedger Object, card Object) bool {
+	provider := strings.ToLower(asString(usageLedger["provider"]))
+	if provider == "" {
+		provider = strings.ToLower(asString(card["provider"]))
+	}
+	surface := strings.ToLower(asString(usageLedger["surface"]))
+	if surface == "" {
+		surface = strings.ToLower(asString(card["surface"]))
+	}
+	if provider != "xai" && !strings.HasPrefix(surface, "xai.") {
+		return false
+	}
+	if modelNameLooksXAI(billedModel(usageLedger)) || modelNameLooksXAI(card["model"]) {
+		return true
+	}
+	for _, alias := range asSlice(card["aliases"]) {
+		if modelNameLooksXAI(alias) {
+			return true
+		}
+	}
+	return provider == "xai"
+}
+
+func xaiReasoningPricedAsOutputMatches(usageLedger Object, matchingCards []Object, component Object) []Object {
+	if asString(component["name"]) != "output_reasoning_tokens" || asString(component["unit"]) != "token" {
+		return nil
+	}
+	outputComponent := Object{"name": "output_text_tokens", "unit": component["unit"]}
+	matches := []Object{}
+	for _, match := range findPriceComponents(usageLedger, matchingCards, outputComponent) {
+		card := asObject(match["card"])
+		if !xaiReasoningPricedAsOutputApplies(usageLedger, card) {
+			continue
+		}
+		if sourceCapabilityUnsupported(card, "output_reasoning_tokens") {
+			continue
+		}
+		priceComponent := cloneObject(asObject(match["price_component"]))
+		priceComponent["usage_component"] = "output_reasoning_tokens"
+		if asString(priceComponent["notes"]) == "" {
+			priceComponent["notes"] = "xAI reasoning tokens are priced at the output-token rate."
+		}
+		matches = append(matches, Object{
+			"card":            card,
+			"price_component": priceComponent,
+			"component_metadata": Object{
+				"pricing_policy":      "xai_reasoning_tokens_priced_as_output_tokens",
+				"priced_as_component": "output_text_tokens",
+			},
+		})
+	}
+	return matches
+}
+
+func outputReasoningPricedAsOutputMatches(usageLedger Object, matchingCards []Object, component Object) []Object {
+	matches := []Object{}
+	matches = append(matches, geminiThinkingPricedAsOutputMatches(usageLedger, matchingCards, component)...)
+	matches = append(matches, xaiReasoningPricedAsOutputMatches(usageLedger, matchingCards, component)...)
 	return matches
 }
 
@@ -1554,7 +1622,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 			}
 		}
 		if len(matches) == 0 && len(candidates) == 0 {
-			matches = geminiThinkingPricedAsOutputMatches(usageLedger, candidateCards, component)
+			matches = outputReasoningPricedAsOutputMatches(usageLedger, candidateCards, component)
 		}
 		if len(matches) == 0 {
 			if warning, ok := sourceCapabilityWarning(candidateCards, component); ok {
@@ -2007,6 +2075,58 @@ func compactComponents(values []any) []any {
 	return result
 }
 
+var xaiServerSideToolUsageComponentMap = map[string][2]string{
+	"SERVER_SIDE_TOOL_WEB_SEARCH":         {"web_search_units", "search"},
+	"SERVER_SIDE_TOOL_IMAGE_SEARCH":       {"web_search_units", "search"},
+	"SERVER_SIDE_TOOL_X_SEARCH":           {"x_search_units", "search"},
+	"SERVER_SIDE_TOOL_CODE_EXECUTION":     {"code_interpreter_call_units", "call"},
+	"SERVER_SIDE_TOOL_COLLECTIONS_SEARCH": {"file_search_units", "call"},
+	"SERVER_SIDE_TOOL_ATTACHMENT_SEARCH":  {"attachment_search_units", "call"},
+	"web_search":                          {"web_search_units", "search"},
+	"image_search":                        {"web_search_units", "search"},
+	"x_search":                            {"x_search_units", "search"},
+	"code_execution":                      {"code_interpreter_call_units", "call"},
+	"code_interpreter":                    {"code_interpreter_call_units", "call"},
+	"collections_search":                  {"file_search_units", "call"},
+	"file_search":                         {"file_search_units", "call"},
+	"attachment_search":                   {"attachment_search_units", "call"},
+}
+
+func xaiServerSideToolUsage(response Object, usage Object) (Object, string) {
+	candidates := []struct {
+		parent     Object
+		key        string
+		sourcePath string
+	}{
+		{response, "server_side_tool_usage", "$.server_side_tool_usage"},
+		{response, "serverSideToolUsage", "$.serverSideToolUsage"},
+		{usage, "server_side_tool_usage", "$.usage.server_side_tool_usage"},
+		{usage, "serverSideToolUsage", "$.usage.serverSideToolUsage"},
+	}
+	for _, candidate := range candidates {
+		value, ok := candidate.parent[candidate.key].(map[string]any)
+		if ok {
+			return value, candidate.sourcePath
+		}
+	}
+	return Object{}, "$.server_side_tool_usage"
+}
+
+func xaiServerSideToolUsageComponents(response Object, usage Object) ([]any, string, bool) {
+	serverSideToolUsage, sourceRoot := xaiServerSideToolUsage(response, usage)
+	components := []any{}
+	totalCount := "0"
+	for rawName, quantity := range serverSideToolUsage {
+		mapping, ok := xaiServerSideToolUsageComponentMap[rawName]
+		if !ok {
+			continue
+		}
+		totalCount = add(totalCount, quantity)
+		components = append(components, positiveComponent(mapping[0], quantity, mapping[1], sourceRoot+"."+rawName))
+	}
+	return components, totalCount, len(serverSideToolUsage) > 0
+}
+
 func baseUsageLedger(provider string, surface string, requestedModel string, returnedModel string, components []any, rawUsage Object) Object {
 	model := returnedModel
 	if model == "" {
@@ -2248,26 +2368,7 @@ func extractOpenAIResponsesUsage(response Object, options Object) Object {
 	output := getNumber(usage, "output_tokens")
 	toolComponents := []any{}
 	functionCallCount := 0
-	for _, rawItem := range asSlice(response["output"]) {
-		item := asObject(rawItem)
-		switch asString(item["type"]) {
-		case "web_search_call":
-			toolComponents = append(toolComponents, positiveComponent("web_search_units", "1", "search", "$.output[*].type"))
-		case "file_search_call":
-			toolComponents = append(toolComponents, positiveComponent("file_search_units", "1", "call", "$.output[*].type"))
-		case "code_interpreter_call":
-			toolComponents = append(toolComponents, positiveComponent("code_interpreter_call_units", "1", "call", "$.output[*].type"))
-		case "computer_call":
-			actionCount := len(asSlice(item["actions"]))
-			if actionCount == 0 {
-				actionCount = 1
-			}
-			toolComponents = append(toolComponents, positiveComponent("computer_use_action_units", strconv.Itoa(actionCount), "call", "$.output[*].actions[*]"))
-		case "function_call":
-			functionCallCount++
-		}
-	}
-	toolComponents = append(toolComponents, positiveComponent("tool_call_units", strconv.Itoa(functionCallCount), "call", "$.output[*].type"))
+	explicitServerSideToolCount := 0
 	provider := asString(options["provider"])
 	surface := asString(options["surface"])
 	if surface == "" {
@@ -2278,6 +2379,62 @@ func extractOpenAIResponsesUsage(response Object, options Object) Object {
 			provider = "xai"
 		} else {
 			provider = "openai"
+		}
+	}
+	xaiTypedToolComponents := []any{}
+	xaiHasTypedToolUsage := false
+	if strings.ToLower(provider) == "xai" {
+		xaiTypedToolComponents, _, xaiHasTypedToolUsage = xaiServerSideToolUsageComponents(response, usage)
+	}
+	for _, rawItem := range asSlice(response["output"]) {
+		item := asObject(rawItem)
+		switch asString(item["type"]) {
+		case "web_search_call":
+			explicitServerSideToolCount++
+			if !xaiHasTypedToolUsage {
+				toolComponents = append(toolComponents, positiveComponent("web_search_units", "1", "search", "$.output[*].type"))
+			}
+		case "file_search_call", "collections_search_call":
+			explicitServerSideToolCount++
+			if !xaiHasTypedToolUsage {
+				toolComponents = append(toolComponents, positiveComponent("file_search_units", "1", "call", "$.output[*].type"))
+			}
+		case "code_interpreter_call", "code_execution_call":
+			explicitServerSideToolCount++
+			if !xaiHasTypedToolUsage {
+				toolComponents = append(toolComponents, positiveComponent("code_interpreter_call_units", "1", "call", "$.output[*].type"))
+			}
+		case "attachment_search_call":
+			explicitServerSideToolCount++
+			if !xaiHasTypedToolUsage {
+				toolComponents = append(toolComponents, positiveComponent("attachment_search_units", "1", "call", "$.output[*].type"))
+			}
+		case "computer_call":
+			explicitServerSideToolCount++
+			actionCount := len(asSlice(item["actions"]))
+			if actionCount == 0 {
+				actionCount = 1
+			}
+			toolComponents = append(toolComponents, positiveComponent("computer_use_action_units", strconv.Itoa(actionCount), "call", "$.output[*].actions[*]"))
+		case "x_search_call":
+			explicitServerSideToolCount++
+			if !xaiHasTypedToolUsage {
+				toolComponents = append(toolComponents, positiveComponent("x_search_units", "1", "search", "$.output[*].type"))
+			}
+		case "function_call":
+			functionCallCount++
+		}
+	}
+	toolComponents = append(toolComponents, positiveComponent("tool_call_units", strconv.Itoa(functionCallCount), "call", "$.output[*].type"))
+	toolComponents = append(toolComponents, xaiTypedToolComponents...)
+	if strings.ToLower(provider) == "xai" {
+		reportedServerSideToolCount := getNumber(usage, "num_server_side_tools_used")
+		if reportedServerSideToolCount == "0" {
+			reportedServerSideToolCount = getNumber(usage, "numServerSideToolsUsed")
+		}
+		if !xaiHasTypedToolUsage {
+			remainingServerSideToolCount := subtract(reportedServerSideToolCount, strconv.Itoa(explicitServerSideToolCount))
+			toolComponents = append(toolComponents, positiveComponent("tool_call_units", remainingServerSideToolCount, "call", "$.usage.num_server_side_tools_used"))
 		}
 	}
 	requestedModel := asString(options["model"])
@@ -4726,6 +4883,10 @@ func PriceCardsFromOfficialSnapshot(data Object) []any {
 	if perDefault == "0" {
 		perDefault = "1000000"
 	}
+	toolPriceDefaults := asObject(data["tool_prices"])
+	if len(toolPriceDefaults) == 0 {
+		toolPriceDefaults = asObject(data["toolPrices"])
+	}
 	rawRows, ok := data["rows"].([]any)
 	if !ok {
 		rawRows, _ = data["models"].([]any)
@@ -4750,6 +4911,20 @@ func PriceCardsFromOfficialSnapshot(data Object) []any {
 		per := numberString(row["per"])
 		if per == "0" {
 			per = perDefault
+		}
+		rowToolPrices := asObject(row["tool_prices"])
+		if len(rowToolPrices) == 0 {
+			rowToolPrices = asObject(row["toolPrices"])
+		}
+		pricingRow := Object{}
+		for key, value := range toolPriceDefaults {
+			pricingRow[key] = value
+		}
+		for key, value := range rowToolPrices {
+			pricingRow[key] = value
+		}
+		for key, value := range row {
+			pricingRow[key] = value
 		}
 		components := []any{}
 		if rawComponents, ok := row["components"].([]any); ok {
@@ -4777,16 +4952,20 @@ func PriceCardsFromOfficialSnapshot(data Object) []any {
 				addPriceComponent(&components, asString(component["usage_component"]), unit, amount, componentPer, nil)
 			}
 		}
-		addOfficialSnapshotComponent(&components, row, "input_uncached_tokens", "token", []string{"input", "prompt", "input_uncached"}, per)
-		addOfficialSnapshotComponent(&components, row, "input_cache_read_tokens", "token", []string{"cache_read", "cached_input", "input_cache_read"}, per)
-		addOfficialSnapshotComponent(&components, row, "input_cache_write_tokens", "token", []string{"cache_write", "input_cache_write"}, per)
-		addOfficialSnapshotComponent(&components, row, "input_cache_write_1h_tokens", "token", []string{"cache_write_1h", "input_cache_write_1h"}, per)
-		addOfficialSnapshotComponent(&components, row, "output_text_tokens", "token", []string{"output", "completion", "output_text"}, per)
-		addOfficialSnapshotComponent(&components, row, "output_reasoning_tokens", "token", []string{"reasoning", "thinking", "output_reasoning"}, per)
-		addOfficialSnapshotComponent(&components, row, "input_audio_tokens", "token", []string{"input_audio", "audio_input"}, per)
-		addOfficialSnapshotComponent(&components, row, "output_audio_tokens", "token", []string{"output_audio", "audio_output"}, per)
-		addOfficialSnapshotComponent(&components, row, "request_units", "request", []string{"request", "per_request"}, "1")
-		addOfficialSnapshotComponent(&components, row, "web_search_units", "search", []string{"web_search", "search"}, "1")
+		addOfficialSnapshotComponent(&components, pricingRow, "input_uncached_tokens", "token", []string{"input", "prompt", "input_uncached"}, per)
+		addOfficialSnapshotComponent(&components, pricingRow, "input_cache_read_tokens", "token", []string{"cache_read", "cached_input", "input_cache_read"}, per)
+		addOfficialSnapshotComponent(&components, pricingRow, "input_cache_write_tokens", "token", []string{"cache_write", "input_cache_write"}, per)
+		addOfficialSnapshotComponent(&components, pricingRow, "input_cache_write_1h_tokens", "token", []string{"cache_write_1h", "input_cache_write_1h"}, per)
+		addOfficialSnapshotComponent(&components, pricingRow, "output_text_tokens", "token", []string{"output", "completion", "output_text"}, per)
+		addOfficialSnapshotComponent(&components, pricingRow, "output_reasoning_tokens", "token", []string{"reasoning", "thinking", "output_reasoning"}, per)
+		addOfficialSnapshotComponent(&components, pricingRow, "input_audio_tokens", "token", []string{"input_audio", "audio_input"}, per)
+		addOfficialSnapshotComponent(&components, pricingRow, "output_audio_tokens", "token", []string{"output_audio", "audio_output"}, per)
+		addOfficialSnapshotComponent(&components, pricingRow, "request_units", "request", []string{"request", "per_request"}, "1")
+		addOfficialSnapshotComponent(&components, pricingRow, "web_search_units", "search", []string{"web_search", "search"}, "1")
+		addOfficialSnapshotComponent(&components, pricingRow, "x_search_units", "search", []string{"x_search"}, "1")
+		addOfficialSnapshotComponent(&components, pricingRow, "file_search_units", "call", []string{"file_search", "collections_search"}, "1")
+		addOfficialSnapshotComponent(&components, pricingRow, "code_interpreter_call_units", "call", []string{"code_interpreter_call", "code_interpreter", "code_execution"}, "1")
+		addOfficialSnapshotComponent(&components, pricingRow, "attachment_search_units", "call", []string{"attachment_search"}, "1")
 		if len(components) == 0 {
 			continue
 		}
@@ -5079,6 +5258,29 @@ func PriceCardsFromHelicone(data Object) []any {
 	return cards
 }
 
+func xaiProviderReportedCost(response Object, usageLedger Object) string {
+	if strings.ToLower(asString(usageLedger["provider"])) != "xai" {
+		return ""
+	}
+	payload := openAIResponsesPayload(response)
+	usageValue, ok := payload["usage"].(map[string]any)
+	if !ok {
+		return ""
+	}
+	ticks, ok := usageValue["cost_in_usd_ticks"]
+	if !ok {
+		ticks, ok = usageValue["costInUsdTicks"]
+	}
+	if !ok || ticks == nil {
+		return ""
+	}
+	return multiplyDivide(ticks, "1", "10000000000")
+}
+
+func providerReportedCostFromRawResponse(response Object, usageLedger Object) string {
+	return xaiProviderReportedCost(response, usageLedger)
+}
+
 // FromResponse extracts usage from a raw provider response and immediately
 // calculates a cost ledger from the supplied price cards and discount policies.
 func FromResponse(response Object, options Object, priceCards []any, discountPolicies []any) Object {
@@ -5113,6 +5315,11 @@ func FromResponse(response Object, options Object, priceCards []any, discountPol
 		return unsupportedSurfaceLedger(response, options)
 	}
 	usageLedger := ExtractUsageLedger(response, options)
+	if _, exists := options["provider_reported_cost"]; !exists {
+		if reportedCost := providerReportedCostFromRawResponse(response, usageLedger); reportedCost != "" {
+			options["provider_reported_cost"] = reportedCost
+		}
+	}
 	options["mode"] = mode
 	return CalculateCostWithOptions(usageLedger, priceCards, discountPolicies, options)
 }

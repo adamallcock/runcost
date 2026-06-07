@@ -20,9 +20,11 @@ const COMPONENT_ORDER_NAMES = [
   "embedding_tokens",
   "request_units",
   "web_search_units",
+  "x_search_units",
   "file_search_units",
   "code_interpreter_session_units",
   "code_interpreter_call_units",
+  "attachment_search_units",
   "computer_use_action_units",
   "tool_call_units",
   "tool_execution_seconds",
@@ -40,9 +42,11 @@ const COMPONENT_ORDER_NAMES = [
 const COMPONENT_ORDER = new Map(COMPONENT_ORDER_NAMES.map((name, index) => [name, index]));
 const TOOL_OR_FEATURE_COMPONENTS = new Set([
   "web_search_units",
+  "x_search_units",
   "file_search_units",
   "code_interpreter_session_units",
   "code_interpreter_call_units",
+  "attachment_search_units",
   "computer_use_action_units",
   "tool_call_units",
   "tool_execution_seconds",
@@ -475,6 +479,11 @@ function modelNameLooksGemini(value) {
     String(value || "").toLowerCase().startsWith("google/gemini-");
 }
 
+function modelNameLooksXAI(value) {
+  const text = String(value || "").toLowerCase();
+  return text.startsWith("grok-") || text.startsWith("xai/");
+}
+
 function geminiThinkingPricedAsOutputApplies(usageLedger, card) {
   const provider = String(usageLedger.provider || card.provider || "").toLowerCase();
   const surface = String(usageLedger.surface || card.surface || "").toLowerCase();
@@ -512,6 +521,52 @@ function geminiThinkingPricedAsOutputMatches(usageLedger, candidateCards, compon
         priced_as_component: "output_text_tokens"
       }
     }));
+}
+
+function xaiReasoningPricedAsOutputApplies(usageLedger, card) {
+  const provider = String(usageLedger.provider || card.provider || "").toLowerCase();
+  const surface = String(usageLedger.surface || card.surface || "").toLowerCase();
+  if (provider !== "xai" && !surface.startsWith("xai.")) {
+    return false;
+  }
+  const modelNames = [
+    billedModel(usageLedger),
+    card.model,
+    ...(card.aliases || [])
+  ];
+  return modelNames.some(modelNameLooksXAI) || provider === "xai";
+}
+
+function xaiReasoningPricedAsOutputMatches(usageLedger, candidateCards, component) {
+  if (component.name !== "output_reasoning_tokens" || component.unit !== "token") {
+    return [];
+  }
+  const outputComponent = {
+    name: "output_text_tokens",
+    unit: component.unit
+  };
+  return findPriceComponents(usageLedger, candidateCards, outputComponent)
+    .filter(({ card }) => xaiReasoningPricedAsOutputApplies(usageLedger, card))
+    .filter(({ card }) => !sourceCapabilityUnsupported(card, "output_reasoning_tokens"))
+    .map(({ card, priceComponent }) => ({
+      card,
+      priceComponent: {
+        ...priceComponent,
+        usage_component: "output_reasoning_tokens",
+        notes: priceComponent.notes || "xAI reasoning tokens are priced at the output-token rate."
+      },
+      componentMetadata: {
+        pricing_policy: "xai_reasoning_tokens_priced_as_output_tokens",
+        priced_as_component: "output_text_tokens"
+      }
+    }));
+}
+
+function outputReasoningPricedAsOutputMatches(usageLedger, candidateCards, component) {
+  return [
+    ...geminiThinkingPricedAsOutputMatches(usageLedger, candidateCards, component),
+    ...xaiReasoningPricedAsOutputMatches(usageLedger, candidateCards, component)
+  ];
 }
 
 function noMatchingCardWarning(usageLedger, priceCards) {
@@ -888,7 +943,7 @@ export function calculateCost({
       return conditionsMatch(usageLedger, priceComponent);
     });
     if (matches.length === 0 && candidates.length === 0) {
-      matches = geminiThinkingPricedAsOutputMatches(usageLedger, candidateCards, component);
+      matches = outputReasoningPricedAsOutputMatches(usageLedger, candidateCards, component);
     }
     if (matches.length === 0) {
       const capabilityWarning = sourceCapabilityWarning(candidateCards, component);
@@ -1192,6 +1247,57 @@ function compactComponents(components) {
   return components.filter(Boolean);
 }
 
+const XAI_SERVER_SIDE_TOOL_USAGE_COMPONENTS = new Map([
+  ["SERVER_SIDE_TOOL_WEB_SEARCH", ["web_search_units", "search"]],
+  ["SERVER_SIDE_TOOL_IMAGE_SEARCH", ["web_search_units", "search"]],
+  ["SERVER_SIDE_TOOL_X_SEARCH", ["x_search_units", "search"]],
+  ["SERVER_SIDE_TOOL_CODE_EXECUTION", ["code_interpreter_call_units", "call"]],
+  ["SERVER_SIDE_TOOL_COLLECTIONS_SEARCH", ["file_search_units", "call"]],
+  ["SERVER_SIDE_TOOL_ATTACHMENT_SEARCH", ["attachment_search_units", "call"]],
+  ["web_search", ["web_search_units", "search"]],
+  ["image_search", ["web_search_units", "search"]],
+  ["x_search", ["x_search_units", "search"]],
+  ["code_execution", ["code_interpreter_call_units", "call"]],
+  ["code_interpreter", ["code_interpreter_call_units", "call"]],
+  ["collections_search", ["file_search_units", "call"]],
+  ["file_search", ["file_search_units", "call"]],
+  ["attachment_search", ["attachment_search_units", "call"]]
+]);
+
+function xaiServerSideToolUsage(response, usage) {
+  const candidates = [
+    [response, "server_side_tool_usage", "$.server_side_tool_usage"],
+    [response, "serverSideToolUsage", "$.serverSideToolUsage"],
+    [usage, "server_side_tool_usage", "$.usage.server_side_tool_usage"],
+    [usage, "serverSideToolUsage", "$.usage.serverSideToolUsage"]
+  ];
+  for (const [parent, key, sourcePath] of candidates) {
+    const value = parent && parent[key];
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return { usage: value, sourcePath };
+    }
+  }
+  return { usage: {}, sourcePath: "$.server_side_tool_usage" };
+}
+
+function xaiServerSideToolUsageComponents(response, usage) {
+  const serverSideToolUsage = xaiServerSideToolUsage(response, usage);
+  const components = [];
+  let totalCount = 0;
+  for (const [rawName, quantity] of Object.entries(serverSideToolUsage.usage)) {
+    const mapping = XAI_SERVER_SIDE_TOOL_USAGE_COMPONENTS.get(String(rawName));
+    if (!mapping) continue;
+    const [componentName, unit] = mapping;
+    totalCount += Number(quantity || 0);
+    components.push(positiveComponent(componentName, quantity, unit, `${serverSideToolUsage.sourcePath}.${rawName}`));
+  }
+  return {
+    components,
+    totalCount,
+    hasUsage: Object.keys(serverSideToolUsage.usage).length > 0
+  };
+}
+
 function baseUsageLedger({ provider, surface, requestedModel, returnedModel, components, rawUsage }) {
   return {
     schema_version: "0.1",
@@ -1215,6 +1321,24 @@ function openAIResponsesPayload(response) {
   return response;
 }
 
+function xaiProviderReportedCost(response, usageLedger) {
+  const provider = String(usageLedger.provider || "").toLowerCase();
+  if (provider !== "xai") {
+    return undefined;
+  }
+  const payload = openAIResponsesPayload(response);
+  const usage = payload.usage && typeof payload.usage === "object" ? payload.usage : {};
+  const ticks = usage.cost_in_usd_ticks ?? usage.costInUsdTicks;
+  if (ticks === undefined || ticks === null) {
+    return undefined;
+  }
+  return multiplyDivideDecimal(ticks, "1", "10000000000");
+}
+
+function providerReportedCostFromRawResponse(response, usageLedger) {
+  return xaiProviderReportedCost(response, usageLedger);
+}
+
 export function extractOpenAIResponsesUsage(response, options = {}) {
   response = openAIResponsesPayload(response);
   const usage = response.usage || {};
@@ -1227,21 +1351,58 @@ export function extractOpenAIResponsesUsage(response, options = {}) {
 
   const toolComponents = [];
   let functionCallCount = 0;
+  let explicitServerSideToolCount = 0;
+  const xaiTypedToolUsage = String(provider).toLowerCase() === "xai"
+    ? xaiServerSideToolUsageComponents(response, usage)
+    : { components: [], totalCount: 0, hasUsage: false };
   for (const item of response.output || []) {
     if (item.type === "web_search_call") {
-      toolComponents.push(positiveComponent("web_search_units", 1, "search", "$.output[*].type"));
-    } else if (item.type === "file_search_call") {
-      toolComponents.push(positiveComponent("file_search_units", 1, "call", "$.output[*].type"));
-    } else if (item.type === "code_interpreter_call") {
-      toolComponents.push(positiveComponent("code_interpreter_call_units", 1, "call", "$.output[*].type"));
+      explicitServerSideToolCount += 1;
+      if (!xaiTypedToolUsage.hasUsage) {
+        toolComponents.push(positiveComponent("web_search_units", 1, "search", "$.output[*].type"));
+      }
+    } else if (item.type === "file_search_call" || item.type === "collections_search_call") {
+      explicitServerSideToolCount += 1;
+      if (!xaiTypedToolUsage.hasUsage) {
+        toolComponents.push(positiveComponent("file_search_units", 1, "call", "$.output[*].type"));
+      }
+    } else if (item.type === "code_interpreter_call" || item.type === "code_execution_call") {
+      explicitServerSideToolCount += 1;
+      if (!xaiTypedToolUsage.hasUsage) {
+        toolComponents.push(positiveComponent("code_interpreter_call_units", 1, "call", "$.output[*].type"));
+      }
+    } else if (item.type === "attachment_search_call") {
+      explicitServerSideToolCount += 1;
+      if (!xaiTypedToolUsage.hasUsage) {
+        toolComponents.push(positiveComponent("attachment_search_units", 1, "call", "$.output[*].type"));
+      }
     } else if (item.type === "computer_call") {
+      explicitServerSideToolCount += 1;
       const actionCount = Array.isArray(item.actions) ? item.actions.length : 1;
       toolComponents.push(positiveComponent("computer_use_action_units", actionCount, "call", "$.output[*].actions[*]"));
+    } else if (item.type === "x_search_call") {
+      explicitServerSideToolCount += 1;
+      if (!xaiTypedToolUsage.hasUsage) {
+        toolComponents.push(positiveComponent("x_search_units", 1, "search", "$.output[*].type"));
+      }
     } else if (item.type === "function_call") {
       functionCallCount += 1;
     }
   }
   toolComponents.push(positiveComponent("tool_call_units", functionCallCount, "call", "$.output[*].type"));
+  toolComponents.push(...xaiTypedToolUsage.components);
+  if (String(provider).toLowerCase() === "xai") {
+    const reportedServerSideToolCount = Number(usage.num_server_side_tools_used || usage.numServerSideToolsUsed || 0);
+    if (!xaiTypedToolUsage.hasUsage) {
+      const remainingServerSideToolCount = reportedServerSideToolCount - explicitServerSideToolCount;
+      toolComponents.push(positiveComponent(
+        "tool_call_units",
+        remainingServerSideToolCount,
+        "call",
+        "$.usage.num_server_side_tools_used"
+      ));
+    }
+  }
 
   return baseUsageLedger({
     provider,
@@ -3266,6 +3427,11 @@ export function priceCardsFromOfficialSnapshot(data, options = {}) {
   const providerDefault = data.provider || options.provider || "unknown";
   const surfaceDefault = data.surface || options.surface;
   const perDefault = numberString(data.per || "1000000");
+  const toolPriceDefaults = data.tool_prices && typeof data.tool_prices === "object"
+    ? data.tool_prices
+    : data.toolPrices && typeof data.toolPrices === "object"
+      ? data.toolPrices
+      : {};
   const rows = data.rows || data.models || [];
   return rows.flatMap((row) => {
     if (!row || typeof row !== "object") return [];
@@ -3273,6 +3439,16 @@ export function priceCardsFromOfficialSnapshot(data, options = {}) {
     const provider = row.provider || providerDefault;
     if (!model || !provider) return [];
     const per = numberString(row.per || perDefault);
+    const rowToolPrices = row.tool_prices && typeof row.tool_prices === "object"
+      ? row.tool_prices
+      : row.toolPrices && typeof row.toolPrices === "object"
+        ? row.toolPrices
+        : {};
+    const pricingRow = {
+      ...toolPriceDefaults,
+      ...rowToolPrices,
+      ...row
+    };
     const components = [];
     for (const rawComponent of row.components || []) {
       if (!rawComponent || typeof rawComponent !== "object") continue;
@@ -3285,16 +3461,20 @@ export function priceCardsFromOfficialSnapshot(data, options = {}) {
         numberString(rawComponent.per || (rawComponent.price && rawComponent.price.per) || per)
       );
     }
-    addOfficialSnapshotComponent(components, row, "input_uncached_tokens", "token", ["input", "prompt", "input_uncached"], per);
-    addOfficialSnapshotComponent(components, row, "input_cache_read_tokens", "token", ["cache_read", "cached_input", "input_cache_read"], per);
-    addOfficialSnapshotComponent(components, row, "input_cache_write_tokens", "token", ["cache_write", "input_cache_write"], per);
-    addOfficialSnapshotComponent(components, row, "input_cache_write_1h_tokens", "token", ["cache_write_1h", "input_cache_write_1h"], per);
-    addOfficialSnapshotComponent(components, row, "output_text_tokens", "token", ["output", "completion", "output_text"], per);
-    addOfficialSnapshotComponent(components, row, "output_reasoning_tokens", "token", ["reasoning", "thinking", "output_reasoning"], per);
-    addOfficialSnapshotComponent(components, row, "input_audio_tokens", "token", ["input_audio", "audio_input"], per);
-    addOfficialSnapshotComponent(components, row, "output_audio_tokens", "token", ["output_audio", "audio_output"], per);
-    addOfficialSnapshotComponent(components, row, "request_units", "request", ["request", "per_request"], "1");
-    addOfficialSnapshotComponent(components, row, "web_search_units", "search", ["web_search", "search"], "1");
+    addOfficialSnapshotComponent(components, pricingRow, "input_uncached_tokens", "token", ["input", "prompt", "input_uncached"], per);
+    addOfficialSnapshotComponent(components, pricingRow, "input_cache_read_tokens", "token", ["cache_read", "cached_input", "input_cache_read"], per);
+    addOfficialSnapshotComponent(components, pricingRow, "input_cache_write_tokens", "token", ["cache_write", "input_cache_write"], per);
+    addOfficialSnapshotComponent(components, pricingRow, "input_cache_write_1h_tokens", "token", ["cache_write_1h", "input_cache_write_1h"], per);
+    addOfficialSnapshotComponent(components, pricingRow, "output_text_tokens", "token", ["output", "completion", "output_text"], per);
+    addOfficialSnapshotComponent(components, pricingRow, "output_reasoning_tokens", "token", ["reasoning", "thinking", "output_reasoning"], per);
+    addOfficialSnapshotComponent(components, pricingRow, "input_audio_tokens", "token", ["input_audio", "audio_input"], per);
+    addOfficialSnapshotComponent(components, pricingRow, "output_audio_tokens", "token", ["output_audio", "audio_output"], per);
+    addOfficialSnapshotComponent(components, pricingRow, "request_units", "request", ["request", "per_request"], "1");
+    addOfficialSnapshotComponent(components, pricingRow, "web_search_units", "search", ["web_search", "search"], "1");
+    addOfficialSnapshotComponent(components, pricingRow, "x_search_units", "search", ["x_search"], "1");
+    addOfficialSnapshotComponent(components, pricingRow, "file_search_units", "call", ["file_search", "collections_search"], "1");
+    addOfficialSnapshotComponent(components, pricingRow, "code_interpreter_call_units", "call", ["code_interpreter_call", "code_interpreter", "code_execution"], "1");
+    addOfficialSnapshotComponent(components, pricingRow, "attachment_search_units", "call", ["attachment_search"], "1");
     if (components.length === 0) return [];
     const card = {
       schema_version: "0.1",
@@ -3482,6 +3662,7 @@ export function fromResponse(response, options) {
     }
     return unsupportedSurfaceLedger(response, options);
   }
+  const extractedProviderReportedCost = providerReportedCostFromRawResponse(response, usageLedger);
   return calculateCost({
     usageLedger,
     priceCards: options.priceCards || [],
@@ -3489,8 +3670,7 @@ export function fromResponse(response, options) {
     mode,
     staleAfterDays: options.staleAfterDays,
     stale_after_days: options.stale_after_days,
-    providerReportedCost: options.providerReportedCost,
-    provider_reported_cost: options.provider_reported_cost,
+    providerReportedCost: options.providerReportedCost ?? options.provider_reported_cost ?? extractedProviderReportedCost,
     providerReportedCostMode: options.providerReportedCostMode,
     provider_reported_cost_mode: options.provider_reported_cost_mode,
     priceSourcePriority: options.priceSourcePriority,

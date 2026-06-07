@@ -28,9 +28,11 @@ _COMPONENT_ORDER_NAMES = [
     "embedding_tokens",
     "request_units",
     "web_search_units",
+    "x_search_units",
     "file_search_units",
     "code_interpreter_session_units",
     "code_interpreter_call_units",
+    "attachment_search_units",
     "computer_use_action_units",
     "tool_call_units",
     "tool_execution_seconds",
@@ -48,9 +50,11 @@ _COMPONENT_ORDER_NAMES = [
 _COMPONENT_ORDER = {name: index for index, name in enumerate(_COMPONENT_ORDER_NAMES)}
 _TOOL_OR_FEATURE_COMPONENTS = {
     "web_search_units",
+    "x_search_units",
     "file_search_units",
     "code_interpreter_session_units",
     "code_interpreter_call_units",
+    "attachment_search_units",
     "computer_use_action_units",
     "tool_call_units",
     "tool_execution_seconds",
@@ -367,6 +371,11 @@ def _model_name_looks_gemini(value: Any) -> bool:
     return text.startswith("gemini-") or text.startswith("google/gemini-")
 
 
+def _model_name_looks_xai(value: Any) -> bool:
+    text = str(value or "").lower()
+    return text.startswith("grok-") or text.startswith("xai/")
+
+
 def _gemini_thinking_priced_as_output_applies(
     usage_ledger: Dict[str, Any],
     card: Dict[str, Any],
@@ -408,6 +417,60 @@ def _gemini_thinking_priced_as_output_matches(
             }
         )
     return matches
+
+
+def _xai_reasoning_priced_as_output_applies(
+    usage_ledger: Dict[str, Any],
+    card: Dict[str, Any],
+) -> bool:
+    provider = str(usage_ledger.get("provider") or card.get("provider") or "").lower()
+    surface = str(usage_ledger.get("surface") or card.get("surface") or "").lower()
+    if provider != "xai" and not surface.startswith("xai."):
+        return False
+    model_names = [_billed_model(usage_ledger), card.get("model"), *card.get("aliases", [])]
+    return any(_model_name_looks_xai(model_name) for model_name in model_names) or provider == "xai"
+
+
+def _xai_reasoning_priced_as_output_matches(
+    usage_ledger: Dict[str, Any],
+    matching_cards: List[Dict[str, Any]],
+    component: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    if component.get("name") != "output_reasoning_tokens" or component.get("unit") != "token":
+        return []
+    output_component = {"name": "output_text_tokens", "unit": component.get("unit")}
+    matches: List[Dict[str, Any]] = []
+    for match in _find_price_components(usage_ledger, matching_cards, output_component):
+        card = match["card"]
+        if not _xai_reasoning_priced_as_output_applies(usage_ledger, card):
+            continue
+        if _source_capability_unsupported(card, "output_reasoning_tokens"):
+            continue
+        price_component = dict(match["price_component"])
+        price_component["usage_component"] = "output_reasoning_tokens"
+        price_component.setdefault("notes", "xAI reasoning tokens are priced at the output-token rate.")
+        matches.append(
+            {
+                "card": card,
+                "price_component": price_component,
+                "component_metadata": {
+                    "pricing_policy": "xai_reasoning_tokens_priced_as_output_tokens",
+                    "priced_as_component": "output_text_tokens",
+                },
+            }
+        )
+    return matches
+
+
+def _output_reasoning_priced_as_output_matches(
+    usage_ledger: Dict[str, Any],
+    matching_cards: List[Dict[str, Any]],
+    component: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    return [
+        *_gemini_thinking_priced_as_output_matches(usage_ledger, matching_cards, component),
+        *_xai_reasoning_priced_as_output_matches(usage_ledger, matching_cards, component),
+    ]
 
 
 def _has_price_card_for_usage(
@@ -651,6 +714,28 @@ def _provider_reported_warning(
     }
 
 
+def _xai_provider_reported_cost(
+    response: Dict[str, Any],
+    usage_ledger: Dict[str, Any],
+) -> Optional[str]:
+    provider = str(usage_ledger.get("provider") or "").lower()
+    if provider != "xai":
+        return None
+    payload = _openai_responses_payload(response)
+    usage = payload.get("usage") if isinstance(payload.get("usage"), dict) else {}
+    ticks = usage.get("cost_in_usd_ticks", usage.get("costInUsdTicks"))
+    if ticks is None:
+        return None
+    return _multiply_divide(ticks, "1", "10000000000")
+
+
+def _provider_reported_cost_from_raw_response(
+    response: Dict[str, Any],
+    usage_ledger: Dict[str, Any],
+) -> Optional[str]:
+    return _xai_provider_reported_cost(response, usage_ledger)
+
+
 def _apply_provider_reported_cost_use(
     total: str,
     components: List[Dict[str, Any]],
@@ -803,7 +888,7 @@ def calculate_cost(
             if _conditions_match(usage_ledger, match["price_component"])
         ]
         if not matches and not candidates:
-            matches = _gemini_thinking_priced_as_output_matches(usage_ledger, matching_cards, component)
+            matches = _output_reasoning_priced_as_output_matches(usage_ledger, matching_cards, component)
         if not matches:
             capability_warning = _source_capability_warning(matching_cards, component)
             long_context_warning = _long_context_rule_missing_warning(usage_ledger, candidates, component)
@@ -1135,6 +1220,51 @@ def _compact_components(components: Iterable[Optional[Dict[str, Any]]]) -> List[
     return [component for component in components if component is not None]
 
 
+_XAI_SERVER_SIDE_TOOL_USAGE_COMPONENTS = {
+    "SERVER_SIDE_TOOL_WEB_SEARCH": ("web_search_units", "search"),
+    "SERVER_SIDE_TOOL_IMAGE_SEARCH": ("web_search_units", "search"),
+    "SERVER_SIDE_TOOL_X_SEARCH": ("x_search_units", "search"),
+    "SERVER_SIDE_TOOL_CODE_EXECUTION": ("code_interpreter_call_units", "call"),
+    "SERVER_SIDE_TOOL_COLLECTIONS_SEARCH": ("file_search_units", "call"),
+    "SERVER_SIDE_TOOL_ATTACHMENT_SEARCH": ("attachment_search_units", "call"),
+    "web_search": ("web_search_units", "search"),
+    "image_search": ("web_search_units", "search"),
+    "x_search": ("x_search_units", "search"),
+    "code_execution": ("code_interpreter_call_units", "call"),
+    "code_interpreter": ("code_interpreter_call_units", "call"),
+    "collections_search": ("file_search_units", "call"),
+    "file_search": ("file_search_units", "call"),
+    "attachment_search": ("attachment_search_units", "call"),
+}
+
+
+def _xai_server_side_tool_usage(response: Dict[str, Any], usage: Dict[str, Any]) -> tuple[Dict[str, Any], str]:
+    for parent, key, source_path in (
+        (response, "server_side_tool_usage", "$.server_side_tool_usage"),
+        (response, "serverSideToolUsage", "$.serverSideToolUsage"),
+        (usage, "server_side_tool_usage", "$.usage.server_side_tool_usage"),
+        (usage, "serverSideToolUsage", "$.usage.serverSideToolUsage"),
+    ):
+        value = parent.get(key)
+        if isinstance(value, dict):
+            return value, source_path
+    return {}, "$.server_side_tool_usage"
+
+
+def _xai_server_side_tool_usage_components(response: Dict[str, Any], usage: Dict[str, Any]) -> tuple[List[Optional[Dict[str, Any]]], Decimal, bool]:
+    server_side_tool_usage, source_root = _xai_server_side_tool_usage(response, usage)
+    components: List[Optional[Dict[str, Any]]] = []
+    total_count = Decimal("0")
+    for raw_name, quantity in server_side_tool_usage.items():
+        mapping = _XAI_SERVER_SIDE_TOOL_USAGE_COMPONENTS.get(str(raw_name))
+        if mapping is None:
+            continue
+        component_name, unit = mapping
+        total_count += _decimal(quantity)
+        components.append(_positive_component(component_name, quantity, unit, f"{source_root}.{raw_name}"))
+    return components, total_count, bool(server_side_tool_usage)
+
+
 def _base_usage_ledger(
     *,
     provider: str,
@@ -1177,22 +1307,56 @@ def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> 
     output_tokens = usage.get("output_tokens", 0)
     tool_components = []
     function_call_count = 0
+    explicit_server_side_tool_count = Decimal("0")
+    xai_typed_tool_components: List[Optional[Dict[str, Any]]] = []
+    xai_typed_tool_count = Decimal("0")
+    xai_has_typed_tool_usage = False
+    if str(provider).lower() == "xai":
+        xai_typed_tool_components, xai_typed_tool_count, xai_has_typed_tool_usage = _xai_server_side_tool_usage_components(response, usage)
     for item in response.get("output", []):
         if item.get("type") == "web_search_call":
-            tool_components.append(_positive_component("web_search_units", 1, "search", "$.output[*].type"))
-        elif item.get("type") == "file_search_call":
-            tool_components.append(_positive_component("file_search_units", 1, "call", "$.output[*].type"))
-        elif item.get("type") == "code_interpreter_call":
-            tool_components.append(_positive_component("code_interpreter_call_units", 1, "call", "$.output[*].type"))
+            explicit_server_side_tool_count += Decimal("1")
+            if not xai_has_typed_tool_usage:
+                tool_components.append(_positive_component("web_search_units", 1, "search", "$.output[*].type"))
+        elif item.get("type") in {"file_search_call", "collections_search_call"}:
+            explicit_server_side_tool_count += Decimal("1")
+            if not xai_has_typed_tool_usage:
+                tool_components.append(_positive_component("file_search_units", 1, "call", "$.output[*].type"))
+        elif item.get("type") in {"code_interpreter_call", "code_execution_call"}:
+            explicit_server_side_tool_count += Decimal("1")
+            if not xai_has_typed_tool_usage:
+                tool_components.append(_positive_component("code_interpreter_call_units", 1, "call", "$.output[*].type"))
+        elif item.get("type") == "attachment_search_call":
+            explicit_server_side_tool_count += Decimal("1")
+            if not xai_has_typed_tool_usage:
+                tool_components.append(_positive_component("attachment_search_units", 1, "call", "$.output[*].type"))
         elif item.get("type") == "computer_call":
+            explicit_server_side_tool_count += Decimal("1")
             actions = item.get("actions")
             action_count = len(actions) if isinstance(actions, list) else 1
             tool_components.append(
                 _positive_component("computer_use_action_units", action_count, "call", "$.output[*].actions[*]")
             )
+        elif item.get("type") == "x_search_call":
+            explicit_server_side_tool_count += Decimal("1")
+            if not xai_has_typed_tool_usage:
+                tool_components.append(_positive_component("x_search_units", 1, "search", "$.output[*].type"))
         elif item.get("type") == "function_call":
             function_call_count += 1
     tool_components.append(_positive_component("tool_call_units", function_call_count, "call", "$.output[*].type"))
+    tool_components.extend(xai_typed_tool_components)
+    if str(provider).lower() == "xai":
+        reported_tool_count = _decimal(usage.get("num_server_side_tools_used", usage.get("numServerSideToolsUsed", 0)))
+        if not xai_has_typed_tool_usage:
+            remaining_tool_count = reported_tool_count - explicit_server_side_tool_count
+            tool_components.append(
+                _positive_component(
+                    "tool_call_units",
+                    _format_decimal(remaining_tool_count),
+                    "call",
+                    "$.usage.num_server_side_tools_used",
+                )
+            )
 
     return _base_usage_ledger(
         provider=provider,
@@ -3147,6 +3311,9 @@ def price_cards_from_official_snapshot(data: Any, **options: Any) -> List[Dict[s
     provider_default = data.get("provider") or options.get("provider", "unknown")
     surface_default = data.get("surface") or options.get("surface")
     per_default = _number_string(data.get("per", "1000000"))
+    tool_price_defaults = data.get("tool_prices") or data.get("toolPrices") or {}
+    if not isinstance(tool_price_defaults, dict):
+        tool_price_defaults = {}
     rows = data.get("rows") or data.get("models") or []
     cards: List[Dict[str, Any]] = []
     for row in rows:
@@ -3157,6 +3324,10 @@ def price_cards_from_official_snapshot(data: Any, **options: Any) -> List[Dict[s
         if not model or not provider:
             continue
         per = _number_string(row.get("per", per_default))
+        row_tool_prices = row.get("tool_prices") or row.get("toolPrices") or {}
+        if not isinstance(row_tool_prices, dict):
+            row_tool_prices = {}
+        pricing_row = {**tool_price_defaults, **row_tool_prices, **row}
         components: List[Dict[str, Any]] = []
         for raw_component in row.get("components", []):
             if not isinstance(raw_component, dict):
@@ -3171,16 +3342,20 @@ def price_cards_from_official_snapshot(data: Any, **options: Any) -> List[Dict[s
                 amount,
                 _number_string(raw_component.get("per") or raw_component.get("price", {}).get("per") or per),
             )
-        _official_snapshot_component(components, row, "input_uncached_tokens", "token", ("input", "prompt", "input_uncached"), per)
-        _official_snapshot_component(components, row, "input_cache_read_tokens", "token", ("cache_read", "cached_input", "input_cache_read"), per)
-        _official_snapshot_component(components, row, "input_cache_write_tokens", "token", ("cache_write", "input_cache_write"), per)
-        _official_snapshot_component(components, row, "input_cache_write_1h_tokens", "token", ("cache_write_1h", "input_cache_write_1h"), per)
-        _official_snapshot_component(components, row, "output_text_tokens", "token", ("output", "completion", "output_text"), per)
-        _official_snapshot_component(components, row, "output_reasoning_tokens", "token", ("reasoning", "thinking", "output_reasoning"), per)
-        _official_snapshot_component(components, row, "input_audio_tokens", "token", ("input_audio", "audio_input"), per)
-        _official_snapshot_component(components, row, "output_audio_tokens", "token", ("output_audio", "audio_output"), per)
-        _official_snapshot_component(components, row, "request_units", "request", ("request", "per_request"), "1")
-        _official_snapshot_component(components, row, "web_search_units", "search", ("web_search", "search"), "1")
+        _official_snapshot_component(components, pricing_row, "input_uncached_tokens", "token", ("input", "prompt", "input_uncached"), per)
+        _official_snapshot_component(components, pricing_row, "input_cache_read_tokens", "token", ("cache_read", "cached_input", "input_cache_read"), per)
+        _official_snapshot_component(components, pricing_row, "input_cache_write_tokens", "token", ("cache_write", "input_cache_write"), per)
+        _official_snapshot_component(components, pricing_row, "input_cache_write_1h_tokens", "token", ("cache_write_1h", "input_cache_write_1h"), per)
+        _official_snapshot_component(components, pricing_row, "output_text_tokens", "token", ("output", "completion", "output_text"), per)
+        _official_snapshot_component(components, pricing_row, "output_reasoning_tokens", "token", ("reasoning", "thinking", "output_reasoning"), per)
+        _official_snapshot_component(components, pricing_row, "input_audio_tokens", "token", ("input_audio", "audio_input"), per)
+        _official_snapshot_component(components, pricing_row, "output_audio_tokens", "token", ("output_audio", "audio_output"), per)
+        _official_snapshot_component(components, pricing_row, "request_units", "request", ("request", "per_request"), "1")
+        _official_snapshot_component(components, pricing_row, "web_search_units", "search", ("web_search", "search"), "1")
+        _official_snapshot_component(components, pricing_row, "x_search_units", "search", ("x_search",), "1")
+        _official_snapshot_component(components, pricing_row, "file_search_units", "call", ("file_search", "collections_search"), "1")
+        _official_snapshot_component(components, pricing_row, "code_interpreter_call_units", "call", ("code_interpreter_call", "code_interpreter", "code_execution"), "1")
+        _official_snapshot_component(components, pricing_row, "attachment_search_units", "call", ("attachment_search",), "1")
         if not components:
             continue
         card = {
@@ -3408,13 +3583,14 @@ def from_response(
         if mode == "strict":
             raise
         return _unsupported_surface_ledger(response, **options)
+    extracted_provider_reported_cost = _provider_reported_cost_from_raw_response(response, usage_ledger)
     return calculate_cost(
         usage_ledger=usage_ledger,
         price_cards=price_cards,
         discount_policies=discount_policies,
         mode=mode,
         stale_after_days=stale_after_days,
-        provider_reported_cost=provider_reported_cost,
+        provider_reported_cost=provider_reported_cost if provider_reported_cost is not None else extracted_provider_reported_cost,
         provider_reported_cost_mode=provider_reported_cost_mode,
         price_source_priority=price_source_priority,
         debug_trace=debug_trace,

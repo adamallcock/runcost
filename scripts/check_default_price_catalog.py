@@ -114,6 +114,24 @@ def check_xai_aliases() -> None:
     by_model = {card.get("model"): card for card in official_cards}
     assert_true("grok-4.3" in by_model, "xAI official catalog must include grok-4.3")
     assert_true(by_model["grok-4.3"].get("aliases") == ["grok-4.3-latest", "grok-latest"], "grok-4.3 must only carry true rolling aliases")
+    grok_components = {
+        component.get("usage_component"): component
+        for component in by_model["grok-4.3"].get("components", [])
+        if isinstance(component, dict)
+    }
+    expected_tool_prices = {
+        "web_search_units": ("search", "0.005"),
+        "x_search_units": ("search", "0.005"),
+        "code_interpreter_call_units": ("call", "0.005"),
+        "attachment_search_units": ("call", "0.01"),
+        "file_search_units": ("call", "0.0025"),
+    }
+    for component_name, (unit, amount) in expected_tool_prices.items():
+        component = grok_components.get(component_name)
+        assert_true(component is not None, f"xAI official catalog must include {component_name}")
+        assert_true(component.get("unit") == unit, f"{component_name} unit mismatch")
+        assert_true((component.get("price") or {}).get("amount") == amount, f"{component_name} price mismatch")
+        assert_true((component.get("price") or {}).get("per") == "1", f"{component_name} must be priced per call/search")
 
     redirected_slugs = [
         "grok-3",

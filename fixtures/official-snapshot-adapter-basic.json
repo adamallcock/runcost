@@ -16,6 +16,8 @@
       "component:output_text_tokens",
       "component:output_reasoning_tokens",
       "component:web_search_units",
+      "component:x_search_units",
+      "component:attachment_search_units",
       "source:official-snapshot",
       "source_adapter"
     ],
@@ -66,6 +68,16 @@
           "name": "web_search_units",
           "quantity": "2",
           "unit": "search"
+        },
+        {
+          "name": "x_search_units",
+          "quantity": "3",
+          "unit": "search"
+        },
+        {
+          "name": "attachment_search_units",
+          "quantity": "1",
+          "unit": "call"
         }
       ]
     },
@@ -94,6 +106,8 @@
             "output": "5",
             "reasoning": "5",
             "web_search": "0.01",
+            "x_search": "0.02",
+            "attachment_search": "0.03",
             "effective": {
               "from": "2026-05-25"
             },
@@ -175,9 +189,27 @@
           "cost": "0.02",
           "price_card_id": "openai:gpt-official:official-snapshot",
           "discount_eligible": true
+        },
+        {
+          "name": "x_search_units",
+          "quantity": "3",
+          "unit": "search",
+          "unit_price": "0.02",
+          "cost": "0.06",
+          "price_card_id": "openai:gpt-official:official-snapshot",
+          "discount_eligible": true
+        },
+        {
+          "name": "attachment_search_units",
+          "quantity": "1",
+          "unit": "call",
+          "unit_price": "0.03",
+          "cost": "0.03",
+          "price_card_id": "openai:gpt-official:official-snapshot",
+          "discount_eligible": true
         }
       ],
-      "total": "0.02027",
+      "total": "0.11027",
       "price_sources": [
         {
           "name": "OpenAI pricing page snapshot",
