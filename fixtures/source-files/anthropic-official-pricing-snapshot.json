@@ -1,0 +1,63 @@
+{
+  "schema_version": "0.1",
+  "provider": "anthropic",
+  "surface": "anthropic.messages",
+  "source": {
+    "name": "Anthropic official pricing snapshot",
+    "url": "https://docs.anthropic.com/en/docs/about-claude/pricing",
+    "retrieved_at": "2026-06-09T23:55:00Z",
+    "version": "2026-06-09",
+    "license": "reviewed"
+  },
+  "rows": [
+    {
+      "model": "claude-fable-5",
+      "aliases": [
+        "Claude Fable 5"
+      ],
+      "effective": {
+        "from": "2026-06-09"
+      },
+      "input": "10",
+      "cache_write": "12.50",
+      "cache_write_1h": "20",
+      "cached_input": "1",
+      "output": "50",
+      "source_label": "Anthropic Claude API pricing",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cache_write_5m",
+          "cache_write_1h",
+          "cache_read"
+        ]
+      },
+      "notes": "Standard Anthropic Messages API pricing only. Batch pricing is intentionally not modeled in this default snapshot until service-tier matching is reviewed for absent service_tier context."
+    },
+    {
+      "model": "claude-mythos-5",
+      "aliases": [
+        "Claude Mythos 5"
+      ],
+      "effective": {
+        "from": "2026-06-09"
+      },
+      "input": "10",
+      "cache_write": "12.50",
+      "cache_write_1h": "20",
+      "cached_input": "1",
+      "output": "50",
+      "source_label": "Anthropic Claude API pricing",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cache_write_5m",
+          "cache_write_1h",
+          "cache_read"
+        ],
+        "limited_availability": true
+      },
+      "notes": "Anthropic lists Claude Mythos 5 as limited availability. Standard Anthropic Messages API pricing only; batch pricing is intentionally not modeled in this default snapshot until service-tier matching is reviewed for absent service_tier context."
+    }
+  ]
+}

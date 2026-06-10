@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 getcontext().prec = 50
 
-DEFAULT_PRICE_SOURCE_PRIORITY = ["xai-official", "llm-prices", "models.dev", "litellm", "openrouter"]
+DEFAULT_PRICE_SOURCE_PRIORITY = ["anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"]
 
 _COMPONENT_ORDER_NAMES = [
     "input_uncached_tokens",
@@ -371,9 +371,22 @@ def _model_name_looks_gemini(value: Any) -> bool:
     return text.startswith("gemini-") or text.startswith("google/gemini-")
 
 
+def _model_name_looks_gemini_live_translate(value: Any) -> bool:
+    text = str(value or "").lower()
+    return text in {"gemini-3.5-live-translate-preview", "google/gemini-3.5-live-translate-preview"}
+
+
 def _model_name_looks_xai(value: Any) -> bool:
     text = str(value or "").lower()
     return text.startswith("grok-") or text.startswith("xai/")
+
+
+GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS = [
+    "output_text_tokens",
+    "output_audio_tokens",
+    "output_image_tokens",
+    "output_video_tokens",
+]
 
 
 def _gemini_thinking_priced_as_output_applies(
@@ -382,10 +395,33 @@ def _gemini_thinking_priced_as_output_applies(
 ) -> bool:
     provider = str(usage_ledger.get("provider") or card.get("provider") or "").lower()
     surface = str(usage_ledger.get("surface") or card.get("surface") or "").lower()
-    if provider not in {"google", "vertex", "google-vertex"} and "gemini.generate_content" not in surface:
+    if provider not in {"google", "vertex", "google-vertex"} and "gemini." not in surface:
         return False
     model_names = [_billed_model(usage_ledger), card.get("model"), *card.get("aliases", [])]
     return any(_model_name_looks_gemini(model_name) for model_name in model_names)
+
+
+def _gemini_thinking_output_component_candidates(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> List[str]:
+    surface = str(usage_ledger.get("surface") or card.get("surface") or "").lower()
+    model_names = [_billed_model(usage_ledger), card.get("model"), *card.get("aliases", [])]
+    is_live_translate = surface == "google.gemini.live" and any(_model_name_looks_gemini_live_translate(model_name) for model_name in model_names)
+    component_names = [
+        component.get("name")
+        for component in usage_ledger.get("components", [])
+        if component.get("unit") == "token"
+        and component.get("name") in GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS
+        and _decimal(component.get("quantity", "0")) > 0
+    ]
+    preferred: List[str] = []
+    if is_live_translate:
+        preferred.append("output_audio_tokens")
+    preferred.extend(component_names)
+    preferred.extend(GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS)
+    deduped: List[str] = []
+    for component_name in preferred:
+        if component_name not in deduped:
+            deduped.append(component_name)
+    return deduped
 
 
 def _gemini_thinking_priced_as_output_matches(
@@ -395,28 +431,33 @@ def _gemini_thinking_priced_as_output_matches(
 ) -> List[Dict[str, Any]]:
     if component.get("name") != "output_reasoning_tokens" or component.get("unit") != "token":
         return []
-    output_component = {"name": "output_text_tokens", "unit": component.get("unit")}
     matches: List[Dict[str, Any]] = []
-    for match in _find_price_components(usage_ledger, matching_cards, output_component):
-        card = match["card"]
-        if not _gemini_thinking_priced_as_output_applies(usage_ledger, card):
-            continue
-        if _source_capability_unsupported(card, "output_reasoning_tokens"):
-            continue
-        price_component = dict(match["price_component"])
-        price_component["usage_component"] = "output_reasoning_tokens"
-        price_component.setdefault("notes", "Gemini thinking tokens are priced at the output-token rate.")
-        matches.append(
-            {
-                "card": card,
-                "price_component": price_component,
-                "component_metadata": {
-                    "pricing_policy": "gemini_thinking_tokens_priced_as_output_tokens",
-                    "priced_as_component": "output_text_tokens",
-                },
-            }
-        )
-    return matches
+    for output_component_name in GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS:
+        output_component = {"name": output_component_name, "unit": component.get("unit")}
+        for match in _find_price_components(usage_ledger, matching_cards, output_component):
+            card = match["card"]
+            if not _gemini_thinking_priced_as_output_applies(usage_ledger, card):
+                continue
+            if output_component_name not in _gemini_thinking_output_component_candidates(usage_ledger, card):
+                continue
+            if _source_capability_unsupported(card, "output_reasoning_tokens"):
+                continue
+            price_component = dict(match["price_component"])
+            price_component["usage_component"] = "output_reasoning_tokens"
+            price_component.setdefault("notes", "Gemini thinking tokens are priced at the output-token rate.")
+            matches.append(
+                {
+                    "card": card,
+                    "price_component": price_component,
+                    "component_metadata": {
+                        "pricing_policy": "gemini_thinking_tokens_priced_as_output_tokens",
+                        "priced_as_component": output_component_name,
+                    },
+                }
+            )
+        if matches:
+            return matches
+    return []
 
 
 def _xai_reasoning_priced_as_output_applies(
@@ -2057,6 +2098,100 @@ def extract_gemini_generate_content_usage(response: Dict[str, Any], **options: A
     )
 
 
+def extract_gemini_live_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    response = _gemini_generate_content_payload(response)
+    requested_model = options.get("model", response.get("modelVersion"))
+    returned_model = response.get("modelVersion") or options.get("model")
+    is_live_translate = any(_model_name_looks_gemini_live_translate(model_name) for model_name in (requested_model, returned_model))
+    input_fallback_component = "input_audio_tokens" if is_live_translate else "input_uncached_tokens"
+    output_fallback_component = "output_audio_tokens" if is_live_translate else "output_text_tokens"
+    usage = response.get("usageMetadata", {})
+    cached_input = _decimal(usage.get("cachedContentTokenCount", 0))
+    prompt_tokens = _decimal(usage.get("promptTokenCount", 0))
+    response_tokens = _decimal(usage.get("responseTokenCount", 0))
+    thoughts_tokens = _decimal(usage.get("thoughtsTokenCount", 0))
+    prompt_counts = _gemini_modality_counts(usage.get("promptTokensDetails"))
+    cache_counts = _gemini_modality_counts(usage.get("cacheTokensDetails"))
+    tool_counts = _gemini_modality_counts(usage.get("toolUsePromptTokensDetails"))
+    response_counts = _gemini_modality_counts(usage.get("responseTokensDetails"))
+
+    tool_prompt_tokens = (
+        _decimal(usage.get("toolUsePromptTokenCount", 0))
+        if "toolUsePromptTokenCount" in usage
+        else _gemini_sum_counts(tool_counts)
+    )
+    tool_remainder = tool_prompt_tokens - _gemini_sum_counts(tool_counts)
+    if tool_remainder > 0:
+        _gemini_add_count(tool_counts, "TEXT", tool_remainder)
+
+    detail_safe_for_input = bool(prompt_counts) and (cached_input == 0 or bool(cache_counts))
+    if detail_safe_for_input:
+        input_quantities = _gemini_component_quantities(
+            _gemini_net_input_counts(prompt_counts, cache_counts, tool_counts),
+            GEMINI_INPUT_MODALITY_COMPONENTS,
+            "input_uncached_tokens",
+        )
+        input_components = _gemini_ordered_components(
+            input_quantities,
+            GEMINI_INPUT_COMPONENT_ORDER,
+            "$.usageMetadata.promptTokensDetails",
+        )
+        cache_read_source = "$.usageMetadata.cachedContentTokenCount"
+        cache_read = cached_input or _gemini_sum_counts(cache_counts)
+    else:
+        input_components = [
+            _positive_component(
+                input_fallback_component,
+                _format_decimal(prompt_tokens - cached_input + tool_prompt_tokens),
+                "token",
+                "$.usageMetadata.promptTokenCount",
+            )
+        ]
+        cache_read_source = "$.usageMetadata.cachedContentTokenCount"
+        cache_read = cached_input
+
+    if response_counts:
+        output_quantities = _gemini_component_quantities(
+            response_counts,
+            GEMINI_OUTPUT_MODALITY_COMPONENTS,
+            "output_text_tokens",
+        )
+        output_components = _gemini_ordered_components(
+            output_quantities,
+            GEMINI_OUTPUT_COMPONENT_ORDER,
+            "$.usageMetadata.responseTokensDetails",
+        )
+    else:
+        output_components = [
+            _positive_component(
+                output_fallback_component,
+                _format_decimal(response_tokens),
+                "token",
+                "$.usageMetadata.responseTokenCount",
+            )
+        ]
+
+    return _base_usage_ledger(
+        provider=options.get("provider", "google"),
+        surface=options.get("surface", "google.gemini.live"),
+        requested_model=requested_model,
+        returned_model=returned_model,
+        raw_usage=usage,
+        components=_compact_components(
+            input_components[:1]
+            + [
+                _positive_component("input_cache_read_tokens", _format_decimal(cache_read), "token", cache_read_source),
+            ]
+            + input_components[1:]
+            + output_components[:1]
+            + [
+                _positive_component("output_reasoning_tokens", _format_decimal(thoughts_tokens), "token", "$.usageMetadata.thoughtsTokenCount"),
+            ]
+            + output_components[1:]
+        ),
+    )
+
+
 def extract_bedrock_converse_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     usage = response.get("usage", {})
     cache_read = usage.get("cacheReadInputTokens", 0)
@@ -2624,6 +2759,8 @@ def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, 
         return extract_anthropic_messages_usage(response, **options)
     if surface in {"google.gemini.generate_content", "vertex.gemini.generate_content"}:
         return extract_gemini_generate_content_usage(response, **options)
+    if surface == "google.gemini.live":
+        return extract_gemini_live_usage(response, **options)
     if surface == "aws.bedrock.converse":
         return extract_bedrock_converse_usage(response, **options)
     if surface == "aws.bedrock.invoke_model":

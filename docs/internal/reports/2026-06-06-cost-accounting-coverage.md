@@ -13,9 +13,9 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 
 ## Summary
 
-- Fixtures scanned: 115
+- Fixtures scanned: 120
 - Public API capabilities scanned: 14
-- Provider/surface component rows: 32
+- Provider/surface component rows: 33
 - Price-source component rows: 11
 - Gemini separate output/thinking fixtures: 6
 
@@ -30,10 +30,10 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `long_context` | 2 |
 | `normalized_usage` | 10 |
 | `provider_reported` | 4 |
-| `raw_provider_response` | 46 |
+| `raw_provider_response` | 50 |
 | `service_mode` | 3 |
 | `service_tier` | 2 |
-| `source_adapter` | 13 |
+| `source_adapter` | 14 |
 | `source_priority` | 2 |
 | `strict_error` | 1 |
 | `warning` | 11 |
@@ -54,7 +54,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `endpoint_runtime_seconds` | 2 |
 | `file_search_units` | 2 |
 | `image_generation_units` | 3 |
-| `input_audio_tokens` | 4 |
+| `input_audio_tokens` | 9 |
 | `input_cache_read_tokens` | 43 |
 | `input_cache_write_1h_tokens` | 2 |
 | `input_cache_write_tokens` | 14 |
@@ -62,10 +62,10 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `input_image_units` | 1 |
 | `input_uncached_tokens` | 95 |
 | `input_video_tokens` | 1 |
-| `output_audio_tokens` | 3 |
+| `output_audio_tokens` | 8 |
 | `output_image_tokens` | 3 |
-| `output_reasoning_tokens` | 40 |
-| `output_text_tokens` | 77 |
+| `output_reasoning_tokens` | 41 |
+| `output_text_tokens` | 78 |
 | `output_video_tokens` | 1 |
 | `request_units` | 3 |
 | `rerank_search_units` | 2 |
@@ -86,7 +86,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `litellm` | `input_cache_read_tokens`, `input_cache_write_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
 | `llm-prices` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_text_tokens` |
 | `models-dev` | `input_audio_tokens`, `input_cache_read_tokens`, `input_cache_write_tokens`, `input_uncached_tokens`, `output_audio_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
-| `official-snapshot` | `attachment_search_units`, `input_cache_read_tokens`, `input_cache_write_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `web_search_units`, `x_search_units` |
+| `official-snapshot` | `attachment_search_units`, `input_audio_tokens`, `input_cache_read_tokens`, `input_cache_write_tokens`, `input_uncached_tokens`, `output_audio_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `web_search_units`, `x_search_units` |
 | `openrouter-models` | `input_cache_read_tokens`, `input_image_units`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `request_units`, `web_search_units` |
 | `portkey` | `input_cache_read_tokens`, `input_cache_write_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `web_search_units` |
 | `source-cache` | `input_uncached_tokens`, `output_text_tokens` |
@@ -108,6 +108,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `custom-provider` | `openai.responses` | `input_uncached_tokens` |
 | `deepseek` | `deepseek.chat_completions` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
 | `google` | `google.gemini.generate_content` | `input_audio_tokens`, `input_cache_read_tokens`, `input_image_tokens`, `input_uncached_tokens`, `input_video_tokens`, `output_audio_tokens`, `output_image_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `output_video_tokens` |
+| `google` | `google.gemini.live` | `input_audio_tokens`, `output_audio_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
 | `groq` | `groq.chat_completions` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_text_tokens` |
 | `huggingface` | `huggingface.chat_completions` | `input_uncached_tokens`, `output_text_tokens` |
 | `mistral` | `mistral.chat_completions` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_text_tokens` |

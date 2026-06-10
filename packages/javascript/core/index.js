@@ -59,7 +59,7 @@ const TOOL_OR_FEATURE_COMPONENTS = new Set([
   "endpoint_runtime_seconds",
   "storage_gb_days"
 ]);
-export const DEFAULT_PRICE_SOURCE_PRIORITY = ["xai-official", "llm-prices", "models.dev", "litellm", "openrouter"];
+export const DEFAULT_PRICE_SOURCE_PRIORITY = ["anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"];
 
 function parseDecimal(value) {
   const text = String(value);
@@ -479,15 +479,29 @@ function modelNameLooksGemini(value) {
     String(value || "").toLowerCase().startsWith("google/gemini-");
 }
 
+function modelNameLooksGeminiLiveTranslate(value) {
+  return [
+    "gemini-3.5-live-translate-preview",
+    "google/gemini-3.5-live-translate-preview"
+  ].includes(String(value || "").toLowerCase());
+}
+
 function modelNameLooksXAI(value) {
   const text = String(value || "").toLowerCase();
   return text.startsWith("grok-") || text.startsWith("xai/");
 }
 
+const GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS = [
+  "output_text_tokens",
+  "output_audio_tokens",
+  "output_image_tokens",
+  "output_video_tokens"
+];
+
 function geminiThinkingPricedAsOutputApplies(usageLedger, card) {
   const provider = String(usageLedger.provider || card.provider || "").toLowerCase();
   const surface = String(usageLedger.surface || card.surface || "").toLowerCase();
-  if (!["google", "vertex", "google-vertex"].includes(provider) && !surface.includes("gemini.generate_content")) {
+  if (!["google", "vertex", "google-vertex"].includes(provider) && !surface.includes("gemini.")) {
     return false;
   }
   const modelNames = [
@@ -498,29 +512,61 @@ function geminiThinkingPricedAsOutputApplies(usageLedger, card) {
   return modelNames.some(modelNameLooksGemini);
 }
 
+function geminiThinkingOutputComponentCandidates(usageLedger, card) {
+  const surface = String(usageLedger.surface || card.surface || "").toLowerCase();
+  const modelNames = [
+    billedModel(usageLedger),
+    card.model,
+    ...(card.aliases || [])
+  ];
+  const isLiveTranslate = surface === "google.gemini.live" &&
+    modelNames.some(modelNameLooksGeminiLiveTranslate);
+  const componentNames = (usageLedger.components || [])
+    .filter((component) => (
+      component.unit === "token" &&
+      GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS.includes(component.name) &&
+      isPositiveDecimal(component.quantity || "0")
+    ))
+    .map((component) => component.name);
+  const preferred = [];
+  if (isLiveTranslate) {
+    preferred.push("output_audio_tokens");
+  }
+  preferred.push(...componentNames);
+  preferred.push(...GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS);
+  return [...new Set(preferred)];
+}
+
 function geminiThinkingPricedAsOutputMatches(usageLedger, candidateCards, component) {
   if (component.name !== "output_reasoning_tokens" || component.unit !== "token") {
     return [];
   }
-  const outputComponent = {
-    name: "output_text_tokens",
-    unit: component.unit
-  };
-  return findPriceComponents(usageLedger, candidateCards, outputComponent)
-    .filter(({ card }) => geminiThinkingPricedAsOutputApplies(usageLedger, card))
-    .filter(({ card }) => !sourceCapabilityUnsupported(card, "output_reasoning_tokens"))
-    .map(({ card, priceComponent }) => ({
-      card,
-      priceComponent: {
-        ...priceComponent,
-        usage_component: "output_reasoning_tokens",
-        notes: priceComponent.notes || "Gemini thinking tokens are priced at the output-token rate."
-      },
-      componentMetadata: {
-        pricing_policy: "gemini_thinking_tokens_priced_as_output_tokens",
-        priced_as_component: "output_text_tokens"
-      }
-    }));
+  for (const outputComponentName of GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS) {
+    const outputComponent = {
+      name: outputComponentName,
+      unit: component.unit
+    };
+    const matches = findPriceComponents(usageLedger, candidateCards, outputComponent)
+      .filter(({ card }) => geminiThinkingPricedAsOutputApplies(usageLedger, card))
+      .filter(({ card }) => geminiThinkingOutputComponentCandidates(usageLedger, card).includes(outputComponentName))
+      .filter(({ card }) => !sourceCapabilityUnsupported(card, "output_reasoning_tokens"))
+      .map(({ card, priceComponent }) => ({
+        card,
+        priceComponent: {
+          ...priceComponent,
+          usage_component: "output_reasoning_tokens",
+          notes: priceComponent.notes || "Gemini thinking tokens are priced at the output-token rate."
+        },
+        componentMetadata: {
+          pricing_policy: "gemini_thinking_tokens_priced_as_output_tokens",
+          priced_as_component: outputComponentName
+        }
+      }));
+    if (matches.length > 0) {
+      return matches;
+    }
+  }
+  return [];
 }
 
 function xaiReasoningPricedAsOutputApplies(usageLedger, card) {
@@ -2063,12 +2109,14 @@ function geminiGenerateContentPayload(response) {
   if (!Array.isArray(chunks) || chunks.length === 0) {
     return response;
   }
-  for (const chunk of [...chunks].reverse()) {
+  for (let index = chunks.length - 1; index >= 0; index -= 1) {
+    const chunk = chunks[index];
     if (chunk && typeof chunk === "object" && chunk.usageMetadata) {
       return chunk;
     }
   }
-  for (const chunk of [...chunks].reverse()) {
+  for (let index = chunks.length - 1; index >= 0; index -= 1) {
+    const chunk = chunks[index];
     if (chunk && typeof chunk === "object") {
       return chunk;
     }
@@ -2145,6 +2193,92 @@ export function extractGeminiGenerateContentUsage(response, options = {}) {
     surface: options.surface || "google.gemini.generate_content",
     requestedModel: options.model || response.modelVersion,
     returnedModel: response.modelVersion || options.model,
+    rawUsage: usage,
+    components: compactComponents([
+      ...inputComponents.slice(0, 1),
+      positiveComponent("input_cache_read_tokens", cacheRead, "token", "$.usageMetadata.cachedContentTokenCount"),
+      ...inputComponents.slice(1),
+      ...outputComponents.slice(0, 1),
+      positiveComponent("output_reasoning_tokens", thoughts, "token", "$.usageMetadata.thoughtsTokenCount"),
+      ...outputComponents.slice(1)
+    ])
+  });
+}
+
+export function extractGeminiLiveUsage(response, options = {}) {
+  response = geminiGenerateContentPayload(response);
+  const requestedModel = options.model || response.modelVersion;
+  const returnedModel = response.modelVersion || options.model;
+  const isLiveTranslate = [requestedModel, returnedModel].some(modelNameLooksGeminiLiveTranslate);
+  const inputFallbackComponent = isLiveTranslate ? "input_audio_tokens" : "input_uncached_tokens";
+  const outputFallbackComponent = isLiveTranslate ? "output_audio_tokens" : "output_text_tokens";
+  const usage = response.usageMetadata || {};
+  const cachedInput = usage.cachedContentTokenCount || 0;
+  const prompt = usage.promptTokenCount || 0;
+  const responseTokens = usage.responseTokenCount || 0;
+  const thoughts = usage.thoughtsTokenCount || 0;
+
+  const promptCounts = geminiModalityCounts(usage.promptTokensDetails);
+  const cacheCounts = geminiModalityCounts(usage.cacheTokensDetails);
+  const toolCounts = geminiModalityCounts(usage.toolUsePromptTokensDetails);
+  const responseCounts = geminiModalityCounts(usage.responseTokensDetails);
+
+  const toolPrompt = hasOwn(usage, "toolUsePromptTokenCount")
+    ? usage.toolUsePromptTokenCount || 0
+    : geminiSumCounts(toolCounts);
+  const toolRemainder = subtractDecimal(toolPrompt, geminiSumCounts(toolCounts));
+  if (isPositiveDecimal(toolRemainder)) {
+    addGeminiCount(toolCounts, "TEXT", toolRemainder);
+  }
+
+  const detailSafeForInput = Object.keys(promptCounts).length > 0 &&
+    (!isPositiveDecimal(cachedInput) || Object.keys(cacheCounts).length > 0);
+  let inputComponents;
+  let cacheRead = cachedInput;
+  if (detailSafeForInput) {
+    inputComponents = geminiOrderedComponents(
+      geminiComponentQuantities(
+        geminiNetInputCounts(promptCounts, cacheCounts, toolCounts),
+        GEMINI_INPUT_MODALITY_COMPONENTS,
+        "input_uncached_tokens"
+      ),
+      GEMINI_INPUT_COMPONENT_ORDER,
+      "$.usageMetadata.promptTokensDetails"
+    );
+    cacheRead = isPositiveDecimal(cachedInput) ? cachedInput : geminiSumCounts(cacheCounts);
+  } else {
+    inputComponents = [
+      positiveComponent(
+        inputFallbackComponent,
+        addDecimal(subtractDecimal(prompt, cachedInput), toolPrompt),
+        "token",
+        "$.usageMetadata.promptTokenCount"
+      )
+    ];
+  }
+
+  let outputComponents;
+  if (Object.keys(responseCounts).length > 0) {
+    outputComponents = geminiOrderedComponents(
+      geminiComponentQuantities(
+        responseCounts,
+        GEMINI_OUTPUT_MODALITY_COMPONENTS,
+        "output_text_tokens"
+      ),
+      GEMINI_OUTPUT_COMPONENT_ORDER,
+      "$.usageMetadata.responseTokensDetails"
+    );
+  } else {
+    outputComponents = [
+      positiveComponent(outputFallbackComponent, responseTokens, "token", "$.usageMetadata.responseTokenCount")
+    ];
+  }
+
+  return baseUsageLedger({
+    provider: options.provider || "google",
+    surface: options.surface || "google.gemini.live",
+    requestedModel,
+    returnedModel,
     rawUsage: usage,
     components: compactComponents([
       ...inputComponents.slice(0, 1),
@@ -2794,6 +2928,9 @@ export function extractUsageLedger(response, options = {}) {
   }
   if (surface === "google.gemini.generate_content" || surface === "vertex.gemini.generate_content") {
     return extractGeminiGenerateContentUsage(response, options);
+  }
+  if (surface === "google.gemini.live") {
+    return extractGeminiLiveUsage(response, options);
   }
   if (surface === "aws.bedrock.converse") {
     return extractBedrockConverseUsage(response, options);

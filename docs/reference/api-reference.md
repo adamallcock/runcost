@@ -71,6 +71,7 @@ Output:
 | OpenRouter Chat Completions | `extract_openrouter_chat_completions_usage` | `extractOpenRouterChatCompletionsUsage` | via dispatch |
 | Anthropic Messages | `extract_anthropic_messages_usage` | `extractAnthropicMessagesUsage` | via dispatch |
 | Gemini or Vertex `generateContent` | `extract_gemini_generate_content_usage` | `extractGeminiGenerateContentUsage` | via dispatch |
+| Gemini Live API | `extract_gemini_live_usage` | `extractGeminiLiveUsage` | via dispatch |
 | AWS Bedrock Converse | `extract_bedrock_converse_usage` | `extractBedrockConverseUsage` | via dispatch |
 | AWS Bedrock InvokeModel | `extract_bedrock_invoke_model_usage` | `extractBedrockInvokeModelUsage` | via dispatch |
 | Cohere Chat | `extract_cohere_chat_usage` | `extractCohereChatUsage` | via dispatch |
@@ -111,6 +112,7 @@ Streaming final usage:
 - OpenAI Responses accepts the final `response.completed` event envelope.
 - Anthropic Messages accepts an object with `events` containing `message_start`, `message_delta`, and `message_stop` SSE payloads, and accumulates the final usage.
 - Gemini / Vertex generateContent accepts an object with `chunks` or `stream` and uses the last chunk carrying `usageMetadata`.
+- Gemini Live API accepts top-level `usageMetadata`, or a `chunks` / `stream` collection where the final server message carries `usageMetadata`.
 - These are final-usage extraction paths, not arbitrary partial-token estimation.
 
 ## Price Source Adapters

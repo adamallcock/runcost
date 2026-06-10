@@ -1,0 +1,139 @@
+{
+  "name": "google-official-pricing-live-translate",
+  "description": "Maps a reviewed Google Gemini pricing-page snapshot for Gemini 3.5 Live Translate into audio-token price cards.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SOURCE-ADAPTER",
+      "RC-GEMINI-LIVE"
+    ],
+    "provider": "google",
+    "surface": "google.gemini.live",
+    "scenario": "source_adapter",
+    "tags": [
+      "component:input_audio_tokens",
+      "component:output_audio_tokens",
+      "gemini",
+      "live_api",
+      "live_translate",
+      "source:official-snapshot",
+      "source_adapter"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "google",
+      "surface": "google.gemini.live",
+      "model": {
+        "requested": "gemini-3.5-live-translate-preview",
+        "returned": "gemini-3.5-live-translate-preview",
+        "billed": "gemini-3.5-live-translate-preview",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_audio_tokens",
+          "quantity": "250",
+          "unit": "token"
+        },
+        {
+          "name": "output_audio_tokens",
+          "quantity": "500",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_source": {
+      "type": "official-snapshot",
+      "data": {
+        "schema_version": "0.1",
+        "provider": "google",
+        "surface": "google.gemini.live",
+        "source": {
+          "name": "Google Gemini pricing page snapshot",
+          "url": "https://ai.google.dev/gemini-api/docs/pricing",
+          "retrieved_at": "2026-06-10T00:00:00Z",
+          "version": "2026-06-09",
+          "license": "reviewed"
+        },
+        "rows": [
+          {
+            "model": "gemini-3.5-live-translate-preview",
+            "effective": {
+              "from": "2026-06-09"
+            },
+            "input_audio": "3.50",
+            "output_audio": "21.00",
+            "source_label": "Gemini Developer API pricing",
+            "capabilities": {
+              "pricing_dimensions": [
+                "input_audio_tokens",
+                "output_audio_tokens"
+              ],
+              "audio_tokens_per_second": 25,
+              "unsupported_components": [
+                "input_cache_read_tokens",
+                "input_cache_write_tokens",
+                "input_cache_write_1h_tokens",
+                "output_text_tokens"
+              ]
+            },
+            "notes": "Google lists Gemini 3.5 Live Translate as a Live API audio translation model with audio and text output. Pricing is based on input and output audio token consumption at 25 tokens per second; transcript text output is not modeled as a priced component in this snapshot."
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "google",
+      "surface": "google.gemini.live",
+      "model": {
+        "requested": "gemini-3.5-live-translate-preview",
+        "returned": "gemini-3.5-live-translate-preview",
+        "billed": "gemini-3.5-live-translate-preview",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_audio_tokens",
+          "quantity": "250",
+          "unit": "token",
+          "unit_price": "0.0000035",
+          "cost": "0.000875",
+          "price_card_id": "google:gemini-3.5-live-translate-preview:official-snapshot",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_audio_tokens",
+          "quantity": "500",
+          "unit": "token",
+          "unit_price": "0.000021",
+          "cost": "0.0105",
+          "price_card_id": "google:gemini-3.5-live-translate-preview:official-snapshot",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.011375",
+      "price_sources": [
+        {
+          "name": "Google Gemini pricing page snapshot",
+          "url": "https://ai.google.dev/gemini-api/docs/pricing",
+          "retrieved_at": "2026-06-10T00:00:00Z",
+          "version": "2026-06-09",
+          "license": "reviewed"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

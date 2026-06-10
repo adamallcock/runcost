@@ -288,8 +288,9 @@ def check_gemini_reported_output_thinking_split(path: Path, fixture: dict[str, A
             component_metadata = component.get("metadata") or {}
             if component_metadata.get("pricing_policy") != "gemini_thinking_tokens_priced_as_output_tokens":
                 errors.append(f"{path.name}: Gemini output-rate thinking fallback must set pricing_policy metadata")
-            if component_metadata.get("priced_as_component") != "output_text_tokens":
-                errors.append(f"{path.name}: Gemini output-rate thinking fallback must set priced_as_component=output_text_tokens")
+            priced_as_component = component_metadata.get("priced_as_component")
+            if priced_as_component not in {"output_text_tokens", "output_audio_tokens", "output_image_tokens", "output_video_tokens"}:
+                errors.append(f"{path.name}: Gemini output-rate thinking fallback must set priced_as_component to a priced output component")
     return errors
 
 

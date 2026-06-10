@@ -1,0 +1,37 @@
+{
+  "schema_version": "0.1",
+  "provider": "google",
+  "surface": "google.gemini.live",
+  "source": {
+    "name": "Google Gemini pricing page snapshot",
+    "url": "https://ai.google.dev/gemini-api/docs/pricing",
+    "retrieved_at": "2026-06-10T00:00:00Z",
+    "version": "2026-06-09",
+    "license": "reviewed"
+  },
+  "rows": [
+    {
+      "model": "gemini-3.5-live-translate-preview",
+      "effective": {
+        "from": "2026-06-09"
+      },
+      "input_audio": "3.50",
+      "output_audio": "21.00",
+      "source_label": "Gemini Developer API pricing",
+      "capabilities": {
+        "pricing_dimensions": [
+          "input_audio_tokens",
+          "output_audio_tokens"
+        ],
+        "audio_tokens_per_second": 25,
+        "unsupported_components": [
+          "input_cache_read_tokens",
+          "input_cache_write_tokens",
+          "input_cache_write_1h_tokens",
+          "output_text_tokens"
+        ]
+      },
+      "notes": "Google lists Gemini 3.5 Live Translate as a Live API audio translation model with audio and text output. Pricing is based on input and output audio token consumption at 25 tokens per second; transcript text output is not modeled as a priced component in this snapshot."
+    }
+  ]
+}

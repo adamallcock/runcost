@@ -17,6 +17,7 @@ from runcost import (  # noqa: E402
     calculate_cost,
     default_price_cards,
     default_source_cache,
+    from_response,
 )
 
 CATALOG_PATHS = [
@@ -26,6 +27,8 @@ CATALOG_PATHS = [
 ]
 
 EXPECTED_SOURCES = {
+    "anthropic-official": "official-snapshot",
+    "google-official": "official-snapshot",
     "llm-prices": "llm-prices",
     "litellm": "litellm",
     "openrouter": "openrouter-models",
@@ -93,7 +96,7 @@ def check_language_loaders() -> None:
                 "const cache = defaultSourceCache();"
                 "const cards = defaultPriceCards();"
                 "if (cache.metadata.price_card_count !== cards.length) throw new Error('JS count mismatch');"
-                "if (DEFAULT_PRICE_SOURCE_PRIORITY[0] !== 'xai-official') throw new Error('JS priority mismatch');"
+                "if (DEFAULT_PRICE_SOURCE_PRIORITY[0] !== 'anthropic-official') throw new Error('JS priority mismatch');"
                 "console.log(cards.length);"
             ),
         ],
@@ -193,11 +196,194 @@ def check_xai_aliases() -> None:
         assert_true(ledger["total"] == "0.00375", f"xAI redirected slug {slug} must use Grok 4.3 token rates")
 
 
+def check_anthropic_fable_mythos() -> None:
+    cards = default_price_cards()
+    official_cards = [
+        card for card in cards
+        if card.get("provider") == "anthropic" and (card.get("source") or {}).get("name") == "anthropic-official"
+    ]
+    by_model = {card.get("model"): card for card in official_cards}
+    for model in ("claude-fable-5", "claude-mythos-5"):
+        assert_true(model in by_model, f"Anthropic official catalog must include {model}")
+        components = {
+            component.get("usage_component"): component
+            for component in by_model[model].get("components", [])
+            if isinstance(component, dict)
+        }
+        expected_components = {
+            "input_uncached_tokens": "10",
+            "input_cache_write_tokens": "12.50",
+            "input_cache_write_1h_tokens": "20",
+            "input_cache_read_tokens": "1",
+            "output_text_tokens": "50",
+        }
+        for component_name, amount in expected_components.items():
+            component = components.get(component_name)
+            assert_true(component is not None, f"{model} official catalog must include {component_name}")
+            assert_true((component.get("price") or {}).get("amount") == amount, f"{model} {component_name} amount mismatch")
+            assert_true((component.get("price") or {}).get("per") == "1000000", f"{model} {component_name} must be priced per MTok")
+
+        usage_ledger = {
+            "schema_version": "0.1",
+            "provider": "anthropic",
+            "surface": "anthropic.messages",
+            "model": {"requested": model, "returned": model, "billed": model, "alias_resolution": "none"},
+            "components": [
+                {"name": "input_uncached_tokens", "quantity": "1000", "unit": "token"},
+                {"name": "input_cache_write_tokens", "quantity": "200", "unit": "token"},
+                {"name": "input_cache_write_1h_tokens", "quantity": "100", "unit": "token"},
+                {"name": "input_cache_read_tokens", "quantity": "500", "unit": "token"},
+                {"name": "output_text_tokens", "quantity": "200", "unit": "token"},
+            ],
+        }
+        ledger = calculate_cost(
+            usage_ledger=usage_ledger,
+            price_cards=cards,
+            price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+        )
+        warning_codes = [warning["code"] for warning in ledger.get("warnings", [])]
+        assert_true("component_unpriced" not in warning_codes, f"{model} standard token/cache components must price")
+        selected_sources = {source.get("name") for source in ledger.get("price_sources", [])}
+        assert_true(selected_sources == {"anthropic-official"}, f"{model} must use anthropic official source")
+
+
+def check_google_live_translate() -> None:
+    cards = default_price_cards()
+    official_cards = [
+        card for card in cards
+        if card.get("provider") == "google" and (card.get("source") or {}).get("name") == "google-official"
+    ]
+    by_model = {card.get("model"): card for card in official_cards}
+    model = "gemini-3.5-live-translate-preview"
+    assert_true(model in by_model, "Google official catalog must include Gemini 3.5 Live Translate")
+    card = by_model[model]
+    assert_true(card.get("surface") == "google.gemini.live", "Gemini Live Translate must use google.gemini.live surface")
+    components = {
+        component.get("usage_component"): component
+        for component in card.get("components", [])
+        if isinstance(component, dict)
+    }
+    expected_components = {
+        "input_audio_tokens": "3.50",
+        "output_audio_tokens": "21.00",
+    }
+    for component_name, amount in expected_components.items():
+        component = components.get(component_name)
+        assert_true(component is not None, f"Gemini Live Translate official catalog must include {component_name}")
+        assert_true((component.get("price") or {}).get("amount") == amount, f"Gemini Live Translate {component_name} amount mismatch")
+        assert_true((component.get("price") or {}).get("per") == "1000000", f"Gemini Live Translate {component_name} must be priced per MTok")
+
+    usage_ledger = {
+        "schema_version": "0.1",
+        "provider": "google",
+        "surface": "google.gemini.live",
+        "model": {"requested": model, "returned": model, "billed": model, "alias_resolution": "none"},
+        "components": [
+            {"name": "input_audio_tokens", "quantity": "250", "unit": "token"},
+            {"name": "output_audio_tokens", "quantity": "500", "unit": "token"},
+        ],
+    }
+    ledger = calculate_cost(
+        usage_ledger=usage_ledger,
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    warning_codes = [warning["code"] for warning in ledger.get("warnings", [])]
+    assert_true("component_unpriced" not in warning_codes, "Gemini Live Translate audio components must price")
+    assert_true(ledger["total"] == "0.011375", "Gemini Live Translate sample total mismatch")
+    selected_sources = {source.get("name") for source in ledger.get("price_sources", [])}
+    assert_true(selected_sources == {"google-official"}, "Gemini Live Translate must use google official source")
+
+    raw_ledger = from_response(
+        response={
+            "chunks": [
+                {"serverContent": {"modelTurn": {"parts": [{"inlineData": {"mimeType": "audio/pcm;rate=24000", "data": "..."}}]}}},
+                {
+                    "modelVersion": model,
+                    "serverContent": {"turnComplete": True},
+                    "usageMetadata": {
+                        "promptTokenCount": 250,
+                        "promptTokensDetails": [{"modality": "AUDIO", "tokenCount": 250}],
+                        "responseTokenCount": 500,
+                        "responseTokensDetails": [{"modality": "AUDIO", "tokenCount": 500}],
+                        "totalTokenCount": 750,
+                    },
+                },
+            ]
+        },
+        provider="google",
+        surface="google.gemini.live",
+        model=model,
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    assert_true(raw_ledger["total"] == "0.011375", "Gemini Live Translate raw extraction and default pricing total mismatch")
+    raw_components = {component.get("name"): component for component in raw_ledger.get("components", [])}
+    assert_true(raw_components.get("input_audio_tokens", {}).get("quantity") == "250", "Gemini Live raw input audio extraction mismatch")
+    assert_true(raw_components.get("output_audio_tokens", {}).get("quantity") == "500", "Gemini Live raw output audio extraction mismatch")
+
+    aggregate_ledger = from_response(
+        response={
+            "modelVersion": model,
+            "usageMetadata": {
+                "promptTokenCount": 250,
+                "responseTokenCount": 500,
+                "thoughtsTokenCount": 25,
+                "totalTokenCount": 775,
+            },
+        },
+        provider="google",
+        surface="google.gemini.live",
+        model=model,
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    assert_true(aggregate_ledger["total"] == "0.0119", "Gemini Live aggregate fallback and thinking total mismatch")
+    aggregate_components = {component.get("name"): component for component in aggregate_ledger.get("components", [])}
+    assert_true(aggregate_components.get("input_audio_tokens", {}).get("quantity") == "250", "Gemini Live aggregate input must fall back to audio")
+    assert_true(aggregate_components.get("output_audio_tokens", {}).get("quantity") == "500", "Gemini Live aggregate output must fall back to audio")
+    reasoning_metadata = aggregate_components.get("output_reasoning_tokens", {}).get("metadata") or {}
+    assert_true(reasoning_metadata.get("priced_as_component") == "output_audio_tokens", "Gemini Live thinking must price at output audio rate")
+
+    transcript_ledger = from_response(
+        response={
+            "modelVersion": model,
+            "usageMetadata": {
+                "promptTokenCount": 250,
+                "promptTokensDetails": [{"modality": "AUDIO", "tokenCount": 250}],
+                "responseTokenCount": 550,
+                "responseTokensDetails": [
+                    {"modality": "AUDIO", "tokenCount": 500},
+                    {"modality": "TEXT", "tokenCount": 50},
+                ],
+                "totalTokenCount": 800,
+            },
+        },
+        provider="google",
+        surface="google.gemini.live",
+        model=model,
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    assert_true(transcript_ledger["total"] == "0.011375", "Gemini Live transcript sample audio total mismatch")
+    transcript_warnings = transcript_ledger.get("warnings", [])
+    assert_true(
+        any(
+            warning.get("code") == "source_capability_unsupported"
+            and (warning.get("metadata") or {}).get("component") == "output_text_tokens"
+            for warning in transcript_warnings
+        ),
+        "Gemini Live transcript text output must warn as unsupported by the official audio-token price card",
+    )
+
+
 def main() -> int:
     catalog = check_files_match()
     check_catalog_shape(catalog)
     check_language_loaders()
     check_xai_aliases()
+    check_anthropic_fable_mythos()
+    check_google_live_translate()
     print(f"Default price catalog checks passed for {catalog['metadata']['price_card_count']} price cards.")
     return 0
 

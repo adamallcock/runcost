@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1",
-  "updated_at": "2026-05-27",
+  "updated_at": "2026-06-10",
   "description": "Machine-readable registry for the public RunCost package APIs. Schemas define data contracts; this registry defines exported capability parity.",
   "capabilities": [
     {
@@ -120,10 +120,10 @@
       "id": "provider_extractors_core_vendors",
       "category": "provider_extractor",
       "status": "polyglot",
-      "evidence": ["fixtures/anthropic-messages-raw-cache.json", "fixtures/gemini-generate-content-raw-reasoning-cache.json", "fixtures/bedrock-converse-raw-cache.json", "fixtures/cohere-chat-raw-usage-billed-units.json"],
+      "evidence": ["fixtures/anthropic-messages-raw-cache.json", "fixtures/gemini-generate-content-raw-reasoning-cache.json", "fixtures/gemini-live-translate-raw-audio-usage.json", "fixtures/bedrock-converse-raw-cache.json", "fixtures/cohere-chat-raw-usage-billed-units.json"],
       "languages": {
-        "python": { "runtime": ["extract_anthropic_messages_usage", "extract_gemini_generate_content_usage", "extract_bedrock_converse_usage", "extract_bedrock_invoke_model_usage", "extract_cohere_chat_usage", "extract_cohere_rerank_usage"], "types": [] },
-        "javascript": { "runtime": ["extractAnthropicMessagesUsage", "extractGeminiGenerateContentUsage", "extractBedrockConverseUsage", "extractBedrockInvokeModelUsage", "extractCohereChatUsage", "extractCohereRerankUsage"], "types": [] },
+        "python": { "runtime": ["extract_anthropic_messages_usage", "extract_gemini_generate_content_usage", "extract_gemini_live_usage", "extract_bedrock_converse_usage", "extract_bedrock_invoke_model_usage", "extract_cohere_chat_usage", "extract_cohere_rerank_usage"], "types": [] },
+        "javascript": { "runtime": ["extractAnthropicMessagesUsage", "extractGeminiGenerateContentUsage", "extractGeminiLiveUsage", "extractBedrockConverseUsage", "extractBedrockInvokeModelUsage", "extractCohereChatUsage", "extractCohereRerankUsage"], "types": [] },
         "go": { "runtime": ["ExtractUsageLedger"], "types": [] }
       }
     },

@@ -1,0 +1,131 @@
+{
+  "name": "gemini-live-translate-raw-audio-usage",
+  "description": "Extracts Gemini Live API usageMetadata audio modality fields for Live Translate input and response audio tokens.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR",
+      "RC-GEMINI-LIVE"
+    ],
+    "provider": "google",
+    "surface": "google.gemini.live",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:input_audio_tokens",
+      "component:output_audio_tokens",
+      "gemini",
+      "live_api",
+      "live_translate",
+      "raw_provider_response"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "usageMetadata": {
+        "promptTokenCount": 250,
+        "promptTokensDetails": [
+          {
+            "modality": "AUDIO",
+            "tokenCount": 250
+          }
+        ],
+        "responseTokenCount": 500,
+        "responseTokensDetails": [
+          {
+            "modality": "AUDIO",
+            "tokenCount": 500
+          }
+        ],
+        "totalTokenCount": 750
+      }
+    },
+    "extract": {
+      "provider": "google",
+      "surface": "google.gemini.live",
+      "model": "gemini-3.5-live-translate-preview"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "google:gemini-3.5-live-translate-preview:official-snapshot",
+        "provider": "google",
+        "surface": "google.gemini.live",
+        "model": "gemini-3.5-live-translate-preview",
+        "components": [
+          {
+            "usage_component": "input_audio_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "3.50",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_audio_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "21.00",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "google-official",
+          "url": "https://ai.google.dev/gemini-api/docs/pricing",
+          "retrieved_at": "2026-06-10T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "google",
+      "surface": "google.gemini.live",
+      "model": {
+        "requested": "gemini-3.5-live-translate-preview",
+        "returned": "gemini-3.5-live-translate-preview",
+        "billed": "gemini-3.5-live-translate-preview",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_audio_tokens",
+          "quantity": "250",
+          "unit": "token",
+          "unit_price": "0.0000035",
+          "cost": "0.000875",
+          "price_card_id": "google:gemini-3.5-live-translate-preview:official-snapshot",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_audio_tokens",
+          "quantity": "500",
+          "unit": "token",
+          "unit_price": "0.000021",
+          "cost": "0.0105",
+          "price_card_id": "google:gemini-3.5-live-translate-preview:official-snapshot",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.011375",
+      "price_sources": [
+        {
+          "name": "google-official",
+          "url": "https://ai.google.dev/gemini-api/docs/pricing",
+          "retrieved_at": "2026-06-10T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

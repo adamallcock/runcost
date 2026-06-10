@@ -18,7 +18,7 @@ import (
 var defaultSourceCacheJSON []byte
 
 // DefaultPriceSourcePriority is the recommended source priority for the bundled catalog.
-var DefaultPriceSourcePriority = []string{"xai-official", "llm-prices", "models.dev", "litellm", "openrouter"}
+var DefaultPriceSourcePriority = []string{"anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"}
 
 var componentOrder = func() map[string]int {
 	orders := map[string]int{}
@@ -582,7 +582,18 @@ func asSlice(value any) []any {
 	if value == nil {
 		return nil
 	}
-	return value.([]any)
+	switch typed := value.(type) {
+	case []any:
+		return typed
+	case []string:
+		result := make([]any, len(typed))
+		for index, item := range typed {
+			result[index] = item
+		}
+		return result
+	default:
+		return value.([]any)
+	}
 }
 
 func asString(value any) string {
@@ -955,9 +966,21 @@ func modelNameLooksGemini(value any) bool {
 	return strings.HasPrefix(text, "gemini-") || strings.HasPrefix(text, "google/gemini-")
 }
 
+func modelNameLooksGeminiLiveTranslate(value any) bool {
+	text := strings.ToLower(fmt.Sprint(value))
+	return text == "gemini-3.5-live-translate-preview" || text == "google/gemini-3.5-live-translate-preview"
+}
+
 func modelNameLooksXAI(value any) bool {
 	text := strings.ToLower(fmt.Sprint(value))
 	return strings.HasPrefix(text, "grok-") || strings.HasPrefix(text, "xai/")
+}
+
+var geminiOutputPriceFallbackComponents = []string{
+	"output_text_tokens",
+	"output_audio_tokens",
+	"output_image_tokens",
+	"output_video_tokens",
 }
 
 func geminiThinkingPricedAsOutputApplies(usageLedger Object, card Object) bool {
@@ -969,7 +992,7 @@ func geminiThinkingPricedAsOutputApplies(usageLedger Object, card Object) bool {
 	if surface == "" {
 		surface = strings.ToLower(asString(card["surface"]))
 	}
-	if provider != "google" && provider != "vertex" && provider != "google-vertex" && !strings.Contains(surface, "gemini.generate_content") {
+	if provider != "google" && provider != "vertex" && provider != "google-vertex" && !strings.Contains(surface, "gemini.") {
 		return false
 	}
 	if modelNameLooksGemini(billedModel(usageLedger)) || modelNameLooksGemini(card["model"]) {
@@ -983,35 +1006,99 @@ func geminiThinkingPricedAsOutputApplies(usageLedger Object, card Object) bool {
 	return false
 }
 
+func appendUniqueString(values []string, value string) []string {
+	if value == "" {
+		return values
+	}
+	for _, existing := range values {
+		if existing == value {
+			return values
+		}
+	}
+	return append(values, value)
+}
+
+func stringInSlice(values []string, value string) bool {
+	for _, existing := range values {
+		if existing == value {
+			return true
+		}
+	}
+	return false
+}
+
+func geminiThinkingOutputComponentCandidates(usageLedger Object, card Object) []string {
+	surface := strings.ToLower(asString(usageLedger["surface"]))
+	if surface == "" {
+		surface = strings.ToLower(asString(card["surface"]))
+	}
+	isLiveTranslate := surface == "google.gemini.live" &&
+		(modelNameLooksGeminiLiveTranslate(billedModel(usageLedger)) || modelNameLooksGeminiLiveTranslate(card["model"]))
+	if !isLiveTranslate {
+		for _, alias := range asSlice(card["aliases"]) {
+			if modelNameLooksGeminiLiveTranslate(alias) {
+				isLiveTranslate = true
+				break
+			}
+		}
+	}
+
+	candidates := []string{}
+	if isLiveTranslate {
+		candidates = appendUniqueString(candidates, "output_audio_tokens")
+	}
+	for _, rawComponent := range asSlice(usageLedger["components"]) {
+		component := asObject(rawComponent)
+		name := asString(component["name"])
+		if asString(component["unit"]) == "token" &&
+			stringInSlice(geminiOutputPriceFallbackComponents, name) &&
+			rat(component["quantity"]).Sign() > 0 {
+			candidates = appendUniqueString(candidates, name)
+		}
+	}
+	for _, componentName := range geminiOutputPriceFallbackComponents {
+		candidates = appendUniqueString(candidates, componentName)
+	}
+	return candidates
+}
+
 func geminiThinkingPricedAsOutputMatches(usageLedger Object, matchingCards []Object, component Object) []Object {
 	if asString(component["name"]) != "output_reasoning_tokens" || asString(component["unit"]) != "token" {
 		return nil
 	}
-	outputComponent := Object{"name": "output_text_tokens", "unit": component["unit"]}
-	matches := []Object{}
-	for _, match := range findPriceComponents(usageLedger, matchingCards, outputComponent) {
-		card := asObject(match["card"])
-		if !geminiThinkingPricedAsOutputApplies(usageLedger, card) {
-			continue
+	for _, outputComponentName := range geminiOutputPriceFallbackComponents {
+		outputComponent := Object{"name": outputComponentName, "unit": component["unit"]}
+		matches := []Object{}
+		for _, match := range findPriceComponents(usageLedger, matchingCards, outputComponent) {
+			card := asObject(match["card"])
+			if !geminiThinkingPricedAsOutputApplies(usageLedger, card) {
+				continue
+			}
+			if !stringInSlice(geminiThinkingOutputComponentCandidates(usageLedger, card), outputComponentName) {
+				continue
+			}
+			if sourceCapabilityUnsupported(card, "output_reasoning_tokens") {
+				continue
+			}
+			priceComponent := cloneObject(asObject(match["price_component"]))
+			priceComponent["usage_component"] = "output_reasoning_tokens"
+			if asString(priceComponent["notes"]) == "" {
+				priceComponent["notes"] = "Gemini thinking tokens are priced at the output-token rate."
+			}
+			matches = append(matches, Object{
+				"card":            card,
+				"price_component": priceComponent,
+				"component_metadata": Object{
+					"pricing_policy":      "gemini_thinking_tokens_priced_as_output_tokens",
+					"priced_as_component": outputComponentName,
+				},
+			})
 		}
-		if sourceCapabilityUnsupported(card, "output_reasoning_tokens") {
-			continue
+		if len(matches) > 0 {
+			return matches
 		}
-		priceComponent := cloneObject(asObject(match["price_component"]))
-		priceComponent["usage_component"] = "output_reasoning_tokens"
-		if asString(priceComponent["notes"]) == "" {
-			priceComponent["notes"] = "Gemini thinking tokens are priced at the output-token rate."
-		}
-		matches = append(matches, Object{
-			"card":            card,
-			"price_component": priceComponent,
-			"component_metadata": Object{
-				"pricing_policy":      "gemini_thinking_tokens_priced_as_output_tokens",
-				"priced_as_component": "output_text_tokens",
-			},
-		})
 	}
-	return matches
+	return nil
 }
 
 func xaiReasoningPricedAsOutputApplies(usageLedger Object, card Object) bool {
@@ -2075,6 +2162,17 @@ func compactComponents(values []any) []any {
 	return result
 }
 
+func appendComponentsAround(components []any, before []any, middle any) []any {
+	if len(before) > 0 {
+		components = append(components, before[0])
+	}
+	components = append(components, middle)
+	if len(before) > 1 {
+		components = append(components, before[1:]...)
+	}
+	return components
+}
+
 var xaiServerSideToolUsageComponentMap = map[string][2]string{
 	"SERVER_SIDE_TOOL_WEB_SEARCH":         {"web_search_units", "search"},
 	"SERVER_SIDE_TOOL_IMAGE_SEARCH":       {"web_search_units", "search"},
@@ -2288,6 +2386,8 @@ func ExtractUsageLedger(response Object, options Object) Object {
 		return extractAnthropicMessagesUsage(response, options)
 	case "google.gemini.generate_content", "vertex.gemini.generate_content":
 		return extractGeminiGenerateContentUsage(response, options)
+	case "google.gemini.live":
+		return extractGeminiLiveUsage(response, options)
 	case "aws.bedrock.converse":
 		return extractBedrockConverseUsage(response, options)
 	case "aws.bedrock.invoke_model":
@@ -3269,12 +3369,109 @@ func extractGeminiGenerateContentUsage(response Object, options Object) Object {
 	}
 
 	components := []any{}
-	components = append(components, inputComponents[:1]...)
-	components = append(components, positiveComponent("input_cache_read_tokens", cacheRead, "token", "$.usageMetadata.cachedContentTokenCount"))
-	components = append(components, inputComponents[1:]...)
-	components = append(components, outputComponents[:1]...)
-	components = append(components, positiveComponent("output_reasoning_tokens", thoughts, "token", "$.usageMetadata.thoughtsTokenCount"))
-	components = append(components, outputComponents[1:]...)
+	components = appendComponentsAround(
+		components,
+		inputComponents,
+		positiveComponent("input_cache_read_tokens", cacheRead, "token", "$.usageMetadata.cachedContentTokenCount"),
+	)
+	components = appendComponentsAround(
+		components,
+		outputComponents,
+		positiveComponent("output_reasoning_tokens", thoughts, "token", "$.usageMetadata.thoughtsTokenCount"),
+	)
+
+	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents(components), usage)
+}
+
+func extractGeminiLiveUsage(response Object, options Object) Object {
+	response = geminiGenerateContentPayload(response)
+	requestedModel := asString(options["model"])
+	if requestedModel == "" {
+		requestedModel = asString(response["modelVersion"])
+	}
+	returnedModel := asString(response["modelVersion"])
+	if returnedModel == "" {
+		returnedModel = requestedModel
+	}
+	isLiveTranslate := modelNameLooksGeminiLiveTranslate(requestedModel) || modelNameLooksGeminiLiveTranslate(returnedModel)
+	inputFallbackComponent := "input_uncached_tokens"
+	outputFallbackComponent := "output_text_tokens"
+	if isLiveTranslate {
+		inputFallbackComponent = "input_audio_tokens"
+		outputFallbackComponent = "output_audio_tokens"
+	}
+	usage := asObject(response["usageMetadata"])
+	cachedInput := getNumber(usage, "cachedContentTokenCount")
+	prompt := getNumber(usage, "promptTokenCount")
+	responseTokens := getNumber(usage, "responseTokenCount")
+	thoughts := getNumber(usage, "thoughtsTokenCount")
+	promptCounts := geminiModalityCounts(usage["promptTokensDetails"])
+	cacheCounts := geminiModalityCounts(usage["cacheTokensDetails"])
+	toolCounts := geminiModalityCounts(usage["toolUsePromptTokensDetails"])
+	responseCounts := geminiModalityCounts(usage["responseTokensDetails"])
+	toolPrompt := getNumber(usage, "toolUsePromptTokenCount")
+	if _, hasToolPrompt := usage["toolUsePromptTokenCount"]; !hasToolPrompt {
+		toolPrompt = geminiSumCounts(toolCounts)
+	}
+	toolRemainder := subtract(toolPrompt, geminiSumCounts(toolCounts))
+	if rat(toolRemainder).Sign() > 0 {
+		addGeminiCount(toolCounts, "TEXT", toolRemainder)
+	}
+
+	detailSafeForInput := len(promptCounts) > 0 && (rat(cachedInput).Sign() == 0 || len(cacheCounts) > 0)
+	var inputComponents []any
+	cacheRead := cachedInput
+	if detailSafeForInput {
+		inputComponents = geminiOrderedComponents(
+			geminiComponentQuantities(
+				geminiNetInputCounts(promptCounts, cacheCounts, toolCounts),
+				geminiInputModalityComponents,
+				"input_uncached_tokens",
+			),
+			geminiInputComponentOrder,
+			"$.usageMetadata.promptTokensDetails",
+		)
+		if rat(cachedInput).Sign() == 0 {
+			cacheRead = geminiSumCounts(cacheCounts)
+		}
+	} else {
+		inputComponents = []any{
+			positiveComponent(inputFallbackComponent, add(subtract(prompt, cachedInput), toolPrompt), "token", "$.usageMetadata.promptTokenCount"),
+		}
+	}
+
+	var outputComponents []any
+	if len(responseCounts) > 0 {
+		outputComponents = geminiOrderedComponents(
+			geminiComponentQuantities(responseCounts, geminiOutputModalityComponents, "output_text_tokens"),
+			geminiOutputComponentOrder,
+			"$.usageMetadata.responseTokensDetails",
+		)
+	} else {
+		outputComponents = []any{
+			positiveComponent(outputFallbackComponent, responseTokens, "token", "$.usageMetadata.responseTokenCount"),
+		}
+	}
+
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "google"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "google.gemini.live"
+	}
+	components := []any{}
+	components = appendComponentsAround(
+		components,
+		inputComponents,
+		positiveComponent("input_cache_read_tokens", cacheRead, "token", "$.usageMetadata.cachedContentTokenCount"),
+	)
+	components = appendComponentsAround(
+		components,
+		outputComponents,
+		positiveComponent("output_reasoning_tokens", thoughts, "token", "$.usageMetadata.thoughtsTokenCount"),
+	)
 
 	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents(components), usage)
 }
@@ -5304,6 +5501,7 @@ func FromResponse(response Object, options Object, priceCards []any, discountPol
 		surface != "anthropic.messages" &&
 		surface != "google.gemini.generate_content" &&
 		surface != "vertex.gemini.generate_content" &&
+		surface != "google.gemini.live" &&
 		surface != "aws.bedrock.converse" &&
 		surface != "aws.bedrock.invoke_model" &&
 		surface != "cohere.chat" &&
