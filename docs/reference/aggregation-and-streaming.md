@@ -78,6 +78,7 @@ RunCost has initial provider-specific final-usage extraction for selected stream
 - OpenAI Responses `response.completed` event envelopes.
 - Anthropic Messages SSE event collections with `message_start` and cumulative `message_delta.usage`.
 - Gemini / Vertex generateContent stream chunk collections where a final chunk carries `usageMetadata`.
+- Gemini Live API stream/message collections where the final server message carries `usageMetadata`.
 
 RunCost does not estimate billing from arbitrary partial text deltas. The safest contract is still:
 

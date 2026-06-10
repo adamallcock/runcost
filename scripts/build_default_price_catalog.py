@@ -22,6 +22,20 @@ from scripts.refresh_price_sources import (  # noqa: E402
 
 DEFAULT_SOURCES: list[dict[str, str]] = [
     {
+        "source_type": "official-snapshot",
+        "name": "anthropic-official",
+        "url": "https://docs.anthropic.com/en/docs/about-claude/pricing",
+        "input": "fixtures/source-files/anthropic-official-pricing-snapshot.json",
+        "license": "reviewed",
+    },
+    {
+        "source_type": "official-snapshot",
+        "name": "google-official",
+        "url": "https://ai.google.dev/gemini-api/docs/pricing",
+        "input": "fixtures/source-files/google-official-pricing-snapshot.json",
+        "license": "reviewed",
+    },
+    {
         "preset": "llm-prices-current",
         "name": "llm-prices",
         "license": "source-specific",
@@ -57,7 +71,7 @@ DEFAULT_OUTPUTS = [
     ROOT / "packages" / "go" / "ledger" / "data" / "default-source-cache.json",
 ]
 
-DEFAULT_PRIORITY = ["xai-official", "llm-prices", "models.dev", "litellm", "openrouter"]
+DEFAULT_PRIORITY = ["anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"]
 
 
 def source_config(raw_config: dict[str, str]) -> dict[str, str]:

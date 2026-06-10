@@ -16,6 +16,18 @@ limitations.
 
 - No unreleased changes yet.
 
+## 0.1.6
+
+- Add reviewed Claude Fable/Mythos and Gemini Live Translate pricing snapshots
+  to the bundled default catalog.
+- Add Gemini Live Translate extraction for audio input/output usage, streaming
+  final usage chunks, aggregate audio-only usage, and transcript text output.
+- Price Gemini Live Translate thinking tokens against the applicable output
+  modality when the provider reports thinking without a dedicated reasoning
+  price.
+- Strengthen package install smokes so Python, JavaScript, and Go execute the
+  Gemini Live Translate fixture against the packaged default catalog.
+
 ## 0.1.5
 
 - Price reported xAI/Grok reasoning tokens at the matching output-token rate

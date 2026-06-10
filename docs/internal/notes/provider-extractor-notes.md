@@ -229,6 +229,38 @@ Notes:
 
 - Modality-aware input splitting only runs when prompt details are present and cache details are available for cached responses. This avoids double-counting cached media tokens when a response has an aggregate cache count but no per-modality cache detail.
 
+## Google Gemini Live API
+
+Surface:
+
+- `google.gemini.live`
+
+Source references:
+
+- Gemini Live API server messages include top-level `usageMetadata` on `BidiGenerateContentServerMessage`: https://ai.google.dev/api/live
+- Gemini Live API `UsageMetadata` documents `promptTokenCount`, `responseTokenCount`, `totalTokenCount`, `promptTokensDetails`, `cacheTokensDetails`, `responseTokensDetails`, and related tool/thought token fields: https://ai.google.dev/api/live
+- Gemini 3.5 Live Translate model docs list `gemini-3.5-live-translate-preview` with audio input and audio/text output through the Live API: https://ai.google.dev/gemini-api/docs/models/gemini-3.5-live-translate-preview
+
+Mapping:
+
+- Non-streaming/final server-message responses read usage from top-level `usageMetadata`.
+- Streaming or collected server-message responses read usage from the last `chunks` or `stream` item with `usageMetadata`.
+- Aggregate fallback: `usageMetadata.promptTokenCount` minus `usageMetadata.cachedContentTokenCount`, plus `usageMetadata.toolUsePromptTokenCount` when present, -> `input_uncached_tokens`.
+- Aggregate fallback: `usageMetadata.cachedContentTokenCount` -> `input_cache_read_tokens`.
+- `usageMetadata.promptTokensDetails` -> modality-aware input components using the same Gemini modality map as generateContent. `AUDIO` maps to `input_audio_tokens`.
+- `usageMetadata.cacheTokensDetails` subtracts matching modality counts from uncached/media input components when cache details are available.
+- `usageMetadata.toolUsePromptTokensDetails` adds tool-use prompt tokens to the matching input modality component. If details are missing but `toolUsePromptTokenCount` exists, the extractor adds the aggregate to `input_uncached_tokens`.
+- `usageMetadata.responseTokensDetails` -> modality-aware output components. `AUDIO` maps to `output_audio_tokens`; `TEXT`, `DOCUMENT`, and `MODALITY_UNSPECIFIED` map to `output_text_tokens`.
+- Aggregate fallback: for `gemini-3.5-live-translate-preview`, `usageMetadata.promptTokenCount` -> `input_audio_tokens` and `usageMetadata.responseTokenCount` -> `output_audio_tokens` when modality details are absent. Other Live models fall back to text until they have fixture-backed modality rules.
+- `usageMetadata.thoughtsTokenCount` -> `output_reasoning_tokens`; when the price card has no direct reasoning price, Gemini thinking tokens price at the applicable output-token rate. For Live Translate, that means `output_audio_tokens`.
+- `usageMetadata.totalTokenCount` is preserved in raw usage but is never priced directly.
+
+Pricing notes:
+
+- `gemini-3.5-live-translate-preview` is bundled through the reviewed `google-official` default source with `input_audio_tokens` and `output_audio_tokens` prices from the Gemini pricing page.
+- The model can return transcript text alongside translated audio. The reviewed `google-official` card marks `output_text_tokens` unsupported because the pricing page publishes audio-token rates for this model, not a separate transcript text-token rate.
+- The Google pricing page states Live Translate billing is based on audio token consumption at 25 tokens per second. RunCost prices the provider-reported token counts; it does not infer token counts from minutes.
+
 ## AWS Bedrock Converse
 
 Surface:

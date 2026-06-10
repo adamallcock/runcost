@@ -102,6 +102,41 @@ def check_python_install(source_root: Path, workdir: Path) -> None:
         ],
         workdir,
     )
+    run([str(python), "-c", "from runcost import extract_gemini_live_usage; print(extract_gemini_live_usage)"], workdir)
+    python_live_check = workdir / "python-live-check.py"
+    python_live_check.write_text(
+        """
+from runcost import DEFAULT_PRICE_SOURCE_PRIORITY, default_price_cards, from_response
+
+model = "gemini-3.5-live-translate-preview"
+ledger = from_response(
+    {
+        "modelVersion": model,
+        "usageMetadata": {
+            "promptTokenCount": 250,
+            "promptTokensDetails": [{"modality": "AUDIO", "tokenCount": 250}],
+            "responseTokenCount": 500,
+            "responseTokensDetails": [{"modality": "AUDIO", "tokenCount": 500}],
+            "totalTokenCount": 750,
+        },
+    },
+    provider="google",
+    surface="google.gemini.live",
+    model=model,
+    price_cards=default_price_cards(),
+    price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+)
+components = {component["name"]: component for component in ledger["components"]}
+sources = {source["name"] for source in ledger["price_sources"]}
+assert ledger["total"] == "0.011375", ledger
+assert components["input_audio_tokens"]["quantity"] == "250", ledger
+assert components["output_audio_tokens"]["quantity"] == "500", ledger
+assert sources == {"google-official"}, ledger
+print("python gemini live package smoke passed")
+""",
+        encoding="utf-8",
+    )
+    run([str(python), str(python_live_check)], workdir)
     run(
         [
             str(venv_dir / "bin" / "runcost"),
@@ -139,6 +174,43 @@ def check_javascript_install(source_root: Path, workdir: Path) -> None:
         ],
         project_dir,
     )
+    run(
+        ["node", "--input-type=module", "-e", 'import { extractGeminiLiveUsage } from "runcost"; console.log(typeof extractGeminiLiveUsage);'],
+        project_dir,
+    )
+    js_live_check = project_dir / "live-check.mjs"
+    js_live_check.write_text(
+        """
+import { DEFAULT_PRICE_SOURCE_PRIORITY, defaultPriceCards, fromResponse } from "runcost";
+
+const model = "gemini-3.5-live-translate-preview";
+const ledger = fromResponse({
+  modelVersion: model,
+  usageMetadata: {
+    promptTokenCount: 250,
+    promptTokensDetails: [{ modality: "AUDIO", tokenCount: 250 }],
+    responseTokenCount: 500,
+    responseTokensDetails: [{ modality: "AUDIO", tokenCount: 500 }],
+    totalTokenCount: 750
+  }
+}, {
+  provider: "google",
+  surface: "google.gemini.live",
+  model,
+  priceCards: defaultPriceCards(),
+  priceSourcePriority: DEFAULT_PRICE_SOURCE_PRIORITY
+});
+const components = Object.fromEntries(ledger.components.map((component) => [component.name, component]));
+const sources = new Set(ledger.price_sources.map((source) => source.name));
+if (ledger.total !== "0.011375") throw new Error(JSON.stringify(ledger));
+if (components.input_audio_tokens.quantity !== "250") throw new Error(JSON.stringify(ledger));
+if (components.output_audio_tokens.quantity !== "500") throw new Error(JSON.stringify(ledger));
+if (sources.size !== 1 || !sources.has("google-official")) throw new Error(JSON.stringify(ledger));
+console.log("javascript gemini live package smoke passed");
+""",
+        encoding="utf-8",
+    )
+    run(["node", str(js_live_check)], project_dir)
 
 
 def check_go_install(source_root: Path, workdir: Path) -> None:
@@ -167,8 +239,44 @@ func TestImport(t *testing.T) {
     if len(ledger.DefaultPriceCards()) < 7000 {
         t.Fatalf("unexpected bundled default price card count: %d", len(ledger.DefaultPriceCards()))
     }
-    if len(ledger.DefaultPriceSourcePriority) == 0 || ledger.DefaultPriceSourcePriority[0] != "xai-official" {
+    if len(ledger.DefaultPriceSourcePriority) == 0 || ledger.DefaultPriceSourcePriority[0] != "anthropic-official" {
         t.Fatalf("unexpected default price priority: %#v", ledger.DefaultPriceSourcePriority)
+    }
+    model := "gemini-3.5-live-translate-preview"
+    liveResult := ledger.FromResponse(
+        ledger.Object{
+            "modelVersion": model,
+            "usageMetadata": ledger.Object{
+                "promptTokenCount": 250,
+                "promptTokensDetails": []any{ledger.Object{"modality": "AUDIO", "tokenCount": 250}},
+                "responseTokenCount": 500,
+                "responseTokensDetails": []any{ledger.Object{"modality": "AUDIO", "tokenCount": 500}},
+                "totalTokenCount": 750,
+            },
+        },
+        ledger.Object{
+            "provider": "google",
+            "surface": "google.gemini.live",
+            "model": model,
+            "price_source_priority": ledger.DefaultPriceSourcePriority,
+        },
+        ledger.DefaultPriceCards(),
+        nil,
+    )
+    if liveResult["total"] != "0.011375" {
+        t.Fatalf("unexpected Gemini Live total: %#v", liveResult)
+    }
+    liveComponents := map[string]ledger.Object{}
+    for _, rawComponent := range liveResult["components"].([]any) {
+        component := rawComponent.(ledger.Object)
+        liveComponents[component["name"].(string)] = component
+    }
+    if liveComponents["input_audio_tokens"]["quantity"] != "250" || liveComponents["output_audio_tokens"]["quantity"] != "500" {
+        t.Fatalf("unexpected Gemini Live components: %#v", liveResult)
+    }
+    liveSources := liveResult["price_sources"].([]any)
+    if len(liveSources) != 1 || liveSources[0].(ledger.Object)["name"] != "google-official" {
+        t.Fatalf("unexpected Gemini Live price sources: %#v", liveResult)
     }
     result := ledger.AggregateCostLedgers([]any{}, ledger.Object{
         "stream_final_usage_expected": true,
