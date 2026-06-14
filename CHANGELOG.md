@@ -16,6 +16,17 @@ limitations.
 
 - No unreleased changes yet.
 
+## 0.1.7
+
+- Default reported reasoning tokens to the matching output-token price when a
+  provider publishes output pricing but no separate reasoning price.
+- Preserve direct reasoning-token prices and explicit unsupported-component
+  warnings ahead of the default fallback.
+- Prefer the active output modality for fallback pricing, including Gemini Live
+  Translate audio thinking tokens when both text and audio output prices exist.
+- Add shared Python, JavaScript, and Go fixtures plus a decision record for the
+  cross-provider fallback policy.
+
 ## 0.1.6
 
 - Add reviewed Claude Fable/Mythos and Gemini Live Translate pricing snapshots

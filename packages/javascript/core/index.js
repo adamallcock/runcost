@@ -491,12 +491,40 @@ function modelNameLooksXAI(value) {
   return text.startsWith("grok-") || text.startsWith("xai/");
 }
 
-const GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS = [
+const OUTPUT_PRICE_FALLBACK_COMPONENTS = [
   "output_text_tokens",
   "output_audio_tokens",
   "output_image_tokens",
   "output_video_tokens"
 ];
+
+function outputPriceFallbackComponentCandidates(usageLedger, preferred = []) {
+  const candidates = [];
+  for (const componentName of preferred) {
+    if (
+      OUTPUT_PRICE_FALLBACK_COMPONENTS.includes(componentName) &&
+      !candidates.includes(componentName)
+    ) {
+      candidates.push(componentName);
+    }
+  }
+  for (const component of usageLedger.components || []) {
+    if (
+      component.unit === "token" &&
+      OUTPUT_PRICE_FALLBACK_COMPONENTS.includes(component.name) &&
+      isPositiveDecimal(component.quantity || "0") &&
+      !candidates.includes(component.name)
+    ) {
+      candidates.push(component.name);
+    }
+  }
+  for (const componentName of OUTPUT_PRICE_FALLBACK_COMPONENTS) {
+    if (!candidates.includes(componentName)) {
+      candidates.push(componentName);
+    }
+  }
+  return candidates;
+}
 
 function geminiThinkingPricedAsOutputApplies(usageLedger, card) {
   const provider = String(usageLedger.provider || card.provider || "").toLowerCase();
@@ -521,27 +549,30 @@ function geminiThinkingOutputComponentCandidates(usageLedger, card) {
   ];
   const isLiveTranslate = surface === "google.gemini.live" &&
     modelNames.some(modelNameLooksGeminiLiveTranslate);
-  const componentNames = (usageLedger.components || [])
-    .filter((component) => (
-      component.unit === "token" &&
-      GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS.includes(component.name) &&
-      isPositiveDecimal(component.quantity || "0")
-    ))
-    .map((component) => component.name);
-  const preferred = [];
-  if (isLiveTranslate) {
-    preferred.push("output_audio_tokens");
+  const preferred = isLiveTranslate ? ["output_audio_tokens"] : [];
+  return outputPriceFallbackComponentCandidates(usageLedger, preferred);
+}
+
+function geminiThinkingOutputComponentNames(usageLedger, candidateCards) {
+  const componentNames = [];
+  for (const card of candidateCards) {
+    if (!geminiThinkingPricedAsOutputApplies(usageLedger, card)) {
+      continue;
+    }
+    for (const componentName of geminiThinkingOutputComponentCandidates(usageLedger, card)) {
+      if (!componentNames.includes(componentName)) {
+        componentNames.push(componentName);
+      }
+    }
   }
-  preferred.push(...componentNames);
-  preferred.push(...GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS);
-  return [...new Set(preferred)];
+  return componentNames;
 }
 
 function geminiThinkingPricedAsOutputMatches(usageLedger, candidateCards, component) {
   if (component.name !== "output_reasoning_tokens" || component.unit !== "token") {
     return [];
   }
-  for (const outputComponentName of GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS) {
+  for (const outputComponentName of geminiThinkingOutputComponentNames(usageLedger, candidateCards)) {
     const outputComponent = {
       name: outputComponentName,
       unit: component.unit
@@ -608,11 +639,46 @@ function xaiReasoningPricedAsOutputMatches(usageLedger, candidateCards, componen
     }));
 }
 
+function genericReasoningPricedAsOutputMatches(usageLedger, candidateCards, component) {
+  if (component.name !== "output_reasoning_tokens" || component.unit !== "token") {
+    return [];
+  }
+  for (const outputComponentName of outputPriceFallbackComponentCandidates(usageLedger)) {
+    const outputComponent = {
+      name: outputComponentName,
+      unit: component.unit
+    };
+    const matches = findPriceComponents(usageLedger, candidateCards, outputComponent)
+      .filter(({ card }) => !sourceCapabilityUnsupported(card, "output_reasoning_tokens"))
+      .map(({ card, priceComponent }) => ({
+        card,
+        priceComponent: {
+          ...priceComponent,
+          usage_component: "output_reasoning_tokens",
+          notes: priceComponent.notes || "Reasoning tokens are priced at the output-token rate by default."
+        },
+        componentMetadata: {
+          pricing_policy: "reasoning_tokens_priced_as_output_tokens",
+          priced_as_component: outputComponentName,
+          fallback_reason: "no_separate_reasoning_price"
+        }
+      }));
+    if (matches.length > 0) {
+      return matches;
+    }
+  }
+  return [];
+}
+
 function outputReasoningPricedAsOutputMatches(usageLedger, candidateCards, component) {
-  return [
+  const providerSpecificMatches = [
     ...geminiThinkingPricedAsOutputMatches(usageLedger, candidateCards, component),
     ...xaiReasoningPricedAsOutputMatches(usageLedger, candidateCards, component)
   ];
+  if (providerSpecificMatches.length > 0) {
+    return providerSpecificMatches;
+  }
+  return genericReasoningPricedAsOutputMatches(usageLedger, candidateCards, component);
 }
 
 function noMatchingCardWarning(usageLedger, priceCards) {

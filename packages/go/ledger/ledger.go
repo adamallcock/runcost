@@ -976,11 +976,33 @@ func modelNameLooksXAI(value any) bool {
 	return strings.HasPrefix(text, "grok-") || strings.HasPrefix(text, "xai/")
 }
 
-var geminiOutputPriceFallbackComponents = []string{
+var outputPriceFallbackComponents = []string{
 	"output_text_tokens",
 	"output_audio_tokens",
 	"output_image_tokens",
 	"output_video_tokens",
+}
+
+func outputPriceFallbackComponentCandidates(usageLedger Object, preferred []string) []string {
+	candidates := []string{}
+	for _, componentName := range preferred {
+		if stringInSlice(outputPriceFallbackComponents, componentName) {
+			candidates = appendUniqueString(candidates, componentName)
+		}
+	}
+	for _, rawComponent := range asSlice(usageLedger["components"]) {
+		component := asObject(rawComponent)
+		name := asString(component["name"])
+		if asString(component["unit"]) == "token" &&
+			stringInSlice(outputPriceFallbackComponents, name) &&
+			rat(component["quantity"]).Sign() > 0 {
+			candidates = appendUniqueString(candidates, name)
+		}
+	}
+	for _, componentName := range outputPriceFallbackComponents {
+		candidates = appendUniqueString(candidates, componentName)
+	}
+	return candidates
 }
 
 func geminiThinkingPricedAsOutputApplies(usageLedger Object, card Object) bool {
@@ -1043,30 +1065,31 @@ func geminiThinkingOutputComponentCandidates(usageLedger Object, card Object) []
 		}
 	}
 
-	candidates := []string{}
+	preferred := []string{}
 	if isLiveTranslate {
-		candidates = appendUniqueString(candidates, "output_audio_tokens")
+		preferred = append(preferred, "output_audio_tokens")
 	}
-	for _, rawComponent := range asSlice(usageLedger["components"]) {
-		component := asObject(rawComponent)
-		name := asString(component["name"])
-		if asString(component["unit"]) == "token" &&
-			stringInSlice(geminiOutputPriceFallbackComponents, name) &&
-			rat(component["quantity"]).Sign() > 0 {
-			candidates = appendUniqueString(candidates, name)
+	return outputPriceFallbackComponentCandidates(usageLedger, preferred)
+}
+
+func geminiThinkingOutputComponentNames(usageLedger Object, matchingCards []Object) []string {
+	componentNames := []string{}
+	for _, card := range matchingCards {
+		if !geminiThinkingPricedAsOutputApplies(usageLedger, card) {
+			continue
+		}
+		for _, componentName := range geminiThinkingOutputComponentCandidates(usageLedger, card) {
+			componentNames = appendUniqueString(componentNames, componentName)
 		}
 	}
-	for _, componentName := range geminiOutputPriceFallbackComponents {
-		candidates = appendUniqueString(candidates, componentName)
-	}
-	return candidates
+	return componentNames
 }
 
 func geminiThinkingPricedAsOutputMatches(usageLedger Object, matchingCards []Object, component Object) []Object {
 	if asString(component["name"]) != "output_reasoning_tokens" || asString(component["unit"]) != "token" {
 		return nil
 	}
-	for _, outputComponentName := range geminiOutputPriceFallbackComponents {
+	for _, outputComponentName := range geminiThinkingOutputComponentNames(usageLedger, matchingCards) {
 		outputComponent := Object{"name": outputComponentName, "unit": component["unit"]}
 		matches := []Object{}
 		for _, match := range findPriceComponents(usageLedger, matchingCards, outputComponent) {
@@ -1155,11 +1178,48 @@ func xaiReasoningPricedAsOutputMatches(usageLedger Object, matchingCards []Objec
 	return matches
 }
 
+func genericReasoningPricedAsOutputMatches(usageLedger Object, matchingCards []Object, component Object) []Object {
+	if asString(component["name"]) != "output_reasoning_tokens" || asString(component["unit"]) != "token" {
+		return nil
+	}
+	for _, outputComponentName := range outputPriceFallbackComponentCandidates(usageLedger, nil) {
+		outputComponent := Object{"name": outputComponentName, "unit": component["unit"]}
+		matches := []Object{}
+		for _, match := range findPriceComponents(usageLedger, matchingCards, outputComponent) {
+			card := asObject(match["card"])
+			if sourceCapabilityUnsupported(card, "output_reasoning_tokens") {
+				continue
+			}
+			priceComponent := cloneObject(asObject(match["price_component"]))
+			priceComponent["usage_component"] = "output_reasoning_tokens"
+			if asString(priceComponent["notes"]) == "" {
+				priceComponent["notes"] = "Reasoning tokens are priced at the output-token rate by default."
+			}
+			matches = append(matches, Object{
+				"card":            card,
+				"price_component": priceComponent,
+				"component_metadata": Object{
+					"pricing_policy":      "reasoning_tokens_priced_as_output_tokens",
+					"priced_as_component": outputComponentName,
+					"fallback_reason":     "no_separate_reasoning_price",
+				},
+			})
+		}
+		if len(matches) > 0 {
+			return matches
+		}
+	}
+	return nil
+}
+
 func outputReasoningPricedAsOutputMatches(usageLedger Object, matchingCards []Object, component Object) []Object {
-	matches := []Object{}
-	matches = append(matches, geminiThinkingPricedAsOutputMatches(usageLedger, matchingCards, component)...)
-	matches = append(matches, xaiReasoningPricedAsOutputMatches(usageLedger, matchingCards, component)...)
-	return matches
+	providerSpecificMatches := []Object{}
+	providerSpecificMatches = append(providerSpecificMatches, geminiThinkingPricedAsOutputMatches(usageLedger, matchingCards, component)...)
+	providerSpecificMatches = append(providerSpecificMatches, xaiReasoningPricedAsOutputMatches(usageLedger, matchingCards, component)...)
+	if len(providerSpecificMatches) > 0 {
+		return providerSpecificMatches
+	}
+	return genericReasoningPricedAsOutputMatches(usageLedger, matchingCards, component)
 }
 
 func hasPriceCardForUsage(usageLedger Object, priceCards []any) bool {
