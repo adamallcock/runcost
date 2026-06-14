@@ -381,12 +381,34 @@ def _model_name_looks_xai(value: Any) -> bool:
     return text.startswith("grok-") or text.startswith("xai/")
 
 
-GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS = [
+OUTPUT_PRICE_FALLBACK_COMPONENTS = [
     "output_text_tokens",
     "output_audio_tokens",
     "output_image_tokens",
     "output_video_tokens",
 ]
+
+def _output_price_fallback_component_candidates(
+    usage_ledger: Dict[str, Any],
+    preferred: Optional[Iterable[str]] = None,
+) -> List[str]:
+    candidates: List[str] = []
+    for component_name in preferred or []:
+        if component_name in OUTPUT_PRICE_FALLBACK_COMPONENTS and component_name not in candidates:
+            candidates.append(component_name)
+    for component in usage_ledger.get("components", []):
+        component_name = component.get("name")
+        if (
+            component.get("unit") == "token"
+            and component_name in OUTPUT_PRICE_FALLBACK_COMPONENTS
+            and _decimal(component.get("quantity", "0")) > 0
+            and component_name not in candidates
+        ):
+            candidates.append(component_name)
+    for component_name in OUTPUT_PRICE_FALLBACK_COMPONENTS:
+        if component_name not in candidates:
+            candidates.append(component_name)
+    return candidates
 
 
 def _gemini_thinking_priced_as_output_applies(
@@ -405,23 +427,22 @@ def _gemini_thinking_output_component_candidates(usage_ledger: Dict[str, Any], c
     surface = str(usage_ledger.get("surface") or card.get("surface") or "").lower()
     model_names = [_billed_model(usage_ledger), card.get("model"), *card.get("aliases", [])]
     is_live_translate = surface == "google.gemini.live" and any(_model_name_looks_gemini_live_translate(model_name) for model_name in model_names)
-    component_names = [
-        component.get("name")
-        for component in usage_ledger.get("components", [])
-        if component.get("unit") == "token"
-        and component.get("name") in GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS
-        and _decimal(component.get("quantity", "0")) > 0
-    ]
-    preferred: List[str] = []
-    if is_live_translate:
-        preferred.append("output_audio_tokens")
-    preferred.extend(component_names)
-    preferred.extend(GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS)
-    deduped: List[str] = []
-    for component_name in preferred:
-        if component_name not in deduped:
-            deduped.append(component_name)
-    return deduped
+    preferred = ["output_audio_tokens"] if is_live_translate else None
+    return _output_price_fallback_component_candidates(usage_ledger, preferred)
+
+
+def _gemini_thinking_output_component_names(
+    usage_ledger: Dict[str, Any],
+    matching_cards: List[Dict[str, Any]],
+) -> List[str]:
+    component_names: List[str] = []
+    for card in matching_cards:
+        if not _gemini_thinking_priced_as_output_applies(usage_ledger, card):
+            continue
+        for component_name in _gemini_thinking_output_component_candidates(usage_ledger, card):
+            if component_name not in component_names:
+                component_names.append(component_name)
+    return component_names
 
 
 def _gemini_thinking_priced_as_output_matches(
@@ -432,7 +453,7 @@ def _gemini_thinking_priced_as_output_matches(
     if component.get("name") != "output_reasoning_tokens" or component.get("unit") != "token":
         return []
     matches: List[Dict[str, Any]] = []
-    for output_component_name in GEMINI_OUTPUT_PRICE_FALLBACK_COMPONENTS:
+    for output_component_name in _gemini_thinking_output_component_names(usage_ledger, matching_cards):
         output_component = {"name": output_component_name, "unit": component.get("unit")}
         for match in _find_price_components(usage_ledger, matching_cards, output_component):
             card = match["card"]
@@ -503,15 +524,51 @@ def _xai_reasoning_priced_as_output_matches(
     return matches
 
 
+def _generic_reasoning_priced_as_output_matches(
+    usage_ledger: Dict[str, Any],
+    matching_cards: List[Dict[str, Any]],
+    component: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    if component.get("name") != "output_reasoning_tokens" or component.get("unit") != "token":
+        return []
+    for output_component_name in _output_price_fallback_component_candidates(usage_ledger):
+        output_component = {"name": output_component_name, "unit": component.get("unit")}
+        matches: List[Dict[str, Any]] = []
+        for match in _find_price_components(usage_ledger, matching_cards, output_component):
+            card = match["card"]
+            if _source_capability_unsupported(card, "output_reasoning_tokens"):
+                continue
+            price_component = dict(match["price_component"])
+            price_component["usage_component"] = "output_reasoning_tokens"
+            price_component.setdefault("notes", "Reasoning tokens are priced at the output-token rate by default.")
+            matches.append(
+                {
+                    "card": card,
+                    "price_component": price_component,
+                    "component_metadata": {
+                        "pricing_policy": "reasoning_tokens_priced_as_output_tokens",
+                        "priced_as_component": output_component_name,
+                        "fallback_reason": "no_separate_reasoning_price",
+                    },
+                }
+            )
+        if matches:
+            return matches
+    return []
+
+
 def _output_reasoning_priced_as_output_matches(
     usage_ledger: Dict[str, Any],
     matching_cards: List[Dict[str, Any]],
     component: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
-    return [
+    provider_specific_matches = [
         *_gemini_thinking_priced_as_output_matches(usage_ledger, matching_cards, component),
         *_xai_reasoning_priced_as_output_matches(usage_ledger, matching_cards, component),
     ]
+    if provider_specific_matches:
+        return provider_specific_matches
+    return _generic_reasoning_priced_as_output_matches(usage_ledger, matching_cards, component)
 
 
 def _has_price_card_for_usage(

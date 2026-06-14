@@ -1,0 +1,120 @@
+{
+  "name": "reasoning-output-default-pricing",
+  "description": "Defaults reported reasoning tokens to the matching output-token price when a provider publishes output pricing but no separate reasoning price.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-REASONING-OUTPUT-DEFAULT"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "normalized_usage",
+    "tags": [
+      "component:output_reasoning_tokens",
+      "component:output_text_tokens",
+      "reasoning"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-fixture",
+        "returned": "gpt-fixture",
+        "billed": "gpt-fixture",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "output_text_tokens",
+          "quantity": "10",
+          "unit": "token"
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "5",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-fixture:output-only",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-fixture",
+        "components": [
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.01",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-06-14T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-fixture",
+        "returned": "gpt-fixture",
+        "billed": "gpt-fixture",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "output_text_tokens",
+          "quantity": "10",
+          "unit": "token",
+          "unit_price": "0.01",
+          "cost": "0.1",
+          "price_card_id": "openai:gpt-fixture:output-only",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "5",
+          "unit": "token",
+          "unit_price": "0.01",
+          "cost": "0.05",
+          "price_card_id": "openai:gpt-fixture:output-only",
+          "discount_eligible": true,
+          "metadata": {
+            "pricing_policy": "reasoning_tokens_priced_as_output_tokens",
+            "priced_as_component": "output_text_tokens",
+            "fallback_reason": "no_separate_reasoning_price"
+          }
+        }
+      ],
+      "total": "0.15",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-06-14T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}
