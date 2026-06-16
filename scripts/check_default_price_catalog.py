@@ -377,12 +377,107 @@ def check_google_live_translate() -> None:
     )
 
 
+def check_google_service_tiers() -> None:
+    cards = default_price_cards()
+    official_cards = [
+        card for card in cards
+        if card.get("provider") == "google" and (card.get("source") or {}).get("name") == "google-official"
+    ]
+    by_id = {card.get("id"): card for card in official_cards}
+    expected_ids = {
+        "google:gemini-3.5-flash:standard:official-snapshot",
+        "google:gemini-3.5-flash:flex:official-snapshot",
+        "google:gemini-3.5-flash:priority:official-snapshot",
+        "google:gemini-3.1-pro-preview:standard:official-snapshot",
+        "google:gemini-3.1-pro-preview:flex:official-snapshot",
+        "google:gemini-3.1-pro-preview:priority:official-snapshot",
+        "google:gemini-2.5-pro:standard:official-snapshot",
+        "google:gemini-2.5-pro:flex:official-snapshot",
+        "google:gemini-2.5-pro:priority:official-snapshot",
+    }
+    missing = sorted(expected_ids - set(by_id))
+    assert_true(not missing, f"Google official catalog missing service-tier cards: {missing}")
+
+    standard_ledger = from_response(
+        response={
+            "modelVersion": "gemini-3.5-flash",
+            "usageMetadata": {
+                "promptTokenCount": 1000,
+                "candidatesTokenCount": 100,
+                "totalTokenCount": 1100,
+            },
+        },
+        provider="google",
+        surface="google.gemini.generate_content",
+        model="gemini-3.5-flash",
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    standard_components = {component.get("name"): component for component in standard_ledger.get("components", [])}
+    assert_true(standard_ledger["total"] == "0.0024", "Gemini 3.5 Flash default standard total mismatch")
+    assert_true(
+        standard_components["input_uncached_tokens"]["price_card_id"] == "google:gemini-3.5-flash:standard:official-snapshot",
+        "Gemini 3.5 Flash absent serviceTier must select Standard official card",
+    )
+
+    flex_ledger = from_response(
+        response={
+            "modelVersion": "gemini-3.5-flash",
+            "usageMetadata": {
+                "promptTokenCount": 1000,
+                "candidatesTokenCount": 100,
+                "totalTokenCount": 1100,
+                "serviceTier": "flex",
+            },
+        },
+        provider="google",
+        surface="google.gemini.generate_content",
+        model="gemini-3.5-flash",
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    flex_components = {component.get("name"): component for component in flex_ledger.get("components", [])}
+    assert_true(flex_ledger["total"] == "0.0012", "Gemini 3.5 Flash flex total mismatch")
+    assert_true(
+        flex_components["input_uncached_tokens"]["price_card_id"] == "google:gemini-3.5-flash:flex:official-snapshot",
+        "Gemini 3.5 Flash serviceTier flex must select Flex official card",
+    )
+
+    priority_long_context = from_response(
+        response={
+            "modelVersion": "gemini-2.5-pro",
+            "usageMetadata": {
+                "promptTokenCount": 200001,
+                "candidatesTokenCount": 100,
+                "totalTokenCount": 200101,
+                "serviceTier": "priority",
+            },
+        },
+        provider="google",
+        surface="google.gemini.generate_content",
+        model="gemini-2.5-pro",
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    priority_components = {component.get("name"): component for component in priority_long_context.get("components", [])}
+    assert_true(priority_long_context["total"] == "0.9027045", "Gemini 2.5 Pro priority long-context total mismatch")
+    assert_true(
+        priority_components["input_uncached_tokens"]["unit_price"] == "0.0000045",
+        "Gemini 2.5 Pro priority long-context input price mismatch",
+    )
+    assert_true(
+        priority_components["output_text_tokens"]["unit_price"] == "0.000027",
+        "Gemini 2.5 Pro priority long-context output price mismatch",
+    )
+
+
 def main() -> int:
     catalog = check_files_match()
     check_catalog_shape(catalog)
     check_language_loaders()
     check_xai_aliases()
     check_anthropic_fable_mythos()
+    check_google_service_tiers()
     check_google_live_translate()
     print(f"Default price catalog checks passed for {catalog['metadata']['price_card_count']} price cards.")
     return 0

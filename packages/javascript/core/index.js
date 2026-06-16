@@ -265,8 +265,9 @@ function effectiveMatches(card, pricedAt) {
 
 function cardContextMatches(usageLedger, card) {
   const context = usageContext(usageLedger);
+  const requestedServiceTier = context.service_tier || "standard";
   const pricedAt = datePart(context.priced_at);
-  if (context.service_tier && card.service_tier && card.service_tier !== context.service_tier) {
+  if (card.service_tier && card.service_tier !== requestedServiceTier) {
     return false;
   }
   if (context.region && card.region && card.region !== context.region) {
@@ -277,9 +278,10 @@ function cardContextMatches(usageLedger, card) {
 
 function cardScore(usageLedger, card) {
   const context = usageContext(usageLedger);
+  const requestedServiceTier = context.service_tier || "standard";
   let score = 0;
   if (card.surface === usageLedger.surface) score += 8;
-  if (context.service_tier && card.service_tier === context.service_tier) score += 4;
+  if (card.service_tier === requestedServiceTier) score += 4;
   if (context.region && card.region === context.region) score += 2;
   if (card.effective) score += 1;
   return score;
@@ -2190,6 +2192,19 @@ function geminiGenerateContentPayload(response) {
   return response;
 }
 
+function normalizeGeminiServiceTier(value) {
+  if (value === undefined || value === null) return null;
+  let tier = String(value).trim();
+  if (!tier) return null;
+  tier = tier.replace(/^SERVICE_TIER_/, "").toLowerCase();
+  return tier === "unspecified" ? "standard" : tier;
+}
+
+function geminiUsageContext(usage) {
+  const serviceTier = normalizeGeminiServiceTier(usage.serviceTier ?? usage.service_tier);
+  return serviceTier ? { service_tier: serviceTier } : null;
+}
+
 export function extractGeminiGenerateContentUsage(response, options = {}) {
   response = geminiGenerateContentPayload(response);
   const usage = response.usageMetadata || {};
@@ -2254,7 +2269,7 @@ export function extractGeminiGenerateContentUsage(response, options = {}) {
     ];
   }
 
-  return baseUsageLedger({
+  const ledger = baseUsageLedger({
     provider: options.provider || "google",
     surface: options.surface || "google.gemini.generate_content",
     requestedModel: options.model || response.modelVersion,
@@ -2269,6 +2284,9 @@ export function extractGeminiGenerateContentUsage(response, options = {}) {
       ...outputComponents.slice(1)
     ])
   });
+  const context = geminiUsageContext(usage);
+  if (context) ledger.context = context;
+  return ledger;
 }
 
 export function extractGeminiLiveUsage(response, options = {}) {
@@ -2340,7 +2358,7 @@ export function extractGeminiLiveUsage(response, options = {}) {
     ];
   }
 
-  return baseUsageLedger({
+  const ledger = baseUsageLedger({
     provider: options.provider || "google",
     surface: options.surface || "google.gemini.live",
     requestedModel,
@@ -2355,6 +2373,9 @@ export function extractGeminiLiveUsage(response, options = {}) {
       ...outputComponents.slice(1)
     ])
   });
+  const context = geminiUsageContext(usage);
+  if (context) ledger.context = context;
+  return ledger;
 }
 
 export function extractBedrockConverseUsage(response, options = {}) {
@@ -3656,12 +3677,23 @@ export function priceCardsFromOfficialSnapshot(data, options = {}) {
     for (const rawComponent of row.components || []) {
       if (!rawComponent || typeof rawComponent !== "object") continue;
       const amount = rawComponent.amount ?? (rawComponent.price && rawComponent.price.amount);
+      const extra = {};
+      if (rawComponent.conditions && typeof rawComponent.conditions === "object") {
+        extra.conditions = rawComponent.conditions;
+      }
+      if (typeof rawComponent.discount_eligible === "boolean") {
+        extra.discount_eligible = rawComponent.discount_eligible;
+      }
+      if (typeof rawComponent.notes === "string") {
+        extra.notes = rawComponent.notes;
+      }
       addPriceComponent(
         components,
         rawComponent.usage_component,
         rawComponent.unit || "token",
         amount,
-        numberString(rawComponent.per || (rawComponent.price && rawComponent.price.per) || per)
+        numberString(rawComponent.per || (rawComponent.price && rawComponent.price.per) || per),
+        extra
       );
     }
     addOfficialSnapshotComponent(components, pricingRow, "input_uncached_tokens", "token", ["input", "prompt", "input_uncached"], per);

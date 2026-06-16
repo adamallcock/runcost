@@ -685,8 +685,12 @@ func effectiveMatches(card Object, pricedAt string) bool {
 func cardContextMatches(usageLedger Object, card Object) bool {
 	context := usageContext(usageLedger)
 	serviceTier := asString(context["service_tier"])
+	requestedServiceTier := serviceTier
+	if requestedServiceTier == "" {
+		requestedServiceTier = "standard"
+	}
 	region := asString(context["region"])
-	if serviceTier != "" && asString(card["service_tier"]) != "" && asString(card["service_tier"]) != serviceTier {
+	if asString(card["service_tier"]) != "" && asString(card["service_tier"]) != requestedServiceTier {
 		return false
 	}
 	if region != "" && asString(card["region"]) != "" && asString(card["region"]) != region {
@@ -697,11 +701,15 @@ func cardContextMatches(usageLedger Object, card Object) bool {
 
 func cardScore(usageLedger Object, card Object) int {
 	context := usageContext(usageLedger)
+	requestedServiceTier := asString(context["service_tier"])
+	if requestedServiceTier == "" {
+		requestedServiceTier = "standard"
+	}
 	score := 0
 	if asString(card["surface"]) == asString(usageLedger["surface"]) {
 		score += 8
 	}
-	if asString(context["service_tier"]) != "" && asString(card["service_tier"]) == asString(context["service_tier"]) {
+	if asString(card["service_tier"]) == requestedServiceTier {
 		score += 4
 	}
 	if asString(context["region"]) != "" && asString(card["region"]) == asString(context["region"]) {
@@ -3356,6 +3364,30 @@ func geminiGenerateContentPayload(response Object) Object {
 	return response
 }
 
+func normalizeGeminiServiceTier(value any) string {
+	tier := strings.TrimSpace(asString(value))
+	if tier == "" {
+		return ""
+	}
+	tier = strings.TrimPrefix(tier, "SERVICE_TIER_")
+	tier = strings.ToLower(tier)
+	if tier == "unspecified" {
+		return "standard"
+	}
+	return tier
+}
+
+func geminiUsageContext(usage Object) Object {
+	serviceTier := normalizeGeminiServiceTier(usage["serviceTier"])
+	if serviceTier == "" {
+		serviceTier = normalizeGeminiServiceTier(usage["service_tier"])
+	}
+	if serviceTier == "" {
+		return nil
+	}
+	return Object{"service_tier": serviceTier}
+}
+
 func extractGeminiGenerateContentUsage(response Object, options Object) Object {
 	response = geminiGenerateContentPayload(response)
 	usage := asObject(response["usageMetadata"])
@@ -3440,7 +3472,11 @@ func extractGeminiGenerateContentUsage(response Object, options Object) Object {
 		positiveComponent("output_reasoning_tokens", thoughts, "token", "$.usageMetadata.thoughtsTokenCount"),
 	)
 
-	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents(components), usage)
+	ledger := baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents(components), usage)
+	if context := geminiUsageContext(usage); len(context) > 0 {
+		ledger["context"] = context
+	}
+	return ledger
 }
 
 func extractGeminiLiveUsage(response Object, options Object) Object {
@@ -3533,7 +3569,11 @@ func extractGeminiLiveUsage(response Object, options Object) Object {
 		positiveComponent("output_reasoning_tokens", thoughts, "token", "$.usageMetadata.thoughtsTokenCount"),
 	)
 
-	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents(components), usage)
+	ledger := baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents(components), usage)
+	if context := geminiUsageContext(usage); len(context) > 0 {
+		ledger["context"] = context
+	}
+	return ledger
 }
 
 func extractBedrockConverseUsage(response Object, options Object) Object {
@@ -5206,7 +5246,17 @@ func PriceCardsFromOfficialSnapshot(data Object) []any {
 				if unit == "" {
 					unit = "token"
 				}
-				addPriceComponent(&components, asString(component["usage_component"]), unit, amount, componentPer, nil)
+				extra := Object{}
+				if conditions := asObject(component["conditions"]); len(conditions) > 0 {
+					extra["conditions"] = conditions
+				}
+				if value, ok := component["discount_eligible"].(bool); ok {
+					extra["discount_eligible"] = value
+				}
+				if notes := asString(component["notes"]); notes != "" {
+					extra["notes"] = notes
+				}
+				addPriceComponent(&components, asString(component["usage_component"]), unit, amount, componentPer, extra)
 			}
 		}
 		addOfficialSnapshotComponent(&components, pricingRow, "input_uncached_tokens", "token", []string{"input", "prompt", "input_uncached"}, per)

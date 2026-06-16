@@ -166,10 +166,11 @@ def _effective_matches(card: Dict[str, Any], priced_at: Optional[str]) -> bool:
 def _card_context_matches(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> bool:
     context = _usage_context(usage_ledger)
     service_tier = context.get("service_tier")
+    requested_service_tier = service_tier or "standard"
     region = context.get("region")
     priced_at = _date_part(context.get("priced_at"))
 
-    if service_tier and card.get("service_tier") and card["service_tier"] != service_tier:
+    if card.get("service_tier") and card["service_tier"] != requested_service_tier:
         return False
     if region and card.get("region") and card["region"] != region:
         return False
@@ -178,10 +179,11 @@ def _card_context_matches(usage_ledger: Dict[str, Any], card: Dict[str, Any]) ->
 
 def _card_score(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> int:
     context = _usage_context(usage_ledger)
+    requested_service_tier = context.get("service_tier") or "standard"
     score = 0
     if card.get("surface") == usage_ledger["surface"]:
         score += 8
-    if context.get("service_tier") and card.get("service_tier") == context["service_tier"]:
+    if card.get("service_tier") == requested_service_tier:
         score += 4
     if context.get("region") and card.get("region") == context["region"]:
         score += 2
@@ -2066,6 +2068,25 @@ def _gemini_generate_content_payload(response: Dict[str, Any]) -> Dict[str, Any]
     return response
 
 
+def _normalize_gemini_service_tier(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    tier = str(value).strip()
+    if not tier:
+        return None
+    tier = tier.removeprefix("SERVICE_TIER_").lower()
+    if tier == "unspecified":
+        return "standard"
+    return tier
+
+
+def _gemini_usage_context(usage: Dict[str, Any]) -> Dict[str, Any]:
+    service_tier = _normalize_gemini_service_tier(usage.get("serviceTier", usage.get("service_tier")))
+    if not service_tier:
+        return {}
+    return {"service_tier": service_tier}
+
+
 def extract_gemini_generate_content_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     response = _gemini_generate_content_payload(response)
     usage = response.get("usageMetadata", {})
@@ -2134,7 +2155,7 @@ def extract_gemini_generate_content_usage(response: Dict[str, Any], **options: A
             )
         ]
 
-    return _base_usage_ledger(
+    ledger = _base_usage_ledger(
         provider=options.get("provider", "google"),
         surface=options.get("surface", "google.gemini.generate_content"),
         requested_model=options.get("model", response.get("modelVersion")),
@@ -2153,6 +2174,10 @@ def extract_gemini_generate_content_usage(response: Dict[str, Any], **options: A
             + output_components[1:]
         ),
     )
+    context = _gemini_usage_context(usage)
+    if context:
+        ledger["context"] = context
+    return ledger
 
 
 def extract_gemini_live_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
@@ -2228,7 +2253,7 @@ def extract_gemini_live_usage(response: Dict[str, Any], **options: Any) -> Dict[
             )
         ]
 
-    return _base_usage_ledger(
+    ledger = _base_usage_ledger(
         provider=options.get("provider", "google"),
         surface=options.get("surface", "google.gemini.live"),
         requested_model=requested_model,
@@ -2247,6 +2272,10 @@ def extract_gemini_live_usage(response: Dict[str, Any], **options: Any) -> Dict[
             + output_components[1:]
         ),
     )
+    context = _gemini_usage_context(usage)
+    if context:
+        ledger["context"] = context
+    return ledger
 
 
 def extract_bedrock_converse_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
@@ -3529,12 +3558,20 @@ def price_cards_from_official_snapshot(data: Any, **options: Any) -> List[Dict[s
             amount = raw_component.get("amount")
             if amount is None and isinstance(raw_component.get("price"), dict):
                 amount = raw_component["price"].get("amount")
+            extra: Dict[str, Any] = {}
+            if isinstance(raw_component.get("conditions"), dict):
+                extra["conditions"] = raw_component["conditions"]
+            if isinstance(raw_component.get("discount_eligible"), bool):
+                extra["discount_eligible"] = raw_component["discount_eligible"]
+            if isinstance(raw_component.get("notes"), str):
+                extra["notes"] = raw_component["notes"]
             _add_price_component(
                 components,
                 raw_component.get("usage_component"),
                 raw_component.get("unit", "token"),
                 amount,
                 _number_string(raw_component.get("per") or raw_component.get("price", {}).get("per") or per),
+                **extra,
             )
         _official_snapshot_component(components, pricing_row, "input_uncached_tokens", "token", ("input", "prompt", "input_uncached"), per)
         _official_snapshot_component(components, pricing_row, "input_cache_read_tokens", "token", ("cache_read", "cached_input", "input_cache_read"), per)
