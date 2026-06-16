@@ -16,6 +16,16 @@ limitations.
 
 - No unreleased changes yet.
 
+## 0.1.8
+
+- Add Gemini `usageMetadata.serviceTier` extraction across Python,
+  JavaScript, and Go so Flex, Standard, and Priority usage selects matching
+  price cards.
+- Refresh reviewed Google official Gemini service-tier pricing for Gemini 3.5
+  Flash, Gemini 3.1 Pro Preview, and Gemini 2.5 Pro.
+- Preserve explicit official snapshot component conditions and assert that
+  absent Gemini service tier defaults to Standard pricing.
+
 ## 0.1.7
 
 - Default reported reasoning tokens to the matching output-token price when a
