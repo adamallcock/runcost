@@ -24,7 +24,7 @@ DEFAULT_SOURCES: list[dict[str, str]] = [
     {
         "source_type": "official-snapshot",
         "name": "anthropic-official",
-        "url": "https://docs.anthropic.com/en/docs/about-claude/pricing",
+        "url": "https://platform.claude.com/docs/en/about-claude/pricing",
         "input": "fixtures/source-files/anthropic-official-pricing-snapshot.json",
         "license": "reviewed",
     },
