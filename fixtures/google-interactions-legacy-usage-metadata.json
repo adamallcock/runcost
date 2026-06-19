@@ -1,0 +1,142 @@
+{
+  "name": "google-interactions-legacy-usage-metadata",
+  "description": "Keeps Google Interactions metadata.usage compatibility while mapping aggregate snake_case usage fields.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "google",
+    "surface": "google.gemini.interactions",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:input_cache_read_tokens",
+      "component:output_text_tokens",
+      "google",
+      "interactions",
+      "raw_provider_response"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "event_type": "interaction.completed",
+      "model": "gemini-2.5-flash",
+      "service_tier": "standard",
+      "metadata": {
+        "usage": {
+          "total_input_tokens": 100,
+          "total_cached_tokens": 10,
+          "total_output_tokens": 20,
+          "total_tool_use_tokens": 5,
+          "total_tokens": 125
+        }
+      }
+    },
+    "extract": {
+      "provider": "google",
+      "surface": "google.gemini.interactions",
+      "model": "gemini-2.5-flash"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "google:gemini-2.5-flash:interactions-standard",
+        "provider": "google",
+        "surface": "google.gemini.interactions",
+        "model": "gemini-2.5-flash",
+        "service_tier": "standard",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.50",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-06-19T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "google",
+      "surface": "google.gemini.interactions",
+      "model": {
+        "requested": "gemini-2.5-flash",
+        "returned": "gemini-2.5-flash",
+        "billed": "gemini-2.5-flash",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "95",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.000095",
+          "price_card_id": "google:gemini-2.5-flash:interactions-standard",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "10",
+          "unit": "token",
+          "unit_price": "0.0000005",
+          "cost": "0.000005",
+          "price_card_id": "google:gemini-2.5-flash:interactions-standard",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.00004",
+          "price_card_id": "google:gemini-2.5-flash:interactions-standard",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.00014",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-06-19T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

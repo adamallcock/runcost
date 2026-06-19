@@ -2243,7 +2243,11 @@ function normalizeGeminiServiceTier(value) {
   if (value === undefined || value === null) return null;
   let tier = String(value).trim();
   if (!tier) return null;
-  tier = tier.replace(/^SERVICE_TIER_/, "").toLowerCase();
+  if (tier.includes(".")) {
+    tier = tier.split(".").pop();
+  }
+  tier = tier.toLowerCase();
+  tier = tier.replace(/^service_tier_/, "");
   return tier === "unspecified" ? "standard" : tier;
 }
 
@@ -2422,6 +2426,222 @@ export function extractGeminiLiveUsage(response, options = {}) {
   });
   const context = geminiUsageContext(usage);
   if (context) ledger.context = context;
+  return ledger;
+}
+
+function googleInteractionsUsageFromParent(parent, sourceRoot) {
+  const metadata = parent.metadata && typeof parent.metadata === "object" ? parent.metadata : {};
+  for (const key of ["total_usage", "totalUsage", "usage"]) {
+    if (metadata[key] && typeof metadata[key] === "object" && !Array.isArray(metadata[key])) {
+      return {
+        usage: metadata[key],
+        sourceRoot: `${sourceRoot}.metadata.${key}`
+      };
+    }
+  }
+  for (const key of ["total_usage", "totalUsage", "usage"]) {
+    if (parent[key] && typeof parent[key] === "object" && !Array.isArray(parent[key])) {
+      return {
+        usage: parent[key],
+        sourceRoot: `${sourceRoot}.${key}`
+      };
+    }
+  }
+  return null;
+}
+
+function googleInteractionsUsagePayload(response) {
+  let result = googleInteractionsUsageFromParent(response, "$");
+  if (result) return result;
+  if (response.interaction && typeof response.interaction === "object") {
+    result = googleInteractionsUsageFromParent(response.interaction, "$.interaction");
+    if (result) return result;
+  }
+  for (const collectionName of ["chunks", "stream", "events"]) {
+    const collection = response[collectionName];
+    if (!Array.isArray(collection)) continue;
+    for (let index = collection.length - 1; index >= 0; index -= 1) {
+      const item = collection[index];
+      if (!item || typeof item !== "object") continue;
+      result = googleInteractionsUsageFromParent(item, `$.${collectionName}[${index}]`);
+      if (result) return result;
+    }
+  }
+  return {
+    usage: {},
+    sourceRoot: "$.metadata.total_usage"
+  };
+}
+
+function googleInteractionsResponseValue(response, keys) {
+  const directParents = [
+    response,
+    response.interaction && typeof response.interaction === "object" ? response.interaction : {}
+  ];
+  for (const parent of directParents) {
+    for (const key of keys) {
+      if (parent[key]) return parent[key];
+    }
+  }
+  for (const collectionName of ["chunks", "stream", "events"]) {
+    const collection = response[collectionName];
+    if (!Array.isArray(collection)) continue;
+    for (let index = collection.length - 1; index >= 0; index -= 1) {
+      const item = collection[index];
+      if (!item || typeof item !== "object") continue;
+      const parents = [
+        item,
+        item.interaction && typeof item.interaction === "object" ? item.interaction : {}
+      ];
+      for (const parent of parents) {
+        for (const key of keys) {
+          if (parent[key]) return parent[key];
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
+function googleInteractionsServiceTier(response, usage) {
+  const parents = [
+    usage,
+    response.metadata && typeof response.metadata === "object" ? response.metadata : {},
+    response.interaction && typeof response.interaction === "object" ? response.interaction : {},
+    response
+  ];
+  for (const parent of parents) {
+    for (const key of ["service_tier", "serviceTier"]) {
+      const serviceTier = normalizeGeminiServiceTier(parent[key]);
+      if (serviceTier) return serviceTier;
+    }
+  }
+  return normalizeGeminiServiceTier(googleInteractionsResponseValue(response, ["service_tier", "serviceTier"]));
+}
+
+function googleInteractionsModalityCounts(value) {
+  const counts = {};
+  if (!Array.isArray(value)) {
+    return counts;
+  }
+  for (const detail of value) {
+    if (!detail || typeof detail !== "object") continue;
+    const modality = String(detail.modality || "text").trim().toUpperCase() || "TEXT";
+    addGeminiCount(counts, modality, detail.tokens ?? detail.tokenCount ?? 0);
+  }
+  return counts;
+}
+
+const GOOGLE_INTERACTIONS_GROUNDING_COMPONENTS = new Map([
+  ["google_search", ["web_search_units", "search"]],
+  ["google_maps", ["tool_call_units", "call"]],
+  ["retrieval", ["tool_call_units", "call"]]
+]);
+
+function googleInteractionsGroundingComponents(usage, sourceRoot) {
+  const groundingCounts = usage.grounding_tool_count;
+  if (!Array.isArray(groundingCounts)) {
+    return [];
+  }
+  const totals = new Map();
+  for (const detail of groundingCounts) {
+    if (!detail || typeof detail !== "object") continue;
+    const mapping = GOOGLE_INTERACTIONS_GROUNDING_COMPONENTS.get(String(detail.type || ""));
+    if (!mapping) continue;
+    const [componentName, unit] = mapping;
+    const key = `${componentName}\t${unit}`;
+    totals.set(key, addDecimal(totals.get(key) || "0", detail.count || 0));
+  }
+  return [...totals.entries()].map(([key, quantity]) => {
+    const [componentName, unit] = key.split("\t");
+    return positiveComponent(componentName, quantity, unit, `${sourceRoot}.grounding_tool_count[*].count`);
+  });
+}
+
+export function extractGoogleInteractionsUsage(response, options = {}) {
+  const { usage, sourceRoot } = googleInteractionsUsagePayload(response);
+  const cachedInput = usage.total_cached_tokens || 0;
+  const inputTokens = usage.total_input_tokens || 0;
+  const outputTokens = usage.total_output_tokens || 0;
+  const thoughts = usage.total_thought_tokens || 0;
+  const toolUseTokens = usage.total_tool_use_tokens || 0;
+
+  const inputCounts = googleInteractionsModalityCounts(usage.input_tokens_by_modality);
+  const cacheCounts = googleInteractionsModalityCounts(usage.cached_tokens_by_modality);
+  const outputCounts = googleInteractionsModalityCounts(usage.output_tokens_by_modality);
+  const toolCounts = googleInteractionsModalityCounts(usage.tool_use_tokens_by_modality);
+
+  const toolRemainder = subtractDecimal(toolUseTokens, geminiSumCounts(toolCounts));
+  if (isPositiveDecimal(toolRemainder)) {
+    addGeminiCount(toolCounts, "TEXT", toolRemainder);
+  }
+
+  const detailSafeForInput = Object.keys(inputCounts).length > 0 &&
+    (!isPositiveDecimal(cachedInput) || Object.keys(cacheCounts).length > 0);
+  let inputComponents;
+  let cacheRead = cachedInput;
+  let cacheReadSource = `${sourceRoot}.total_cached_tokens`;
+  if (detailSafeForInput) {
+    inputComponents = geminiOrderedComponents(
+      geminiComponentQuantities(
+        geminiNetInputCounts(inputCounts, cacheCounts, toolCounts),
+        GEMINI_INPUT_MODALITY_COMPONENTS,
+        "input_uncached_tokens"
+      ),
+      GEMINI_INPUT_COMPONENT_ORDER,
+      `${sourceRoot}.input_tokens_by_modality`
+    );
+    cacheRead = isPositiveDecimal(cachedInput) ? cachedInput : geminiSumCounts(cacheCounts);
+    if (!hasOwn(usage, "total_cached_tokens")) {
+      cacheReadSource = `${sourceRoot}.cached_tokens_by_modality`;
+    }
+  } else {
+    inputComponents = [
+      positiveComponent(
+        "input_uncached_tokens",
+        addDecimal(subtractDecimal(inputTokens, cachedInput), toolUseTokens),
+        "token",
+        `${sourceRoot}.total_input_tokens`
+      )
+    ];
+  }
+
+  let outputComponents;
+  if (Object.keys(outputCounts).length > 0) {
+    outputComponents = geminiOrderedComponents(
+      geminiComponentQuantities(
+        outputCounts,
+        GEMINI_OUTPUT_MODALITY_COMPONENTS,
+        "output_text_tokens"
+      ),
+      GEMINI_OUTPUT_COMPONENT_ORDER,
+      `${sourceRoot}.output_tokens_by_modality`
+    );
+  } else {
+    outputComponents = [
+      positiveComponent("output_text_tokens", outputTokens, "token", `${sourceRoot}.total_output_tokens`)
+    ];
+  }
+
+  const returnedModel = googleInteractionsResponseValue(response, ["model", "agent"]) || options.model;
+  const ledger = baseUsageLedger({
+    provider: options.provider || "google",
+    surface: options.surface || "google.gemini.interactions",
+    requestedModel: options.model || returnedModel,
+    returnedModel,
+    rawUsage: usage,
+    components: compactComponents([
+      ...inputComponents.slice(0, 1),
+      positiveComponent("input_cache_read_tokens", cacheRead, "token", cacheReadSource),
+      ...inputComponents.slice(1),
+      ...outputComponents.slice(0, 1),
+      positiveComponent("output_reasoning_tokens", thoughts, "token", `${sourceRoot}.total_thought_tokens`),
+      ...outputComponents.slice(1),
+      ...googleInteractionsGroundingComponents(usage, sourceRoot)
+    ])
+  });
+  const serviceTier = googleInteractionsServiceTier(response, usage);
+  if (serviceTier) ledger.context = { service_tier: serviceTier };
   return ledger;
 }
 
@@ -3065,6 +3285,9 @@ export function extractUsageLedger(response, options = {}) {
   }
   if (surface === "google.gemini.live") {
     return extractGeminiLiveUsage(response, options);
+  }
+  if (surface === "google.gemini.interactions") {
+    return extractGoogleInteractionsUsage(response, options);
   }
   if (surface === "aws.bedrock.converse") {
     return extractBedrockConverseUsage(response, options);

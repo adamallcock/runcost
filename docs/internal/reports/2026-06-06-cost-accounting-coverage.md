@@ -13,9 +13,9 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 
 ## Summary
 
-- Fixtures scanned: 124
+- Fixtures scanned: 128
 - Public API capabilities scanned: 14
-- Provider/surface component rows: 33
+- Provider/surface component rows: 34
 - Price-source component rows: 11
 - Gemini separate output/thinking fixtures: 6
 
@@ -30,7 +30,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `long_context` | 2 |
 | `normalized_usage` | 11 |
 | `provider_reported` | 4 |
-| `raw_provider_response` | 52 |
+| `raw_provider_response` | 56 |
 | `service_mode` | 3 |
 | `service_tier` | 3 |
 | `source_adapter` | 14 |
@@ -55,26 +55,26 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `file_search_units` | 2 |
 | `image_generation_units` | 3 |
 | `input_audio_tokens` | 10 |
-| `input_cache_read_tokens` | 43 |
+| `input_cache_read_tokens` | 46 |
 | `input_cache_write_1h_tokens` | 2 |
 | `input_cache_write_tokens` | 14 |
-| `input_image_tokens` | 3 |
+| `input_image_tokens` | 4 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 96 |
+| `input_uncached_tokens` | 100 |
 | `input_video_tokens` | 1 |
-| `output_audio_tokens` | 9 |
+| `output_audio_tokens` | 10 |
 | `output_image_tokens` | 3 |
-| `output_reasoning_tokens` | 43 |
-| `output_text_tokens` | 82 |
-| `output_video_tokens` | 1 |
+| `output_reasoning_tokens` | 45 |
+| `output_text_tokens` | 86 |
+| `output_video_tokens` | 2 |
 | `request_units` | 3 |
 | `rerank_search_units` | 2 |
 | `storage_gb_days` | 2 |
-| `tool_call_units` | 2 |
+| `tool_call_units` | 4 |
 | `tool_execution_seconds` | 1 |
 | `transcription_seconds` | 3 |
 | `video_generation_units` | 1 |
-| `web_search_units` | 11 |
+| `web_search_units` | 12 |
 | `x_search_units` | 3 |
 
 ## Price Source Component Coverage
@@ -108,6 +108,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `custom-provider` | `openai.responses` | `input_uncached_tokens` |
 | `deepseek` | `deepseek.chat_completions` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
 | `google` | `google.gemini.generate_content` | `input_audio_tokens`, `input_cache_read_tokens`, `input_image_tokens`, `input_uncached_tokens`, `input_video_tokens`, `output_audio_tokens`, `output_image_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `output_video_tokens` |
+| `google` | `google.gemini.interactions` | `input_cache_read_tokens`, `input_image_tokens`, `input_uncached_tokens`, `output_audio_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `output_video_tokens`, `tool_call_units`, `web_search_units` |
 | `google` | `google.gemini.live` | `input_audio_tokens`, `output_audio_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
 | `groq` | `groq.chat_completions` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_text_tokens` |
 | `huggingface` | `huggingface.chat_completions` | `input_uncached_tokens`, `output_text_tokens` |

@@ -261,6 +261,33 @@ Pricing notes:
 - The model can return transcript text alongside translated audio. The reviewed `google-official` card marks `output_text_tokens` unsupported because the pricing page publishes audio-token rates for this model, not a separate transcript text-token rate.
 - The Google pricing page states Live Translate billing is based on audio token consumption at 25 tokens per second. RunCost prices the provider-reported token counts; it does not infer token counts from minutes.
 
+## Google Gemini Interactions
+
+Surface:
+
+- `google.gemini.interactions`
+
+Source references:
+
+- js-genai v2.9.0 adds `UsageMetadata.serviceTier`: https://github.com/googleapis/js-genai/releases/tag/v2.9.0
+- js-genai v2.9.0 renames Interactions stream metadata usage from `usage` to `total_usage`: https://github.com/googleapis/js-genai/releases/tag/v2.9.0
+- The v2.9.0 `ServiceTier` enum uses lower-case string values: `unspecified`, `flex`, `standard`, and `priority`: https://github.com/googleapis/js-genai/commit/1f44b04
+
+Mapping:
+
+- Non-streaming or event-shaped responses read usage from `metadata.total_usage`, `metadata.totalUsage`, or legacy `metadata.usage`.
+- Streaming or collected event responses read usage from the last `chunks`, `stream`, or `events` item carrying usage metadata.
+- Aggregate fallback: `total_input_tokens` minus `total_cached_tokens`, plus `total_tool_use_tokens` when present, -> `input_uncached_tokens`.
+- Aggregate fallback: `total_cached_tokens` -> `input_cache_read_tokens`.
+- `input_tokens_by_modality` -> modality-aware input components using lower-case Interactions modality values mapped through the shared Gemini modality table.
+- `cached_tokens_by_modality` subtracts matching modality counts from uncached/media input components when cache details are available.
+- `tool_use_tokens_by_modality` adds tool-use tokens to the matching input modality component. If details are missing but `total_tool_use_tokens` exists, the extractor adds the aggregate to `input_uncached_tokens`.
+- `output_tokens_by_modality` -> modality-aware output components. `text` and `document` map to `output_text_tokens`; `image`, `audio`, and `video` map to their matching media output components.
+- `total_thought_tokens` -> `output_reasoning_tokens`.
+- `grounding_tool_count` maps `google_search` to `web_search_units`; `google_maps` and `retrieval` map conservatively to `tool_call_units` until those provider-specific price surfaces have stronger public price-card coverage.
+- `service_tier` / `serviceTier` values are normalized like other Gemini service tiers, including SDK string forms such as `ServiceTier.PRIORITY`.
+- `total_tokens` is preserved in raw usage but is never priced directly.
+
 ## AWS Bedrock Converse
 
 Surface:

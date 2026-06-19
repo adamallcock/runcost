@@ -1,0 +1,348 @@
+{
+  "name": "google-interactions-total-usage-camelcase-event",
+  "description": "Extracts Google Interactions metadata.totalUsage from the final event, including tokenCount aliases and enum-style service tiers.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR",
+      "RC-SERVICE-TIER",
+      "RC-TOOL-PRICING"
+    ],
+    "provider": "google",
+    "surface": "google.gemini.interactions",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:input_cache_read_tokens",
+      "component:input_image_tokens",
+      "component:output_text_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_video_tokens",
+      "component:tool_call_units",
+      "google",
+      "interactions",
+      "raw_provider_response",
+      "service_tier",
+      "tool_pricing"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "events": [
+        {
+          "event_type": "interaction.created",
+          "metadata": {
+            "totalUsage": {
+              "total_input_tokens": 1,
+              "total_output_tokens": 1,
+              "total_tokens": 2
+            }
+          }
+        },
+        {
+          "event_type": "interaction.completed",
+          "interaction": {
+            "model": "gemini-2.5-pro",
+            "serviceTier": "ServiceTier.FLEX"
+          },
+          "metadata": {
+            "totalUsage": {
+              "input_tokens_by_modality": [
+                {
+                  "modality": "text",
+                  "tokenCount": 100
+                },
+                {
+                  "modality": "image",
+                  "tokenCount": 30
+                }
+              ],
+              "cached_tokens_by_modality": [
+                {
+                  "modality": "text",
+                  "tokenCount": 40
+                }
+              ],
+              "output_tokens_by_modality": [
+                {
+                  "modality": "document",
+                  "tokenCount": 20
+                },
+                {
+                  "modality": "video",
+                  "tokenCount": 8
+                }
+              ],
+              "grounding_tool_count": [
+                {
+                  "type": "google_maps",
+                  "count": 3
+                }
+              ],
+              "total_input_tokens": 130,
+              "total_cached_tokens": 40,
+              "total_output_tokens": 28,
+              "total_thought_tokens": 7,
+              "total_tool_use_tokens": 4,
+              "total_tokens": 169
+            }
+          }
+        }
+      ]
+    },
+    "extract": {
+      "provider": "google",
+      "surface": "google.gemini.interactions",
+      "model": "gemini-2.5-pro"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "google:gemini-2.5-pro:interactions-standard",
+        "provider": "google",
+        "surface": "google.gemini.interactions",
+        "model": "gemini-2.5-pro",
+        "service_tier": "standard",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.50",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_image_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1.25",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_video_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "3",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "tool_call_units",
+            "unit": "call",
+            "price": {
+              "amount": "0.02",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-06-19T00:00:00Z"
+        }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "google:gemini-2.5-pro:interactions-flex",
+        "provider": "google",
+        "surface": "google.gemini.interactions",
+        "model": "gemini-2.5-pro",
+        "service_tier": "flex",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "3",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_image_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "6",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "6",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_video_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "8",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "tool_call_units",
+            "unit": "call",
+            "price": {
+              "amount": "0.05",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-06-19T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "google",
+      "surface": "google.gemini.interactions",
+      "model": {
+        "requested": "gemini-2.5-pro",
+        "returned": "gemini-2.5-pro",
+        "billed": "gemini-2.5-pro",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "64",
+          "unit": "token",
+          "unit_price": "0.000003",
+          "cost": "0.000192",
+          "price_card_id": "google:gemini-2.5-pro:interactions-flex",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "40",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.00004",
+          "price_card_id": "google:gemini-2.5-pro:interactions-flex",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_image_tokens",
+          "quantity": "30",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.00012",
+          "price_card_id": "google:gemini-2.5-pro:interactions-flex",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.000006",
+          "cost": "0.00012",
+          "price_card_id": "google:gemini-2.5-pro:interactions-flex",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "7",
+          "unit": "token",
+          "unit_price": "0.000006",
+          "cost": "0.000042",
+          "price_card_id": "google:gemini-2.5-pro:interactions-flex",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_video_tokens",
+          "quantity": "8",
+          "unit": "token",
+          "unit_price": "0.000008",
+          "cost": "0.000064",
+          "price_card_id": "google:gemini-2.5-pro:interactions-flex",
+          "discount_eligible": true
+        },
+        {
+          "name": "tool_call_units",
+          "quantity": "3",
+          "unit": "call",
+          "unit_price": "0.05",
+          "cost": "0.15",
+          "price_card_id": "google:gemini-2.5-pro:interactions-flex",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.150578",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-06-19T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}
