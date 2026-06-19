@@ -16,6 +16,16 @@ limitations.
 
 - No unreleased changes yet.
 
+## 0.1.9
+
+- Refresh the bundled default price catalog from live public sources and expand
+  the reviewed Anthropic official snapshot to active current Claude API rows
+  verified against Anthropic pricing and model lifecycle docs.
+- Update the Vercel AI SDK development smoke dependencies to `ai@6.0.208` and
+  `@ai-sdk/openai@3.0.73`, sharing `@ai-sdk/provider-utils@4.0.30`.
+- Update CI and release workflows from `actions/checkout@v6` to
+  `actions/checkout@v7`.
+
 ## 0.1.8
 
 - Add Gemini `usageMetadata.serviceTier` extraction across Python,

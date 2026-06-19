@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "runcost-ai"
-version = "0.1.8"
+version = "0.1.9"
 description = "Alpha cost ledger utility for LLM and agent API responses."
 requires-python = ">=3.9"
 readme = "README.md"
