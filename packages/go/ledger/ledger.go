@@ -2456,6 +2456,8 @@ func ExtractUsageLedger(response Object, options Object) Object {
 		return extractGeminiGenerateContentUsage(response, options)
 	case "google.gemini.live":
 		return extractGeminiLiveUsage(response, options)
+	case "google.gemini.interactions":
+		return extractGoogleInteractionsUsage(response, options)
 	case "aws.bedrock.converse":
 		return extractBedrockConverseUsage(response, options)
 	case "aws.bedrock.invoke_model":
@@ -3369,8 +3371,12 @@ func normalizeGeminiServiceTier(value any) string {
 	if tier == "" {
 		return ""
 	}
-	tier = strings.TrimPrefix(tier, "SERVICE_TIER_")
+	if strings.Contains(tier, ".") {
+		parts := strings.Split(tier, ".")
+		tier = parts[len(parts)-1]
+	}
 	tier = strings.ToLower(tier)
+	tier = strings.TrimPrefix(tier, "service_tier_")
 	if tier == "unspecified" {
 		return "standard"
 	}
@@ -3572,6 +3578,245 @@ func extractGeminiLiveUsage(response Object, options Object) Object {
 	ledger := baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents(components), usage)
 	if context := geminiUsageContext(usage); len(context) > 0 {
 		ledger["context"] = context
+	}
+	return ledger
+}
+
+func googleInteractionsUsageFromParent(parent Object, sourceRoot string) (Object, string, bool) {
+	metadata := asObject(parent["metadata"])
+	for _, key := range []string{"total_usage", "totalUsage", "usage"} {
+		usage := asObject(metadata[key])
+		if len(usage) > 0 {
+			return usage, sourceRoot + ".metadata." + key, true
+		}
+	}
+	for _, key := range []string{"total_usage", "totalUsage", "usage"} {
+		usage := asObject(parent[key])
+		if len(usage) > 0 {
+			return usage, sourceRoot + "." + key, true
+		}
+	}
+	return nil, "", false
+}
+
+func googleInteractionsUsagePayload(response Object) (Object, string) {
+	if usage, sourceRoot, ok := googleInteractionsUsageFromParent(response, "$"); ok {
+		return usage, sourceRoot
+	}
+	interaction := asObject(response["interaction"])
+	if len(interaction) > 0 {
+		if usage, sourceRoot, ok := googleInteractionsUsageFromParent(interaction, "$.interaction"); ok {
+			return usage, sourceRoot
+		}
+	}
+	for _, collectionName := range []string{"chunks", "stream", "events"} {
+		collection := asSlice(response[collectionName])
+		for index := len(collection) - 1; index >= 0; index-- {
+			item := asObject(collection[index])
+			if len(item) == 0 {
+				continue
+			}
+			sourceRoot := fmt.Sprintf("$.%s[%d]", collectionName, index)
+			if usage, usageSourceRoot, ok := googleInteractionsUsageFromParent(item, sourceRoot); ok {
+				return usage, usageSourceRoot
+			}
+		}
+	}
+	return Object{}, "$.metadata.total_usage"
+}
+
+func googleInteractionsResponseValue(response Object, keys []string) any {
+	directParents := []Object{response, asObject(response["interaction"])}
+	for _, parent := range directParents {
+		for _, key := range keys {
+			if value := parent[key]; value != nil && asString(value) != "" {
+				return value
+			}
+		}
+	}
+	for _, collectionName := range []string{"chunks", "stream", "events"} {
+		collection := asSlice(response[collectionName])
+		for index := len(collection) - 1; index >= 0; index-- {
+			item := asObject(collection[index])
+			if len(item) == 0 {
+				continue
+			}
+			parents := []Object{item, asObject(item["interaction"])}
+			for _, parent := range parents {
+				for _, key := range keys {
+					if value := parent[key]; value != nil && asString(value) != "" {
+						return value
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func googleInteractionsServiceTier(response Object, usage Object) string {
+	for _, parent := range []Object{
+		usage,
+		asObject(response["metadata"]),
+		asObject(response["interaction"]),
+		response,
+	} {
+		for _, key := range []string{"service_tier", "serviceTier"} {
+			if serviceTier := normalizeGeminiServiceTier(parent[key]); serviceTier != "" {
+				return serviceTier
+			}
+		}
+	}
+	return normalizeGeminiServiceTier(googleInteractionsResponseValue(response, []string{"service_tier", "serviceTier"}))
+}
+
+func googleInteractionsModalityCounts(details any) map[string]string {
+	counts := map[string]string{}
+	for _, rawDetail := range asSlice(details) {
+		detail := asObject(rawDetail)
+		modality := strings.ToUpper(strings.TrimSpace(asString(detail["modality"])))
+		if modality == "" {
+			modality = "TEXT"
+		}
+		tokenCount := any(nil)
+		if _, ok := detail["tokens"]; ok {
+			tokenCount = detail["tokens"]
+		} else {
+			tokenCount = detail["tokenCount"]
+		}
+		addGeminiCount(counts, modality, tokenCount)
+	}
+	return counts
+}
+
+var googleInteractionsGroundingComponents = map[string][]string{
+	"google_search": {"web_search_units", "search"},
+	"google_maps":   {"tool_call_units", "call"},
+	"retrieval":     {"tool_call_units", "call"},
+}
+
+func googleInteractionsGroundingUsageComponents(usage Object, sourceRoot string) []any {
+	totals := map[string]string{}
+	componentUnits := map[string]string{}
+	for _, rawDetail := range asSlice(usage["grounding_tool_count"]) {
+		detail := asObject(rawDetail)
+		mapping := googleInteractionsGroundingComponents[asString(detail["type"])]
+		if len(mapping) == 0 {
+			continue
+		}
+		componentName := mapping[0]
+		unit := mapping[1]
+		key := componentName + "\t" + unit
+		if totals[key] == "" {
+			totals[key] = "0"
+		}
+		totals[key] = add(totals[key], getNumber(detail, "count"))
+		componentUnits[key] = unit
+	}
+	components := []any{}
+	keys := []string{}
+	for key := range totals {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		parts := strings.Split(key, "\t")
+		componentName := parts[0]
+		unit := componentUnits[key]
+		components = append(components, positiveComponent(componentName, totals[key], unit, sourceRoot+".grounding_tool_count[*].count"))
+	}
+	return components
+}
+
+func extractGoogleInteractionsUsage(response Object, options Object) Object {
+	usage, sourceRoot := googleInteractionsUsagePayload(response)
+	cachedInput := getNumber(usage, "total_cached_tokens")
+	inputTokens := getNumber(usage, "total_input_tokens")
+	outputTokens := getNumber(usage, "total_output_tokens")
+	thoughts := getNumber(usage, "total_thought_tokens")
+	toolUseTokens := getNumber(usage, "total_tool_use_tokens")
+	inputCounts := googleInteractionsModalityCounts(usage["input_tokens_by_modality"])
+	cacheCounts := googleInteractionsModalityCounts(usage["cached_tokens_by_modality"])
+	outputCounts := googleInteractionsModalityCounts(usage["output_tokens_by_modality"])
+	toolCounts := googleInteractionsModalityCounts(usage["tool_use_tokens_by_modality"])
+
+	toolRemainder := subtract(toolUseTokens, geminiSumCounts(toolCounts))
+	if rat(toolRemainder).Sign() > 0 {
+		addGeminiCount(toolCounts, "TEXT", toolRemainder)
+	}
+
+	detailSafeForInput := len(inputCounts) > 0 && (rat(cachedInput).Sign() == 0 || len(cacheCounts) > 0)
+	var inputComponents []any
+	cacheRead := cachedInput
+	cacheReadSource := sourceRoot + ".total_cached_tokens"
+	if detailSafeForInput {
+		inputComponents = geminiOrderedComponents(
+			geminiComponentQuantities(
+				geminiNetInputCounts(inputCounts, cacheCounts, toolCounts),
+				geminiInputModalityComponents,
+				"input_uncached_tokens",
+			),
+			geminiInputComponentOrder,
+			sourceRoot+".input_tokens_by_modality",
+		)
+		if rat(cachedInput).Sign() == 0 {
+			cacheRead = geminiSumCounts(cacheCounts)
+		}
+		if _, ok := usage["total_cached_tokens"]; !ok {
+			cacheReadSource = sourceRoot + ".cached_tokens_by_modality"
+		}
+	} else {
+		inputComponents = []any{
+			positiveComponent("input_uncached_tokens", add(subtract(inputTokens, cachedInput), toolUseTokens), "token", sourceRoot+".total_input_tokens"),
+		}
+	}
+
+	var outputComponents []any
+	if len(outputCounts) > 0 {
+		outputComponents = geminiOrderedComponents(
+			geminiComponentQuantities(outputCounts, geminiOutputModalityComponents, "output_text_tokens"),
+			geminiOutputComponentOrder,
+			sourceRoot+".output_tokens_by_modality",
+		)
+	} else {
+		outputComponents = []any{
+			positiveComponent("output_text_tokens", outputTokens, "token", sourceRoot+".total_output_tokens"),
+		}
+	}
+
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = "google"
+	}
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "google.gemini.interactions"
+	}
+	returnedModel := asString(googleInteractionsResponseValue(response, []string{"model", "agent"}))
+	if returnedModel == "" {
+		returnedModel = asString(options["model"])
+	}
+	requestedModel := asString(options["model"])
+	if requestedModel == "" {
+		requestedModel = returnedModel
+	}
+
+	components := []any{}
+	components = appendComponentsAround(
+		components,
+		inputComponents,
+		positiveComponent("input_cache_read_tokens", cacheRead, "token", cacheReadSource),
+	)
+	components = appendComponentsAround(
+		components,
+		outputComponents,
+		positiveComponent("output_reasoning_tokens", thoughts, "token", sourceRoot+".total_thought_tokens"),
+	)
+	components = append(components, googleInteractionsGroundingUsageComponents(usage, sourceRoot)...)
+
+	ledger := baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents(components), usage)
+	if serviceTier := googleInteractionsServiceTier(response, usage); serviceTier != "" {
+		ledger["context"] = Object{"service_tier": serviceTier}
 	}
 	return ledger
 }
@@ -5612,6 +5857,7 @@ func FromResponse(response Object, options Object, priceCards []any, discountPol
 		surface != "google.gemini.generate_content" &&
 		surface != "vertex.gemini.generate_content" &&
 		surface != "google.gemini.live" &&
+		surface != "google.gemini.interactions" &&
 		surface != "aws.bedrock.converse" &&
 		surface != "aws.bedrock.invoke_model" &&
 		surface != "cohere.chat" &&

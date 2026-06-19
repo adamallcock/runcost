@@ -47,6 +47,7 @@ For the full fixture-derived provider/surface/language matrix, see
 | Google Gemini | `generateContent` | Fixture-backed |
 | Google Gemini | `generateContent` stream chunks with final `usageMetadata` | Fixture-backed |
 | Google Gemini | Live API top-level or final-message `usageMetadata` | Fixture-backed |
+| Google Gemini | Interactions stream/event `metadata.total_usage` / `metadata.totalUsage` | Fixture-backed |
 | Vertex AI Gemini | `generateContent` | Fixture-backed |
 | AWS Bedrock | Converse | Fixture-backed |
 | AWS Bedrock | InvokeModel with Anthropic Messages body | Fixture-backed |
@@ -100,6 +101,7 @@ For the full fixture-derived provider/surface/language matrix, see
 - OpenAI Responses hosted tool extraction is fixture-backed for web search, file search, code interpreter calls, computer-use action counts, and function-call counts.
 - Tool/feature pricing is complete for the current exit gate: OpenAI-style hosted tools, OpenRouter/provider-reported costs, custom internal tools, OpenAI organization usage completions text/cache/audio tokens, OpenAI Embeddings per-response and organization usage bucket tokens, OpenAI Images token/image-unit usage, OpenAI organization usage image buckets, OpenAI organization usage audio speech character buckets, normalized generated media, Cohere Rerank search units, OpenAI audio transcription duration/token usage, OpenAI organization usage audio transcription seconds, OpenAI Vector Stores `usage_bytes` to GB-day conversion with an explicit storage-day window, OpenAI organization usage code-interpreter `num_sessions`, runtime-second, and GB-day storage pricing. Broader provider-specific storage/session extraction and live validation remain beta hardening.
 - Gemini Live API extraction uses `google.gemini.live`, reads `usageMetadata.promptTokensDetails` and `usageMetadata.responseTokensDetails`, maps `AUDIO` entries to `input_audio_tokens` and `output_audio_tokens`, and preserves `usageMetadata.totalTokenCount` as raw usage rather than pricing it directly. The bundled default catalog includes a reviewed `google-official` card for `gemini-3.5-live-translate-preview`.
+- Google Gemini Interactions extraction uses `google.gemini.interactions`, reads v2.9.0 `metadata.total_usage`, camelCase `metadata.totalUsage`, or legacy `metadata.usage`, maps lower-case modality token arrays into the canonical token components, and treats `google_search` grounding counts as `web_search_units`; broader grounding/tool pricing still depends on caller-supplied price cards.
 - Framework paths are fixture-backed for dependency-free plain-object shapes. Sanitized sample and live smoke harnesses exist, but real application validation is still expanding.
 - Price-source fixtures prove representative adapter mappings. The bundled
   default catalog is package data, not fixture coverage; see

@@ -75,7 +75,7 @@ exports.
 | OpenAI Chat Completions | Yes | Yes | Yes | `openai-chat-raw-cached-reasoning.json` |
 | Shared OpenAI-compatible chat helper | Yes | Yes | Yes | `extract_openai_compatible_chat_completions_usage`, `extractOpenAICompatibleChatCompletionsUsage`; Go routes through `ExtractUsageLedger` |
 | Anthropic Messages | Yes | Yes | Yes | `anthropic-messages-raw-cache.json`, `anthropic-messages-raw-cache-1h.json`, `anthropic-messages-stream-events.json` |
-| Google Gemini / AI Studio | Yes | Yes | Yes | `extract_gemini_generate_content_usage`, `extractGeminiGenerateContentUsage`, `extract_gemini_live_usage`, `extractGeminiLiveUsage`; `gemini-generate-content-raw-reasoning-cache.json`, `gemini-generate-content-stream-chunks.json`, `gemini-live-translate-raw-audio-usage.json` |
+| Google Gemini / AI Studio | Yes | Yes | Yes | `extract_gemini_generate_content_usage`, `extractGeminiGenerateContentUsage`, `extract_gemini_live_usage`, `extractGeminiLiveUsage`, `extract_google_interactions_usage`, `extractGoogleInteractionsUsage`; `gemini-generate-content-raw-reasoning-cache.json`, `gemini-generate-content-stream-chunks.json`, `gemini-live-translate-raw-audio-usage.json`, `google-interactions-total-usage-metadata.json` |
 | Google Vertex AI | Yes | Yes | Yes | Uses Gemini generateContent extractor for `vertex.gemini.generate_content`; `vertex-gemini-generate-content-raw-basic.json` |
 | AWS Bedrock Converse | Yes | Yes | Yes | `extract_bedrock_converse_usage`, `extractBedrockConverseUsage`; `bedrock-converse-raw-cache.json` |
 | AWS Bedrock InvokeModel | Yes | Yes | Yes | `extract_bedrock_invoke_model_usage`, `extractBedrockInvokeModelUsage`; `bedrock-invoke-model-anthropic-messages.json` |

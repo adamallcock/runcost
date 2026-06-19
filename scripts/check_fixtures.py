@@ -342,6 +342,7 @@ def run_python_fixture(fixture):
                 "huggingface.chat_completions",
                 "google.gemini.generate_content",
                 "google.gemini.live",
+                "google.gemini.interactions",
                 "vertex.gemini.generate_content",
                 "aws.bedrock.converse",
                 "aws.bedrock.invoke_model",

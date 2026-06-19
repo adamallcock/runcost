@@ -2074,7 +2074,11 @@ def _normalize_gemini_service_tier(value: Any) -> Optional[str]:
     tier = str(value).strip()
     if not tier:
         return None
-    tier = tier.removeprefix("SERVICE_TIER_").lower()
+    if "." in tier:
+        tier = tier.rsplit(".", 1)[1]
+    tier = tier.lower()
+    if tier.startswith("service_tier_"):
+        tier = tier.removeprefix("service_tier_")
     if tier == "unspecified":
         return "standard"
     return tier
@@ -2275,6 +2279,224 @@ def extract_gemini_live_usage(response: Dict[str, Any], **options: Any) -> Dict[
     context = _gemini_usage_context(usage)
     if context:
         ledger["context"] = context
+    return ledger
+
+
+def _interaction_usage_from_parent(parent: Dict[str, Any], source_root: str) -> Optional[tuple[Dict[str, Any], str]]:
+    metadata = parent.get("metadata") if isinstance(parent.get("metadata"), dict) else {}
+    for key in ("total_usage", "totalUsage", "usage"):
+        value = metadata.get(key)
+        if isinstance(value, dict):
+            return value, f"{source_root}.metadata.{key}"
+    for key in ("total_usage", "totalUsage", "usage"):
+        value = parent.get(key)
+        if isinstance(value, dict):
+            return value, f"{source_root}.{key}"
+    return None
+
+
+def _google_interactions_usage_payload(response: Dict[str, Any]) -> tuple[Dict[str, Any], str]:
+    result = _interaction_usage_from_parent(response, "$")
+    if result is not None:
+        return result
+    interaction = response.get("interaction")
+    if isinstance(interaction, dict):
+        result = _interaction_usage_from_parent(interaction, "$.interaction")
+        if result is not None:
+            return result
+    for collection_name in ("chunks", "stream", "events"):
+        collection = response.get(collection_name)
+        if not isinstance(collection, list):
+            continue
+        for index in range(len(collection) - 1, -1, -1):
+            item = collection[index]
+            if not isinstance(item, dict):
+                continue
+            result = _interaction_usage_from_parent(item, f"$.{collection_name}[{index}]")
+            if result is not None:
+                return result
+    return {}, "$.metadata.total_usage"
+
+
+def _google_interactions_response_value(response: Dict[str, Any], *keys: str) -> Optional[Any]:
+    interaction = response.get("interaction") if isinstance(response.get("interaction"), dict) else {}
+    for parent in (response, interaction):
+        for key in keys:
+            value = parent.get(key)
+            if value:
+                return value
+    for collection_name in ("chunks", "stream", "events"):
+        collection = response.get(collection_name)
+        if not isinstance(collection, list):
+            continue
+        for item in reversed(collection):
+            if not isinstance(item, dict):
+                continue
+            interaction = item.get("interaction") if isinstance(item.get("interaction"), dict) else {}
+            for parent in (item, interaction):
+                for key in keys:
+                    value = parent.get(key)
+                    if value:
+                        return value
+    return None
+
+
+def _google_interactions_service_tier(response: Dict[str, Any], usage: Dict[str, Any]) -> Optional[str]:
+    candidates: List[Any] = []
+    for parent in (
+        usage,
+        response.get("metadata") if isinstance(response.get("metadata"), dict) else {},
+        response.get("interaction") if isinstance(response.get("interaction"), dict) else {},
+        response,
+    ):
+        candidates.extend([parent.get("service_tier"), parent.get("serviceTier")])
+    for value in candidates:
+        service_tier = _normalize_gemini_service_tier(value)
+        if service_tier:
+            return service_tier
+    return _normalize_gemini_service_tier(
+        _google_interactions_response_value(response, "service_tier", "serviceTier")
+    )
+
+
+def _google_interactions_modality_counts(value: Any) -> Dict[str, Decimal]:
+    counts: Dict[str, Decimal] = {}
+    if not isinstance(value, list):
+        return counts
+    for detail in value:
+        if not isinstance(detail, dict):
+            continue
+        modality = str(detail.get("modality") or "text").strip().upper()
+        if not modality:
+            modality = "TEXT"
+        quantity = detail.get("tokens", detail.get("tokenCount", 0))
+        _gemini_add_count(counts, modality, _decimal(quantity))
+    return counts
+
+
+_GOOGLE_INTERACTIONS_GROUNDING_COMPONENTS = {
+    "google_search": ("web_search_units", "search"),
+    "google_maps": ("tool_call_units", "call"),
+    "retrieval": ("tool_call_units", "call"),
+}
+
+
+def _google_interactions_grounding_components(usage: Dict[str, Any], source_root: str) -> List[Optional[Dict[str, Any]]]:
+    components: List[Optional[Dict[str, Any]]] = []
+    grounding_counts = usage.get("grounding_tool_count")
+    if not isinstance(grounding_counts, list):
+        return components
+    totals: Dict[tuple[str, str], Decimal] = {}
+    for detail in grounding_counts:
+        if not isinstance(detail, dict):
+            continue
+        mapping = _GOOGLE_INTERACTIONS_GROUNDING_COMPONENTS.get(str(detail.get("type") or ""))
+        if mapping is None:
+            continue
+        component_name, unit = mapping
+        key = (component_name, unit)
+        totals[key] = totals.get(key, Decimal("0")) + _decimal(detail.get("count", 0))
+    for (component_name, unit), quantity in totals.items():
+        components.append(
+            _positive_component(
+                component_name,
+                _format_decimal(quantity),
+                unit,
+                f"{source_root}.grounding_tool_count[*].count",
+            )
+        )
+    return components
+
+
+def extract_google_interactions_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    usage, source_root = _google_interactions_usage_payload(response)
+    cached_input = _decimal(usage.get("total_cached_tokens", 0))
+    input_tokens = _decimal(usage.get("total_input_tokens", 0))
+    output_tokens = _decimal(usage.get("total_output_tokens", 0))
+    thoughts_tokens = _decimal(usage.get("total_thought_tokens", 0))
+    tool_use_tokens = _decimal(usage.get("total_tool_use_tokens", 0))
+    input_counts = _google_interactions_modality_counts(usage.get("input_tokens_by_modality"))
+    cache_counts = _google_interactions_modality_counts(usage.get("cached_tokens_by_modality"))
+    output_counts = _google_interactions_modality_counts(usage.get("output_tokens_by_modality"))
+    tool_counts = _google_interactions_modality_counts(usage.get("tool_use_tokens_by_modality"))
+
+    tool_remainder = tool_use_tokens - _gemini_sum_counts(tool_counts)
+    if tool_remainder > 0:
+        _gemini_add_count(tool_counts, "TEXT", tool_remainder)
+
+    detail_safe_for_input = bool(input_counts) and (cached_input == 0 or bool(cache_counts))
+    if detail_safe_for_input:
+        input_components = _gemini_ordered_components(
+            _gemini_component_quantities(
+                _gemini_net_input_counts(input_counts, cache_counts, tool_counts),
+                GEMINI_INPUT_MODALITY_COMPONENTS,
+                "input_uncached_tokens",
+            ),
+            GEMINI_INPUT_COMPONENT_ORDER,
+            f"{source_root}.input_tokens_by_modality",
+        )
+        cache_read = cached_input or _gemini_sum_counts(cache_counts)
+        cache_read_source = (
+            f"{source_root}.total_cached_tokens"
+            if "total_cached_tokens" in usage
+            else f"{source_root}.cached_tokens_by_modality"
+        )
+    else:
+        input_components = [
+            _positive_component(
+                "input_uncached_tokens",
+                _format_decimal(input_tokens - cached_input + tool_use_tokens),
+                "token",
+                f"{source_root}.total_input_tokens",
+            )
+        ]
+        cache_read = cached_input
+        cache_read_source = f"{source_root}.total_cached_tokens"
+
+    if output_counts:
+        output_components = _gemini_ordered_components(
+            _gemini_component_quantities(
+                output_counts,
+                GEMINI_OUTPUT_MODALITY_COMPONENTS,
+                "output_text_tokens",
+            ),
+            GEMINI_OUTPUT_COMPONENT_ORDER,
+            f"{source_root}.output_tokens_by_modality",
+        )
+    else:
+        output_components = [
+            _positive_component(
+                "output_text_tokens",
+                _format_decimal(output_tokens),
+                "token",
+                f"{source_root}.total_output_tokens",
+            )
+        ]
+
+    returned_model = _google_interactions_response_value(response, "model", "agent") or options.get("model")
+    ledger = _base_usage_ledger(
+        provider=options.get("provider", "google"),
+        surface=options.get("surface", "google.gemini.interactions"),
+        requested_model=options.get("model", returned_model),
+        returned_model=returned_model,
+        raw_usage=usage,
+        components=_compact_components(
+            input_components[:1]
+            + [
+                _positive_component("input_cache_read_tokens", _format_decimal(cache_read), "token", cache_read_source),
+            ]
+            + input_components[1:]
+            + output_components[:1]
+            + [
+                _positive_component("output_reasoning_tokens", _format_decimal(thoughts_tokens), "token", f"{source_root}.total_thought_tokens"),
+            ]
+            + output_components[1:]
+            + _google_interactions_grounding_components(usage, source_root)
+        ),
+    )
+    service_tier = _google_interactions_service_tier(response, usage)
+    if service_tier:
+        ledger["context"] = {"service_tier": service_tier}
     return ledger
 
 
@@ -2847,6 +3069,8 @@ def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, 
         return extract_gemini_generate_content_usage(response, **options)
     if surface == "google.gemini.live":
         return extract_gemini_live_usage(response, **options)
+    if surface == "google.gemini.interactions":
+        return extract_google_interactions_usage(response, **options)
     if surface == "aws.bedrock.converse":
         return extract_bedrock_converse_usage(response, **options)
     if surface == "aws.bedrock.invoke_model":
