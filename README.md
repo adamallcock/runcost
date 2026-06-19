@@ -128,6 +128,30 @@ import (
 )
 
 func main() {
+    priceCards := []any{
+        ledger.Object{
+            "schema_version": "0.1",
+            "id":             "openai:gpt-4.1-mini:example",
+            "provider":       "openai",
+            "surface":        "openai.responses",
+            "model":          "gpt-4.1-mini",
+            "aliases":        []any{"gpt-4.1-mini-2025-04-14"},
+            "components": []any{
+                ledger.Object{
+                    "usage_component": "input_uncached_tokens",
+                    "unit":            "token",
+                    "price": ledger.Object{"amount": "0.40", "currency": "USD", "per": "1000000"},
+                },
+                ledger.Object{
+                    "usage_component": "output_text_tokens",
+                    "unit":            "token",
+                    "price": ledger.Object{"amount": "1.60", "currency": "USD", "per": "1000000"},
+                },
+            },
+            "source": ledger.Object{"name": "example"},
+        },
+    }
+
     cost := ledger.FromResponse(
         ledger.Object{
             "model": "gpt-4.1-mini-2025-04-14",
@@ -137,33 +161,12 @@ func main() {
             },
         },
         ledger.Object{
-            "provider":    "openai",
-            "surface":     "openai.responses",
-            "model":       "gpt-4.1-mini",
-            "price_cards": []any{
-                ledger.Object{
-                    "schema_version": "0.1",
-                    "id":             "openai:gpt-4.1-mini:example",
-                    "provider":       "openai",
-                    "surface":        "openai.responses",
-                    "model":          "gpt-4.1-mini",
-                    "aliases":        []any{"gpt-4.1-mini-2025-04-14"},
-                    "components": []any{
-                        ledger.Object{
-                            "usage_component": "input_uncached_tokens",
-                            "unit":            "token",
-                            "price": ledger.Object{"amount": "0.40", "currency": "USD", "per": "1000000"},
-                        },
-                        ledger.Object{
-                            "usage_component": "output_text_tokens",
-                            "unit":            "token",
-                            "price": ledger.Object{"amount": "1.60", "currency": "USD", "per": "1000000"},
-                        },
-                    },
-                    "source": ledger.Object{"name": "example"},
-                },
-            },
+            "provider": "openai",
+            "surface":  "openai.responses",
+            "model":    "gpt-4.1-mini",
         },
+        priceCards,
+        nil,
     )
 
     fmt.Println(cost["total"])
@@ -195,7 +198,7 @@ ledger = calculate_cost(
 | Job | Python | JavaScript/TypeScript | Go |
 |---|---|---|---|
 | Price normalized usage | `calculate_cost(...)` | `calculateCost(options)` | `CalculateCost(options)` |
-| Price a provider response | `from_response(...)` | `fromResponse(response, options)` | `FromResponse(response, options)` |
+| Price a provider response | `from_response(...)` | `fromResponse(response, options)` | `FromResponse(response, options, priceCards, discountPolicies)` |
 | Aggregate call ledgers | `aggregate_cost_ledgers(...)` | `aggregateCostLedgers(options)` | `AggregateCostLedgers(...)` |
 | Use framework outputs | `from_langsmith_run(...)`, `track_langchain_costs(...)`, and more | `fromVercelAISDKStreamFinish(...)`, `createRunCostVercelOnFinish(...)`, and more | `FromLangSmithRun(...)`, `FromSemanticKernelTelemetry(...)`, and more |
 | Load price sources | `price_cards_from_json_file(...)`, `price_cards_from_openrouter_models(...)` | `priceCardsFromJSONFile(...)`, `priceCardsFromOpenRouterModels(...)` | `PriceCardsFromJSONFile(...)`, `PriceCardsFromOpenRouterModels(...)` |

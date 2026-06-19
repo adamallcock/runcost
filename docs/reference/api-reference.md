@@ -83,7 +83,7 @@ Common one-call helper:
 |---|---|
 | Python | `from_response(response, ...)` |
 | JavaScript/TypeScript | `fromResponse(response, options)` |
-| Go | `FromResponse(response, options)` |
+| Go | `FromResponse(response, options, priceCards, discountPolicies)` |
 
 ## Framework Adapters
 

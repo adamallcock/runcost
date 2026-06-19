@@ -16,6 +16,16 @@ limitations.
 
 - No unreleased changes yet.
 
+## 0.1.10
+
+- Fix JavaScript decimal normalization for tiny bundled default-catalog prices
+  that arrive from JSON numbers as exponent-form strings such as `4e-7`.
+- Strengthen package install checks with OpenAI default-catalog cost smokes
+  across Python, JavaScript, and Go so exponent-form pricing regressions are
+  caught before release.
+- Correct Go `FromResponse` documentation examples to pass price cards and
+  discount policies through the exported Go signature.
+
 ## 0.1.9
 
 - Refresh the bundled default price catalog from live public sources and expand

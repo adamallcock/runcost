@@ -113,6 +113,38 @@ import (
 )
 
 func main() {
+    priceCards := []any{
+        ledger.Object{
+            "schema_version": "0.1",
+            "id":             "openai:gpt-5.4:example",
+            "provider":       "openai",
+            "surface":        "openai.responses",
+            "model":          "gpt-5.4",
+            "aliases":        []any{"gpt-5.4-2026-05-01"},
+            "components": []any{
+                ledger.Object{
+                    "usage_component": "input_uncached_tokens",
+                    "unit":            "token",
+                    "price": ledger.Object{
+                        "amount": "1.25",
+                        "currency": "USD",
+                        "per": "1000000",
+                    },
+                },
+                ledger.Object{
+                    "usage_component": "output_text_tokens",
+                    "unit":            "token",
+                    "price": ledger.Object{
+                        "amount": "10",
+                        "currency": "USD",
+                        "per": "1000000",
+                    },
+                },
+            },
+            "source": ledger.Object{"name": "user"},
+        },
+    }
+
     cost := ledger.FromResponse(
         ledger.Object{
             "model": "gpt-5.4-2026-05-01",
@@ -125,38 +157,9 @@ func main() {
             "provider": "openai",
             "surface":  "openai.responses",
             "model":    "gpt-5.4",
-            "price_cards": []any{
-                ledger.Object{
-                    "schema_version": "0.1",
-                    "id":             "openai:gpt-5.4:example",
-                    "provider":       "openai",
-                    "surface":        "openai.responses",
-                    "model":          "gpt-5.4",
-                    "aliases":        []any{"gpt-5.4-2026-05-01"},
-                    "components": []any{
-                        ledger.Object{
-                            "usage_component": "input_uncached_tokens",
-                            "unit":            "token",
-                            "price": ledger.Object{
-                                "amount": "1.25",
-                                "currency": "USD",
-                                "per": "1000000",
-                            },
-                        },
-                        ledger.Object{
-                            "usage_component": "output_text_tokens",
-                            "unit":            "token",
-                            "price": ledger.Object{
-                                "amount": "10",
-                                "currency": "USD",
-                                "per": "1000000",
-                            },
-                        },
-                    },
-                    "source": ledger.Object{"name": "user"},
-                },
-            },
         },
+        priceCards,
+        nil,
     )
 
     fmt.Println(cost["total"])

@@ -61,8 +61,55 @@ const TOOL_OR_FEATURE_COMPONENTS = new Set([
 ]);
 export const DEFAULT_PRICE_SOURCE_PRIORITY = ["anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"];
 
+function normalizeDecimalString(value) {
+  if (value === null || value === undefined) {
+    return "0";
+  }
+  if (typeof value === "number" && !Number.isFinite(value)) {
+    throw new Error(`invalid decimal: ${value}`);
+  }
+  const text = String(value).trim();
+  if (text === "") {
+    return "0";
+  }
+  if (!/[eE]/.test(text)) {
+    return text.startsWith("+") ? text.slice(1) : text;
+  }
+
+  const match = text.match(/^([+-]?)(?:(\d+)(?:\.(\d*))?|\.(\d+))[eE]([+-]?\d+)$/);
+  if (!match) {
+    throw new Error(`invalid decimal: ${value}`);
+  }
+  const [, rawSign, rawWhole, rawFrac, rawLeadingFrac, rawExponent] = match;
+  const whole = rawWhole || "0";
+  const frac = rawFrac ?? rawLeadingFrac ?? "";
+  const rawDigits = `${whole}${frac}`;
+  const leadingZeros = rawDigits.match(/^0*/)[0].length;
+  const digits = rawDigits.slice(leadingZeros) || "0";
+  if (digits === "0") {
+    return "0";
+  }
+  const decimalIndex = whole.length + Number.parseInt(rawExponent, 10) - leadingZeros;
+  let normalizedWhole;
+  let normalizedFrac;
+  if (decimalIndex <= 0) {
+    normalizedWhole = "0";
+    normalizedFrac = `${"0".repeat(-decimalIndex)}${digits}`;
+  } else if (decimalIndex >= digits.length) {
+    normalizedWhole = `${digits}${"0".repeat(decimalIndex - digits.length)}`;
+    normalizedFrac = "";
+  } else {
+    normalizedWhole = digits.slice(0, decimalIndex);
+    normalizedFrac = digits.slice(decimalIndex);
+  }
+  normalizedWhole = normalizedWhole.replace(/^0+(?=\d)/, "") || "0";
+  normalizedFrac = normalizedFrac.replace(/0+$/, "");
+  const sign = rawSign === "-" ? "-" : "";
+  return `${sign}${normalizedWhole}${normalizedFrac ? `.${normalizedFrac}` : ""}`;
+}
+
 function parseDecimal(value) {
-  const text = String(value);
+  const text = normalizeDecimalString(value);
   const sign = text.startsWith("-") ? -1n : 1n;
   const unsigned = text.startsWith("-") ? text.slice(1) : text;
   const [wholeRaw, fracRaw = ""] = unsigned.split(".");
@@ -1341,7 +1388,7 @@ export function aggregateCostLedgers({
 }
 
 function numberString(value) {
-  return String(value ?? 0);
+  return normalizeDecimalString(value);
 }
 
 function positiveComponent(name, quantity, unit, sourcePath) {

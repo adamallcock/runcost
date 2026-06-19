@@ -137,6 +137,33 @@ print("python gemini live package smoke passed")
         encoding="utf-8",
     )
     run([str(python), str(python_live_check)], workdir)
+    python_default_openai_check = workdir / "python-default-openai-check.py"
+    python_default_openai_check.write_text(
+        """
+from runcost import default_price_cards, from_response
+
+ledger = from_response(
+    {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "usage": {
+            "input_tokens": 36,
+            "input_tokens_details": {"cached_tokens": 6},
+            "output_tokens": 87,
+            "output_tokens_details": {"reasoning_tokens": 12},
+        },
+    },
+    provider="openai",
+    surface="openai.responses",
+    model="gpt-4.1-mini",
+    price_cards=default_price_cards(),
+)
+assert ledger["total"] == "0.0001518", ledger
+assert ledger["warnings"] == [], ledger
+print("python OpenAI default catalog package smoke passed")
+""",
+        encoding="utf-8",
+    )
+    run([str(python), str(python_default_openai_check)], workdir)
     run(
         [
             str(venv_dir / "bin" / "runcost"),
@@ -211,6 +238,32 @@ console.log("javascript gemini live package smoke passed");
         encoding="utf-8",
     )
     run(["node", str(js_live_check)], project_dir)
+    js_default_openai_check = project_dir / "default-openai-check.mjs"
+    js_default_openai_check.write_text(
+        """
+import { defaultPriceCards, fromResponse } from "runcost";
+
+const ledger = fromResponse({
+  model: "gpt-4.1-mini-2025-04-14",
+  usage: {
+    input_tokens: 36,
+    input_tokens_details: { cached_tokens: 6 },
+    output_tokens: 87,
+    output_tokens_details: { reasoning_tokens: 12 }
+  }
+}, {
+  provider: "openai",
+  surface: "openai.responses",
+  model: "gpt-4.1-mini",
+  priceCards: defaultPriceCards()
+});
+if (ledger.total !== "0.0001518") throw new Error(JSON.stringify(ledger));
+if (ledger.warnings.length !== 0) throw new Error(JSON.stringify(ledger));
+console.log("javascript OpenAI default catalog package smoke passed");
+""",
+        encoding="utf-8",
+    )
+    run(["node", str(js_default_openai_check)], project_dir)
 
 
 def check_go_install(source_root: Path, workdir: Path) -> None:
@@ -277,6 +330,30 @@ func TestImport(t *testing.T) {
     liveSources := liveResult["price_sources"].([]any)
     if len(liveSources) != 1 || liveSources[0].(ledger.Object)["name"] != "google-official" {
         t.Fatalf("unexpected Gemini Live price sources: %#v", liveResult)
+    }
+    openaiResult := ledger.FromResponse(
+        ledger.Object{
+            "model": "gpt-4.1-mini-2025-04-14",
+            "usage": ledger.Object{
+                "input_tokens": 36,
+                "input_tokens_details": ledger.Object{"cached_tokens": 6},
+                "output_tokens": 87,
+                "output_tokens_details": ledger.Object{"reasoning_tokens": 12},
+            },
+        },
+        ledger.Object{
+            "provider": "openai",
+            "surface": "openai.responses",
+            "model": "gpt-4.1-mini",
+        },
+        ledger.DefaultPriceCards(),
+        nil,
+    )
+    if openaiResult["total"] != "0.0001518" {
+        t.Fatalf("unexpected OpenAI default catalog total: %#v", openaiResult)
+    }
+    if len(openaiResult["warnings"].([]any)) != 0 {
+        t.Fatalf("unexpected OpenAI default catalog warnings: %#v", openaiResult)
     }
     result := ledger.AggregateCostLedgers([]any{}, ledger.Object{
         "stream_final_usage_expected": true,
