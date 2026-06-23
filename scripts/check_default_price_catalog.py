@@ -388,12 +388,24 @@ def check_google_service_tiers() -> None:
         "google:gemini-3.5-flash:standard:official-snapshot",
         "google:gemini-3.5-flash:flex:official-snapshot",
         "google:gemini-3.5-flash:priority:official-snapshot",
+        "google:gemini-3.1-flash-lite:standard:official-snapshot",
+        "google:gemini-3.1-flash-lite:flex:official-snapshot",
+        "google:gemini-3.1-flash-lite:priority:official-snapshot",
         "google:gemini-3.1-pro-preview:standard:official-snapshot",
         "google:gemini-3.1-pro-preview:flex:official-snapshot",
         "google:gemini-3.1-pro-preview:priority:official-snapshot",
+        "google:gemini-3-flash-preview:standard:official-snapshot",
+        "google:gemini-3-flash-preview:flex:official-snapshot",
+        "google:gemini-3-flash-preview:priority:official-snapshot",
         "google:gemini-2.5-pro:standard:official-snapshot",
         "google:gemini-2.5-pro:flex:official-snapshot",
         "google:gemini-2.5-pro:priority:official-snapshot",
+        "google:gemini-2.5-flash:standard:official-snapshot",
+        "google:gemini-2.5-flash:flex:official-snapshot",
+        "google:gemini-2.5-flash:priority:official-snapshot",
+        "google:gemini-2.5-flash-lite:standard:official-snapshot",
+        "google:gemini-2.5-flash-lite:flex:official-snapshot",
+        "google:gemini-2.5-flash-lite:priority:official-snapshot",
     }
     missing = sorted(expected_ids - set(by_id))
     assert_true(not missing, f"Google official catalog missing service-tier cards: {missing}")
@@ -468,6 +480,52 @@ def check_google_service_tiers() -> None:
     assert_true(
         priority_components["output_text_tokens"]["unit_price"] == "0.000027",
         "Gemini 2.5 Pro priority long-context output price mismatch",
+    )
+
+    flash_flex = from_response(
+        response={
+            "modelVersion": "gemini-2.5-flash",
+            "usageMetadata": {
+                "promptTokenCount": 1000,
+                "candidatesTokenCount": 100,
+                "totalTokenCount": 1100,
+                "serviceTier": "flex",
+            },
+        },
+        provider="google",
+        surface="google.gemini.generate_content",
+        model="gemini-2.5-flash",
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    flash_flex_components = {component.get("name"): component for component in flash_flex.get("components", [])}
+    assert_true(flash_flex["total"] == "0.000275", "Gemini 2.5 Flash flex total mismatch")
+    assert_true(
+        flash_flex_components["input_uncached_tokens"]["price_card_id"] == "google:gemini-2.5-flash:flex:official-snapshot",
+        "Gemini 2.5 Flash serviceTier flex must select Flex official card",
+    )
+
+    flash_lite_priority = from_response(
+        response={
+            "modelVersion": "gemini-3.1-flash-lite",
+            "usageMetadata": {
+                "promptTokenCount": 1000,
+                "candidatesTokenCount": 100,
+                "totalTokenCount": 1100,
+                "serviceTier": "priority",
+            },
+        },
+        provider="google",
+        surface="google.gemini.generate_content",
+        model="gemini-3.1-flash-lite",
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    flash_lite_priority_components = {component.get("name"): component for component in flash_lite_priority.get("components", [])}
+    assert_true(flash_lite_priority["total"] == "0.00072", "Gemini 3.1 Flash-Lite priority total mismatch")
+    assert_true(
+        flash_lite_priority_components["input_uncached_tokens"]["price_card_id"] == "google:gemini-3.1-flash-lite:priority:official-snapshot",
+        "Gemini 3.1 Flash-Lite serviceTier priority must select Priority official card",
     )
 
 

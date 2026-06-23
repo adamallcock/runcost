@@ -3383,8 +3383,40 @@ func normalizeGeminiServiceTier(value any) string {
 	return tier
 }
 
-func geminiUsageContext(usage Object) Object {
-	serviceTier := normalizeGeminiServiceTier(usage["serviceTier"])
+func responseHeaderValue(response Object, headerName string) any {
+	for _, field := range []string{"headers", "response_headers", "responseHeaders"} {
+		switch headers := response[field].(type) {
+		case map[string]any:
+			for key, value := range headers {
+				if strings.EqualFold(key, headerName) {
+					return value
+				}
+			}
+		case map[string]string:
+			for key, value := range headers {
+				if strings.EqualFold(key, headerName) {
+					return value
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func geminiHeaderServiceTier(responses ...Object) string {
+	for _, response := range responses {
+		if serviceTier := normalizeGeminiServiceTier(responseHeaderValue(response, "x-gemini-service-tier")); serviceTier != "" {
+			return serviceTier
+		}
+	}
+	return ""
+}
+
+func geminiUsageContext(usage Object, responses ...Object) Object {
+	serviceTier := geminiHeaderServiceTier(responses...)
+	if serviceTier == "" {
+		serviceTier = normalizeGeminiServiceTier(usage["serviceTier"])
+	}
 	if serviceTier == "" {
 		serviceTier = normalizeGeminiServiceTier(usage["service_tier"])
 	}
@@ -3395,6 +3427,7 @@ func geminiUsageContext(usage Object) Object {
 }
 
 func extractGeminiGenerateContentUsage(response Object, options Object) Object {
+	originalResponse := response
 	response = geminiGenerateContentPayload(response)
 	usage := asObject(response["usageMetadata"])
 	cachedInput := getNumber(usage, "cachedContentTokenCount")
@@ -3479,7 +3512,7 @@ func extractGeminiGenerateContentUsage(response Object, options Object) Object {
 	)
 
 	ledger := baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents(components), usage)
-	if context := geminiUsageContext(usage); len(context) > 0 {
+	if context := geminiUsageContext(usage, originalResponse, response); len(context) > 0 {
 		ledger["context"] = context
 	}
 	return ledger
@@ -3655,6 +3688,9 @@ func googleInteractionsResponseValue(response Object, keys []string) any {
 }
 
 func googleInteractionsServiceTier(response Object, usage Object) string {
+	if serviceTier := geminiHeaderServiceTier(response); serviceTier != "" {
+		return serviceTier
+	}
 	for _, parent := range []Object{
 		usage,
 		asObject(response["metadata"]),

@@ -202,6 +202,7 @@ Source reference:
 - Firebase AI Logic `GenerateContentResponse.UsageMetadata` documents `thoughtsTokenCount`, `totalTokenCount`, `promptTokensDetails`, cache token details, candidate token details, and tool prompt token details: https://firebase.google.com/docs/reference/swift/firebaseailogic/api/reference/Structs/GenerateContentResponse/UsageMetadata
 - Vertex AI REST `GenerateContentResponse` documents `usageMetadata` and `totalTokenCount`, where total is the sum of prompt, candidate, tool-use prompt, and thoughts token counts: https://cloud.google.com/vertex-ai/generative-ai/docs/reference/rest/v1/GenerateContentResponse
 - Gemini API text-generation docs state that `generate_content_stream` / `generateContentStream` returns `GenerateContentResponse` chunks incrementally: https://ai.google.dev/gemini-api/docs/text-generation
+- Gemini API Priority docs identify `x-gemini-service-tier` as the response header for the actual served tier when Priority requests downgrade to Standard: https://ai.google.dev/gemini-api/docs/priority-inference
 
 Mapping:
 
@@ -223,6 +224,7 @@ Mapping:
   - `IMAGE` -> `output_image_tokens`.
   - `AUDIO` -> `output_audio_tokens`.
   - `VIDEO` -> `output_video_tokens`.
+- `x-gemini-service-tier` is preferred over `usageMetadata.serviceTier` when present because Priority requests can be billed at the downgraded response tier.
 - `usageMetadata.totalTokenCount` is preserved in raw usage but is never priced directly.
 
 Notes:
@@ -272,6 +274,7 @@ Source references:
 - js-genai v2.9.0 adds `UsageMetadata.serviceTier`: https://github.com/googleapis/js-genai/releases/tag/v2.9.0
 - js-genai v2.9.0 renames Interactions stream metadata usage from `usage` to `total_usage`: https://github.com/googleapis/js-genai/releases/tag/v2.9.0
 - The v2.9.0 `ServiceTier` enum uses lower-case string values: `unspecified`, `flex`, `standard`, and `priority`: https://github.com/googleapis/js-genai/commit/1f44b04
+- Gemini API Priority docs identify `x-gemini-service-tier` as the response header for the actual served tier when Priority requests downgrade to Standard: https://ai.google.dev/gemini-api/docs/priority-inference
 
 Mapping:
 
@@ -285,7 +288,7 @@ Mapping:
 - `output_tokens_by_modality` -> modality-aware output components. `text` and `document` map to `output_text_tokens`; `image`, `audio`, and `video` map to their matching media output components.
 - `total_thought_tokens` -> `output_reasoning_tokens`.
 - `grounding_tool_count` maps `google_search` to `web_search_units`; `google_maps` and `retrieval` map conservatively to `tool_call_units` until those provider-specific price surfaces have stronger public price-card coverage.
-- `service_tier` / `serviceTier` values are normalized like other Gemini service tiers, including SDK string forms such as `ServiceTier.PRIORITY`.
+- `x-gemini-service-tier` is preferred over `service_tier` / `serviceTier`; body values are normalized like other Gemini service tiers, including SDK string forms such as `ServiceTier.PRIORITY`.
 - `total_tokens` is preserved in raw usage but is never priced directly.
 
 ## AWS Bedrock Converse

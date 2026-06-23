@@ -2251,12 +2251,34 @@ function normalizeGeminiServiceTier(value) {
   return tier === "unspecified" ? "standard" : tier;
 }
 
-function geminiUsageContext(usage) {
-  const serviceTier = normalizeGeminiServiceTier(usage.serviceTier ?? usage.service_tier);
+function responseHeaderValue(response, headerName) {
+  const expected = headerName.toLowerCase();
+  for (const field of ["headers", "response_headers", "responseHeaders"]) {
+    const headers = response && typeof response === "object" ? response[field] : null;
+    if (!headers || typeof headers !== "object") continue;
+    for (const [key, value] of Object.entries(headers)) {
+      if (String(key).toLowerCase() === expected) return value;
+    }
+  }
+  return undefined;
+}
+
+function geminiHeaderServiceTier(...responses) {
+  for (const response of responses) {
+    const serviceTier = normalizeGeminiServiceTier(responseHeaderValue(response, "x-gemini-service-tier"));
+    if (serviceTier) return serviceTier;
+  }
+  return null;
+}
+
+function geminiUsageContext(usage, response, originalResponse) {
+  const serviceTier = geminiHeaderServiceTier(originalResponse, response) ||
+    normalizeGeminiServiceTier(usage.serviceTier ?? usage.service_tier);
   return serviceTier ? { service_tier: serviceTier } : null;
 }
 
 export function extractGeminiGenerateContentUsage(response, options = {}) {
+  const originalResponse = response;
   response = geminiGenerateContentPayload(response);
   const usage = response.usageMetadata || {};
   const cachedInput = usage.cachedContentTokenCount || 0;
@@ -2335,7 +2357,7 @@ export function extractGeminiGenerateContentUsage(response, options = {}) {
       ...outputComponents.slice(1)
     ])
   });
-  const context = geminiUsageContext(usage);
+  const context = geminiUsageContext(usage, response, originalResponse);
   if (context) ledger.context = context;
   return ledger;
 }
@@ -2504,6 +2526,8 @@ function googleInteractionsResponseValue(response, keys) {
 }
 
 function googleInteractionsServiceTier(response, usage) {
+  const headerServiceTier = geminiHeaderServiceTier(response);
+  if (headerServiceTier) return headerServiceTier;
   const parents = [
     usage,
     response.metadata && typeof response.metadata === "object" ? response.metadata : {},
