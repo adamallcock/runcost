@@ -2084,14 +2084,43 @@ def _normalize_gemini_service_tier(value: Any) -> Optional[str]:
     return tier
 
 
-def _gemini_usage_context(usage: Dict[str, Any]) -> Dict[str, Any]:
-    service_tier = _normalize_gemini_service_tier(usage.get("serviceTier", usage.get("service_tier")))
+def _response_header_value(response: Dict[str, Any], header_name: str) -> Optional[Any]:
+    header_name_lower = header_name.lower()
+    for field in ("headers", "response_headers", "responseHeaders"):
+        headers = response.get(field)
+        if not isinstance(headers, dict):
+            continue
+        for key, value in headers.items():
+            if str(key).lower() == header_name_lower:
+                return value
+    return None
+
+
+def _gemini_header_service_tier(*responses: Dict[str, Any]) -> Optional[str]:
+    for response in responses:
+        if not isinstance(response, dict):
+            continue
+        service_tier = _normalize_gemini_service_tier(_response_header_value(response, "x-gemini-service-tier"))
+        if service_tier:
+            return service_tier
+    return None
+
+
+def _gemini_usage_context(
+    usage: Dict[str, Any],
+    response: Optional[Dict[str, Any]] = None,
+    original_response: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    service_tier = _gemini_header_service_tier(original_response or {}, response or {})
+    if not service_tier:
+        service_tier = _normalize_gemini_service_tier(usage.get("serviceTier", usage.get("service_tier")))
     if not service_tier:
         return {}
     return {"service_tier": service_tier}
 
 
 def extract_gemini_generate_content_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    original_response = response
     response = _gemini_generate_content_payload(response)
     usage = response.get("usageMetadata", {})
     cached_input = _decimal(usage.get("cachedContentTokenCount", 0))
@@ -2178,7 +2207,7 @@ def extract_gemini_generate_content_usage(response: Dict[str, Any], **options: A
             + output_components[1:]
         ),
     )
-    context = _gemini_usage_context(usage)
+    context = _gemini_usage_context(usage, response=response, original_response=original_response)
     if context:
         ledger["context"] = context
     return ledger
@@ -2342,6 +2371,9 @@ def _google_interactions_response_value(response: Dict[str, Any], *keys: str) ->
 
 
 def _google_interactions_service_tier(response: Dict[str, Any], usage: Dict[str, Any]) -> Optional[str]:
+    header_service_tier = _gemini_header_service_tier(response)
+    if header_service_tier:
+        return header_service_tier
     candidates: List[Any] = []
     for parent in (
         usage,

@@ -13,7 +13,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 128
+- Fixtures: 130
 - Providers: 17
 - Provider surfaces: 34
 - Usage components covered: 34
@@ -24,9 +24,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 126 |
-| `javascript` | 127 |
-| `python` | 127 |
+| `go` | 128 |
+| `javascript` | 129 |
+| `python` | 129 |
 
 ## Scenarios
 
@@ -39,7 +39,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `long_context` | 2 |
 | `normalized_usage` | 11 |
 | `provider_reported` | 4 |
-| `raw_provider_response` | 56 |
+| `raw_provider_response` | 58 |
 | `service_mode` | 3 |
 | `service_tier` | 3 |
 | `source_adapter` | 14 |
@@ -61,8 +61,8 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `custom` | `custom.unknown` | 1 |
 | `custom-provider` | `openai.responses` | 1 |
 | `deepseek` | `deepseek.chat_completions` | 1 |
-| `google` | `google.gemini.generate_content` | 9 |
-| `google` | `google.gemini.interactions` | 3 |
+| `google` | `google.gemini.generate_content` | 10 |
+| `google` | `google.gemini.interactions` | 4 |
 | `google` | `google.gemini.live` | 6 |
 | `groq` | `groq.chat_completions` | 1 |
 | `huggingface` | `huggingface.chat_completions` | 1 |
@@ -108,12 +108,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `input_cache_write_tokens` | 14 |
 | `input_image_tokens` | 4 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 100 |
+| `input_uncached_tokens` | 102 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 10 |
 | `output_image_tokens` | 3 |
 | `output_reasoning_tokens` | 45 |
-| `output_text_tokens` | 85 |
+| `output_text_tokens` | 87 |
 | `output_video_tokens` | 2 |
 | `request_units` | 3 |
 | `rerank_search_units` | 2 |
@@ -193,7 +193,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-DEBUG-TRACE` | 1 |
 | `RC-DISCOUNT-POLICY` | 2 |
 | `RC-FEATURE-PRICING` | 15 |
-| `RC-FIXTURE-CONFORMANCE` | 128 |
+| `RC-FIXTURE-CONFORMANCE` | 130 |
 | `RC-FRAMEWORK-ADAPTER` | 14 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
 | `RC-GEMINI-LIVE` | 6 |
@@ -201,10 +201,10 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-LONG-CONTEXT` | 2 |
 | `RC-PROVIDER-EXTRACTOR` | 11 |
 | `RC-PROVIDER-REPORTED-COST` | 10 |
-| `RC-RAW-EXTRACTOR` | 46 |
+| `RC-RAW-EXTRACTOR` | 48 |
 | `RC-REASONING-OUTPUT-DEFAULT` | 1 |
 | `RC-SERVICE-MODE` | 3 |
-| `RC-SERVICE-TIER` | 7 |
+| `RC-SERVICE-TIER` | 9 |
 | `RC-SOURCE-ADAPTER` | 15 |
 | `RC-SOURCE-PRIORITY` | 2 |
 | `RC-STRICT-MODE` | 1 |
@@ -251,12 +251,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:input_cache_write_tokens` | 14 |
 | `component:input_image_tokens` | 4 |
 | `component:input_image_units` | 1 |
-| `component:input_uncached_tokens` | 98 |
+| `component:input_uncached_tokens` | 100 |
 | `component:input_video_tokens` | 1 |
 | `component:output_audio_tokens` | 10 |
 | `component:output_image_tokens` | 3 |
 | `component:output_reasoning_tokens` | 45 |
-| `component:output_text_tokens` | 85 |
+| `component:output_text_tokens` | 87 |
 | `component:output_video_tokens` | 2 |
 | `component:request_units` | 3 |
 | `component:rerank_search_units` | 2 |
@@ -285,9 +285,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `framework:vercel_ai_sdk` | 1 |
 | `framework_adapter` | 16 |
 | `gb_day` | 1 |
-| `gemini` | 12 |
+| `gemini` | 13 |
 | `generated_media` | 5 |
-| `google` | 3 |
+| `google` | 4 |
 | `helper:from_ag2_usage_summary` | 2 |
 | `helper:from_haystack_generator_result` | 1 |
 | `helper:from_langchain_message` | 1 |
@@ -303,7 +303,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `helper:vercel_ai_sdk_middleware` | 1 |
 | `historical_pricing` | 2 |
 | `image_generation` | 3 |
-| `interactions` | 3 |
+| `interactions` | 4 |
 | `invoke_model` | 1 |
 | `live_api` | 6 |
 | `live_translate` | 6 |
@@ -312,12 +312,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `multimodal` | 1 |
 | `normalized_usage` | 3 |
 | `provider_reported` | 9 |
-| `raw_provider_response` | 47 |
+| `raw_provider_response` | 49 |
 | `reasoning` | 18 |
 | `rerank` | 2 |
 | `separate_output_thinking` | 2 |
 | `service_mode` | 3 |
-| `service_tier` | 7 |
+| `service_tier` | 9 |
 | `session_pricing` | 1 |
 | `source:file` | 1 |
 | `source:helicone` | 1 |
