@@ -13,7 +13,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 130
+- Fixtures: 132
 - Providers: 17
 - Provider surfaces: 34
 - Usage components covered: 34
@@ -24,9 +24,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 128 |
-| `javascript` | 129 |
-| `python` | 129 |
+| `go` | 130 |
+| `javascript` | 131 |
+| `python` | 131 |
 
 ## Scenarios
 
@@ -35,11 +35,11 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `aggregation` | 2 |
 | `debug_trace` | 1 |
 | `discount` | 2 |
-| `framework_adapter` | 16 |
+| `framework_adapter` | 17 |
 | `long_context` | 2 |
 | `normalized_usage` | 11 |
 | `provider_reported` | 4 |
-| `raw_provider_response` | 58 |
+| `raw_provider_response` | 59 |
 | `service_mode` | 3 |
 | `service_tier` | 3 |
 | `source_adapter` | 14 |
@@ -72,7 +72,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `openai` | `openai.chat_completions` | 12 |
 | `openai` | `openai.embeddings` | 2 |
 | `openai` | `openai.images` | 2 |
-| `openai` | `openai.responses` | 49 |
+| `openai` | `openai.responses` | 51 |
 | `openai` | `openai.usage.audio_speeches` | 1 |
 | `openai` | `openai.usage.audio_transcriptions` | 1 |
 | `openai` | `openai.usage.code_interpreter_sessions` | 1 |
@@ -103,17 +103,17 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `file_search_units` | 2 |
 | `image_generation_units` | 3 |
 | `input_audio_tokens` | 10 |
-| `input_cache_read_tokens` | 46 |
+| `input_cache_read_tokens` | 48 |
 | `input_cache_write_1h_tokens` | 2 |
 | `input_cache_write_tokens` | 14 |
 | `input_image_tokens` | 4 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 102 |
+| `input_uncached_tokens` | 104 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 10 |
 | `output_image_tokens` | 3 |
-| `output_reasoning_tokens` | 45 |
-| `output_text_tokens` | 87 |
+| `output_reasoning_tokens` | 47 |
+| `output_text_tokens` | 89 |
 | `output_video_tokens` | 2 |
 | `request_units` | 3 |
 | `rerank_search_units` | 2 |
@@ -178,7 +178,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `from_openai_agents_usage` | 1 |
 | `from_openrouter_sdk_response` | 3 |
 | `from_semantic_kernel_telemetry` | 1 |
-| `from_vercel_ai_sdk_result` | 1 |
+| `from_vercel_ai_sdk_result` | 2 |
 | `from_vercel_ai_sdk_stream_finish` | 1 |
 | `langchain_callback` | 1 |
 | `vercel_ai_sdk_middleware` | 1 |
@@ -193,15 +193,15 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-DEBUG-TRACE` | 1 |
 | `RC-DISCOUNT-POLICY` | 2 |
 | `RC-FEATURE-PRICING` | 15 |
-| `RC-FIXTURE-CONFORMANCE` | 130 |
-| `RC-FRAMEWORK-ADAPTER` | 14 |
+| `RC-FIXTURE-CONFORMANCE` | 132 |
+| `RC-FRAMEWORK-ADAPTER` | 15 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
 | `RC-GEMINI-LIVE` | 6 |
 | `RC-GEMINI-THINKING-PRICING` | 6 |
 | `RC-LONG-CONTEXT` | 2 |
 | `RC-PROVIDER-EXTRACTOR` | 11 |
 | `RC-PROVIDER-REPORTED-COST` | 10 |
-| `RC-RAW-EXTRACTOR` | 48 |
+| `RC-RAW-EXTRACTOR` | 49 |
 | `RC-REASONING-OUTPUT-DEFAULT` | 1 |
 | `RC-SERVICE-MODE` | 3 |
 | `RC-SERVICE-TIER` | 9 |
@@ -224,7 +224,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `adapter:openai_agents.usage` | 1 |
 | `adapter:openrouter.sdk_response` | 2 |
 | `adapter:semantic_kernel.telemetry` | 1 |
-| `adapter:vercel_ai_sdk.generate_text` | 2 |
+| `adapter:vercel_ai_sdk.generate_text` | 3 |
 | `adapter:vercel_ai_sdk.stream_text` | 1 |
 | `aggregation` | 2 |
 | `alias` | 17 |
@@ -246,17 +246,17 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:file_search_units` | 2 |
 | `component:image_generation_units` | 3 |
 | `component:input_audio_tokens` | 10 |
-| `component:input_cache_read_tokens` | 46 |
+| `component:input_cache_read_tokens` | 48 |
 | `component:input_cache_write_1h_tokens` | 2 |
 | `component:input_cache_write_tokens` | 14 |
 | `component:input_image_tokens` | 4 |
 | `component:input_image_units` | 1 |
-| `component:input_uncached_tokens` | 100 |
+| `component:input_uncached_tokens` | 102 |
 | `component:input_video_tokens` | 1 |
 | `component:output_audio_tokens` | 10 |
 | `component:output_image_tokens` | 3 |
-| `component:output_reasoning_tokens` | 45 |
-| `component:output_text_tokens` | 87 |
+| `component:output_reasoning_tokens` | 47 |
+| `component:output_text_tokens` | 89 |
 | `component:output_video_tokens` | 2 |
 | `component:request_units` | 3 |
 | `component:rerank_search_units` | 2 |
@@ -283,7 +283,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `framework:openrouter` | 2 |
 | `framework:semantic_kernel` | 1 |
 | `framework:vercel_ai_sdk` | 1 |
-| `framework_adapter` | 16 |
+| `framework_adapter` | 17 |
 | `gb_day` | 1 |
 | `gemini` | 13 |
 | `generated_media` | 5 |
@@ -297,7 +297,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `helper:from_openai_agents_usage` | 1 |
 | `helper:from_openrouter_sdk_response` | 3 |
 | `helper:from_semantic_kernel_telemetry` | 1 |
-| `helper:from_vercel_ai_sdk_result` | 1 |
+| `helper:from_vercel_ai_sdk_result` | 2 |
 | `helper:from_vercel_ai_sdk_stream_finish` | 1 |
 | `helper:langchain_callback` | 1 |
 | `helper:vercel_ai_sdk_middleware` | 1 |
@@ -311,8 +311,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `mode:total` | 1 |
 | `multimodal` | 1 |
 | `normalized_usage` | 3 |
+| `openai_responses_orchestration_usage` | 2 |
 | `provider_reported` | 9 |
-| `raw_provider_response` | 49 |
+| `raw_provider_response` | 50 |
 | `reasoning` | 18 |
 | `rerank` | 2 |
 | `separate_output_thinking` | 2 |

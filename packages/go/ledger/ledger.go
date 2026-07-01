@@ -2529,13 +2529,40 @@ func openAIResponsesPayload(response Object) Object {
 	return response
 }
 
+func openAIResponsesOrchestrationUsage(usage Object) (any, any, any) {
+	inputDetails := asObject(usage["input_tokens_details"])
+	outputDetails := asObject(usage["output_tokens_details"])
+	return getNumber(inputDetails, "orchestration_input_tokens"),
+		getNumber(inputDetails, "orchestration_input_cached_tokens"),
+		getNumber(outputDetails, "orchestration_output_tokens")
+}
+
+func sumOpenAIResponsesOrchestrationUsage(usages []Object) (string, string, string) {
+	inputTokens := "0"
+	cachedInputTokens := "0"
+	outputTokens := "0"
+	for _, usage := range usages {
+		orchestrationInput, orchestrationCachedInput, orchestrationOutput := openAIResponsesOrchestrationUsage(usage)
+		inputTokens = add(inputTokens, orchestrationInput)
+		cachedInputTokens = add(cachedInputTokens, orchestrationCachedInput)
+		outputTokens = add(outputTokens, orchestrationOutput)
+	}
+	return inputTokens, cachedInputTokens, outputTokens
+}
+
 func extractOpenAIResponsesUsage(response Object, options Object) Object {
 	response = openAIResponsesPayload(response)
 	usage := asObject(response["usage"])
-	cachedInput := getNumber(usage, "input_tokens_details", "cached_tokens")
-	reasoning := getNumber(usage, "output_tokens_details", "reasoning_tokens")
+	inputDetails := asObject(usage["input_tokens_details"])
+	outputDetails := asObject(usage["output_tokens_details"])
+	cachedInput := getNumber(inputDetails, "cached_tokens")
+	orchestrationInput, orchestrationCachedInput, orchestrationOutput := openAIResponsesOrchestrationUsage(usage)
+	reasoning := getNumber(outputDetails, "reasoning_tokens")
 	input := getNumber(usage, "input_tokens")
 	output := getNumber(usage, "output_tokens")
+	inputUncached := add(subtract(input, cachedInput), subtract(orchestrationInput, orchestrationCachedInput))
+	inputCacheRead := add(cachedInput, orchestrationCachedInput)
+	outputText := add(subtract(output, reasoning), orchestrationOutput)
 	toolComponents := []any{}
 	functionCallCount := 0
 	explicitServerSideToolCount := 0
@@ -2613,9 +2640,9 @@ func extractOpenAIResponsesUsage(response Object, options Object) Object {
 	}
 
 	components := []any{
-		positiveComponent("input_uncached_tokens", subtract(input, cachedInput), "token", "$.usage.input_tokens"),
-		positiveComponent("input_cache_read_tokens", cachedInput, "token", "$.usage.input_tokens_details.cached_tokens"),
-		positiveComponent("output_text_tokens", subtract(output, reasoning), "token", "$.usage.output_tokens"),
+		positiveComponent("input_uncached_tokens", inputUncached, "token", "$.usage.input_tokens + $.usage.input_tokens_details.orchestration_input_tokens"),
+		positiveComponent("input_cache_read_tokens", inputCacheRead, "token", "$.usage.input_tokens_details.cached_tokens + $.usage.input_tokens_details.orchestration_input_cached_tokens"),
+		positiveComponent("output_text_tokens", outputText, "token", "$.usage.output_tokens + $.usage.output_tokens_details.orchestration_output_tokens"),
 		positiveComponent("output_reasoning_tokens", reasoning, "token", "$.usage.output_tokens_details.reasoning_tokens"),
 	}
 	components = append(components, toolComponents...)
@@ -4058,20 +4085,52 @@ func vercelAISDKUsagePayload(response Object) (Object, string) {
 	return asObject(response["usage"]), "$.usage"
 }
 
+func vercelAISDKRawUsagePayloads(response Object, usage Object) []Object {
+	stepRawUsages := []Object{}
+	for _, rawStep := range asSlice(response["steps"]) {
+		step := asObject(rawStep)
+		rawUsage := asObject(asObject(step["usage"])["raw"])
+		if len(rawUsage) > 0 {
+			stepRawUsages = append(stepRawUsages, rawUsage)
+		}
+	}
+	if len(stepRawUsages) > 0 {
+		return stepRawUsages
+	}
+	rawUsage := asObject(usage["raw"])
+	if len(rawUsage) > 0 {
+		return []Object{rawUsage}
+	}
+	for _, candidate := range []any{
+		asObject(response["usage"])["raw"],
+		asObject(response["totalUsage"])["raw"],
+		asObject(asObject(response["finalStep"])["usage"])["raw"],
+	} {
+		rawUsage = asObject(candidate)
+		if len(rawUsage) > 0 {
+			return []Object{rawUsage}
+		}
+	}
+	return []Object{}
+}
+
 func extractVercelAISDKUsage(response Object, options Object) Object {
 	usage, sourceRoot := vercelAISDKUsagePayload(response)
+	orchestrationInput, orchestrationCachedInput, orchestrationOutput := sumOpenAIResponsesOrchestrationUsage(vercelAISDKRawUsagePayloads(response, usage))
 	inputDetails := asObject(usage["inputTokenDetails"])
 	outputDetails := asObject(usage["outputTokenDetails"])
-	cacheRead := getNumber(inputDetails, "cacheReadTokens")
-	if rat(cacheRead).Sign() == 0 {
-		cacheRead = getNumber(usage, "cachedInputTokens")
+	baseCacheRead := getNumber(inputDetails, "cacheReadTokens")
+	if rat(baseCacheRead).Sign() == 0 {
+		baseCacheRead = getNumber(usage, "cachedInputTokens")
 	}
+	cacheRead := add(baseCacheRead, orchestrationCachedInput)
 	cacheWrite := getNumber(inputDetails, "cacheWriteTokens")
 	inputTokens := getNumber(usage, "inputTokens")
 	uncached := getNumber(inputDetails, "noCacheTokens")
 	if rat(uncached).Sign() == 0 {
-		uncached = subtract(subtract(inputTokens, cacheRead), cacheWrite)
+		uncached = subtract(subtract(inputTokens, baseCacheRead), cacheWrite)
 	}
+	uncached = add(uncached, subtract(orchestrationInput, orchestrationCachedInput))
 	outputTokens := getNumber(usage, "outputTokens")
 	reasoning := getNumber(outputDetails, "reasoningTokens")
 	if rat(reasoning).Sign() == 0 {
@@ -4081,6 +4140,7 @@ func extractVercelAISDKUsage(response Object, options Object) Object {
 	if rat(textTokens).Sign() == 0 {
 		textTokens = subtract(outputTokens, reasoning)
 	}
+	textTokens = add(textTokens, orchestrationOutput)
 	modelMetadata := asObject(response["model"])
 	responseMetadata := asObject(response["response"])
 	provider := asString(options["provider"])

@@ -1396,15 +1396,43 @@ def _openai_responses_payload(response: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
+def _openai_responses_orchestration_usage(usage: Dict[str, Any]) -> tuple[Decimal, Decimal, Decimal]:
+    input_details = usage.get("input_tokens_details") or {}
+    output_details = usage.get("output_tokens_details") or {}
+    return (
+        _decimal(input_details.get("orchestration_input_tokens") or 0),
+        _decimal(input_details.get("orchestration_input_cached_tokens") or 0),
+        _decimal(output_details.get("orchestration_output_tokens") or 0),
+    )
+
+
+def _sum_openai_responses_orchestration_usage(usages: Iterable[Dict[str, Any]]) -> tuple[Decimal, Decimal, Decimal]:
+    input_tokens = Decimal("0")
+    cached_input_tokens = Decimal("0")
+    output_tokens = Decimal("0")
+    for usage in usages:
+        orchestration_input, orchestration_cached_input, orchestration_output = _openai_responses_orchestration_usage(usage)
+        input_tokens += orchestration_input
+        cached_input_tokens += orchestration_cached_input
+        output_tokens += orchestration_output
+    return input_tokens, cached_input_tokens, output_tokens
+
+
 def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     response = _openai_responses_payload(response)
     usage = response.get("usage", {})
     surface = options.get("surface", "openai.responses")
     provider = options.get("provider") or ("xai" if surface == "xai.responses" else "openai")
-    cached_input = usage.get("input_tokens_details", {}).get("cached_tokens", 0)
-    reasoning = usage.get("output_tokens_details", {}).get("reasoning_tokens", 0)
-    input_tokens = usage.get("input_tokens", 0)
-    output_tokens = usage.get("output_tokens", 0)
+    input_details = usage.get("input_tokens_details") or {}
+    output_details = usage.get("output_tokens_details") or {}
+    cached_input = _decimal(input_details.get("cached_tokens") or 0)
+    orchestration_input, orchestration_cached_input, orchestration_output = _openai_responses_orchestration_usage(usage)
+    reasoning = _decimal(output_details.get("reasoning_tokens") or 0)
+    input_tokens = _decimal(usage.get("input_tokens") or 0)
+    output_tokens = _decimal(usage.get("output_tokens") or 0)
+    input_uncached = input_tokens - cached_input + orchestration_input - orchestration_cached_input
+    input_cache_read = cached_input + orchestration_cached_input
+    output_text = output_tokens - reasoning + orchestration_output
     tool_components = []
     function_call_count = 0
     explicit_server_side_tool_count = Decimal("0")
@@ -1466,9 +1494,24 @@ def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> 
         raw_usage=usage,
         components=_compact_components(
             [
-                _positive_component("input_uncached_tokens", input_tokens - cached_input, "token", "$.usage.input_tokens"),
-                _positive_component("input_cache_read_tokens", cached_input, "token", "$.usage.input_tokens_details.cached_tokens"),
-                _positive_component("output_text_tokens", output_tokens - reasoning, "token", "$.usage.output_tokens"),
+                _positive_component(
+                    "input_uncached_tokens",
+                    _format_decimal(input_uncached),
+                    "token",
+                    "$.usage.input_tokens + $.usage.input_tokens_details.orchestration_input_tokens",
+                ),
+                _positive_component(
+                    "input_cache_read_tokens",
+                    _format_decimal(input_cache_read),
+                    "token",
+                    "$.usage.input_tokens_details.cached_tokens + $.usage.input_tokens_details.orchestration_input_cached_tokens",
+                ),
+                _positive_component(
+                    "output_text_tokens",
+                    _format_decimal(output_text),
+                    "token",
+                    "$.usage.output_tokens + $.usage.output_tokens_details.orchestration_output_tokens",
+                ),
                 _positive_component("output_reasoning_tokens", reasoning, "token", "$.usage.output_tokens_details.reasoning_tokens"),
                 *tool_components,
             ]
@@ -2701,17 +2744,43 @@ def _vercel_ai_sdk_usage_payload(response: Dict[str, Any]) -> tuple[Dict[str, An
     return {}, "$.usage"
 
 
+def _vercel_ai_sdk_raw_usage_payloads(response: Dict[str, Any], usage: Dict[str, Any]) -> List[Dict[str, Any]]:
+    step_raw_usages = []
+    for step in response.get("steps", []):
+        step_usage = step.get("usage") if isinstance(step, dict) else None
+        if isinstance(step_usage, dict) and isinstance(step_usage.get("raw"), dict):
+            step_raw_usages.append(step_usage["raw"])
+    if step_raw_usages:
+        return step_raw_usages
+    if isinstance(usage.get("raw"), dict):
+        return [usage["raw"]]
+    for candidate in (
+        response.get("usage", {}).get("raw") if isinstance(response.get("usage"), dict) else None,
+        response.get("totalUsage", {}).get("raw") if isinstance(response.get("totalUsage"), dict) else None,
+        response.get("finalStep", {}).get("usage", {}).get("raw") if isinstance(response.get("finalStep"), dict) else None,
+    ):
+        if isinstance(candidate, dict):
+            return [candidate]
+    return []
+
+
 def extract_vercel_ai_sdk_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     usage, source_root = _vercel_ai_sdk_usage_payload(response)
+    orchestration_input, orchestration_cached_input, orchestration_output = _sum_openai_responses_orchestration_usage(
+        _vercel_ai_sdk_raw_usage_payloads(response, usage)
+    )
     input_details = usage.get("inputTokenDetails", {})
     output_details = usage.get("outputTokenDetails", {})
-    cache_read = input_details.get("cacheReadTokens", usage.get("cachedInputTokens", 0))
+    cache_read = _decimal(input_details.get("cacheReadTokens", usage.get("cachedInputTokens", 0)) or 0)
     cache_write = input_details.get("cacheWriteTokens", 0)
     input_tokens = usage.get("inputTokens", 0)
-    uncached = input_details.get("noCacheTokens", input_tokens - cache_read - cache_write)
+    base_uncached = _decimal(input_details.get("noCacheTokens", _decimal(input_tokens or 0) - cache_read - _decimal(cache_write or 0)) or 0)
+    uncached = base_uncached + orchestration_input - orchestration_cached_input
+    cache_read += orchestration_cached_input
     output_tokens = usage.get("outputTokens", 0)
     reasoning = output_details.get("reasoningTokens", usage.get("reasoningTokens", 0))
-    text_tokens = output_details.get("textTokens", output_tokens - reasoning)
+    base_text_tokens = _decimal(output_details.get("textTokens", _decimal(output_tokens or 0) - _decimal(reasoning or 0)) or 0)
+    text_tokens = base_text_tokens + orchestration_output
     response_metadata = response.get("response", {})
     model_metadata = response.get("model", {})
     returned_model = response_metadata.get("modelId") or model_metadata.get("modelId") or options.get("model")
@@ -2724,10 +2793,10 @@ def extract_vercel_ai_sdk_usage(response: Dict[str, Any], **options: Any) -> Dic
         raw_usage=usage,
         components=_compact_components(
             [
-                _positive_component("input_uncached_tokens", uncached, "token", f"{source_root}.inputTokenDetails.noCacheTokens"),
-                _positive_component("input_cache_read_tokens", cache_read, "token", f"{source_root}.inputTokenDetails.cacheReadTokens"),
+                _positive_component("input_uncached_tokens", _format_decimal(uncached), "token", f"{source_root}.inputTokenDetails.noCacheTokens"),
+                _positive_component("input_cache_read_tokens", _format_decimal(cache_read), "token", f"{source_root}.inputTokenDetails.cacheReadTokens"),
                 _positive_component("input_cache_write_tokens", cache_write, "token", f"{source_root}.inputTokenDetails.cacheWriteTokens"),
-                _positive_component("output_text_tokens", text_tokens, "token", f"{source_root}.outputTokenDetails.textTokens"),
+                _positive_component("output_text_tokens", _format_decimal(text_tokens), "token", f"{source_root}.outputTokenDetails.textTokens"),
                 _positive_component("output_reasoning_tokens", reasoning, "token", f"{source_root}.outputTokenDetails.reasoningTokens"),
             ]
         ),

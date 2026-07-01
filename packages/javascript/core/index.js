@@ -1482,6 +1482,30 @@ function openAIResponsesPayload(response) {
   return response;
 }
 
+function openAIResponsesOrchestrationUsage(usage) {
+  const inputDetails = usage.input_tokens_details || {};
+  const outputDetails = usage.output_tokens_details || {};
+  return {
+    input: inputDetails.orchestration_input_tokens ?? 0,
+    cachedInput: inputDetails.orchestration_input_cached_tokens ?? 0,
+    output: outputDetails.orchestration_output_tokens ?? 0
+  };
+}
+
+function sumOpenAIResponsesOrchestrationUsage(usages) {
+  return usages.reduce(
+    (total, usage) => {
+      const current = openAIResponsesOrchestrationUsage(usage);
+      return {
+        input: addDecimal(total.input, current.input),
+        cachedInput: addDecimal(total.cachedInput, current.cachedInput),
+        output: addDecimal(total.output, current.output)
+      };
+    },
+    { input: "0", cachedInput: "0", output: "0" }
+  );
+}
+
 function xaiProviderReportedCost(response, usageLedger) {
   const provider = String(usageLedger.provider || "").toLowerCase();
   if (provider !== "xai") {
@@ -1505,10 +1529,19 @@ export function extractOpenAIResponsesUsage(response, options = {}) {
   const usage = response.usage || {};
   const surface = options.surface || "openai.responses";
   const provider = options.provider || (surface === "xai.responses" ? "xai" : "openai");
-  const cachedInput = usage.input_tokens_details?.cached_tokens || 0;
-  const reasoning = usage.output_tokens_details?.reasoning_tokens || 0;
-  const input = usage.input_tokens || 0;
-  const output = usage.output_tokens || 0;
+  const inputDetails = usage.input_tokens_details || {};
+  const outputDetails = usage.output_tokens_details || {};
+  const cachedInput = inputDetails.cached_tokens ?? 0;
+  const reasoning = outputDetails.reasoning_tokens ?? 0;
+  const orchestrationUsage = openAIResponsesOrchestrationUsage(usage);
+  const input = usage.input_tokens ?? 0;
+  const output = usage.output_tokens ?? 0;
+  const inputUncached = addDecimal(
+    subtractDecimal(input, cachedInput),
+    subtractDecimal(orchestrationUsage.input, orchestrationUsage.cachedInput)
+  );
+  const inputCacheRead = addDecimal(cachedInput, orchestrationUsage.cachedInput);
+  const outputText = addDecimal(subtractDecimal(output, reasoning), orchestrationUsage.output);
 
   const toolComponents = [];
   let functionCallCount = 0;
@@ -1572,9 +1605,24 @@ export function extractOpenAIResponsesUsage(response, options = {}) {
     returnedModel: response.model,
     rawUsage: usage,
     components: compactComponents([
-      positiveComponent("input_uncached_tokens", input - cachedInput, "token", "$.usage.input_tokens"),
-      positiveComponent("input_cache_read_tokens", cachedInput, "token", "$.usage.input_tokens_details.cached_tokens"),
-      positiveComponent("output_text_tokens", output - reasoning, "token", "$.usage.output_tokens"),
+      positiveComponent(
+        "input_uncached_tokens",
+        inputUncached,
+        "token",
+        "$.usage.input_tokens + $.usage.input_tokens_details.orchestration_input_tokens"
+      ),
+      positiveComponent(
+        "input_cache_read_tokens",
+        inputCacheRead,
+        "token",
+        "$.usage.input_tokens_details.cached_tokens + $.usage.input_tokens_details.orchestration_input_cached_tokens"
+      ),
+      positiveComponent(
+        "output_text_tokens",
+        outputText,
+        "token",
+        "$.usage.output_tokens + $.usage.output_tokens_details.orchestration_output_tokens"
+      ),
       positiveComponent("output_reasoning_tokens", reasoning, "token", "$.usage.output_tokens_details.reasoning_tokens"),
       ...toolComponents
     ])
@@ -2850,17 +2898,41 @@ function vercelAISDKUsagePayload(response) {
   };
 }
 
+function vercelAISDKRawUsagePayloads(response, usage) {
+  if (Array.isArray(response.steps)) {
+    const stepRawUsages = response.steps
+      .map((step) => step?.usage?.raw)
+      .filter((rawUsage) => rawUsage && typeof rawUsage === "object");
+    if (stepRawUsages.length > 0) {
+      return stepRawUsages;
+    }
+  }
+  if (usage.raw && typeof usage.raw === "object") {
+    return [usage.raw];
+  }
+  for (const candidate of [response.usage?.raw, response.totalUsage?.raw, response.finalStep?.usage?.raw]) {
+    if (candidate && typeof candidate === "object") {
+      return [candidate];
+    }
+  }
+  return [];
+}
+
 export function extractVercelAISDKUsage(response, options = {}) {
   const { usage, sourceRoot } = vercelAISDKUsagePayload(response);
+  const orchestrationUsage = sumOpenAIResponsesOrchestrationUsage(vercelAISDKRawUsagePayloads(response, usage));
   const inputDetails = usage.inputTokenDetails || {};
   const outputDetails = usage.outputTokenDetails || {};
-  const cacheRead = inputDetails.cacheReadTokens ?? usage.cachedInputTokens ?? 0;
+  const baseCacheRead = inputDetails.cacheReadTokens ?? usage.cachedInputTokens ?? 0;
+  const cacheRead = addDecimal(baseCacheRead, orchestrationUsage.cachedInput);
   const cacheWrite = inputDetails.cacheWriteTokens || 0;
   const inputTokens = usage.inputTokens || 0;
-  const uncached = inputDetails.noCacheTokens ?? (inputTokens - cacheRead - cacheWrite);
+  const baseUncached = inputDetails.noCacheTokens ?? subtractDecimal(subtractDecimal(inputTokens, baseCacheRead), cacheWrite);
+  const uncached = addDecimal(baseUncached, subtractDecimal(orchestrationUsage.input, orchestrationUsage.cachedInput));
   const outputTokens = usage.outputTokens || 0;
   const reasoning = outputDetails.reasoningTokens ?? usage.reasoningTokens ?? 0;
-  const textTokens = outputDetails.textTokens ?? (outputTokens - reasoning);
+  const baseTextTokens = outputDetails.textTokens ?? subtractDecimal(outputTokens, reasoning);
+  const textTokens = addDecimal(baseTextTokens, orchestrationUsage.output);
   const modelMetadata = response.model || {};
   const responseMetadata = response.response || {};
   const returnedModel = responseMetadata.modelId || modelMetadata.modelId || options.model;
