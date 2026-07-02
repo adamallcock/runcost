@@ -48,6 +48,6 @@
   ],
   "devDependencies": {
     "@ai-sdk/openai": "^4.0.0",
-    "ai": "^7.0.2"
+    "ai": "^7.0.14"
   }
 }
