@@ -112,7 +112,8 @@ For the current public-beta and V1 caveat register, see
 
 ## Current Limitations
 
-- Registry publishing is not complete.
+- Alpha packages are published, but invoice/dashboard reconciliation remains a
+  separate evidence gate before treating totals as invoice-exact.
 - Go now has typed wrappers for normalized usage, price cards, discounts, and
   core calculation, but raw provider and framework adapter paths are still
   map-backed prototype objects.

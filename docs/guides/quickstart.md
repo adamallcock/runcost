@@ -24,8 +24,8 @@ python3 -m pip install git+https://github.com/adamallcock/runcost.git
 JavaScript and TypeScript from a cloned checkout:
 
 ```bash
-npm pack ./packages/javascript/core
-npm install ./runcost-0.1.2.tgz
+PKG_TGZ=$(npm pack ./packages/javascript/core --silent)
+npm install "./$PKG_TGZ"
 ```
 
 Go:
@@ -34,7 +34,8 @@ Go:
 go get github.com/adamallcock/runcost/packages/go/ledger
 ```
 
-The package is alpha. Until registry publishing is enabled, the repo and tarball install paths are the supported validation path.
+The package is alpha. Registry packages are the normal install path; repo and
+tarball install paths are useful for local development and release verification.
 
 ## Python
 

@@ -72,7 +72,8 @@ Required files:
 
 ## Package Registry Readiness
 
-Do not publish yet.
+Alpha packages are published. Continue to use the guarded release workflow for
+future versions.
 
 Name checks on May 28, 2026:
 
@@ -83,7 +84,10 @@ Name checks on May 28, 2026:
 - PyPI `runcost`: already exists, so the Python distribution remains
   `runcost-ai` while the import package and CLI remain `runcost`.
 
-Before publishing:
+Release `0.1.11` was published on 2026-07-02. Current evidence is recorded in
+`docs/internal/reports/2026-07-02-release-0-1-11-evidence.md`.
+
+Before future publishing:
 
 - Confirm PyPI trusted publishing for `runcost-ai`.
 - Confirm npm trusted publishing for `runcost`.

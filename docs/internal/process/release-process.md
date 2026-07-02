@@ -141,6 +141,10 @@ small package-local `README.md` that summarizes the JavaScript entrypoint and
 links back to the repository for the full docs. Keep the npm README short; do
 not duplicate the full docs tree there.
 
+Current release evidence for `0.1.11`, including GitHub Release, PyPI, npm, Go,
+npm provenance, and post-publish install smoke checks, is recorded in
+`docs/internal/reports/2026-07-02-release-0-1-11-evidence.md`.
+
 ## PyPI Publishing
 
 The Python distribution is `runcost-ai`; the import package and CLI remain

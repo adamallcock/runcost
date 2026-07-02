@@ -13,6 +13,10 @@ goal allows the work to be considered complete when the remaining steps require
 operator action such as credentials, registry settings, or explicit publish
 approval.
 
+This report is historical. Release `0.1.11` later satisfied the registry
+publishing and trusted-publishing gates; current release evidence is recorded in
+`docs/internal/reports/2026-07-02-release-0-1-11-evidence.md`.
+
 ## Verified Local Evidence
 
 Validated in this workspace:
@@ -65,9 +69,9 @@ Remaining gate classification:
 | `milestone8_live_smoke_langchain_agent` | pending external evidence | Requires `OPENAI_API_KEY` plus optional Python packages `langchain_openai` and `langchain_core`; the key and packages are not available in the current operator environment. |
 | `milestone8_product_truth_loop` | partial | The loop exists and passed for the current reviewed smoke evidence; completing it for all scenarios depends on the missing OpenAI, Vercel, LangChain, and invoice evidence. |
 | `milestone8_invoice_dashboard_real_comparison` | pending external evidence | Requires an operator-provided real provider dashboard, invoice, usage export, or OpenAI Costs Admin API access plus matching RunCost ledger input. |
-| `milestone9_pypi_trusted_publishing` | pending external evidence | Requires registry-side PyPI project/trusted-publisher configuration for `runcost-ai`. |
-| `milestone9_npm_trusted_publishing` | pending external evidence | Requires registry-side npm package/trusted-publisher configuration for `runcost`. |
-| `milestone9_actual_registry_publish` | deferred by user | The goal explicitly says to leave packages unpublished for now. |
+| `milestone9_pypi_trusted_publishing` | historical pending external evidence | Satisfied later by release `0.1.11`; see `docs/internal/reports/2026-07-02-release-0-1-11-evidence.md`. |
+| `milestone9_npm_trusted_publishing` | historical pending external evidence | Satisfied later by release `0.1.11`; see `docs/internal/reports/2026-07-02-release-0-1-11-evidence.md`. |
+| `milestone9_actual_registry_publish` | historical deferred by user | Satisfied later by release `0.1.11`; see `docs/internal/reports/2026-07-02-release-0-1-11-evidence.md`. |
 
 ## Keychain And Dependency Check
 

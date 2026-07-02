@@ -13,11 +13,11 @@ validated against the same shared fixtures as the Python and Go packages.
 npm install runcost
 ```
 
-Until the first registry release is published, install from a checkout:
+For local checkout development, pack and install the checkout tarball:
 
 ```bash
-npm pack ./packages/javascript/core
-npm install ./runcost-0.1.2.tgz
+PKG_TGZ=$(npm pack ./packages/javascript/core --silent)
+npm install "./$PKG_TGZ"
 ```
 
 ## Basic Usage

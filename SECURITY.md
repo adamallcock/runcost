@@ -37,5 +37,5 @@ pricing behavior.
 
 ## Supported Versions
 
-RunCost is pre-alpha. Until the first public release, security fixes apply to
-the default branch and the latest published pre-release only.
+RunCost is alpha. Security fixes apply to the default branch and the latest
+published alpha release.

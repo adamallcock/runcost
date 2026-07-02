@@ -610,7 +610,10 @@ Progress criteria:
 
 Exit gate:
 
-- The library is ready for private alpha users from the repository/source-install path. First real registry publication, external trusted-publisher setup, and post-tag Go module verification remain release operations, not repo-side blockers.
+- The library is ready for alpha users from registry or source-install paths.
+  First registry publication, trusted-publisher setup, and post-tag Go module
+  verification were completed for `0.1.11`; current evidence is recorded in
+  `docs/internal/reports/2026-07-02-release-0-1-11-evidence.md`.
 
 ### Milestone 8: Alpha Quality and Feedback
 
@@ -724,9 +727,9 @@ The finalization path is:
    external evidence ledger for Milestone 8, public beta, and V1; use
    `python3 scripts/check_project_completion_gates.py --require-milestone8`
    before marking Milestone 8 complete.
-5. Configure PyPI and npm trusted publishers outside the repo.
-6. Cut the first registry release with the guarded workflow, first with
-   publishing disabled and then with publishing enabled after artifact review.
+5. Keep PyPI and npm trusted publishing verified outside the repo.
+6. For each release, run the guarded workflow first with publishing disabled and
+   then with publishing enabled after artifact review and explicit approval.
 7. Use private-alpha feedback to choose the beta hardening lane: schema-derived
    type generation and drift checks if language maintenance is the largest
    risk, or provider/framework breadth if real integrations fail on coverage.
@@ -742,9 +745,10 @@ Release rehearsal progress:
 - When a remote `v<version>` tag exists, the workflow verifies the Go package
   from `github.com/adamallcock/runcost/packages/go/ledger@v<version>` without a
   local `replace`.
-- Actual trusted-publisher configuration, a real-version no-publish workflow
-  execution, real Go tag verification, and publishing remain release
-  operations.
+- Trusted-publisher configuration, real-version no-publish workflow execution,
+  real Go tag verification, and publishing are proven for `0.1.11`. Current
+  evidence is recorded in
+  `docs/internal/reports/2026-07-02-release-0-1-11-evidence.md`.
 
 Polyglot hardening progress:
 
@@ -799,14 +803,14 @@ Beta requirements:
 Delivered so far:
 
 - Guarded release workflow and local release dry-run checks exist.
-- PyPI/npm trusted-publishing setup instructions exist, but external registry
-  configuration is not verified yet.
-- A guarded `publish=false` GitHub release rehearsal from `main` has passed for
-  version `0.0.0`; this proves workflow dispatch, build, package artifact, and
-  upload mechanics, but it is not a real release-version rehearsal.
+- PyPI/npm trusted-publishing setup instructions exist, and `0.1.11` was
+  published through the guarded release workflow.
+- Guarded `publish=false` and `publish=true` workflow runs have passed for
+  `0.1.11`; current evidence is recorded in
+  `docs/internal/reports/2026-07-02-release-0-1-11-evidence.md`.
 - Real Go tag verification exists in the guarded release workflow when a remote
-  `v<version>` tag is present; no real tag verification evidence has been
-  captured yet.
+  `v<version>` tag is present, and `v0.1.11` is available through the Go module
+  path.
 - Source-data update ownership, cadence, review checklist, and product-truth
   loop are documented in
   `docs/internal/process/2026-05-26-source-data-update-process.md` and checked by
