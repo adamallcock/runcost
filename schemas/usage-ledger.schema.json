@@ -45,7 +45,7 @@
     },
     "components": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 0,
       "items": { "$ref": "#/$defs/usage_component" }
     },
     "raw_usage": {
@@ -125,6 +125,10 @@
         "source_path": {
           "type": "string",
           "description": "JSON path or human-readable path to the raw usage field."
+        },
+        "billing_model": {
+          "type": "string",
+          "description": "Explicit model used for this component's price-card selection when it differs from the ledger-level billed model."
         },
         "metadata": {
           "type": "object",

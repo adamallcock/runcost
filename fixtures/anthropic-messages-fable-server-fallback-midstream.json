@@ -1,0 +1,230 @@
+{
+  "name": "anthropic-messages-fable-server-fallback-midstream",
+  "description": "Prices a mid-stream Fable 5 classifier fallback with partial Fable output and Opus continuation usage from iterations.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "anthropic",
+    "surface": "anthropic.messages",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "anthropic_fallback_billing",
+      "cache",
+      "component:input_cache_read_tokens",
+      "component:output_text_tokens",
+      "fable_fallback",
+      "raw_provider_response",
+      "streaming"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "extract": {
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": "claude-fable-5"
+    },
+    "raw_response": {
+      "id": "msg_fable_midstream_fallback_fixture",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-opus-4-8",
+      "content": [
+        {
+          "type": "text",
+          "text": "Partial Fable output. "
+        },
+        {
+          "type": "fallback",
+          "from": {
+            "model": "claude-fable-5"
+          },
+          "to": {
+            "model": "claude-opus-4-8"
+          }
+        },
+        {
+          "type": "text",
+          "text": "Opus continuation."
+        }
+      ],
+      "stop_reason": "end_turn",
+      "stop_details": null,
+      "usage": {
+        "input_tokens": 420,
+        "output_tokens": 252,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "iterations": [
+          {
+            "type": "message",
+            "model": "claude-fable-5",
+            "input_tokens": 408,
+            "output_tokens": 12,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          },
+          {
+            "type": "fallback_message",
+            "model": "claude-opus-4-8",
+            "input_tokens": 420,
+            "output_tokens": 240,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        ]
+      }
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "anthropic:claude-fable-5:midstream-fixture",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "claude-fable-5",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.00001",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.00005",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture-fable",
+          "retrieved_at": "2026-06-09T00:00:00Z"
+        }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "anthropic:claude-opus-4-8:midstream-fixture",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "claude-opus-4-8",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000005",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.0000005",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000025",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture-opus",
+          "retrieved_at": "2026-06-19T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": {
+        "requested": "claude-fable-5",
+        "returned": "claude-opus-4-8",
+        "billed": "claude-opus-4-8",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "420",
+          "unit": "token",
+          "unit_price": "0.0000005",
+          "cost": "0.00021",
+          "price_card_id": "anthropic:claude-opus-4-8:midstream-fixture",
+          "discount_eligible": true,
+          "metadata": {
+            "billing_model": "claude-opus-4-8",
+            "usage_iteration_index": 1,
+            "usage_iteration_type": "fallback_message",
+            "anthropic_fallback_billing": "fable_to_opus_cache_read"
+          }
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "240",
+          "unit": "token",
+          "unit_price": "0.000025",
+          "cost": "0.006",
+          "price_card_id": "anthropic:claude-opus-4-8:midstream-fixture",
+          "discount_eligible": true,
+          "metadata": {
+            "billing_model": "claude-opus-4-8",
+            "usage_iteration_index": 1,
+            "usage_iteration_type": "fallback_message"
+          }
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "12",
+          "unit": "token",
+          "unit_price": "0.00005",
+          "cost": "0.0006",
+          "price_card_id": "anthropic:claude-fable-5:midstream-fixture",
+          "discount_eligible": true,
+          "metadata": {
+            "billing_model": "claude-fable-5",
+            "usage_iteration_index": 0,
+            "usage_iteration_type": "message"
+          }
+        }
+      ],
+      "total": "0.00681",
+      "price_sources": [
+        {
+          "name": "fixture-fable",
+          "retrieved_at": "2026-06-09T00:00:00Z"
+        },
+        {
+          "name": "fixture-opus",
+          "retrieved_at": "2026-06-19T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

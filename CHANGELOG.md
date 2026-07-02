@@ -16,6 +16,16 @@ limitations.
 
 - No unreleased changes yet.
 
+## 0.1.11
+
+- Add Anthropic Claude Fable 5 fallback billing extraction and pricing behavior
+  across Python, JavaScript/TypeScript, and Go.
+- Cover server-side fallback, sticky fallback, client-side fallback credit,
+  direct classifier blocks, unavailable fallback metadata, and missing usage
+  warnings with shared fixtures.
+- Keep component metadata passive for billing decisions and require explicit
+  billing model fields for pricing overrides.
+
 ## 0.1.10
 
 - Fix JavaScript decimal normalization for tiny bundled default-catalog prices

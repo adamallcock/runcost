@@ -96,6 +96,7 @@ Source references:
 
 - Anthropic streaming docs state that `message_delta` usage token counts are cumulative and show `message_start`, `message_delta`, and `message_stop` event sequences: https://platform.claude.com/docs/en/build-with-claude/streaming
 - Anthropic streaming docs also describe SDK helpers that accumulate a stream into the final Message object: https://platform.claude.com/docs/en/build-with-claude/streaming
+- Anthropic's Fable 5 fallback billing cookbook says `usage.iterations` is the reliable source for fallback-served turns, including sticky-served turns without a `fallback` content block; Fable 5 -> Opus 4.8 fallback input is billed at cache-read pricing; direct classifier blocks before output tokens have no input-token cost; client-side fallback-credit retries require the `fallback-credit-2026-06-01` beta and `fallback_credit_token`: https://platform.claude.com/cookbook/fable-5-fallback-billing-guide
 
 Mapping:
 
@@ -106,6 +107,11 @@ Mapping:
 - `usage.cache_creation_input_tokens_1h` -> `input_cache_write_1h_tokens`.
 - `usage.cache_read_input_tokens` -> `input_cache_read_tokens`.
 - `usage.output_tokens` -> `output_text_tokens`.
+- When `usage.iterations` is present, RunCost prices per iteration instead of pricing the aggregate top-level usage. Fable 5 blocked-attempt input/cache components are not billed again when a fallback iteration served the turn; any partial Fable output remains `output_text_tokens` with `metadata.billing_model: "claude-fable-5"`.
+- `fallback_message` iterations for Fable 5 -> Opus 4.8 convert the fallback attempt's `input_tokens`, `cache_creation_input_tokens`, and `cache_read_input_tokens` into `input_cache_read_tokens` with `metadata.billing_model: "claude-opus-4-8"`.
+- Sticky-served fallback turns are detected from `usage.iterations` even when `content` has no `fallback` block; when the response object only exposes returned Opus metadata, RunCost applies the currently supported Fable 5 -> Opus 4.8 cache-read billing rule.
+- Direct Fable 5 classifier blocks with `stop_reason: "refusal"` and no output tokens produce zero billable components.
+- Client-side Opus retries that redeemed an Anthropic fallback credit token can be marked with `anthropic_fallback_credit` / `anthropicFallbackCredit` / `fallback_credit` / `fallbackCredit`; RunCost then prices the retry input/cache prefix as `input_cache_read_tokens`.
 
 ## OpenAI-Compatible Chat
 

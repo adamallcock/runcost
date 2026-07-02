@@ -34,6 +34,7 @@ Current warning codes:
 - `price_stale`
 - `price_source_disagreement`
 - `usage_field_ignored`
+- `usage_missing`
 - `inclusive_usage_ambiguous`
 - `component_unpriced`
 - `source_capability_unsupported`
@@ -68,6 +69,7 @@ For the current public-beta and V1 caveat register, see
 | `price_stale` | `source`, `age_days`, `threshold_days`, `retrieved_at` |
 | `price_source_disagreement` | `component`, `selected_price_card_id`, `candidate_price_card_ids` |
 | `usage_field_ignored` | `field` |
+| `usage_missing` | `field` |
 | `inclusive_usage_ambiguous` | `field` |
 | `component_unpriced` | `component`, `unit`, `model` |
 | `source_capability_unsupported` | `component`, `unit`, `price_card_id`, `source` |
@@ -89,6 +91,8 @@ For the current public-beta and V1 caveat register, see
 `unknown_model`: usage was extracted, but no matching price card was available.
 
 `usage_field_ignored`: a normalized usage ledger explicitly marked a raw field as intentionally not mapped to a cost component.
+
+`usage_missing`: a provider response did not include the expected usage object, so RunCost could not extract billable usage from that path.
 
 `inclusive_usage_ambiguous`: a normalized usage ledger explicitly marked a raw field as an inclusive total while RunCost priced the component fields instead.
 
