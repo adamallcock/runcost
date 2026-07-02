@@ -1,0 +1,156 @@
+{
+  "name": "anthropic-messages-fable-client-fallback-credit-token",
+  "description": "Auto-detects an Anthropic client-side fallback credit token on the request metadata and bills the Opus retry input/cache prefix as cache read.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "anthropic",
+    "surface": "anthropic.messages",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "anthropic_fallback_billing",
+      "cache",
+      "client_fallback_credit",
+      "component:input_cache_read_tokens",
+      "component:output_text_tokens",
+      "fallback_credit_token",
+      "fable_fallback",
+      "raw_provider_response"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "extract": {
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": "claude-opus-4-8"
+    },
+    "raw_response": {
+      "id": "msg_fable_client_credit_token_fixture",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-opus-4-8",
+      "request": {
+        "fallback_credit_token": "fallback-credit-fixture"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Client-side fallback answer."
+        }
+      ],
+      "stop_reason": "end_turn",
+      "stop_details": null,
+      "usage": {
+        "input_tokens": 500,
+        "cache_creation_input_tokens": 100,
+        "cache_read_input_tokens": 20,
+        "output_tokens": 40
+      }
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "anthropic:claude-opus-4-8:client-credit-token-fixture",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "claude-opus-4-8",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000005",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "input_cache_write_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.00000625",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.0000005",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000025",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-06-19T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": {
+        "requested": "claude-opus-4-8",
+        "returned": "claude-opus-4-8",
+        "billed": "claude-opus-4-8",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "620",
+          "unit": "token",
+          "unit_price": "0.0000005",
+          "cost": "0.00031",
+          "price_card_id": "anthropic:claude-opus-4-8:client-credit-token-fixture",
+          "discount_eligible": true,
+          "metadata": {
+            "billing_model": "claude-opus-4-8",
+            "anthropic_fallback_billing": "client_fallback_credit_cache_read"
+          }
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "40",
+          "unit": "token",
+          "unit_price": "0.000025",
+          "cost": "0.001",
+          "price_card_id": "anthropic:claude-opus-4-8:client-credit-token-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.00131",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-06-19T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

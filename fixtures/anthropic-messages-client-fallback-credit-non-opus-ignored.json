@@ -1,0 +1,168 @@
+{
+  "name": "anthropic-messages-client-fallback-credit-non-opus-ignored",
+  "description": "Ignores a client fallback credit marker on a non-Opus response because Anthropic fallback credit billing is valid only for Opus 4.8 retries.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "anthropic",
+    "surface": "anthropic.messages",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "client_fallback_credit",
+      "component:input_cache_read_tokens",
+      "component:input_cache_write_tokens",
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "raw_provider_response"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "extract": {
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": "claude-sonnet-4-5"
+    },
+    "options": {
+      "anthropic_fallback_credit": true
+    },
+    "raw_response": {
+      "id": "msg_anthropic_non_opus_credit_fixture",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-sonnet-4-5",
+      "content": [
+        {
+          "type": "text",
+          "text": "Non-Opus answer."
+        }
+      ],
+      "stop_reason": "end_turn",
+      "stop_details": null,
+      "usage": {
+        "input_tokens": 500,
+        "cache_creation_input_tokens": 100,
+        "cache_read_input_tokens": 20,
+        "output_tokens": 40
+      }
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "anthropic:claude-sonnet-4-5:non-opus-credit-fixture",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "claude-sonnet-4-5",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000001",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "input_cache_write_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.00000125",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.0000001",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000002",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-06-19T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": {
+        "requested": "claude-sonnet-4-5",
+        "returned": "claude-sonnet-4-5",
+        "billed": "claude-sonnet-4-5",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "500",
+          "unit": "token",
+          "unit_price": "0.000001",
+          "cost": "0.0005",
+          "price_card_id": "anthropic:claude-sonnet-4-5:non-opus-credit-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.0000001",
+          "cost": "0.000002",
+          "price_card_id": "anthropic:claude-sonnet-4-5:non-opus-credit-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.00000125",
+          "cost": "0.000125",
+          "price_card_id": "anthropic:claude-sonnet-4-5:non-opus-credit-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "40",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.00008",
+          "price_card_id": "anthropic:claude-sonnet-4-5:non-opus-credit-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.000707",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-06-19T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

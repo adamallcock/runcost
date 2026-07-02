@@ -219,6 +219,22 @@ def _matching_cards(
     return [item[-1] for item in sorted(scored_cards, key=lambda item: item[:-1])]
 
 
+def _price_lookup_cache_key(
+    usage_ledger: Dict[str, Any],
+    source_priority: Iterable[str],
+) -> tuple[Any, ...]:
+    context = _usage_context(usage_ledger)
+    return (
+        usage_ledger.get("provider"),
+        usage_ledger.get("surface"),
+        _billed_model(usage_ledger),
+        context.get("service_tier") or "",
+        context.get("region") or "",
+        _date_part(context.get("priced_at")) or "",
+        tuple(source_priority),
+    )
+
+
 def _total_input_tokens(usage_ledger: Dict[str, Any]) -> Decimal:
     context = _usage_context(usage_ledger)
     if context.get("total_input_tokens") is not None:
@@ -653,6 +669,16 @@ def _usage_metadata_field_warnings(
                 "metadata": {"field": field_name},
             }
         )
+    for field in metadata.get("missing_usage_fields") or []:
+        field_name = str(field)
+        warnings.append(
+            {
+                "code": "usage_missing",
+                "message": f"Usage field {field_name} was missing; RunCost could not extract billable usage from it.",
+                "path": field_name,
+                "metadata": {"field": field_name},
+            }
+        )
     for field in metadata.get("inclusive_usage_fields") or []:
         field_name = str(field)
         warnings.append(
@@ -942,41 +968,60 @@ def calculate_cost(
     total = "0"
     resolved_billed_model = _billed_model(usage_ledger)
     alias_resolution = usage_ledger["model"].get("alias_resolution", "none")
-    has_model_card = _has_price_card_for_usage(usage_ledger, price_cards_list)
-    matching_cards = _matching_cards(usage_ledger, price_cards_list, source_priority)
-    if trace is not None:
-        trace["decisions"].append(
-            {
-                "type": "price_card_candidates",
-                "model": resolved_billed_model,
-                "candidate_price_card_ids": [card["id"] for card in matching_cards],
-                "source_priority": source_priority,
-            }
-        )
-    model_surface_card_exists = _has_price_card_for_model_surface(usage_ledger, price_cards_list)
-    warned_unknown_model = False
-    warned_unknown_provider = False
-    warned_no_matching_card = False
+    warned_unknown_model = set()
+    warned_unknown_provider = set()
+    warned_no_matching_card = set()
     warned_alias_inferred = False
     warned_stale_cards = set()
+    price_lookup_cache: Dict[tuple[Any, ...], Dict[str, Any]] = {}
 
     for component in usage_ledger["components"]:
+        component_usage_ledger = _usage_ledger_for_component(usage_ledger, component)
+        component_billed_model = _billed_model(component_usage_ledger)
+        component_warning_key = (
+            component_usage_ledger["provider"],
+            component_usage_ledger["surface"],
+            component_billed_model,
+        )
+        lookup_key = _price_lookup_cache_key(component_usage_ledger, source_priority)
+        lookup = price_lookup_cache.get(lookup_key)
+        if lookup is None:
+            lookup = {
+                "has_model_card": _has_price_card_for_usage(component_usage_ledger, price_cards_list),
+                "matching_cards": _matching_cards(component_usage_ledger, price_cards_list, source_priority),
+                "model_surface_card_exists": _has_price_card_for_model_surface(component_usage_ledger, price_cards_list),
+            }
+            price_lookup_cache[lookup_key] = lookup
+        has_model_card = lookup["has_model_card"]
+        matching_cards = lookup["matching_cards"]
+        model_surface_card_exists = lookup["model_surface_card_exists"]
+        if trace is not None:
+            trace["decisions"].append(
+                {
+                    "type": "price_card_candidates",
+                    "component": component["name"],
+                    "model": component_billed_model,
+                    "candidate_price_card_ids": [card["id"] for card in matching_cards],
+                    "source_priority": source_priority,
+                }
+            )
+
         if not has_model_card:
             if model_surface_card_exists:
-                if not warned_unknown_provider:
-                    warnings.append(_unknown_provider_warning(usage_ledger))
-                    warned_unknown_provider = True
-            elif not warned_unknown_model:
-                warnings.append(_unknown_model_warning(usage_ledger))
-                warned_unknown_model = True
+                if component_warning_key not in warned_unknown_provider:
+                    warnings.append(_unknown_provider_warning(component_usage_ledger))
+                    warned_unknown_provider.add(component_warning_key)
+            elif component_warning_key not in warned_unknown_model:
+                warnings.append(_unknown_model_warning(component_usage_ledger))
+                warned_unknown_model.add(component_warning_key)
             if trace is not None:
                 trace["summary"]["unpriced_components"] += 1
             continue
 
         if not matching_cards:
-            if not warned_no_matching_card:
-                warnings.append(_no_matching_card_warning(usage_ledger, price_cards_list))
-                warned_no_matching_card = True
+            if component_warning_key not in warned_no_matching_card:
+                warnings.append(_no_matching_card_warning(component_usage_ledger, price_cards_list))
+                warned_no_matching_card.add(component_warning_key)
             if trace is not None:
                 trace["summary"]["unpriced_components"] += 1
             continue
@@ -985,19 +1030,19 @@ def calculate_cost(
         matches = [
             match
             for match in candidates
-            if _conditions_match(usage_ledger, match["price_component"])
+            if _conditions_match(component_usage_ledger, match["price_component"])
         ]
         if not matches and not candidates:
-            matches = _output_reasoning_priced_as_output_matches(usage_ledger, matching_cards, component)
+            matches = _output_reasoning_priced_as_output_matches(component_usage_ledger, matching_cards, component)
         if not matches:
             capability_warning = _source_capability_warning(matching_cards, component)
-            long_context_warning = _long_context_rule_missing_warning(usage_ledger, candidates, component)
+            long_context_warning = _long_context_rule_missing_warning(component_usage_ledger, candidates, component)
             if capability_warning:
                 warnings.append(capability_warning)
             elif long_context_warning:
                 warnings.append(long_context_warning)
             else:
-                warnings.append(_unpriced_component_warning(usage_ledger, component))
+                warnings.append(_unpriced_component_warning(component_usage_ledger, component))
             if trace is not None:
                 trace["summary"]["unpriced_components"] += 1
             continue
@@ -1019,24 +1064,25 @@ def calculate_cost(
                     "selected_source": card["source"]["name"],
                 }
             )
-        if card["model"] != resolved_billed_model and resolved_billed_model in card.get("aliases", []):
-            previous_billed_model = resolved_billed_model
-            resolved_billed_model = card["model"]
-            if alias_resolution == "none":
-                alias_resolution = "source_exact"
-                if not warned_alias_inferred:
-                    warnings.append(_alias_inferred_warning(previous_billed_model, resolved_billed_model))
-                    warned_alias_inferred = True
-            if trace is not None:
-                trace["decisions"].append(
-                    {
-                        "type": "model_alias_resolution",
-                        "from": previous_billed_model,
-                        "to": resolved_billed_model,
-                        "price_card_id": card["id"],
-                        "resolution": alias_resolution,
-                    }
-                )
+        if card["model"] != component_billed_model and component_billed_model in card.get("aliases", []):
+            previous_billed_model = component_billed_model
+            if not _component_billing_model(component):
+                resolved_billed_model = card["model"]
+                if alias_resolution == "none":
+                    alias_resolution = "source_exact"
+                    if not warned_alias_inferred:
+                        warnings.append(_alias_inferred_warning(previous_billed_model, resolved_billed_model))
+                        warned_alias_inferred = True
+                if trace is not None:
+                    trace["decisions"].append(
+                        {
+                            "type": "model_alias_resolution",
+                            "from": previous_billed_model,
+                            "to": resolved_billed_model,
+                            "price_card_id": card["id"],
+                            "resolution": alias_resolution,
+                        }
+                    )
 
         price = price_component["price"]
         base_cost = _multiply_divide(component["quantity"], price["amount"], price["per"])
@@ -1044,7 +1090,7 @@ def calculate_cost(
         discounted = _apply_discounts(
             base_cost,
             policies,
-            usage_ledger,
+            component_usage_ledger,
             component,
             discount_eligible,
         )
@@ -1063,7 +1109,7 @@ def calculate_cost(
         total = _add(total, discounted["cost"])
         sources_by_name[card["source"]["name"]] = card["source"]
         if card["id"] not in warned_stale_cards:
-            stale_warning = _stale_price_warning(usage_ledger, card, stale_after_days)
+            stale_warning = _stale_price_warning(component_usage_ledger, card, stale_after_days)
             if stale_warning:
                 warnings.append(stale_warning)
                 warned_stale_cards.add(card["id"])
@@ -1077,8 +1123,13 @@ def calculate_cost(
             "price_card_id": card["id"],
             "discount_eligible": discount_eligible,
         }
+        output_metadata = {}
+        if isinstance(component.get("metadata"), dict):
+            output_metadata.update(component["metadata"])
         if component_metadata:
-            cost_component["metadata"] = component_metadata
+            output_metadata.update(component_metadata)
+        if output_metadata:
+            cost_component["metadata"] = output_metadata
         components.append(cost_component)
         if trace is not None:
             trace["summary"]["priced_components"] += 1
@@ -1133,6 +1184,8 @@ def calculate_cost(
     }
     if trace is not None:
         result["debug_trace"] = trace
+    if isinstance(usage_ledger.get("metadata"), dict) and usage_ledger["metadata"]:
+        result["metadata"] = dict(usage_ledger["metadata"])
     if mode == "strict" and warnings:
         raise ValueError(f"strict mode cost calculation failed: {warnings[0]['code']}")
     return result
@@ -1316,6 +1369,40 @@ def _positive_component(name: str, quantity: Any, unit: str, source_path: str) -
     }
 
 
+def _positive_component_with_metadata(
+    name: str,
+    quantity: Any,
+    unit: str,
+    source_path: str,
+    metadata: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    component = _positive_component(name, quantity, unit, source_path)
+    if component is None:
+        return None
+    component["metadata"] = dict(metadata)
+    if metadata.get("billing_model"):
+        component["billing_model"] = str(metadata["billing_model"])
+    return component
+
+
+def _component_billing_model(component: Dict[str, Any]) -> Optional[str]:
+    value = component.get("billing_model")
+    return str(value) if value else None
+
+
+def _usage_ledger_for_component(usage_ledger: Dict[str, Any], component: Dict[str, Any]) -> Dict[str, Any]:
+    billing_model = _component_billing_model(component)
+    if not billing_model:
+        return usage_ledger
+
+    component_ledger = dict(usage_ledger)
+    model = dict(usage_ledger["model"])
+    model["billed"] = billing_model
+    model["returned"] = billing_model
+    component_ledger["model"] = model
+    return component_ledger
+
+
 def _compact_components(components: Iterable[Optional[Dict[str, Any]]]) -> List[Dict[str, Any]]:
     return [component for component in components if component is not None]
 
@@ -1396,15 +1483,43 @@ def _openai_responses_payload(response: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
+def _openai_responses_orchestration_usage(usage: Dict[str, Any]) -> tuple[Decimal, Decimal, Decimal]:
+    input_details = usage.get("input_tokens_details") or {}
+    output_details = usage.get("output_tokens_details") or {}
+    return (
+        _decimal(input_details.get("orchestration_input_tokens") or 0),
+        _decimal(input_details.get("orchestration_input_cached_tokens") or 0),
+        _decimal(output_details.get("orchestration_output_tokens") or 0),
+    )
+
+
+def _sum_openai_responses_orchestration_usage(usages: Iterable[Dict[str, Any]]) -> tuple[Decimal, Decimal, Decimal]:
+    input_tokens = Decimal("0")
+    cached_input_tokens = Decimal("0")
+    output_tokens = Decimal("0")
+    for usage in usages:
+        orchestration_input, orchestration_cached_input, orchestration_output = _openai_responses_orchestration_usage(usage)
+        input_tokens += orchestration_input
+        cached_input_tokens += orchestration_cached_input
+        output_tokens += orchestration_output
+    return input_tokens, cached_input_tokens, output_tokens
+
+
 def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     response = _openai_responses_payload(response)
     usage = response.get("usage", {})
     surface = options.get("surface", "openai.responses")
     provider = options.get("provider") or ("xai" if surface == "xai.responses" else "openai")
-    cached_input = usage.get("input_tokens_details", {}).get("cached_tokens", 0)
-    reasoning = usage.get("output_tokens_details", {}).get("reasoning_tokens", 0)
-    input_tokens = usage.get("input_tokens", 0)
-    output_tokens = usage.get("output_tokens", 0)
+    input_details = usage.get("input_tokens_details") or {}
+    output_details = usage.get("output_tokens_details") or {}
+    cached_input = _decimal(input_details.get("cached_tokens") or 0)
+    orchestration_input, orchestration_cached_input, orchestration_output = _openai_responses_orchestration_usage(usage)
+    reasoning = _decimal(output_details.get("reasoning_tokens") or 0)
+    input_tokens = _decimal(usage.get("input_tokens") or 0)
+    output_tokens = _decimal(usage.get("output_tokens") or 0)
+    input_uncached = input_tokens - cached_input + orchestration_input - orchestration_cached_input
+    input_cache_read = cached_input + orchestration_cached_input
+    output_text = output_tokens - reasoning + orchestration_output
     tool_components = []
     function_call_count = 0
     explicit_server_side_tool_count = Decimal("0")
@@ -1466,9 +1581,24 @@ def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> 
         raw_usage=usage,
         components=_compact_components(
             [
-                _positive_component("input_uncached_tokens", input_tokens - cached_input, "token", "$.usage.input_tokens"),
-                _positive_component("input_cache_read_tokens", cached_input, "token", "$.usage.input_tokens_details.cached_tokens"),
-                _positive_component("output_text_tokens", output_tokens - reasoning, "token", "$.usage.output_tokens"),
+                _positive_component(
+                    "input_uncached_tokens",
+                    _format_decimal(input_uncached),
+                    "token",
+                    "$.usage.input_tokens + $.usage.input_tokens_details.orchestration_input_tokens",
+                ),
+                _positive_component(
+                    "input_cache_read_tokens",
+                    _format_decimal(input_cache_read),
+                    "token",
+                    "$.usage.input_tokens_details.cached_tokens + $.usage.input_tokens_details.orchestration_input_cached_tokens",
+                ),
+                _positive_component(
+                    "output_text_tokens",
+                    _format_decimal(output_text),
+                    "token",
+                    "$.usage.output_tokens + $.usage.output_tokens_details.orchestration_output_tokens",
+                ),
                 _positive_component("output_reasoning_tokens", reasoning, "token", "$.usage.output_tokens_details.reasoning_tokens"),
                 *tool_components,
             ]
@@ -1931,22 +2061,207 @@ def _anthropic_messages_payload(response: Dict[str, Any]) -> Dict[str, Any]:
     return message
 
 
+ANTHROPIC_FABLE_5_MODEL = "claude-fable-5"
+ANTHROPIC_OPUS_4_8_MODEL = "claude-opus-4-8"
+ANTHROPIC_FALLBACK_CLASSIFIER_CATEGORIES = {"cyber", "bio", "reasoning_extraction"}
+
+
+def _anthropic_fallback_pairs(response: Dict[str, Any]) -> List[tuple[str, str]]:
+    pairs = []
+    content = response.get("content")
+    if not isinstance(content, list):
+        return pairs
+    for block in content:
+        if not isinstance(block, dict) or block.get("type") != "fallback":
+            continue
+        from_model = (block.get("from") or {}).get("model") if isinstance(block.get("from"), dict) else None
+        to_model = (block.get("to") or {}).get("model") if isinstance(block.get("to"), dict) else None
+        if from_model and to_model:
+            pairs.append((str(from_model), str(to_model)))
+    return pairs
+
+
+def _anthropic_classifier_blocked(response: Dict[str, Any]) -> bool:
+    if response.get("stop_reason") != "refusal":
+        return False
+    details = response.get("stop_details")
+    if not isinstance(details, dict):
+        return False
+    return (
+        details.get("category") in ANTHROPIC_FALLBACK_CLASSIFIER_CATEGORIES
+        or details.get("recommended_model") == ANTHROPIC_OPUS_4_8_MODEL
+        or "fallback_credit_token" in details
+        or details.get("fallback_has_prefill_claim") is True
+    )
+
+
+def _anthropic_is_fable_to_opus_fallback_iteration(
+    *,
+    iteration: Dict[str, Any],
+    previous_models: Iterable[str],
+    requested_model: Optional[str],
+    fallback_pairs: Iterable[tuple[str, str]],
+) -> bool:
+    if iteration.get("type") != "fallback_message":
+        return False
+    if iteration.get("model") != ANTHROPIC_OPUS_4_8_MODEL:
+        return False
+    if requested_model == ANTHROPIC_FABLE_5_MODEL:
+        return True
+    if ANTHROPIC_FABLE_5_MODEL in set(previous_models):
+        return True
+    return (ANTHROPIC_FABLE_5_MODEL, ANTHROPIC_OPUS_4_8_MODEL) in set(fallback_pairs)
+
+
+def _anthropic_iteration_metadata(iteration: Dict[str, Any], index: int, billing_model: str) -> Dict[str, Any]:
+    metadata: Dict[str, Any] = {
+        "billing_model": billing_model,
+        "usage_iteration_index": index,
+    }
+    if iteration.get("type"):
+        metadata["usage_iteration_type"] = iteration["type"]
+    return metadata
+
+
+def _anthropic_fallback_cache_read_quantity(iteration: Dict[str, Any]) -> Decimal:
+    return (
+        _decimal(iteration.get("input_tokens") or 0)
+        + _decimal(iteration.get("cache_creation_input_tokens") or 0)
+        + _decimal(iteration.get("cache_read_input_tokens") or 0)
+    )
+
+
+def _anthropic_messages_iteration_components(
+    response: Dict[str, Any],
+    usage: Dict[str, Any],
+    requested_model: Optional[str],
+) -> List[Dict[str, Any]]:
+    iterations = usage.get("iterations")
+    if not isinstance(iterations, list):
+        return []
+
+    components: List[Optional[Dict[str, Any]]] = []
+    previous_models: List[str] = []
+    fallback_pairs = _anthropic_fallback_pairs(response)
+    classifier_blocked = _anthropic_classifier_blocked(response)
+    has_fallback_iteration = any(
+        isinstance(iteration, dict) and iteration.get("type") == "fallback_message"
+        for iteration in iterations
+    )
+    for index, raw_iteration in enumerate(iterations):
+        if not isinstance(raw_iteration, dict):
+            continue
+        iteration_model = str(raw_iteration.get("model") or response.get("model") or requested_model or "")
+        source_root = f"$.usage.iterations[{index}]"
+        metadata = _anthropic_iteration_metadata(raw_iteration, index, iteration_model)
+        is_fable_to_opus = _anthropic_is_fable_to_opus_fallback_iteration(
+            iteration=raw_iteration,
+            previous_models=previous_models,
+            requested_model=requested_model,
+            fallback_pairs=fallback_pairs,
+        )
+        if is_fable_to_opus:
+            fallback_input = _anthropic_fallback_cache_read_quantity(raw_iteration)
+            fallback_metadata = dict(metadata)
+            fallback_metadata["anthropic_fallback_billing"] = "fable_to_opus_cache_read"
+            components.append(
+                _positive_component_with_metadata(
+                    "input_cache_read_tokens",
+                    fallback_input,
+                    "token",
+                    f"{source_root}.input_tokens",
+                    fallback_metadata,
+                )
+            )
+        else:
+            suppress_classifier_input = (
+                classifier_blocked
+                and not has_fallback_iteration
+                and _decimal(raw_iteration.get("output_tokens") or 0) <= 0
+            )
+        if (
+            not is_fable_to_opus
+            and not suppress_classifier_input
+            and (not has_fallback_iteration or raw_iteration.get("type") == "fallback_message")
+        ):
+            cache_write = raw_iteration.get("cache_creation_input_tokens", 0)
+            cache_write_1h = raw_iteration.get("cache_creation_input_tokens_1h", 0)
+            components.extend(
+                [
+                    _positive_component_with_metadata("input_uncached_tokens", raw_iteration.get("input_tokens", 0), "token", f"{source_root}.input_tokens", metadata),
+                    _positive_component_with_metadata("input_cache_write_tokens", _decimal(cache_write) - _decimal(cache_write_1h), "token", f"{source_root}.cache_creation_input_tokens", metadata),
+                    _positive_component_with_metadata("input_cache_write_1h_tokens", cache_write_1h, "token", f"{source_root}.cache_creation_input_tokens_1h", metadata),
+                    _positive_component_with_metadata("input_cache_read_tokens", raw_iteration.get("cache_read_input_tokens", 0), "token", f"{source_root}.cache_read_input_tokens", metadata),
+                ]
+            )
+
+        components.append(
+            _positive_component_with_metadata(
+                "output_text_tokens",
+                raw_iteration.get("output_tokens", 0),
+                "token",
+                f"{source_root}.output_tokens",
+                metadata,
+            )
+        )
+        if iteration_model:
+            previous_models.append(iteration_model)
+
+    return _compact_components(components)
+
+
+def _anthropic_client_fallback_credit_enabled(response: Dict[str, Any], options: Dict[str, Any]) -> bool:
+    for key in ("anthropic_fallback_credit", "anthropicFallbackCredit", "fallback_credit", "fallbackCredit"):
+        if options.get(key) is True:
+            return True
+    request = response.get("request") if isinstance(response.get("request"), dict) else {}
+    metadata = response.get("metadata") if isinstance(response.get("metadata"), dict) else {}
+    return bool(
+        request.get("fallback_credit_token")
+        or metadata.get("fallback_credit_token")
+        or response.get("fallback_credit_token")
+    )
+
+
+def _anthropic_client_fallback_credit_model(response: Dict[str, Any], requested_model: Optional[str]) -> str:
+    return str(response.get("model") or requested_model or "")
+
+
 def extract_anthropic_messages_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     response = _anthropic_messages_payload(response)
-    usage = response.get("usage", {})
+    usage_present = isinstance(response.get("usage"), dict)
+    usage = response.get("usage") if usage_present else {}
+    requested_model = options.get("model", response.get("model"))
     input_tokens = usage.get("input_tokens", 0)
     cache_write = usage.get("cache_creation_input_tokens", 0)
     cache_write_1h = usage.get("cache_creation_input_tokens_1h", 0)
     cache_read = usage.get("cache_read_input_tokens", 0)
     output_tokens = usage.get("output_tokens", 0)
-
-    return _base_usage_ledger(
-        provider=options.get("provider", "anthropic"),
-        surface=options.get("surface", "anthropic.messages"),
-        requested_model=options.get("model", response.get("model")),
-        returned_model=response.get("model"),
-        raw_usage=usage,
-        components=_compact_components(
+    iteration_components = _anthropic_messages_iteration_components(response, usage, requested_model)
+    metadata: Dict[str, Any] = {}
+    classifier_zero_billable = _anthropic_classifier_blocked(response) and _decimal(output_tokens) <= 0
+    if iteration_components:
+        components = iteration_components
+    elif (
+        _anthropic_client_fallback_credit_enabled(response, options)
+        and _anthropic_client_fallback_credit_model(response, requested_model) == ANTHROPIC_OPUS_4_8_MODEL
+    ):
+        fallback_input = _decimal(input_tokens) + _decimal(cache_write) + _decimal(cache_read)
+        metadata = {
+            "billing_model": response.get("model") or requested_model,
+            "anthropic_fallback_billing": "client_fallback_credit_cache_read",
+        }
+        components = _compact_components(
+            [
+                _positive_component_with_metadata("input_cache_read_tokens", fallback_input, "token", "$.usage.input_tokens", metadata),
+                _positive_component("output_text_tokens", output_tokens, "token", "$.usage.output_tokens"),
+            ]
+        )
+    elif _anthropic_classifier_blocked(response) and _decimal(output_tokens) <= 0:
+        components = []
+        metadata["zero_billable_reason"] = "anthropic_classifier_block"
+    else:
+        components = _compact_components(
             [
                 _positive_component("input_uncached_tokens", input_tokens, "token", "$.usage.input_tokens"),
                 _positive_component("input_cache_write_tokens", cache_write - cache_write_1h, "token", "$.usage.cache_creation_input_tokens"),
@@ -1954,8 +2269,23 @@ def extract_anthropic_messages_usage(response: Dict[str, Any], **options: Any) -
                 _positive_component("input_cache_read_tokens", cache_read, "token", "$.usage.cache_read_input_tokens"),
                 _positive_component("output_text_tokens", output_tokens, "token", "$.usage.output_tokens"),
             ]
-        ),
+        )
+        if not usage_present:
+            metadata["missing_usage_fields"] = ["$.usage"]
+
+    ledger = _base_usage_ledger(
+        provider=options.get("provider", "anthropic"),
+        surface=options.get("surface", "anthropic.messages"),
+        requested_model=requested_model,
+        returned_model=response.get("model"),
+        raw_usage=usage,
+        components=components,
     )
+    if not components and classifier_zero_billable:
+        metadata.setdefault("zero_billable_reason", "anthropic_classifier_block")
+    if metadata:
+        ledger["metadata"] = metadata
+    return ledger
 
 
 GEMINI_INPUT_MODALITY_COMPONENTS = {
@@ -2701,17 +3031,43 @@ def _vercel_ai_sdk_usage_payload(response: Dict[str, Any]) -> tuple[Dict[str, An
     return {}, "$.usage"
 
 
+def _vercel_ai_sdk_raw_usage_payloads(response: Dict[str, Any], usage: Dict[str, Any]) -> List[Dict[str, Any]]:
+    step_raw_usages = []
+    for step in response.get("steps", []):
+        step_usage = step.get("usage") if isinstance(step, dict) else None
+        if isinstance(step_usage, dict) and isinstance(step_usage.get("raw"), dict):
+            step_raw_usages.append(step_usage["raw"])
+    if step_raw_usages:
+        return step_raw_usages
+    if isinstance(usage.get("raw"), dict):
+        return [usage["raw"]]
+    for candidate in (
+        response.get("usage", {}).get("raw") if isinstance(response.get("usage"), dict) else None,
+        response.get("totalUsage", {}).get("raw") if isinstance(response.get("totalUsage"), dict) else None,
+        response.get("finalStep", {}).get("usage", {}).get("raw") if isinstance(response.get("finalStep"), dict) else None,
+    ):
+        if isinstance(candidate, dict):
+            return [candidate]
+    return []
+
+
 def extract_vercel_ai_sdk_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     usage, source_root = _vercel_ai_sdk_usage_payload(response)
+    orchestration_input, orchestration_cached_input, orchestration_output = _sum_openai_responses_orchestration_usage(
+        _vercel_ai_sdk_raw_usage_payloads(response, usage)
+    )
     input_details = usage.get("inputTokenDetails", {})
     output_details = usage.get("outputTokenDetails", {})
-    cache_read = input_details.get("cacheReadTokens", usage.get("cachedInputTokens", 0))
+    cache_read = _decimal(input_details.get("cacheReadTokens", usage.get("cachedInputTokens", 0)) or 0)
     cache_write = input_details.get("cacheWriteTokens", 0)
     input_tokens = usage.get("inputTokens", 0)
-    uncached = input_details.get("noCacheTokens", input_tokens - cache_read - cache_write)
+    base_uncached = _decimal(input_details.get("noCacheTokens", _decimal(input_tokens or 0) - cache_read - _decimal(cache_write or 0)) or 0)
+    uncached = base_uncached + orchestration_input - orchestration_cached_input
+    cache_read += orchestration_cached_input
     output_tokens = usage.get("outputTokens", 0)
     reasoning = output_details.get("reasoningTokens", usage.get("reasoningTokens", 0))
-    text_tokens = output_details.get("textTokens", output_tokens - reasoning)
+    base_text_tokens = _decimal(output_details.get("textTokens", _decimal(output_tokens or 0) - _decimal(reasoning or 0)) or 0)
+    text_tokens = base_text_tokens + orchestration_output
     response_metadata = response.get("response", {})
     model_metadata = response.get("model", {})
     returned_model = response_metadata.get("modelId") or model_metadata.get("modelId") or options.get("model")
@@ -2724,10 +3080,10 @@ def extract_vercel_ai_sdk_usage(response: Dict[str, Any], **options: Any) -> Dic
         raw_usage=usage,
         components=_compact_components(
             [
-                _positive_component("input_uncached_tokens", uncached, "token", f"{source_root}.inputTokenDetails.noCacheTokens"),
-                _positive_component("input_cache_read_tokens", cache_read, "token", f"{source_root}.inputTokenDetails.cacheReadTokens"),
+                _positive_component("input_uncached_tokens", _format_decimal(uncached), "token", f"{source_root}.inputTokenDetails.noCacheTokens"),
+                _positive_component("input_cache_read_tokens", _format_decimal(cache_read), "token", f"{source_root}.inputTokenDetails.cacheReadTokens"),
                 _positive_component("input_cache_write_tokens", cache_write, "token", f"{source_root}.inputTokenDetails.cacheWriteTokens"),
-                _positive_component("output_text_tokens", text_tokens, "token", f"{source_root}.outputTokenDetails.textTokens"),
+                _positive_component("output_text_tokens", _format_decimal(text_tokens), "token", f"{source_root}.outputTokenDetails.textTokens"),
                 _positive_component("output_reasoning_tokens", reasoning, "token", f"{source_root}.outputTokenDetails.reasoningTokens"),
             ]
         ),
@@ -4040,6 +4396,10 @@ def from_response(
     storage_days: Optional[Any] = None,
     storageDays: Optional[Any] = None,
     ag2_usage_mode: Optional[str] = None,
+    anthropic_fallback_credit: Optional[bool] = None,
+    anthropicFallbackCredit: Optional[bool] = None,
+    fallback_credit: Optional[bool] = None,
+    fallbackCredit: Optional[bool] = None,
     price_cards: Iterable[Dict[str, Any]],
     discount_policies: Optional[Iterable[Dict[str, Any]]] = None,
     mode: str = "compatibility",
@@ -4064,6 +4424,14 @@ def from_response(
         options["storageDays"] = storageDays
     if ag2_usage_mode:
         options["ag2_usage_mode"] = ag2_usage_mode
+    if anthropic_fallback_credit is not None:
+        options["anthropic_fallback_credit"] = anthropic_fallback_credit
+    if anthropicFallbackCredit is not None:
+        options["anthropicFallbackCredit"] = anthropicFallbackCredit
+    if fallback_credit is not None:
+        options["fallback_credit"] = fallback_credit
+    if fallbackCredit is not None:
+        options["fallbackCredit"] = fallbackCredit
     try:
         usage_ledger = extract_usage_ledger(response, **options)
     except ValueError:

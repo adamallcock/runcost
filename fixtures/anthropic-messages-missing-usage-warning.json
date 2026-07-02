@@ -1,0 +1,101 @@
+{
+  "name": "anthropic-messages-missing-usage-warning",
+  "description": "Emits a warning instead of silently treating an Anthropic Messages response with no usage object as intentionally zero billable.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "anthropic",
+    "surface": "anthropic.messages",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "missing_usage",
+      "raw_provider_response",
+      "warning:usage_missing"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "extract": {
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": "claude-opus-4-8"
+    },
+    "raw_response": {
+      "id": "msg_anthropic_missing_usage_fixture",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-opus-4-8",
+      "content": [
+        {
+          "type": "text",
+          "text": "Missing usage."
+        }
+      ],
+      "stop_reason": "end_turn",
+      "stop_details": null
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "anthropic:claude-opus-4-8:missing-usage-fixture",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "claude-opus-4-8",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000005",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-06-19T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": {
+        "requested": "claude-opus-4-8",
+        "returned": "claude-opus-4-8",
+        "billed": "claude-opus-4-8",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "usage_missing",
+          "message": "Usage field $.usage was missing; RunCost could not extract billable usage from it.",
+          "path": "$.usage",
+          "metadata": {
+            "field": "$.usage"
+          }
+        }
+      ],
+      "metadata": {
+        "missing_usage_fields": [
+          "$.usage"
+        ]
+      }
+    }
+  }
+}

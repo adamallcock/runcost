@@ -67,6 +67,7 @@ var warningCodeNames = []string{
 	"price_stale",
 	"price_source_disagreement",
 	"usage_field_ignored",
+	"usage_missing",
 	"inclusive_usage_ambiguous",
 	"component_unpriced",
 	"source_capability_unsupported",

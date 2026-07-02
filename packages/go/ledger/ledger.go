@@ -100,12 +100,13 @@ func (tool ToolMetadata) Object() Object {
 
 // UsageComponent is a typed Go representation of a canonical usage component.
 type UsageComponent struct {
-	Name       string
-	Quantity   string
-	Unit       string
-	Tool       *ToolMetadata
-	SourcePath string
-	Metadata   Object
+	Name         string
+	Quantity     string
+	Unit         string
+	Tool         *ToolMetadata
+	SourcePath   string
+	BillingModel string
+	Metadata     Object
 }
 
 // Object converts the usage component to the canonical schema-shaped object.
@@ -120,6 +121,9 @@ func (component UsageComponent) Object() Object {
 	}
 	if component.SourcePath != "" {
 		result["source_path"] = component.SourcePath
+	}
+	if component.BillingModel != "" {
+		result["billing_model"] = component.BillingModel
 	}
 	if component.Metadata != nil {
 		result["metadata"] = component.Metadata
@@ -578,6 +582,14 @@ func asObject(value any) Object {
 	return value.(map[string]any)
 }
 
+func objectValue(value any) (Object, bool) {
+	if value == nil {
+		return Object{}, false
+	}
+	object, ok := value.(map[string]any)
+	return object, ok
+}
+
 func asSlice(value any) []any {
 	if value == nil {
 		return nil
@@ -786,6 +798,22 @@ func matchingCards(usageLedger Object, priceCards []any, options Object) []Objec
 		cards = append(cards, item.card)
 	}
 	return cards
+}
+
+func priceLookupCacheKey(usageLedger Object, options Object) string {
+	context := usageContext(usageLedger)
+	parts := []string{
+		asString(usageLedger["provider"]),
+		asString(usageLedger["surface"]),
+		billedModel(usageLedger),
+		asString(context["service_tier"]),
+		asString(context["region"]),
+		datePart(context["priced_at"]),
+	}
+	for _, value := range sourcePriority(options) {
+		parts = append(parts, asString(value))
+	}
+	return strings.Join(parts, "\x1f")
 }
 
 func totalInputTokens(usageLedger Object) *big.Rat {
@@ -1436,6 +1464,17 @@ func usageMetadataFieldWarnings(usageLedger Object) []any {
 			},
 		})
 	}
+	for _, rawField := range asSlice(metadata["missing_usage_fields"]) {
+		field := asString(rawField)
+		warnings = append(warnings, Object{
+			"code":    "usage_missing",
+			"message": fmt.Sprintf("Usage field %s was missing; RunCost could not extract billable usage from it.", field),
+			"path":    field,
+			"metadata": Object{
+				"field": field,
+			},
+		})
+	}
 	for _, rawField := range asSlice(metadata["inclusive_usage_fields"]) {
 		field := asString(rawField)
 		warnings = append(warnings, Object{
@@ -1727,43 +1766,68 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 	if mode == "" {
 		mode = "compatibility"
 	}
-	hasModelCard := hasPriceCardForUsage(usageLedger, priceCards)
-	modelSurfaceCardExists := hasPriceCardForModelSurface(usageLedger, priceCards)
-	candidateCards := matchingCards(usageLedger, priceCards, options)
-	if trace != nil {
-		appendTraceDecision(trace, Object{
-			"type":                     "price_card_candidates",
-			"model":                    resolvedBilledModel,
-			"candidate_price_card_ids": priceCardIDs(candidateCards),
-			"source_priority":          sourcePriority(options),
-		})
-	}
-	warnedUnknownModel := false
-	warnedUnknownProvider := false
-	warnedNoMatchingCard := false
+	warnedUnknownModel := map[string]bool{}
+	warnedUnknownProvider := map[string]bool{}
+	warnedNoMatchingCard := map[string]bool{}
 	warnedAliasInferred := false
 	warnedStaleCards := map[string]bool{}
+	type priceLookupResult struct {
+		hasModelCard           bool
+		modelSurfaceCardExists bool
+		candidateCards         []Object
+	}
+	priceLookupCache := map[string]priceLookupResult{}
 
 	for _, rawComponent := range asSlice(usageLedger["components"]) {
 		component := asObject(rawComponent)
+		componentUsageLedger := usageLedgerForComponent(usageLedger, component)
+		componentBilledModel := billedModel(componentUsageLedger)
+		componentWarningKey := strings.Join([]string{
+			asString(componentUsageLedger["provider"]),
+			asString(componentUsageLedger["surface"]),
+			componentBilledModel,
+		}, "|")
+		lookupKey := priceLookupCacheKey(componentUsageLedger, options)
+		lookup, ok := priceLookupCache[lookupKey]
+		if !ok {
+			lookup = priceLookupResult{
+				hasModelCard:           hasPriceCardForUsage(componentUsageLedger, priceCards),
+				modelSurfaceCardExists: hasPriceCardForModelSurface(componentUsageLedger, priceCards),
+				candidateCards:         matchingCards(componentUsageLedger, priceCards, options),
+			}
+			priceLookupCache[lookupKey] = lookup
+		}
+		hasModelCard := lookup.hasModelCard
+		modelSurfaceCardExists := lookup.modelSurfaceCardExists
+		candidateCards := lookup.candidateCards
+		if trace != nil {
+			appendTraceDecision(trace, Object{
+				"type":                     "price_card_candidates",
+				"component":                asString(component["name"]),
+				"model":                    componentBilledModel,
+				"candidate_price_card_ids": priceCardIDs(candidateCards),
+				"source_priority":          sourcePriority(options),
+			})
+		}
+
 		if !hasModelCard {
 			if modelSurfaceCardExists {
-				if !warnedUnknownProvider {
-					warnings = append(warnings, unknownProviderWarning(usageLedger))
-					warnedUnknownProvider = true
+				if !warnedUnknownProvider[componentWarningKey] {
+					warnings = append(warnings, unknownProviderWarning(componentUsageLedger))
+					warnedUnknownProvider[componentWarningKey] = true
 				}
-			} else if !warnedUnknownModel {
-				warnings = append(warnings, unknownModelWarning(usageLedger))
-				warnedUnknownModel = true
+			} else if !warnedUnknownModel[componentWarningKey] {
+				warnings = append(warnings, unknownModelWarning(componentUsageLedger))
+				warnedUnknownModel[componentWarningKey] = true
 			}
 			incrementTraceSummary(trace, "unpriced_components")
 			continue
 		}
 
 		if len(candidateCards) == 0 {
-			if !warnedNoMatchingCard {
-				warnings = append(warnings, noMatchingCardWarning(usageLedger, priceCards))
-				warnedNoMatchingCard = true
+			if !warnedNoMatchingCard[componentWarningKey] {
+				warnings = append(warnings, noMatchingCardWarning(componentUsageLedger, priceCards))
+				warnedNoMatchingCard[componentWarningKey] = true
 			}
 			incrementTraceSummary(trace, "unpriced_components")
 			continue
@@ -1772,20 +1836,20 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		candidates := candidatePriceComponents(candidateCards, component)
 		matches := []Object{}
 		for _, match := range candidates {
-			if conditionsMatch(usageLedger, asObject(match["price_component"])) {
+			if conditionsMatch(componentUsageLedger, asObject(match["price_component"])) {
 				matches = append(matches, match)
 			}
 		}
 		if len(matches) == 0 && len(candidates) == 0 {
-			matches = outputReasoningPricedAsOutputMatches(usageLedger, candidateCards, component)
+			matches = outputReasoningPricedAsOutputMatches(componentUsageLedger, candidateCards, component)
 		}
 		if len(matches) == 0 {
 			if warning, ok := sourceCapabilityWarning(candidateCards, component); ok {
 				warnings = append(warnings, warning)
-			} else if warning, ok := longContextRuleMissingWarning(usageLedger, candidates, component); ok {
+			} else if warning, ok := longContextRuleMissingWarning(componentUsageLedger, candidates, component); ok {
 				warnings = append(warnings, warning)
 			} else {
-				warnings = append(warnings, unpricedComponentWarning(usageLedger, component))
+				warnings = append(warnings, unpricedComponentWarning(componentUsageLedger, component))
 			}
 			incrementTraceSummary(trace, "unpriced_components")
 			continue
@@ -1804,29 +1868,31 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 			"selected_price_card_id":   asString(card["id"]),
 			"selected_source":          asString(asObject(card["source"])["name"]),
 		})
-		if asString(card["model"]) != resolvedBilledModel && containsString(asSlice(card["aliases"]), resolvedBilledModel) {
-			previousBilledModel := resolvedBilledModel
-			resolvedBilledModel = asString(card["model"])
-			if aliasResolution == "none" {
-				aliasResolution = "source_exact"
-				if !warnedAliasInferred {
-					warnings = append(warnings, aliasInferredWarning(previousBilledModel, resolvedBilledModel))
-					warnedAliasInferred = true
+		if asString(card["model"]) != componentBilledModel && containsString(asSlice(card["aliases"]), componentBilledModel) {
+			previousBilledModel := componentBilledModel
+			if componentBillingModel(component) == "" {
+				resolvedBilledModel = asString(card["model"])
+				if aliasResolution == "none" {
+					aliasResolution = "source_exact"
+					if !warnedAliasInferred {
+						warnings = append(warnings, aliasInferredWarning(previousBilledModel, resolvedBilledModel))
+						warnedAliasInferred = true
+					}
 				}
+				appendTraceDecision(trace, Object{
+					"type":          "model_alias_resolution",
+					"from":          previousBilledModel,
+					"to":            resolvedBilledModel,
+					"price_card_id": asString(card["id"]),
+					"resolution":    aliasResolution,
+				})
 			}
-			appendTraceDecision(trace, Object{
-				"type":          "model_alias_resolution",
-				"from":          previousBilledModel,
-				"to":            resolvedBilledModel,
-				"price_card_id": asString(card["id"]),
-				"resolution":    aliasResolution,
-			})
 		}
 
 		price := asObject(priceComponent["price"])
 		baseCost := multiplyDivide(component["quantity"], price["amount"], price["per"])
 		eligible := discountEligible(priceComponent)
-		finalCost, applied := applyDiscounts(baseCost, discountPolicies, usageLedger, component, eligible)
+		finalCost, applied := applyDiscounts(baseCost, discountPolicies, componentUsageLedger, component, eligible)
 		appliedDiscounts = append(appliedDiscounts, applied...)
 		for _, rawApplied := range applied {
 			appliedItem := asObject(rawApplied)
@@ -1847,7 +1913,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		sourceByName[sourceName] = source
 		cardID := asString(card["id"])
 		if !warnedStaleCards[cardID] {
-			if warning, ok := stalePriceWarning(usageLedger, card, options); ok {
+			if warning, ok := stalePriceWarning(componentUsageLedger, card, options); ok {
 				warnings = append(warnings, warning)
 				warnedStaleCards[cardID] = true
 			}
@@ -1862,8 +1928,15 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 			"price_card_id":     asString(card["id"]),
 			"discount_eligible": eligible,
 		}
-		if len(componentMetadata) > 0 {
-			costComponent["metadata"] = componentMetadata
+		outputMetadata := Object{}
+		for key, value := range asObject(component["metadata"]) {
+			outputMetadata[key] = value
+		}
+		for key, value := range componentMetadata {
+			outputMetadata[key] = value
+		}
+		if len(outputMetadata) > 0 {
+			costComponent["metadata"] = outputMetadata
 		}
 		components = append(components, costComponent)
 		incrementTraceSummary(trace, "priced_components")
@@ -1915,6 +1988,9 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 	}
 	if trace != nil {
 		result["debug_trace"] = trace
+	}
+	if metadata, ok := objectValue(usageLedger["metadata"]); ok && len(metadata) > 0 {
+		result["metadata"] = metadata
 	}
 	if mode == "strict" && len(warnings) > 0 {
 		panic(fmt.Sprintf("strict mode cost calculation failed: %s", asString(asObject(warnings[0])["code"])))
@@ -2218,6 +2294,42 @@ func positiveComponent(name string, quantity any, unit string, sourcePath string
 		"unit":        unit,
 		"source_path": sourcePath,
 	}
+}
+
+func positiveComponentWithMetadata(name string, quantity any, unit string, sourcePath string, metadata Object) any {
+	component := positiveComponent(name, quantity, unit, sourcePath)
+	if component == nil {
+		return nil
+	}
+	result := asObject(component)
+	result["metadata"] = metadata
+	if billingModel := asString(metadata["billing_model"]); billingModel != "" {
+		result["billing_model"] = billingModel
+	}
+	return result
+}
+
+func componentBillingModel(component Object) string {
+	return asString(component["billing_model"])
+}
+
+func usageLedgerForComponent(usageLedger Object, component Object) Object {
+	billingModel := componentBillingModel(component)
+	if billingModel == "" {
+		return usageLedger
+	}
+	result := Object{}
+	for key, value := range usageLedger {
+		result[key] = value
+	}
+	model := Object{}
+	for key, value := range asObject(usageLedger["model"]) {
+		model[key] = value
+	}
+	model["returned"] = billingModel
+	model["billed"] = billingModel
+	result["model"] = model
+	return result
 }
 
 func compactComponents(values []any) []any {
@@ -2529,13 +2641,40 @@ func openAIResponsesPayload(response Object) Object {
 	return response
 }
 
+func openAIResponsesOrchestrationUsage(usage Object) (any, any, any) {
+	inputDetails := asObject(usage["input_tokens_details"])
+	outputDetails := asObject(usage["output_tokens_details"])
+	return getNumber(inputDetails, "orchestration_input_tokens"),
+		getNumber(inputDetails, "orchestration_input_cached_tokens"),
+		getNumber(outputDetails, "orchestration_output_tokens")
+}
+
+func sumOpenAIResponsesOrchestrationUsage(usages []Object) (string, string, string) {
+	inputTokens := "0"
+	cachedInputTokens := "0"
+	outputTokens := "0"
+	for _, usage := range usages {
+		orchestrationInput, orchestrationCachedInput, orchestrationOutput := openAIResponsesOrchestrationUsage(usage)
+		inputTokens = add(inputTokens, orchestrationInput)
+		cachedInputTokens = add(cachedInputTokens, orchestrationCachedInput)
+		outputTokens = add(outputTokens, orchestrationOutput)
+	}
+	return inputTokens, cachedInputTokens, outputTokens
+}
+
 func extractOpenAIResponsesUsage(response Object, options Object) Object {
 	response = openAIResponsesPayload(response)
 	usage := asObject(response["usage"])
-	cachedInput := getNumber(usage, "input_tokens_details", "cached_tokens")
-	reasoning := getNumber(usage, "output_tokens_details", "reasoning_tokens")
+	inputDetails := asObject(usage["input_tokens_details"])
+	outputDetails := asObject(usage["output_tokens_details"])
+	cachedInput := getNumber(inputDetails, "cached_tokens")
+	orchestrationInput, orchestrationCachedInput, orchestrationOutput := openAIResponsesOrchestrationUsage(usage)
+	reasoning := getNumber(outputDetails, "reasoning_tokens")
 	input := getNumber(usage, "input_tokens")
 	output := getNumber(usage, "output_tokens")
+	inputUncached := add(subtract(input, cachedInput), subtract(orchestrationInput, orchestrationCachedInput))
+	inputCacheRead := add(cachedInput, orchestrationCachedInput)
+	outputText := add(subtract(output, reasoning), orchestrationOutput)
 	toolComponents := []any{}
 	functionCallCount := 0
 	explicitServerSideToolCount := 0
@@ -2613,9 +2752,9 @@ func extractOpenAIResponsesUsage(response Object, options Object) Object {
 	}
 
 	components := []any{
-		positiveComponent("input_uncached_tokens", subtract(input, cachedInput), "token", "$.usage.input_tokens"),
-		positiveComponent("input_cache_read_tokens", cachedInput, "token", "$.usage.input_tokens_details.cached_tokens"),
-		positiveComponent("output_text_tokens", subtract(output, reasoning), "token", "$.usage.output_tokens"),
+		positiveComponent("input_uncached_tokens", inputUncached, "token", "$.usage.input_tokens + $.usage.input_tokens_details.orchestration_input_tokens"),
+		positiveComponent("input_cache_read_tokens", inputCacheRead, "token", "$.usage.input_tokens_details.cached_tokens + $.usage.input_tokens_details.orchestration_input_cached_tokens"),
+		positiveComponent("output_text_tokens", outputText, "token", "$.usage.output_tokens + $.usage.output_tokens_details.orchestration_output_tokens"),
 		positiveComponent("output_reasoning_tokens", reasoning, "token", "$.usage.output_tokens_details.reasoning_tokens"),
 	}
 	components = append(components, toolComponents...)
@@ -3169,24 +3308,33 @@ func anthropicMessagesPayload(response Object) Object {
 	message := Object{}
 	usage := Object{}
 	for _, rawEvent := range events {
-		event := asObject(rawEvent)
+		event, ok := objectValue(rawEvent)
+		if !ok {
+			continue
+		}
 		switch asString(event["type"]) {
 		case "message_start":
-			startMessage := asObject(event["message"])
-			if len(startMessage) > 0 {
+			startMessage, ok := objectValue(event["message"])
+			if ok && len(startMessage) > 0 {
 				for key, value := range startMessage {
 					message[key] = value
 				}
-				for key, value := range asObject(startMessage["usage"]) {
-					usage[key] = value
+				if startUsage, ok := objectValue(startMessage["usage"]); ok {
+					for key, value := range startUsage {
+						usage[key] = value
+					}
 				}
 			}
 		case "message_delta":
-			for key, value := range asObject(event["usage"]) {
-				usage[key] = value
+			if deltaUsage, ok := objectValue(event["usage"]); ok {
+				for key, value := range deltaUsage {
+					usage[key] = value
+				}
 			}
-			for key, value := range asObject(event["delta"]) {
-				message[key] = value
+			if delta, ok := objectValue(event["delta"]); ok {
+				for key, value := range delta {
+					message[key] = value
+				}
 			}
 		}
 	}
@@ -3197,9 +3345,173 @@ func anthropicMessagesPayload(response Object) Object {
 	return message
 }
 
+const anthropicFable5Model = "claude-fable-5"
+const anthropicOpus48Model = "claude-opus-4-8"
+
+var anthropicFallbackClassifierCategories = map[string]bool{
+	"cyber":                true,
+	"bio":                  true,
+	"reasoning_extraction": true,
+}
+
+func anthropicFallbackPairs(response Object) [][2]string {
+	pairs := [][2]string{}
+	for _, rawBlock := range asSlice(response["content"]) {
+		block, ok := objectValue(rawBlock)
+		if !ok {
+			continue
+		}
+		if asString(block["type"]) != "fallback" {
+			continue
+		}
+		from, _ := objectValue(block["from"])
+		to, _ := objectValue(block["to"])
+		fromModel := asString(from["model"])
+		toModel := asString(to["model"])
+		if fromModel != "" && toModel != "" {
+			pairs = append(pairs, [2]string{fromModel, toModel})
+		}
+	}
+	return pairs
+}
+
+func anthropicClassifierBlocked(response Object) bool {
+	if asString(response["stop_reason"]) != "refusal" {
+		return false
+	}
+	details, ok := objectValue(response["stop_details"])
+	if !ok || len(details) == 0 {
+		return false
+	}
+	_, hasFallbackCreditToken := details["fallback_credit_token"]
+	return anthropicFallbackClassifierCategories[asString(details["category"])] ||
+		asString(details["recommended_model"]) == anthropicOpus48Model ||
+		hasFallbackCreditToken ||
+		details["fallback_has_prefill_claim"] == true
+}
+
+func anthropicIsFableToOpusFallbackIteration(iteration Object, previousModels []string, requestedModel string, fallbackPairs [][2]string) bool {
+	if asString(iteration["type"]) != "fallback_message" {
+		return false
+	}
+	if asString(iteration["model"]) != anthropicOpus48Model {
+		return false
+	}
+	if requestedModel == anthropicFable5Model {
+		return true
+	}
+	for _, model := range previousModels {
+		if model == anthropicFable5Model {
+			return true
+		}
+	}
+	for _, pair := range fallbackPairs {
+		if pair[0] == anthropicFable5Model && pair[1] == anthropicOpus48Model {
+			return true
+		}
+	}
+	return false
+}
+
+func anthropicIterationMetadata(iteration Object, index int, billingModel string) Object {
+	metadata := Object{
+		"billing_model":         billingModel,
+		"usage_iteration_index": json.Number(strconv.Itoa(index)),
+	}
+	if iterationType := asString(iteration["type"]); iterationType != "" {
+		metadata["usage_iteration_type"] = iterationType
+	}
+	return metadata
+}
+
+func anthropicFallbackCacheReadQuantity(iteration Object) string {
+	return add(add(getNumber(iteration, "input_tokens"), getNumber(iteration, "cache_creation_input_tokens")), getNumber(iteration, "cache_read_input_tokens"))
+}
+
+func anthropicMessagesIterationComponents(response Object, usage Object, requestedModel string) []any {
+	iterations := asSlice(usage["iterations"])
+	if len(iterations) == 0 {
+		return []any{}
+	}
+	components := []any{}
+	previousModels := []string{}
+	fallbackPairs := anthropicFallbackPairs(response)
+	classifierBlocked := anthropicClassifierBlocked(response)
+	hasFallbackIteration := false
+	for _, rawIteration := range iterations {
+		iteration, ok := objectValue(rawIteration)
+		if ok && asString(iteration["type"]) == "fallback_message" {
+			hasFallbackIteration = true
+			break
+		}
+	}
+	for index, rawIteration := range iterations {
+		iteration, ok := objectValue(rawIteration)
+		if !ok {
+			continue
+		}
+		iterationModel := asString(iteration["model"])
+		if iterationModel == "" {
+			iterationModel = asString(response["model"])
+		}
+		if iterationModel == "" {
+			iterationModel = requestedModel
+		}
+		sourceRoot := fmt.Sprintf("$.usage.iterations[%d]", index)
+		metadata := anthropicIterationMetadata(iteration, index, iterationModel)
+		isFableToOpus := anthropicIsFableToOpusFallbackIteration(iteration, previousModels, requestedModel, fallbackPairs)
+		suppressClassifierInput := false
+		if isFableToOpus {
+			fallbackMetadata := Object{}
+			for key, value := range metadata {
+				fallbackMetadata[key] = value
+			}
+			fallbackMetadata["anthropic_fallback_billing"] = "fable_to_opus_cache_read"
+			components = append(components, positiveComponentWithMetadata("input_cache_read_tokens", anthropicFallbackCacheReadQuantity(iteration), "token", sourceRoot+".input_tokens", fallbackMetadata))
+		} else {
+			suppressClassifierInput = classifierBlocked && !hasFallbackIteration && rat(getNumber(iteration, "output_tokens")).Sign() <= 0
+		}
+		if !isFableToOpus && !suppressClassifierInput && (!hasFallbackIteration || asString(iteration["type"]) == "fallback_message") {
+			cacheWrite := getNumber(iteration, "cache_creation_input_tokens")
+			cacheWrite1h := getNumber(iteration, "cache_creation_input_tokens_1h")
+			components = append(components,
+				positiveComponentWithMetadata("input_uncached_tokens", getNumber(iteration, "input_tokens"), "token", sourceRoot+".input_tokens", metadata),
+				positiveComponentWithMetadata("input_cache_write_tokens", subtract(cacheWrite, cacheWrite1h), "token", sourceRoot+".cache_creation_input_tokens", metadata),
+				positiveComponentWithMetadata("input_cache_write_1h_tokens", cacheWrite1h, "token", sourceRoot+".cache_creation_input_tokens_1h", metadata),
+				positiveComponentWithMetadata("input_cache_read_tokens", getNumber(iteration, "cache_read_input_tokens"), "token", sourceRoot+".cache_read_input_tokens", metadata),
+			)
+		}
+		components = append(components, positiveComponentWithMetadata("output_text_tokens", getNumber(iteration, "output_tokens"), "token", sourceRoot+".output_tokens", metadata))
+		if iterationModel != "" {
+			previousModels = append(previousModels, iterationModel)
+		}
+	}
+	return compactComponents(components)
+}
+
+func anthropicClientFallbackCreditEnabled(response Object, options Object) bool {
+	for _, key := range []string{"anthropic_fallback_credit", "anthropicFallbackCredit", "fallback_credit", "fallbackCredit"} {
+		if value, ok := options[key].(bool); ok && value {
+			return true
+		}
+	}
+	request, _ := objectValue(response["request"])
+	metadata, _ := objectValue(response["metadata"])
+	return request["fallback_credit_token"] != nil ||
+		metadata["fallback_credit_token"] != nil ||
+		response["fallback_credit_token"] != nil
+}
+
+func anthropicClientFallbackCreditModel(response Object, requestedModel string) string {
+	if model := asString(response["model"]); model != "" {
+		return model
+	}
+	return requestedModel
+}
+
 func extractAnthropicMessagesUsage(response Object, options Object) Object {
 	response = anthropicMessagesPayload(response)
-	usage := asObject(response["usage"])
+	usage, usagePresent := objectValue(response["usage"])
 	cacheWrite := getNumber(usage, "cache_creation_input_tokens")
 	cacheWrite1h := getNumber(usage, "cache_creation_input_tokens_1h")
 	provider := asString(options["provider"])
@@ -3210,14 +3522,47 @@ func extractAnthropicMessagesUsage(response Object, options Object) Object {
 	if requestedModel == "" {
 		requestedModel = asString(response["model"])
 	}
+	components := anthropicMessagesIterationComponents(response, usage, requestedModel)
+	metadata := Object{}
+	classifierZeroBillable := anthropicClassifierBlocked(response) && rat(getNumber(usage, "output_tokens")).Sign() <= 0
+	if len(components) == 0 {
+		if anthropicClientFallbackCreditEnabled(response, options) && anthropicClientFallbackCreditModel(response, requestedModel) == anthropicOpus48Model {
+			billingModel := asString(response["model"])
+			if billingModel == "" {
+				billingModel = requestedModel
+			}
+			components = compactComponents([]any{
+				positiveComponentWithMetadata("input_cache_read_tokens", add(add(getNumber(usage, "input_tokens"), cacheWrite), getNumber(usage, "cache_read_input_tokens")), "token", "$.usage.input_tokens", Object{
+					"billing_model":              billingModel,
+					"anthropic_fallback_billing": "client_fallback_credit_cache_read",
+				}),
+				positiveComponent("output_text_tokens", getNumber(usage, "output_tokens"), "token", "$.usage.output_tokens"),
+			})
+		} else if anthropicClassifierBlocked(response) && rat(getNumber(usage, "output_tokens")).Sign() <= 0 {
+			components = []any{}
+			metadata["zero_billable_reason"] = "anthropic_classifier_block"
+		} else {
+			components = compactComponents([]any{
+				positiveComponent("input_uncached_tokens", getNumber(usage, "input_tokens"), "token", "$.usage.input_tokens"),
+				positiveComponent("input_cache_write_tokens", subtract(cacheWrite, cacheWrite1h), "token", "$.usage.cache_creation_input_tokens"),
+				positiveComponent("input_cache_write_1h_tokens", cacheWrite1h, "token", "$.usage.cache_creation_input_tokens_1h"),
+				positiveComponent("input_cache_read_tokens", getNumber(usage, "cache_read_input_tokens"), "token", "$.usage.cache_read_input_tokens"),
+				positiveComponent("output_text_tokens", getNumber(usage, "output_tokens"), "token", "$.usage.output_tokens"),
+			})
+			if !usagePresent {
+				metadata["missing_usage_fields"] = []any{"$.usage"}
+			}
+		}
+	}
 
-	return baseUsageLedger(provider, "anthropic.messages", requestedModel, asString(response["model"]), compactComponents([]any{
-		positiveComponent("input_uncached_tokens", getNumber(usage, "input_tokens"), "token", "$.usage.input_tokens"),
-		positiveComponent("input_cache_write_tokens", subtract(cacheWrite, cacheWrite1h), "token", "$.usage.cache_creation_input_tokens"),
-		positiveComponent("input_cache_write_1h_tokens", cacheWrite1h, "token", "$.usage.cache_creation_input_tokens_1h"),
-		positiveComponent("input_cache_read_tokens", getNumber(usage, "cache_read_input_tokens"), "token", "$.usage.cache_read_input_tokens"),
-		positiveComponent("output_text_tokens", getNumber(usage, "output_tokens"), "token", "$.usage.output_tokens"),
-	}), usage)
+	ledger := baseUsageLedger(provider, "anthropic.messages", requestedModel, asString(response["model"]), components, usage)
+	if len(components) == 0 && classifierZeroBillable {
+		metadata["zero_billable_reason"] = "anthropic_classifier_block"
+	}
+	if len(metadata) > 0 {
+		ledger["metadata"] = metadata
+	}
+	return ledger
 }
 
 var geminiInputModalityComponents = map[string]string{
@@ -4058,20 +4403,52 @@ func vercelAISDKUsagePayload(response Object) (Object, string) {
 	return asObject(response["usage"]), "$.usage"
 }
 
+func vercelAISDKRawUsagePayloads(response Object, usage Object) []Object {
+	stepRawUsages := []Object{}
+	for _, rawStep := range asSlice(response["steps"]) {
+		step := asObject(rawStep)
+		rawUsage := asObject(asObject(step["usage"])["raw"])
+		if len(rawUsage) > 0 {
+			stepRawUsages = append(stepRawUsages, rawUsage)
+		}
+	}
+	if len(stepRawUsages) > 0 {
+		return stepRawUsages
+	}
+	rawUsage := asObject(usage["raw"])
+	if len(rawUsage) > 0 {
+		return []Object{rawUsage}
+	}
+	for _, candidate := range []any{
+		asObject(response["usage"])["raw"],
+		asObject(response["totalUsage"])["raw"],
+		asObject(asObject(response["finalStep"])["usage"])["raw"],
+	} {
+		rawUsage = asObject(candidate)
+		if len(rawUsage) > 0 {
+			return []Object{rawUsage}
+		}
+	}
+	return []Object{}
+}
+
 func extractVercelAISDKUsage(response Object, options Object) Object {
 	usage, sourceRoot := vercelAISDKUsagePayload(response)
+	orchestrationInput, orchestrationCachedInput, orchestrationOutput := sumOpenAIResponsesOrchestrationUsage(vercelAISDKRawUsagePayloads(response, usage))
 	inputDetails := asObject(usage["inputTokenDetails"])
 	outputDetails := asObject(usage["outputTokenDetails"])
-	cacheRead := getNumber(inputDetails, "cacheReadTokens")
-	if rat(cacheRead).Sign() == 0 {
-		cacheRead = getNumber(usage, "cachedInputTokens")
+	baseCacheRead := getNumber(inputDetails, "cacheReadTokens")
+	if rat(baseCacheRead).Sign() == 0 {
+		baseCacheRead = getNumber(usage, "cachedInputTokens")
 	}
+	cacheRead := add(baseCacheRead, orchestrationCachedInput)
 	cacheWrite := getNumber(inputDetails, "cacheWriteTokens")
 	inputTokens := getNumber(usage, "inputTokens")
 	uncached := getNumber(inputDetails, "noCacheTokens")
 	if rat(uncached).Sign() == 0 {
-		uncached = subtract(subtract(inputTokens, cacheRead), cacheWrite)
+		uncached = subtract(subtract(inputTokens, baseCacheRead), cacheWrite)
 	}
+	uncached = add(uncached, subtract(orchestrationInput, orchestrationCachedInput))
 	outputTokens := getNumber(usage, "outputTokens")
 	reasoning := getNumber(outputDetails, "reasoningTokens")
 	if rat(reasoning).Sign() == 0 {
@@ -4081,6 +4458,7 @@ func extractVercelAISDKUsage(response Object, options Object) Object {
 	if rat(textTokens).Sign() == 0 {
 		textTokens = subtract(outputTokens, reasoning)
 	}
+	textTokens = add(textTokens, orchestrationOutput)
 	modelMetadata := asObject(response["model"])
 	responseMetadata := asObject(response["response"])
 	provider := asString(options["provider"])

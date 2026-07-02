@@ -1,0 +1,108 @@
+{
+  "name": "anthropic-messages-fable-server-fallback-unavailable",
+  "description": "Treats a server-side Fable fallback refusal with recommended_model as a direct zero-bill classifier block when no fallback model could serve the turn.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "anthropic",
+    "surface": "anthropic.messages",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "anthropic_fallback_billing",
+      "classifier_block",
+      "fallback_unavailable",
+      "fable_fallback",
+      "raw_provider_response",
+      "recommended_model",
+      "zero_billable_usage"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "extract": {
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": "claude-fable-5"
+    },
+    "raw_response": {
+      "id": "msg_fable_fallback_unavailable_fixture",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-fable-5",
+      "content": [],
+      "stop_reason": "refusal",
+      "stop_details": {
+        "type": "refusal",
+        "category": "cyber",
+        "recommended_model": "claude-opus-4-8"
+      },
+      "usage": {
+        "input_tokens": 408,
+        "output_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0
+      }
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "anthropic:claude-fable-5:fallback-unavailable-fixture",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "claude-fable-5",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.00001",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.00005",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-06-09T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": {
+        "requested": "claude-fable-5",
+        "returned": "claude-fable-5",
+        "billed": "claude-fable-5",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": [],
+      "metadata": {
+        "zero_billable_reason": "anthropic_classifier_block"
+      }
+    }
+  }
+}

@@ -46,6 +46,7 @@ class UsageComponent(TypedDict, total=False):
     unit: UsageUnit
     tool: UsageTool
     source_path: str
+    billing_model: str
     metadata: Dict[str, Any]
 
 

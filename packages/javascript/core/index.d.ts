@@ -50,6 +50,7 @@ export interface UsageComponent {
   unit: UsageUnit;
   tool?: UsageTool;
   source_path?: string;
+  billing_model?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -380,6 +381,10 @@ export interface ExtractOptions {
   storageDays?: string | number;
   ag2_usage_mode?: "actual" | "total" | "including_cached" | "usage_excluding_cached_inference" | "usage_including_cached_inference";
   usage_mode?: string;
+  anthropic_fallback_credit?: boolean;
+  anthropicFallbackCredit?: boolean;
+  fallback_credit?: boolean;
+  fallbackCredit?: boolean;
 }
 
 export interface FromResponseOptions extends ExtractOptions {

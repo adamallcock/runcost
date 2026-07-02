@@ -1,0 +1,169 @@
+{
+  "name": "openai-responses-raw-orchestration-usage",
+  "description": "Raw OpenAI Responses usage with orchestration token detail fields mapped onto standard token pricing components.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:input_cache_read_tokens",
+      "component:input_uncached_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_text_tokens",
+      "openai_responses_orchestration_usage",
+      "raw_provider_response"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "extract": {
+      "provider": "openai",
+      "surface": "openai.responses"
+    },
+    "raw_response": {
+      "id": "resp_orchestration_fixture",
+      "object": "response",
+      "model": "gpt-5.4",
+      "output": [
+        {
+          "type": "message",
+          "id": "msg_1"
+        }
+      ],
+      "usage": {
+        "input_tokens": 100,
+        "output_tokens": 50,
+        "total_tokens": 195,
+        "input_tokens_details": {
+          "cached_tokens": 20,
+          "orchestration_input_tokens": 30,
+          "orchestration_input_cached_tokens": 5
+        },
+        "output_tokens_details": {
+          "reasoning_tokens": 10,
+          "orchestration_output_tokens": 15
+        }
+      }
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-5.4:orchestration-fixture",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-5.4",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.001",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.0001",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.002",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.002",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-07-01T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-5.4",
+        "returned": "gpt-5.4",
+        "billed": "gpt-5.4",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "105",
+          "unit": "token",
+          "unit_price": "0.001",
+          "cost": "0.105",
+          "price_card_id": "openai:gpt-5.4:orchestration-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "25",
+          "unit": "token",
+          "unit_price": "0.0001",
+          "cost": "0.0025",
+          "price_card_id": "openai:gpt-5.4:orchestration-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "55",
+          "unit": "token",
+          "unit_price": "0.002",
+          "cost": "0.11",
+          "price_card_id": "openai:gpt-5.4:orchestration-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "10",
+          "unit": "token",
+          "unit_price": "0.002",
+          "cost": "0.02",
+          "price_card_id": "openai:gpt-5.4:orchestration-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.2375",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-07-01T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

@@ -362,6 +362,19 @@ function matchingCards(usageLedger, priceCards, priceSourcePriority = []) {
     .map(({ card }) => card);
 }
 
+function priceLookupCacheKey(usageLedger, sourcePriority = []) {
+  const context = usageContext(usageLedger);
+  return JSON.stringify([
+    usageLedger.provider || "",
+    usageLedger.surface || "",
+    billedModel(usageLedger),
+    context.service_tier || "",
+    context.region || "",
+    datePart(context.priced_at) || "",
+    sourcePriority
+  ]);
+}
+
 function totalInputTokens(usageLedger) {
   const context = usageContext(usageLedger);
   if (context.total_input_tokens !== undefined && context.total_input_tokens !== null) {
@@ -809,6 +822,15 @@ function usageMetadataFieldWarnings(usageLedger) {
       metadata: { field: fieldName }
     });
   }
+  for (const field of metadata.missing_usage_fields || []) {
+    const fieldName = String(field);
+    warnings.push({
+      code: "usage_missing",
+      message: `Usage field ${fieldName} was missing; RunCost could not extract billable usage from it.`,
+      path: fieldName,
+      metadata: { field: fieldName }
+    });
+  }
   for (const field of metadata.inclusive_usage_fields || []) {
     const fieldName = String(field);
     warnings.push({
@@ -1050,37 +1072,55 @@ export function calculateCost({
   let total = "0";
   let resolvedBilledModel = billedModel(usageLedger);
   let aliasResolution = usageLedger.model.alias_resolution || "none";
-  const hasModelCard = hasPriceCardForUsage(usageLedger, priceCards);
-  const modelSurfaceCardExists = hasPriceCardForModelSurface(usageLedger, priceCards);
   const sourcePriority = priceSourcePriority || price_source_priority || [];
-  const candidateCards = matchingCards(usageLedger, priceCards, sourcePriority);
-  let warnedUnknownModel = false;
-  let warnedUnknownProvider = false;
-  let warnedNoMatchingCard = false;
+  const warnedUnknownModel = new Set();
+  const warnedUnknownProvider = new Set();
+  const warnedNoMatchingCard = new Set();
   let warnedAliasInferred = false;
   const warnedStaleCards = new Set();
   const staleThreshold = staleAfterDays ?? stale_after_days;
   const reportedCost = providerReportedCost ?? provider_reported_cost;
   const reportedCostMode = providerReportedCostMode ?? provider_reported_cost_mode ?? "compare";
-  if (trace) {
-    trace.decisions.push({
-      type: "price_card_candidates",
-      model: resolvedBilledModel,
-      candidate_price_card_ids: candidateCards.map((card) => card.id),
-      source_priority: sourcePriority
-    });
-  }
+  const priceLookupCache = new Map();
 
   for (const component of usageLedger.components) {
+    const componentUsageLedger = usageLedgerForComponent(usageLedger, component);
+    const componentBilledModel = billedModel(componentUsageLedger);
+    const componentWarningKey = [
+      componentUsageLedger.provider,
+      componentUsageLedger.surface,
+      componentBilledModel
+    ].join("|");
+    const lookupKey = priceLookupCacheKey(componentUsageLedger, sourcePriority);
+    let lookup = priceLookupCache.get(lookupKey);
+    if (!lookup) {
+      lookup = {
+        hasModelCard: hasPriceCardForUsage(componentUsageLedger, priceCards),
+        modelSurfaceCardExists: hasPriceCardForModelSurface(componentUsageLedger, priceCards),
+        candidateCards: matchingCards(componentUsageLedger, priceCards, sourcePriority)
+      };
+      priceLookupCache.set(lookupKey, lookup);
+    }
+    const { hasModelCard, modelSurfaceCardExists, candidateCards } = lookup;
+    if (trace) {
+      trace.decisions.push({
+        type: "price_card_candidates",
+        component: component.name,
+        model: componentBilledModel,
+        candidate_price_card_ids: candidateCards.map((card) => card.id),
+        source_priority: sourcePriority
+      });
+    }
+
     if (!hasModelCard) {
       if (modelSurfaceCardExists) {
-        if (!warnedUnknownProvider) {
-          warnings.push(unknownProviderWarning(usageLedger));
-          warnedUnknownProvider = true;
+        if (!warnedUnknownProvider.has(componentWarningKey)) {
+          warnings.push(unknownProviderWarning(componentUsageLedger));
+          warnedUnknownProvider.add(componentWarningKey);
         }
-      } else if (!warnedUnknownModel) {
-        warnings.push(unknownModelWarning(usageLedger));
-        warnedUnknownModel = true;
+      } else if (!warnedUnknownModel.has(componentWarningKey)) {
+        warnings.push(unknownModelWarning(componentUsageLedger));
+        warnedUnknownModel.add(componentWarningKey);
       }
       if (trace) {
         trace.summary.unpriced_components += 1;
@@ -1089,9 +1129,9 @@ export function calculateCost({
     }
 
     if (candidateCards.length === 0) {
-      if (!warnedNoMatchingCard) {
-        warnings.push(noMatchingCardWarning(usageLedger, priceCards));
-        warnedNoMatchingCard = true;
+      if (!warnedNoMatchingCard.has(componentWarningKey)) {
+        warnings.push(noMatchingCardWarning(componentUsageLedger, priceCards));
+        warnedNoMatchingCard.add(componentWarningKey);
       }
       if (trace) {
         trace.summary.unpriced_components += 1;
@@ -1101,20 +1141,20 @@ export function calculateCost({
 
     const candidates = candidatePriceComponents(candidateCards, component);
     let matches = candidates.filter(({ priceComponent }) => {
-      return conditionsMatch(usageLedger, priceComponent);
+      return conditionsMatch(componentUsageLedger, priceComponent);
     });
     if (matches.length === 0 && candidates.length === 0) {
-      matches = outputReasoningPricedAsOutputMatches(usageLedger, candidateCards, component);
+      matches = outputReasoningPricedAsOutputMatches(componentUsageLedger, candidateCards, component);
     }
     if (matches.length === 0) {
       const capabilityWarning = sourceCapabilityWarning(candidateCards, component);
-      const longContextWarning = longContextRuleMissingWarning(usageLedger, candidates, component);
+      const longContextWarning = longContextRuleMissingWarning(componentUsageLedger, candidates, component);
       if (capabilityWarning) {
         warnings.push(capabilityWarning);
       } else if (longContextWarning) {
         warnings.push(longContextWarning);
       } else {
-        warnings.push(unpricedComponentWarning(usageLedger, component));
+        warnings.push(unpricedComponentWarning(componentUsageLedger, component));
       }
       if (trace) {
         trace.summary.unpriced_components += 1;
@@ -1137,24 +1177,26 @@ export function calculateCost({
         selected_source: card.source.name
       });
     }
-    if (card.model !== resolvedBilledModel && (card.aliases || []).includes(resolvedBilledModel)) {
-      const previousBilledModel = resolvedBilledModel;
-      resolvedBilledModel = card.model;
-      if (aliasResolution === "none") {
-        aliasResolution = "source_exact";
-        if (!warnedAliasInferred) {
-          warnings.push(aliasInferredWarning(previousBilledModel, resolvedBilledModel));
-          warnedAliasInferred = true;
+    if (card.model !== componentBilledModel && (card.aliases || []).includes(componentBilledModel)) {
+      const previousBilledModel = componentBilledModel;
+      if (!componentBillingModel(component)) {
+        resolvedBilledModel = card.model;
+        if (aliasResolution === "none") {
+          aliasResolution = "source_exact";
+          if (!warnedAliasInferred) {
+            warnings.push(aliasInferredWarning(previousBilledModel, resolvedBilledModel));
+            warnedAliasInferred = true;
+          }
         }
-      }
-      if (trace) {
-        trace.decisions.push({
-          type: "model_alias_resolution",
-          from: previousBilledModel,
-          to: resolvedBilledModel,
-          price_card_id: card.id,
-          resolution: aliasResolution
-        });
+        if (trace) {
+          trace.decisions.push({
+            type: "model_alias_resolution",
+            from: previousBilledModel,
+            to: resolvedBilledModel,
+            price_card_id: card.id,
+            resolution: aliasResolution
+          });
+        }
       }
     }
 
@@ -1167,7 +1209,7 @@ export function calculateCost({
     const discounted = applyDiscounts(
       baseCost,
       discountPolicies,
-      usageLedger,
+      componentUsageLedger,
       component,
       discountEligible
     );
@@ -1186,7 +1228,7 @@ export function calculateCost({
     total = addDecimal(total, discounted.cost);
     sourceByName.set(card.source.name, card.source);
     if (!warnedStaleCards.has(card.id)) {
-      const staleWarning = stalePriceWarning(usageLedger, card, staleThreshold);
+      const staleWarning = stalePriceWarning(componentUsageLedger, card, staleThreshold);
       if (staleWarning) {
         warnings.push(staleWarning);
         warnedStaleCards.add(card.id);
@@ -1202,8 +1244,12 @@ export function calculateCost({
       price_card_id: card.id,
       discount_eligible: discountEligible
     };
-    if (componentMetadata) {
-      costComponent.metadata = componentMetadata;
+    const outputMetadata = {
+      ...(component.metadata && typeof component.metadata === "object" ? component.metadata : {}),
+      ...(componentMetadata || {})
+    };
+    if (Object.keys(outputMetadata).length > 0) {
+      costComponent.metadata = outputMetadata;
     }
     components.push(costComponent);
     if (trace) {
@@ -1252,6 +1298,9 @@ export function calculateCost({
   };
   if (trace) {
     result.debug_trace = trace;
+  }
+  if (usageLedger.metadata && typeof usageLedger.metadata === "object" && Object.keys(usageLedger.metadata).length > 0) {
+    result.metadata = { ...usageLedger.metadata };
   }
   if (mode === "strict" && orderedWarningList.length > 0) {
     throw new Error(`strict mode cost calculation failed: ${orderedWarningList[0].code}`);
@@ -1404,6 +1453,41 @@ function positiveComponent(name, quantity, unit, sourcePath) {
   };
 }
 
+function positiveComponentWithMetadata(name, quantity, unit, sourcePath, metadata) {
+  const component = positiveComponent(name, quantity, unit, sourcePath);
+  if (!component) {
+    return null;
+  }
+  const result = {
+    ...component,
+    metadata: { ...metadata }
+  };
+  if (metadata.billing_model) {
+    result.billing_model = String(metadata.billing_model);
+  }
+  return result;
+}
+
+function componentBillingModel(component) {
+  const value = component.billing_model;
+  return value ? String(value) : null;
+}
+
+function usageLedgerForComponent(usageLedger, component) {
+  const billingModel = componentBillingModel(component);
+  if (!billingModel) {
+    return usageLedger;
+  }
+  return {
+    ...usageLedger,
+    model: {
+      ...usageLedger.model,
+      returned: billingModel,
+      billed: billingModel
+    }
+  };
+}
+
 function compactComponents(components) {
   return components.filter(Boolean);
 }
@@ -1482,6 +1566,30 @@ function openAIResponsesPayload(response) {
   return response;
 }
 
+function openAIResponsesOrchestrationUsage(usage) {
+  const inputDetails = usage.input_tokens_details || {};
+  const outputDetails = usage.output_tokens_details || {};
+  return {
+    input: inputDetails.orchestration_input_tokens ?? 0,
+    cachedInput: inputDetails.orchestration_input_cached_tokens ?? 0,
+    output: outputDetails.orchestration_output_tokens ?? 0
+  };
+}
+
+function sumOpenAIResponsesOrchestrationUsage(usages) {
+  return usages.reduce(
+    (total, usage) => {
+      const current = openAIResponsesOrchestrationUsage(usage);
+      return {
+        input: addDecimal(total.input, current.input),
+        cachedInput: addDecimal(total.cachedInput, current.cachedInput),
+        output: addDecimal(total.output, current.output)
+      };
+    },
+    { input: "0", cachedInput: "0", output: "0" }
+  );
+}
+
 function xaiProviderReportedCost(response, usageLedger) {
   const provider = String(usageLedger.provider || "").toLowerCase();
   if (provider !== "xai") {
@@ -1505,10 +1613,19 @@ export function extractOpenAIResponsesUsage(response, options = {}) {
   const usage = response.usage || {};
   const surface = options.surface || "openai.responses";
   const provider = options.provider || (surface === "xai.responses" ? "xai" : "openai");
-  const cachedInput = usage.input_tokens_details?.cached_tokens || 0;
-  const reasoning = usage.output_tokens_details?.reasoning_tokens || 0;
-  const input = usage.input_tokens || 0;
-  const output = usage.output_tokens || 0;
+  const inputDetails = usage.input_tokens_details || {};
+  const outputDetails = usage.output_tokens_details || {};
+  const cachedInput = inputDetails.cached_tokens ?? 0;
+  const reasoning = outputDetails.reasoning_tokens ?? 0;
+  const orchestrationUsage = openAIResponsesOrchestrationUsage(usage);
+  const input = usage.input_tokens ?? 0;
+  const output = usage.output_tokens ?? 0;
+  const inputUncached = addDecimal(
+    subtractDecimal(input, cachedInput),
+    subtractDecimal(orchestrationUsage.input, orchestrationUsage.cachedInput)
+  );
+  const inputCacheRead = addDecimal(cachedInput, orchestrationUsage.cachedInput);
+  const outputText = addDecimal(subtractDecimal(output, reasoning), orchestrationUsage.output);
 
   const toolComponents = [];
   let functionCallCount = 0;
@@ -1572,9 +1689,24 @@ export function extractOpenAIResponsesUsage(response, options = {}) {
     returnedModel: response.model,
     rawUsage: usage,
     components: compactComponents([
-      positiveComponent("input_uncached_tokens", input - cachedInput, "token", "$.usage.input_tokens"),
-      positiveComponent("input_cache_read_tokens", cachedInput, "token", "$.usage.input_tokens_details.cached_tokens"),
-      positiveComponent("output_text_tokens", output - reasoning, "token", "$.usage.output_tokens"),
+      positiveComponent(
+        "input_uncached_tokens",
+        inputUncached,
+        "token",
+        "$.usage.input_tokens + $.usage.input_tokens_details.orchestration_input_tokens"
+      ),
+      positiveComponent(
+        "input_cache_read_tokens",
+        inputCacheRead,
+        "token",
+        "$.usage.input_tokens_details.cached_tokens + $.usage.input_tokens_details.orchestration_input_cached_tokens"
+      ),
+      positiveComponent(
+        "output_text_tokens",
+        outputText,
+        "token",
+        "$.usage.output_tokens + $.usage.output_tokens_details.orchestration_output_tokens"
+      ),
       positiveComponent("output_reasoning_tokens", reasoning, "token", "$.usage.output_tokens_details.reasoning_tokens"),
       ...toolComponents
     ])
@@ -2100,29 +2232,235 @@ function anthropicMessagesPayload(response) {
   return message;
 }
 
+const ANTHROPIC_FABLE_5_MODEL = "claude-fable-5";
+const ANTHROPIC_OPUS_4_8_MODEL = "claude-opus-4-8";
+const ANTHROPIC_FALLBACK_CLASSIFIER_CATEGORIES = new Set(["cyber", "bio", "reasoning_extraction"]);
+
+function anthropicFallbackPairs(response) {
+  if (!Array.isArray(response.content)) {
+    return [];
+  }
+  const pairs = [];
+  for (const block of response.content) {
+    if (!block || typeof block !== "object" || block.type !== "fallback") {
+      continue;
+    }
+    const fromModel = block.from && block.from.model;
+    const toModel = block.to && block.to.model;
+    if (fromModel && toModel) {
+      pairs.push([String(fromModel), String(toModel)]);
+    }
+  }
+  return pairs;
+}
+
+function anthropicClassifierBlocked(response) {
+  if (response.stop_reason !== "refusal") {
+    return false;
+  }
+  const details = response.stop_details;
+  if (!details || typeof details !== "object") {
+    return false;
+  }
+  return (
+    ANTHROPIC_FALLBACK_CLASSIFIER_CATEGORIES.has(details.category) ||
+    details.recommended_model === ANTHROPIC_OPUS_4_8_MODEL ||
+    Object.prototype.hasOwnProperty.call(details, "fallback_credit_token") ||
+    details.fallback_has_prefill_claim === true
+  );
+}
+
+function anthropicIsFableToOpusFallbackIteration({
+  iteration,
+  previousModels,
+  requestedModel,
+  fallbackPairs
+}) {
+  if (iteration.type !== "fallback_message") {
+    return false;
+  }
+  if (iteration.model !== ANTHROPIC_OPUS_4_8_MODEL) {
+    return false;
+  }
+  if (requestedModel === ANTHROPIC_FABLE_5_MODEL) {
+    return true;
+  }
+  if (previousModels.includes(ANTHROPIC_FABLE_5_MODEL)) {
+    return true;
+  }
+  return fallbackPairs.some(([fromModel, toModel]) => (
+    fromModel === ANTHROPIC_FABLE_5_MODEL && toModel === ANTHROPIC_OPUS_4_8_MODEL
+  ));
+}
+
+function anthropicIterationMetadata(iteration, index, billingModel) {
+  const metadata = {
+    billing_model: billingModel,
+    usage_iteration_index: index
+  };
+  if (iteration.type) {
+    metadata.usage_iteration_type = iteration.type;
+  }
+  return metadata;
+}
+
+function anthropicFallbackCacheReadQuantity(iteration) {
+  return addDecimal(
+    addDecimal(iteration.input_tokens || 0, iteration.cache_creation_input_tokens || 0),
+    iteration.cache_read_input_tokens || 0
+  );
+}
+
+function anthropicMessagesIterationComponents(response, usage, requestedModel) {
+  if (!Array.isArray(usage.iterations)) {
+    return [];
+  }
+  const components = [];
+  const previousModels = [];
+  const fallbackPairs = anthropicFallbackPairs(response);
+  const classifierBlocked = anthropicClassifierBlocked(response);
+  const hasFallbackIteration = usage.iterations.some((iteration) => (
+    iteration && typeof iteration === "object" && iteration.type === "fallback_message"
+  ));
+  usage.iterations.forEach((iteration, index) => {
+    if (!iteration || typeof iteration !== "object") {
+      return;
+    }
+    const iterationModel = String(iteration.model || response.model || requestedModel || "");
+    const sourceRoot = `$.usage.iterations[${index}]`;
+    const metadata = anthropicIterationMetadata(iteration, index, iterationModel);
+    const isFableToOpus = anthropicIsFableToOpusFallbackIteration({
+      iteration,
+      previousModels,
+      requestedModel,
+      fallbackPairs
+    });
+    let suppressClassifierInput = false;
+    if (isFableToOpus) {
+      components.push(positiveComponentWithMetadata(
+        "input_cache_read_tokens",
+        anthropicFallbackCacheReadQuantity(iteration),
+        "token",
+        `${sourceRoot}.input_tokens`,
+        {
+          ...metadata,
+          anthropic_fallback_billing: "fable_to_opus_cache_read"
+        }
+      ));
+    } else {
+      suppressClassifierInput = (
+        classifierBlocked &&
+        !hasFallbackIteration &&
+        parseDecimal(iteration.output_tokens || 0).value <= 0n
+      );
+    }
+    if (!isFableToOpus && !suppressClassifierInput && (!hasFallbackIteration || iteration.type === "fallback_message")) {
+      const cacheWrite = iteration.cache_creation_input_tokens || 0;
+      const cacheWrite1h = iteration.cache_creation_input_tokens_1h || 0;
+      components.push(
+        positiveComponentWithMetadata("input_uncached_tokens", iteration.input_tokens || 0, "token", `${sourceRoot}.input_tokens`, metadata),
+        positiveComponentWithMetadata("input_cache_write_tokens", subtractDecimal(cacheWrite, cacheWrite1h), "token", `${sourceRoot}.cache_creation_input_tokens`, metadata),
+        positiveComponentWithMetadata("input_cache_write_1h_tokens", cacheWrite1h, "token", `${sourceRoot}.cache_creation_input_tokens_1h`, metadata),
+        positiveComponentWithMetadata("input_cache_read_tokens", iteration.cache_read_input_tokens || 0, "token", `${sourceRoot}.cache_read_input_tokens`, metadata)
+      );
+    }
+    components.push(positiveComponentWithMetadata(
+      "output_text_tokens",
+      iteration.output_tokens || 0,
+      "token",
+      `${sourceRoot}.output_tokens`,
+      metadata
+    ));
+    if (iterationModel) {
+      previousModels.push(iterationModel);
+    }
+  });
+  return compactComponents(components);
+}
+
+function anthropicClientFallbackCreditEnabled(response, options) {
+  for (const key of ["anthropic_fallback_credit", "anthropicFallbackCredit", "fallback_credit", "fallbackCredit"]) {
+    if (options[key] === true) {
+      return true;
+    }
+  }
+  const request = response.request && typeof response.request === "object" ? response.request : {};
+  const metadata = response.metadata && typeof response.metadata === "object" ? response.metadata : {};
+  return Boolean(
+    request.fallback_credit_token ||
+    metadata.fallback_credit_token ||
+    response.fallback_credit_token
+  );
+}
+
+function anthropicClientFallbackCreditModel(response, requestedModel) {
+  return String(response.model || requestedModel || "");
+}
+
 export function extractAnthropicMessagesUsage(response, options = {}) {
   response = anthropicMessagesPayload(response);
-  const usage = response.usage || {};
+  const usagePresent = response.usage && typeof response.usage === "object";
+  const usage = usagePresent ? response.usage : {};
+  const requestedModel = options.model || response.model;
   const input = usage.input_tokens || 0;
   const cacheWrite = usage.cache_creation_input_tokens || 0;
   const cacheWrite1h = usage.cache_creation_input_tokens_1h || 0;
   const cacheRead = usage.cache_read_input_tokens || 0;
   const output = usage.output_tokens || 0;
+  const metadata = {};
+  const classifierZeroBillable = anthropicClassifierBlocked(response) && parseDecimal(output).value <= 0n;
+  let components = anthropicMessagesIterationComponents(response, usage, requestedModel);
+  if (components.length === 0) {
+    if (
+      anthropicClientFallbackCreditEnabled(response, options) &&
+      anthropicClientFallbackCreditModel(response, requestedModel) === ANTHROPIC_OPUS_4_8_MODEL
+    ) {
+      const billingModel = response.model || requestedModel;
+      components = compactComponents([
+        positiveComponentWithMetadata(
+          "input_cache_read_tokens",
+          addDecimal(addDecimal(input, cacheWrite), cacheRead),
+          "token",
+          "$.usage.input_tokens",
+          {
+            billing_model: billingModel,
+            anthropic_fallback_billing: "client_fallback_credit_cache_read"
+          }
+        ),
+        positiveComponent("output_text_tokens", output, "token", "$.usage.output_tokens")
+      ]);
+    } else if (anthropicClassifierBlocked(response) && parseDecimal(output).value <= 0n) {
+      components = [];
+      metadata.zero_billable_reason = "anthropic_classifier_block";
+    } else {
+      components = compactComponents([
+        positiveComponent("input_uncached_tokens", input, "token", "$.usage.input_tokens"),
+        positiveComponent("input_cache_write_tokens", cacheWrite - cacheWrite1h, "token", "$.usage.cache_creation_input_tokens"),
+        positiveComponent("input_cache_write_1h_tokens", cacheWrite1h, "token", "$.usage.cache_creation_input_tokens_1h"),
+        positiveComponent("input_cache_read_tokens", cacheRead, "token", "$.usage.cache_read_input_tokens"),
+        positiveComponent("output_text_tokens", output, "token", "$.usage.output_tokens")
+      ]);
+      if (!usagePresent) {
+        metadata.missing_usage_fields = ["$.usage"];
+      }
+    }
+  }
 
-  return baseUsageLedger({
+  const ledger = baseUsageLedger({
     provider: options.provider || "anthropic",
     surface: options.surface || "anthropic.messages",
-    requestedModel: options.model || response.model,
+    requestedModel,
     returnedModel: response.model,
     rawUsage: usage,
-    components: compactComponents([
-      positiveComponent("input_uncached_tokens", input, "token", "$.usage.input_tokens"),
-      positiveComponent("input_cache_write_tokens", cacheWrite - cacheWrite1h, "token", "$.usage.cache_creation_input_tokens"),
-      positiveComponent("input_cache_write_1h_tokens", cacheWrite1h, "token", "$.usage.cache_creation_input_tokens_1h"),
-      positiveComponent("input_cache_read_tokens", cacheRead, "token", "$.usage.cache_read_input_tokens"),
-      positiveComponent("output_text_tokens", output, "token", "$.usage.output_tokens")
-    ])
+    components
   });
+  if (components.length === 0 && classifierZeroBillable) {
+    metadata.zero_billable_reason = metadata.zero_billable_reason || "anthropic_classifier_block";
+  }
+  if (Object.keys(metadata).length > 0) {
+    ledger.metadata = metadata;
+  }
+  return ledger;
 }
 
 const GEMINI_INPUT_MODALITY_COMPONENTS = {
@@ -2850,17 +3188,41 @@ function vercelAISDKUsagePayload(response) {
   };
 }
 
+function vercelAISDKRawUsagePayloads(response, usage) {
+  if (Array.isArray(response.steps)) {
+    const stepRawUsages = response.steps
+      .map((step) => step?.usage?.raw)
+      .filter((rawUsage) => rawUsage && typeof rawUsage === "object");
+    if (stepRawUsages.length > 0) {
+      return stepRawUsages;
+    }
+  }
+  if (usage.raw && typeof usage.raw === "object") {
+    return [usage.raw];
+  }
+  for (const candidate of [response.usage?.raw, response.totalUsage?.raw, response.finalStep?.usage?.raw]) {
+    if (candidate && typeof candidate === "object") {
+      return [candidate];
+    }
+  }
+  return [];
+}
+
 export function extractVercelAISDKUsage(response, options = {}) {
   const { usage, sourceRoot } = vercelAISDKUsagePayload(response);
+  const orchestrationUsage = sumOpenAIResponsesOrchestrationUsage(vercelAISDKRawUsagePayloads(response, usage));
   const inputDetails = usage.inputTokenDetails || {};
   const outputDetails = usage.outputTokenDetails || {};
-  const cacheRead = inputDetails.cacheReadTokens ?? usage.cachedInputTokens ?? 0;
+  const baseCacheRead = inputDetails.cacheReadTokens ?? usage.cachedInputTokens ?? 0;
+  const cacheRead = addDecimal(baseCacheRead, orchestrationUsage.cachedInput);
   const cacheWrite = inputDetails.cacheWriteTokens || 0;
   const inputTokens = usage.inputTokens || 0;
-  const uncached = inputDetails.noCacheTokens ?? (inputTokens - cacheRead - cacheWrite);
+  const baseUncached = inputDetails.noCacheTokens ?? subtractDecimal(subtractDecimal(inputTokens, baseCacheRead), cacheWrite);
+  const uncached = addDecimal(baseUncached, subtractDecimal(orchestrationUsage.input, orchestrationUsage.cachedInput));
   const outputTokens = usage.outputTokens || 0;
   const reasoning = outputDetails.reasoningTokens ?? usage.reasoningTokens ?? 0;
-  const textTokens = outputDetails.textTokens ?? (outputTokens - reasoning);
+  const baseTextTokens = outputDetails.textTokens ?? subtractDecimal(outputTokens, reasoning);
+  const textTokens = addDecimal(baseTextTokens, orchestrationUsage.output);
   const modelMetadata = response.model || {};
   const responseMetadata = response.response || {};
   const returnedModel = responseMetadata.modelId || modelMetadata.modelId || options.model;

@@ -1,0 +1,207 @@
+{
+  "name": "anthropic-messages-fable-server-fallback",
+  "description": "Prices Anthropic server-side Fable 5 to Opus 4.8 fallback from usage.iterations, billing the fallback input as cache read.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "anthropic",
+    "surface": "anthropic.messages",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "anthropic_fallback_billing",
+      "cache",
+      "component:input_cache_read_tokens",
+      "component:output_text_tokens",
+      "fable_fallback",
+      "raw_provider_response"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "extract": {
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": "claude-fable-5"
+    },
+    "raw_response": {
+      "id": "msg_fable_fallback_fixture",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-opus-4-8",
+      "content": [
+        {
+          "type": "fallback",
+          "from": {
+            "model": "claude-fable-5"
+          },
+          "to": {
+            "model": "claude-opus-4-8"
+          }
+        },
+        {
+          "type": "text",
+          "text": "Fallback answer."
+        }
+      ],
+      "stop_reason": "end_turn",
+      "stop_details": null,
+      "usage": {
+        "input_tokens": 412,
+        "output_tokens": 264,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "iterations": [
+          {
+            "type": "message",
+            "model": "claude-fable-5",
+            "input_tokens": 408,
+            "output_tokens": 0,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          },
+          {
+            "type": "fallback_message",
+            "model": "claude-opus-4-8",
+            "input_tokens": 412,
+            "output_tokens": 264,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        ]
+      }
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "anthropic:claude-fable-5:fallback-fixture",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "claude-fable-5",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.00001",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.00005",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-06-09T00:00:00Z"
+        }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "anthropic:claude-opus-4-8:fallback-fixture",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "claude-opus-4-8",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000005",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.0000005",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.000025",
+              "currency": "USD",
+              "per": "1"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-06-19T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": {
+        "requested": "claude-fable-5",
+        "returned": "claude-opus-4-8",
+        "billed": "claude-opus-4-8",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "412",
+          "unit": "token",
+          "unit_price": "0.0000005",
+          "cost": "0.000206",
+          "price_card_id": "anthropic:claude-opus-4-8:fallback-fixture",
+          "discount_eligible": true,
+          "metadata": {
+            "billing_model": "claude-opus-4-8",
+            "usage_iteration_index": 1,
+            "usage_iteration_type": "fallback_message",
+            "anthropic_fallback_billing": "fable_to_opus_cache_read"
+          }
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "264",
+          "unit": "token",
+          "unit_price": "0.000025",
+          "cost": "0.0066",
+          "price_card_id": "anthropic:claude-opus-4-8:fallback-fixture",
+          "discount_eligible": true,
+          "metadata": {
+            "billing_model": "claude-opus-4-8",
+            "usage_iteration_index": 1,
+            "usage_iteration_type": "fallback_message"
+          }
+        }
+      ],
+      "total": "0.006806",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-06-19T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}
