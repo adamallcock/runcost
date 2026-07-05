@@ -170,6 +170,7 @@ exports.
 | LlamaIndex | Yes | Yes | Yes | `from_llamaindex_token_counter`, `fromLlamaIndexTokenCounter`, `FromLlamaIndexTokenCounter`; lower-level `extract_llamaindex_token_counter_usage`, `extractLlamaIndexTokenCounterUsage`; `llamaindex-token-counter-events.json` |
 | Vercel AI SDK | Yes | Yes | Yes | `from_vercel_ai_sdk_result`, `fromVercelAISDKResult`, `FromVercelAISDKResult`; lower-level `extract_vercel_ai_sdk_usage`, `extractVercelAISDKUsage`; `vercel-ai-sdk-generate-text-total-usage.json` |
 | Vercel AI SDK streamText finish | Yes | Yes | Yes | `from_vercel_ai_sdk_stream_finish`, `fromVercelAISDKStreamFinish`, `FromVercelAISDKStreamFinish`; adapter `vercel_ai_sdk.stream_text`; `vercel-ai-sdk-stream-text-finish.json` |
+| Vercel AI SDK streamTranscribe finish | Yes | Yes | Yes | `from_vercel_ai_sdk_stream_transcribe_finish`, `fromVercelAISDKStreamTranscribeFinish`, `FromVercelAISDKStreamTranscribeFinish`; adapter `vercel_ai_sdk.stream_transcribe`; `vercel-ai-sdk-stream-transcribe-finish.json` |
 | Vercel AI SDK middleware | N/A | Yes | N/A | `createRunCostVercelMiddleware`; `vercel-ai-sdk-middleware-wrap-generate.json` |
 | Vercel AI SDK onFinish helper | N/A | Yes | N/A | `createRunCostVercelOnFinish`; uses `fromVercelAISDKStreamFinish` |
 | Haystack | Yes | Yes | Yes | `from_haystack_generator_result`, `fromHaystackGeneratorResult`, `FromHaystackGeneratorResult`; lower-level `extract_haystack_generator_usage`, `extractHaystackGeneratorUsage`; `haystack-openai-chat-generator-meta.json` |

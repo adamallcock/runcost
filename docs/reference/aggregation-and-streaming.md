@@ -76,6 +76,7 @@ The returned ledger includes `stream_usage_missing`, which means the aggregate t
 RunCost has initial provider-specific final-usage extraction for selected stream shapes:
 
 - OpenAI Responses `response.completed` event envelopes.
+- Vercel AI SDK `experimental_streamTranscribe` final results carrying `durationInSeconds`.
 - Anthropic Messages SSE event collections with `message_start` and cumulative `message_delta.usage`.
 - Gemini / Vertex generateContent stream chunk collections where a final chunk carries `usageMetadata`.
 - Gemini Live API stream/message collections where the final server message carries `usageMetadata`.

@@ -2188,6 +2188,48 @@ export function extractOpenAIEmbeddingsUsage(response, options = {}) {
   });
 }
 
+function transcriptionDurationSeconds(response) {
+  const usage = response.usage && typeof response.usage === "object" ? response.usage : {};
+  if (usage.type === "duration" || hasOwn(usage, "seconds")) {
+    return { value: usage.seconds || 0, sourcePath: "$.usage.seconds" };
+  }
+  for (const [field, sourcePath] of [
+    ["duration", "$.duration"],
+    ["durationInSeconds", "$.durationInSeconds"],
+    ["duration_in_seconds", "$.duration_in_seconds"]
+  ]) {
+    if (response[field] !== undefined && response[field] !== null) {
+      return { value: response[field], sourcePath };
+    }
+  }
+  const finish = response.finish && typeof response.finish === "object" ? response.finish : {};
+  for (const [field, sourcePath] of [
+    ["durationInSeconds", "$.finish.durationInSeconds"],
+    ["duration_in_seconds", "$.finish.duration_in_seconds"],
+    ["duration", "$.finish.duration"]
+  ]) {
+    if (finish[field] !== undefined && finish[field] !== null) {
+      return { value: finish[field], sourcePath };
+    }
+  }
+  return { value: undefined, sourcePath: undefined };
+}
+
+function vercelAISDKModelId(response) {
+  const responseMetadata = response.response && typeof response.response === "object" ? response.response : {};
+  const modelMetadata = response.model && typeof response.model === "object" ? response.model : {};
+  for (const value of [
+    response.model,
+    responseMetadata.modelId,
+    responseMetadata.model_id,
+    modelMetadata.modelId,
+    modelMetadata.model_id
+  ]) {
+    if (typeof value === "string" && value) return value;
+  }
+  return undefined;
+}
+
 export function extractOpenAIAudioTranscriptionUsage(response, options = {}) {
   const usage = response.usage && typeof response.usage === "object" ? response.usage : {};
   const components = [];
@@ -2204,17 +2246,24 @@ export function extractOpenAIAudioTranscriptionUsage(response, options = {}) {
       positiveComponent("input_audio_tokens", audioTokens, "token", "$.usage.input_token_details.audio_tokens"),
       positiveComponent("output_text_tokens", outputTokens, "token", "$.usage.output_tokens")
     );
-  } else if (response.duration !== undefined && response.duration !== null) {
-    components.push(positiveComponent("transcription_seconds", response.duration, "second", "$.duration"));
+  } else {
+    const duration = transcriptionDurationSeconds(response);
+    if (duration.value !== undefined && duration.sourcePath !== undefined) {
+      components.push(positiveComponent("transcription_seconds", duration.value, "second", duration.sourcePath));
+    }
   }
 
-  const returnedModel = response.model || options.model;
+  const returnedModel = vercelAISDKModelId(response) || options.model;
+  const duration = transcriptionDurationSeconds(response);
   return baseUsageLedger({
     provider: options.provider || "openai",
     surface: options.surface || "openai.audio_transcriptions",
     requestedModel: options.model || returnedModel,
     returnedModel,
-    rawUsage: Object.keys(usage).length > 0 ? usage : { duration: response.duration },
+    rawUsage: Object.keys(usage).length > 0 ? usage : {
+      duration_seconds: duration.value,
+      source_path: duration.sourcePath
+    },
     components: compactComponents(components)
   });
 }
@@ -4118,6 +4167,13 @@ export function extractUsageLedger(response, options = {}) {
   if (adapter === "vercel_ai_sdk.stream_text") {
     return extractVercelAISDKUsage(response, options);
   }
+  if (adapter === "vercel_ai_sdk.stream_transcribe") {
+    return extractOpenAIAudioTranscriptionUsage(response, {
+      provider: "openai",
+      surface: "openai.audio_transcriptions",
+      ...options
+    });
+  }
   if (adapter === "llamaindex.token_counter") {
     return extractLlamaIndexTokenCounterUsage(response, options);
   }
@@ -5230,6 +5286,13 @@ export function fromVercelAISDKStreamFinish(result, options = {}) {
   return fromResponse(result, {
     ...options,
     adapter: "vercel_ai_sdk.stream_text"
+  });
+}
+
+export function fromVercelAISDKStreamTranscribeFinish(result, options = {}) {
+  return fromResponse(result, {
+    ...options,
+    adapter: "vercel_ai_sdk.stream_transcribe"
   });
 }
 

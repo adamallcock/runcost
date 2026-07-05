@@ -141,6 +141,7 @@ Auto-resolving convenience helper (may read or refresh the public price cache):
 | OpenAI Agents SDK usage | `from_openai_agents_usage` | `fromOpenAIAgentsUsage` | `FromOpenAIAgentsUsage` |
 | Vercel AI SDK `generateText` result | `from_vercel_ai_sdk_result` | `fromVercelAISDKResult` | `FromVercelAISDKResult` |
 | Vercel AI SDK `streamText` finish result | `from_vercel_ai_sdk_stream_finish` | `fromVercelAISDKStreamFinish` | `FromVercelAISDKStreamFinish` |
+| Vercel AI SDK `experimental_streamTranscribe` final result | `from_vercel_ai_sdk_stream_transcribe_finish` | `fromVercelAISDKStreamTranscribeFinish` | `FromVercelAISDKStreamTranscribeFinish` |
 | LlamaIndex token counter | `from_llamaindex_token_counter` | `fromLlamaIndexTokenCounter` | `FromLlamaIndexTokenCounter` |
 | Haystack generator result | `from_haystack_generator_result` | `fromHaystackGeneratorResult` | `FromHaystackGeneratorResult` |
 | LiteLLM proxy / SDK response | `from_litellm_response` | `fromLiteLLMResponse` | `FromLiteLLMResponse` |
@@ -160,6 +161,7 @@ The framework helpers route through the same cost calculator after extracting ca
 Streaming final usage:
 
 - OpenAI Responses accepts the final `response.completed` event envelope.
+- Vercel AI SDK `experimental_streamTranscribe` accepts a consumed final result carrying `durationInSeconds`, and prices it as OpenAI audio transcription duration.
 - Anthropic Messages accepts an object with `events` containing `message_start`, `content_block_start`, `message_delta`, and `message_stop` SSE payloads. It accumulates final usage and follows a final fallback block/iteration when `message_start` still names the primary model.
 - Gemini / Vertex generateContent accepts an object with `chunks` or `stream` and uses the last chunk carrying `usageMetadata`.
 - Gemini Live API accepts top-level `usageMetadata`, or a `chunks` / `stream` collection where the final server message carries `usageMetadata`.

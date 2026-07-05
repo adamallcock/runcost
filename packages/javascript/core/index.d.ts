@@ -744,6 +744,7 @@ export function fromResponseAuto(response: Record<string, unknown>, options?: Fr
 export function fromLangChainMessage(message: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromVercelAISDKResult(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromVercelAISDKStreamFinish(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function fromVercelAISDKStreamTranscribeFinish(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromLlamaIndexTokenCounter(counter: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromHaystackGeneratorResult(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromLiteLLMResponse(response: Record<string, unknown>, options: FromResponseOptions): CostLedger;

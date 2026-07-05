@@ -2525,6 +2525,20 @@
       ]
     },
     {
+      "fixture": "fixtures/vercel-ai-sdk-stream-transcribe-finish.json",
+      "id": "vercel-ai-sdk-stream-transcribe-finish",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.audio_transcriptions",
+      "warning_codes": []
+    },
+    {
       "fixture": "fixtures/vertex-gemini-generate-content-raw-basic.json",
       "id": "vertex-gemini-generate-content-raw-basic",
       "languages": {
@@ -3147,29 +3161,29 @@
   },
   "schema_version": "0.1",
   "summary": {
-    "case_count": 216,
+    "case_count": 217,
     "languages": {
       "go": {
         "not_tested": 2,
-        "preserved": 161,
+        "preserved": 162,
         "unsupported": 7,
         "warned": 46
       },
       "javascript": {
         "not_tested": 1,
-        "preserved": 161,
+        "preserved": 162,
         "unsupported": 7,
         "warned": 47
       },
       "python": {
         "not_tested": 1,
-        "preserved": 161,
+        "preserved": 162,
         "unsupported": 7,
         "warned": 47
       }
     },
     "outcomes": {
-      "preserved": 161,
+      "preserved": 162,
       "unsupported": 7,
       "warned": 48
     }

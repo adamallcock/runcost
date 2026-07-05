@@ -3224,6 +3224,12 @@ func ExtractUsageLedger(response Object, options Object) Object {
 		return extractVercelAISDKUsage(response, options)
 	case "vercel_ai_sdk.stream_text":
 		return extractVercelAISDKUsage(response, options)
+	case "vercel_ai_sdk.stream_transcribe":
+		mergedOptions := Object{"provider": "openai", "surface": "openai.audio_transcriptions"}
+		for key, value := range options {
+			mergedOptions[key] = value
+		}
+		return extractOpenAIAudioTranscriptionUsage(response, mergedOptions)
 	case "llamaindex.token_counter":
 		return extractLlamaIndexTokenCounterUsage(response, options)
 	case "haystack.generator_result":
@@ -3498,6 +3504,56 @@ func extractOpenAIEmbeddingsUsage(response Object, options Object) Object {
 	}), usage)
 }
 
+func transcriptionDurationSeconds(response Object) (any, string, bool) {
+	usage := asObject(response["usage"])
+	if asString(usage["type"]) == "duration" || usage["seconds"] != nil {
+		return getNumber(usage, "seconds"), "$.usage.seconds", true
+	}
+	for _, candidate := range []struct {
+		field string
+		path  string
+	}{
+		{"duration", "$.duration"},
+		{"durationInSeconds", "$.durationInSeconds"},
+		{"duration_in_seconds", "$.duration_in_seconds"},
+	} {
+		if response[candidate.field] != nil {
+			return response[candidate.field], candidate.path, true
+		}
+	}
+	finish := asObject(response["finish"])
+	for _, candidate := range []struct {
+		field string
+		path  string
+	}{
+		{"durationInSeconds", "$.finish.durationInSeconds"},
+		{"duration_in_seconds", "$.finish.duration_in_seconds"},
+		{"duration", "$.finish.duration"},
+	} {
+		if finish[candidate.field] != nil {
+			return finish[candidate.field], candidate.path, true
+		}
+	}
+	return nil, "", false
+}
+
+func vercelAISDKModelID(response Object) string {
+	responseMetadata := asObject(response["response"])
+	modelMetadata := asObject(response["model"])
+	for _, value := range []any{
+		response["model"],
+		responseMetadata["modelId"],
+		responseMetadata["model_id"],
+		modelMetadata["modelId"],
+		modelMetadata["model_id"],
+	} {
+		if text, ok := value.(string); ok && text != "" {
+			return text
+		}
+	}
+	return ""
+}
+
 func extractOpenAIAudioTranscriptionUsage(response Object, options Object) Object {
 	usage := asObject(response["usage"])
 	components := []any{}
@@ -3516,9 +3572,9 @@ func extractOpenAIAudioTranscriptionUsage(response Object, options Object) Objec
 			positiveComponent("input_audio_tokens", audioTokens, "token", "$.usage.input_token_details.audio_tokens"),
 			positiveComponent("output_text_tokens", getNumber(usage, "output_tokens"), "token", "$.usage.output_tokens"),
 		)
-	} else if response["duration"] != nil {
-		components = append(components, positiveComponent("transcription_seconds", response["duration"], "second", "$.duration"))
-		usage = Object{"duration": response["duration"]}
+	} else if duration, sourcePath, ok := transcriptionDurationSeconds(response); ok {
+		components = append(components, positiveComponent("transcription_seconds", duration, "second", sourcePath))
+		usage = Object{"duration_seconds": duration, "source_path": sourcePath}
 	}
 	provider := asString(options["provider"])
 	if provider == "" {
@@ -3529,7 +3585,7 @@ func extractOpenAIAudioTranscriptionUsage(response Object, options Object) Objec
 		surface = "openai.audio_transcriptions"
 	}
 	requestedModel := asString(options["model"])
-	returnedModel := asString(response["model"])
+	returnedModel := vercelAISDKModelID(response)
 	if returnedModel == "" {
 		returnedModel = requestedModel
 	}
@@ -7327,6 +7383,14 @@ func FromVercelAISDKResult(result Object, options Object, priceCards []any, disc
 // object by reading usage or totalUsage and applying provider price cards.
 func FromVercelAISDKStreamFinish(result Object, options Object, priceCards []any, discountPolicies []any) Object {
 	options["adapter"] = "vercel_ai_sdk.stream_text"
+	return FromResponse(result, options, priceCards, discountPolicies)
+}
+
+// FromVercelAISDKStreamTranscribeFinish prices a Vercel AI SDK
+// experimental_streamTranscribe final result by reading duration metadata and
+// applying provider transcription price cards.
+func FromVercelAISDKStreamTranscribeFinish(result Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options["adapter"] = "vercel_ai_sdk.stream_transcribe"
 	return FromResponse(result, options, priceCards, discountPolicies)
 }
 

@@ -1,0 +1,119 @@
+{
+  "name": "vercel-ai-sdk-stream-transcribe-finish",
+  "description": "Extracts Vercel AI SDK experimental_streamTranscribe final duration metadata for gpt-realtime-whisper.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-FRAMEWORK-ADAPTER",
+      "RC-FEATURE-PRICING"
+    ],
+    "provider": "openai",
+    "surface": "openai.audio_transcriptions",
+    "scenario": "framework_adapter",
+    "tags": [
+      "adapter:vercel_ai_sdk.stream_transcribe",
+      "component:transcription_seconds",
+      "framework:vercel_ai_sdk",
+      "framework_adapter",
+      "helper:from_vercel_ai_sdk_stream_transcribe_finish",
+      "model:gpt-realtime-whisper",
+      "streaming",
+      "transcription"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "finishReason": "stop",
+      "text": "Hello from the AI SDK.",
+      "language": "en",
+      "durationInSeconds": 12,
+      "response": {
+        "id": "ai-sdk-stream-transcribe-response-123",
+        "modelId": "gpt-realtime-whisper"
+      },
+      "model": {
+        "provider": "openai",
+        "modelId": "gpt-realtime-whisper"
+      }
+    },
+    "helper": "from_vercel_ai_sdk_stream_transcribe_finish",
+    "extract": {
+      "adapter": "vercel_ai_sdk.stream_transcribe",
+      "provider": "openai",
+      "surface": "openai.audio_transcriptions",
+      "model": "gpt-realtime-whisper"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-realtime-whisper:stream-transcribe-fixture",
+        "provider": "openai",
+        "surface": "openai.audio_transcriptions",
+        "model": "gpt-realtime-whisper",
+        "components": [
+          {
+            "usage_component": "transcription_seconds",
+            "unit": "second",
+            "price": {
+              "amount": "0.000283333333333333",
+              "currency": "USD",
+              "per": "1"
+            },
+            "notes": "Derived from OpenAI's $0.017/minute realtime audio-duration price and rounded to 18 decimal places for cross-runtime fixture parity."
+          }
+        ],
+        "source": {
+          "name": "openai-official",
+          "url": "https://developers.openai.com/api/docs/pricing",
+          "retrieved_at": "2026-07-05T00:00:00Z"
+        },
+        "metadata": {
+          "official_snapshot": {
+            "notes": "OpenAI lists gpt-realtime-whisper at $0.017 per minute for realtime audio duration.",
+            "source_label": "OpenAI API pricing page"
+          }
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.audio_transcriptions",
+      "model": {
+        "requested": "gpt-realtime-whisper",
+        "returned": "gpt-realtime-whisper",
+        "billed": "gpt-realtime-whisper",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "transcription_seconds",
+          "quantity": "12",
+          "unit": "second",
+          "unit_price": "0.000283333333333333",
+          "cost": "0.003399999999999996",
+          "price_card_id": "openai:gpt-realtime-whisper:stream-transcribe-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.003399999999999996",
+      "price_sources": [
+        {
+          "name": "openai-official",
+          "url": "https://developers.openai.com/api/docs/pricing",
+          "retrieved_at": "2026-07-05T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

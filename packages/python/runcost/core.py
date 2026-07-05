@@ -2114,6 +2114,43 @@ def extract_openai_embeddings_usage(response: Dict[str, Any], **options: Any) ->
     )
 
 
+def _transcription_duration_seconds(response: Dict[str, Any]) -> tuple[Any, Optional[str]]:
+    usage = response.get("usage") if isinstance(response.get("usage"), dict) else {}
+    if usage.get("type") == "duration" or "seconds" in usage:
+        return usage.get("seconds", 0), "$.usage.seconds"
+    for field, path in (
+        ("duration", "$.duration"),
+        ("durationInSeconds", "$.durationInSeconds"),
+        ("duration_in_seconds", "$.duration_in_seconds"),
+    ):
+        if response.get(field) is not None:
+            return response.get(field, 0), path
+    finish = response.get("finish") if isinstance(response.get("finish"), dict) else {}
+    for field, path in (
+        ("durationInSeconds", "$.finish.durationInSeconds"),
+        ("duration_in_seconds", "$.finish.duration_in_seconds"),
+        ("duration", "$.finish.duration"),
+    ):
+        if finish.get(field) is not None:
+            return finish.get(field, 0), path
+    return None, None
+
+
+def _vercel_ai_sdk_model_id(response: Dict[str, Any]) -> Optional[str]:
+    response_metadata = response.get("response") if isinstance(response.get("response"), dict) else {}
+    model_metadata = response.get("model") if isinstance(response.get("model"), dict) else {}
+    for value in (
+        response.get("model"),
+        response_metadata.get("modelId"),
+        response_metadata.get("model_id"),
+        model_metadata.get("modelId"),
+        model_metadata.get("model_id"),
+    ):
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
 def extract_openai_audio_transcription_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     usage = response.get("usage") if isinstance(response.get("usage"), dict) else {}
     components: List[Dict[str, Any]] = []
@@ -2133,16 +2170,22 @@ def extract_openai_audio_transcription_usage(response: Dict[str, Any], **options
                 _positive_component("output_text_tokens", output_tokens, "token", "$.usage.output_tokens"),
             ]
         )
-    elif response.get("duration") is not None:
-        components.append(_positive_component("transcription_seconds", response.get("duration", 0), "second", "$.duration"))
+    else:
+        duration_seconds, source_path = _transcription_duration_seconds(response)
+        if duration_seconds is not None and source_path is not None:
+            components.append(_positive_component("transcription_seconds", duration_seconds, "second", source_path))
 
-    returned_model = response.get("model") or options.get("model")
+    returned_model = _vercel_ai_sdk_model_id(response) or options.get("model")
+    raw_usage = usage or {}
+    if not raw_usage:
+        duration_seconds, source_path = _transcription_duration_seconds(response)
+        raw_usage = {"duration_seconds": duration_seconds, "source_path": source_path}
     return _base_usage_ledger(
         provider=options.get("provider", "openai"),
         surface=options.get("surface", "openai.audio_transcriptions"),
         requested_model=options.get("model", returned_model),
         returned_model=returned_model,
-        raw_usage=usage or {"duration": response.get("duration")},
+        raw_usage=raw_usage,
         components=_compact_components(components),
     )
 
@@ -3987,6 +4030,10 @@ def extract_usage_ledger(response: Any, **options: Any) -> Dict[str, Any]:
         return extract_vercel_ai_sdk_usage(response, **options)
     if adapter == "vercel_ai_sdk.stream_text":
         return extract_vercel_ai_sdk_usage(response, **options)
+    if adapter == "vercel_ai_sdk.stream_transcribe":
+        merged_options = {"provider": "openai", "surface": "openai.audio_transcriptions"}
+        merged_options.update(options)
+        return extract_openai_audio_transcription_usage(response, **merged_options)
     if adapter == "llamaindex.token_counter":
         return extract_llamaindex_token_counter_usage(response, **options)
     if adapter == "haystack.generator_result":
@@ -5169,6 +5216,12 @@ def from_vercel_ai_sdk_result(result: Dict[str, Any], **options: Any) -> Dict[st
 def from_vercel_ai_sdk_stream_finish(result: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     merged_options = dict(options)
     merged_options["adapter"] = "vercel_ai_sdk.stream_text"
+    return from_response(result, **merged_options)
+
+
+def from_vercel_ai_sdk_stream_transcribe_finish(result: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = dict(options)
+    merged_options["adapter"] = "vercel_ai_sdk.stream_transcribe"
     return from_response(result, **merged_options)
 
 
