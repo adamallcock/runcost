@@ -22,6 +22,7 @@ REQUIRED_FILES = [
     "docs/internal/reports/2026-05-26-release-workflow-no-publish-blocked.md",
     "docs/internal/reports/2026-05-26-release-workflow-0-1-0-no-publish-rehearsal.md",
     "docs/internal/reports/2026-05-26-go-tag-verification-0-1-0.md",
+    "docs/internal/reports/2026-07-02-release-0-1-11-evidence.md",
     "docs/guides/package-installation.md",
     "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     "docs/guides/quickstart.md",
@@ -84,6 +85,7 @@ REQUIRED_FILES = [
     "fixtures/source-files/invoice-dashboard-comparison-sample.json",
     "fixtures/source-files/openai-costs-comparison-source.json",
     "fixtures/source-files/project-completion-gates.json",
+    "fixtures/source-files/trusted-publishing-verification-2026-07-02.json",
     "packages/python/runcost/cli.py",
     "LICENSE",
     "CHANGELOG.md",
@@ -582,6 +584,7 @@ def check_packaging_docs() -> None:
     source_update = (ROOT / "docs/internal/process/2026-05-26-source-data-update-process.md").read_text(encoding="utf-8")
     warnings = (ROOT / "docs/reference/warnings-and-limitations.md").read_text(encoding="utf-8")
     gates = load_json(ROOT / "fixtures/source-files/project-completion-gates.json")
+    current_version = load_json(ROOT / "package.json")["version"]
 
     for phrase in [
         "What did this LLM or agent API call cost, and why?",
@@ -606,6 +609,51 @@ def check_packaging_docs() -> None:
     assert_true("prototype" not in npm_readme.lower(), "npm README must not use prototype positioning")
     assert_true("pre-alpha" not in root_readme.lower(), "README must not use pre-alpha positioning")
     assert_true("pre-alpha" not in npm_readme.lower(), "npm README must not use pre-alpha positioning")
+    release_state_paths = [
+        ROOT / "README.md",
+        ROOT / "docs/guides/quickstart.md",
+        ROOT / "docs/guides/package-installation.md",
+        ROOT / "packages/javascript/core/README.md",
+        ROOT / "docs/reference/warnings-and-limitations.md",
+        ROOT / "SECURITY.md",
+        ROOT / "docs/internal/process/2026-05-28-public-github-readiness.md",
+        ROOT / "docs/internal/process/beta-v1-hardening-roadmap.md",
+        ROOT / "docs/internal/project-plan.md",
+        ROOT / "docs/internal/progress-tracker.md",
+        ROOT / "docs/internal/reports/2026-05-27-live-framework-and-billing-review.md",
+    ]
+    install_command_paths = [
+        ROOT / "README.md",
+        ROOT / "docs/guides/quickstart.md",
+        ROOT / "docs/guides/package-installation.md",
+        ROOT / "packages/javascript/core/README.md",
+    ]
+    stale_release_phrases = [
+        "until the first registry release",
+        "until registry publishing is enabled",
+        "registry publishing is still held",
+        "registry publishing is intentionally held until the first release",
+        "registry publishing is not complete",
+        "do not publish yet",
+        "no registry release has been cut yet",
+        "first real registry publication",
+        "remain intentionally on hold",
+        "leave packages unpublished",
+    ]
+    for path in release_state_paths:
+        text = path.read_text(encoding="utf-8")
+        relative = path.relative_to(ROOT)
+        lower_text = text.lower()
+        for phrase in stale_release_phrases:
+            assert_true(phrase not in lower_text, f"{relative} contains stale release-state phrase: {phrase}")
+    for path in install_command_paths:
+        text = path.read_text(encoding="utf-8")
+        relative = path.relative_to(ROOT)
+        for match in re.finditer(r"runcost-(\d+\.\d+\.\d+)\.tgz", text):
+            assert_true(
+                match.group(1) == current_version,
+                f"{relative} hardcodes stale npm tarball version {match.group(1)}; expected {current_version}",
+            )
     assert_true("npm test" in quickstart, "quickstart must mention npm test")
     assert_true("npm run check:packages" in installation, "package installation guide must mention package checks")
     assert_true("runcost.cli:main" in (ROOT / "pyproject.toml").read_text(encoding="utf-8"), "pyproject missing CLI entry")

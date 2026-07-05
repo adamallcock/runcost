@@ -55,6 +55,9 @@ def bullet_table(values: list[str]) -> list[list[str]]:
 def schema_type(schema: dict[str, Any]) -> str:
     if "$ref" in schema:
         return f"`{schema['$ref']}`"
+    for union_key in ("oneOf", "anyOf"):
+        if union_key in schema:
+            return " or ".join(filter(None, (schema_type(item) for item in schema[union_key])))
     value = schema.get("type")
     if isinstance(value, list):
         return ", ".join(f"`{item}`" for item in value)
@@ -80,6 +83,11 @@ def schema_constraints(schema: dict[str, Any]) -> str:
         parts.append(f"default `{json.dumps(schema['default'])}`")
     if "format" in schema:
         parts.append(f"format `{schema['format']}`")
+    for union_key in ("oneOf", "anyOf"):
+        if union_key in schema:
+            formats = [item.get("format") for item in schema[union_key] if isinstance(item, dict) and item.get("format")]
+            if formats:
+                parts.append("formats " + ", ".join(f"`{value}`" for value in formats))
     if "pattern" in schema:
         parts.append(f"pattern `{schema['pattern']}`")
     if "minLength" in schema:

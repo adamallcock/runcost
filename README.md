@@ -31,8 +31,8 @@ Source checkout development paths:
 
 ```bash
 python3 -m pip install git+https://github.com/adamallcock/runcost.git
-npm pack ./packages/javascript/core
-npm install ./runcost-0.1.2.tgz
+PKG_TGZ=$(npm pack ./packages/javascript/core --silent)
+npm install "./$PKG_TGZ"
 ```
 
 The Python distribution name is `runcost-ai`; the import package and CLI are
@@ -308,6 +308,6 @@ runcost fixture-check fixtures/my-case.json
 ## Status
 
 RunCost is alpha software. The core behavior is fixture-backed across Python,
-JavaScript/TypeScript, and Go, but registry publishing is still held until the
-release gates are complete. Smoke costs may use sample price cards; use provider
-exports or dashboard reconciliation before treating a total as invoice-exact.
+JavaScript/TypeScript, and Go, and alpha packages are published to PyPI, npm, and
+Go module tags. Smoke costs may use sample price cards; use provider exports or
+dashboard reconciliation before treating a total as invoice-exact.

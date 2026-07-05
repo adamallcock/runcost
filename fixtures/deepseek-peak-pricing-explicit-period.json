@@ -1,0 +1,121 @@
+{
+  "name": "deepseek-peak-pricing-explicit-period",
+  "description": "Lets an explicit pricing_period override timestamp-derived DeepSeek pricing period selection.",
+  "metadata": {
+    "requirement_ids": ["RC-FIXTURE-CONFORMANCE", "RC-PRICING-PERIOD"],
+    "provider": "deepseek",
+    "surface": "deepseek.chat_completions",
+    "scenario": "normalized_usage",
+    "tags": ["component:output_text_tokens", "pricing_period", "normalized_usage"],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "deepseek",
+      "surface": "deepseek.chat_completions",
+      "model": {
+        "requested": "deepseek-v4-pro",
+        "billed": "deepseek-v4-pro",
+        "alias_resolution": "none"
+      },
+      "context": {
+        "priced_at": "2026-07-15T00:30:00Z",
+        "pricing_period": "peak"
+      },
+      "components": [
+        {
+          "name": "output_text_tokens",
+          "quantity": "1000000",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "deepseek:deepseek-v4-pro:regular:fixture",
+        "provider": "deepseek",
+        "surface": "deepseek.chat_completions",
+        "model": "deepseek-v4-pro",
+        "pricing_period": "regular",
+        "billing_schedule": {
+          "timezone": "UTC",
+          "default_period": "regular",
+          "boundary_policy": "start_inclusive_end_exclusive",
+          "windows": [
+            {"period": "peak", "start": "01:00", "end": "04:00"},
+            {"period": "peak", "start": "06:00", "end": "10:00"}
+          ]
+        },
+        "effective": {"from": "2026-07-15"},
+        "components": [
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {"amount": "0.87", "currency": "USD", "per": "1000000"}
+          }
+        ],
+        "source": {"name": "fixture", "retrieved_at": "2026-07-15T00:00:00Z"}
+      },
+      {
+        "schema_version": "0.1",
+        "id": "deepseek:deepseek-v4-pro:peak:fixture",
+        "provider": "deepseek",
+        "surface": "deepseek.chat_completions",
+        "model": "deepseek-v4-pro",
+        "pricing_period": "peak",
+        "billing_schedule": {
+          "timezone": "UTC",
+          "default_period": "regular",
+          "boundary_policy": "start_inclusive_end_exclusive",
+          "windows": [
+            {"period": "peak", "start": "01:00", "end": "04:00"},
+            {"period": "peak", "start": "06:00", "end": "10:00"}
+          ]
+        },
+        "effective": {"from": "2026-07-15"},
+        "components": [
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {"amount": "1.74", "currency": "USD", "per": "1000000"}
+          }
+        ],
+        "source": {"name": "fixture", "retrieved_at": "2026-07-15T00:00:00Z"}
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "deepseek",
+      "surface": "deepseek.chat_completions",
+      "model": {
+        "requested": "deepseek-v4-pro",
+        "billed": "deepseek-v4-pro",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "output_text_tokens",
+          "quantity": "1000000",
+          "unit": "token",
+          "unit_price": "0.00000174",
+          "cost": "1.74",
+          "price_card_id": "deepseek:deepseek-v4-pro:peak:fixture",
+          "discount_eligible": true,
+          "metadata": {
+            "pricing_period": "peak",
+            "period_selection": "explicit_context"
+          }
+        }
+      ],
+      "total": "1.74",
+      "price_sources": [{"name": "fixture", "retrieved_at": "2026-07-15T00:00:00Z"}],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

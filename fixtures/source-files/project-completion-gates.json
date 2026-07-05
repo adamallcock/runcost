@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1",
-  "updated_at": "2026-05-26",
+  "updated_at": "2026-07-02",
   "status_scale": {
     "satisfied": "Completion evidence exists and is machine-checkable where practical.",
     "partial": "Useful repo-side work exists, but the final requirement is not proven.",
@@ -463,7 +463,7 @@
       "id": "milestone9_pypi_trusted_publishing",
       "area": "milestone9",
       "requirement": "Configure PyPI trusted publishing for adamallcock/runcost and the release environment.",
-      "status": "pending_external_evidence",
+      "status": "satisfied",
       "required_for": ["public_beta", "v1"],
       "required_evidence": [
         "Registry-side PyPI trusted-publisher settings are configured for .github/workflows/release.yml and environment release.",
@@ -473,7 +473,12 @@
         {
           "kind": "report",
           "path": "docs/internal/reports/2026-05-27-operator-action-completion-audit.md",
-          "proves": "The remaining PyPI trusted-publishing gap requires operator-side registry configuration."
+          "proves": "Historical audit recorded the PyPI trusted-publishing gap before the v0.1.11 release."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-07-02-release-0-1-11-evidence.md",
+          "proves": "Release 0.1.11 published the PyPI package through the guarded release workflow and verified the live PyPI package."
         },
         {
           "kind": "docs",
@@ -502,13 +507,13 @@
         },
         {
           "kind": "fixture",
-          "path": "fixtures/source-files/trusted-publishing-verification-template.json",
-          "proves": "The current checked-in trusted-publishing artifact is an explicit template, not real registry setup evidence."
+          "path": "fixtures/source-files/trusted-publishing-verification-2026-07-02.json",
+          "proves": "Sanitized manual verification records PyPI trusted publishing as configured and OIDC-backed without stored registry tokens."
         },
         {
           "kind": "report",
           "path": "docs/internal/reports/2026-05-26-package-name-availability-check.md",
-          "proves": "Live registry checks showed PyPI `runcost` is occupied and `runcost-ai` had no matching distribution, so the Python distribution target is `runcost-ai`."
+          "proves": "Historical registry checks explain why the Python distribution target is `runcost-ai`."
         },
         {
           "kind": "docs",
@@ -522,13 +527,13 @@
         }
       ],
       "completion_check": "python3 scripts/check_trusted_publishing_verification.py --verification <sanitized-manual-verification.json> --require-real plus guarded release workflow evidence.",
-      "remaining_action": "Configure and verify the PyPI trusted publisher for project `runcost-ai` outside the repository."
+      "remaining_action": "Keep PyPI trusted publishing verified for future releases."
     },
     {
       "id": "milestone9_npm_trusted_publishing",
       "area": "milestone9",
       "requirement": "Configure npm trusted publishing/provenance for the JavaScript package.",
-      "status": "pending_external_evidence",
+      "status": "satisfied",
       "required_for": ["public_beta", "v1"],
       "required_evidence": [
         "Registry-side npm trusted-publisher settings are configured for release.yml and environment release.",
@@ -538,7 +543,12 @@
         {
           "kind": "report",
           "path": "docs/internal/reports/2026-05-27-operator-action-completion-audit.md",
-          "proves": "The remaining npm trusted-publishing gap requires operator-side registry configuration."
+          "proves": "Historical audit recorded the npm trusted-publishing gap before the v0.1.11 release."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-07-02-release-0-1-11-evidence.md",
+          "proves": "Release 0.1.11 published the npm package through the guarded release workflow and verified live npm provenance."
         },
         {
           "kind": "docs",
@@ -567,17 +577,17 @@
         },
         {
           "kind": "fixture",
-          "path": "fixtures/source-files/trusted-publishing-verification-template.json",
-          "proves": "The current checked-in trusted-publishing artifact is an explicit template, not real registry setup evidence."
+          "path": "fixtures/source-files/trusted-publishing-verification-2026-07-02.json",
+          "proves": "Sanitized manual verification records npm trusted publishing and provenance as configured without stored registry tokens."
         },
         {
           "kind": "report",
           "path": "docs/internal/reports/2026-05-26-package-name-availability-check.md",
-          "proves": "npm `runcost` returned E404 during the registry availability check, so npm trusted-publishing setup can proceed after registry-side ownership/settings are configured."
+          "proves": "Historical registry checks explain why the npm package target is `runcost`."
         }
       ],
       "completion_check": "python3 scripts/check_trusted_publishing_verification.py --verification <sanitized-manual-verification.json> --require-real plus guarded release workflow evidence.",
-      "remaining_action": "Configure and verify npm trusted publishing outside the repository."
+      "remaining_action": "Keep npm trusted publishing and provenance verified for future releases."
     },
     {
       "id": "milestone9_real_version_no_publish_rehearsal",
@@ -599,10 +609,15 @@
           "kind": "report",
           "path": "docs/internal/reports/2026-05-26-release-workflow-0-1-0-no-publish-rehearsal.md",
           "proves": "A publish=false guarded release workflow rehearsal succeeded for real intended beta version 0.1.0, artifacts were reviewed, and publishing stayed disabled."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-07-02-release-0-1-11-evidence.md",
+          "proves": "A publish=false guarded release workflow rehearsal succeeded for release 0.1.11 before the publish run."
         }
       ],
       "completion_check": "gh workflow run release.yml --ref main -f version=<real-version> -f publish=false",
-      "remaining_action": "Keep publishing disabled until trusted publisher setup and explicit approval; real Go tag verification remains tracked separately."
+      "remaining_action": "Keep running the no-publish rehearsal before future publish runs."
     },
     {
       "id": "milestone9_real_go_tag_verification",
@@ -629,6 +644,11 @@
           "kind": "report",
           "path": "docs/internal/reports/2026-05-26-go-tag-verification-0-1-0.md",
           "proves": "Remote tag v0.1.0 was verified from a clean Go module without a local replace in guarded release workflow run 26467656634."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-07-02-release-0-1-11-evidence.md",
+          "proves": "Remote tag v0.1.11 is available through the Go module path and was verified by workflow and post-publish smoke."
         }
       ],
       "completion_check": "go get github.com/adamallcock/runcost/packages/go/ledger@v<version>",
@@ -638,7 +658,7 @@
       "id": "milestone9_actual_registry_publish",
       "area": "milestone9",
       "requirement": "Publish Python and JavaScript packages after explicit artifact review and approval.",
-      "status": "deferred_by_user",
+      "status": "satisfied",
       "required_for": ["public_beta", "v1"],
       "required_evidence": [
         "Explicit user approval to publish.",
@@ -646,10 +666,20 @@
         "PyPI and npm package pages for the released version.",
         "Post-publish install smoke evidence."
       ],
-      "current_evidence": [],
-      "completion_check": "Guarded release workflow with publish=true and publish_approval=publish-runcost after explicit approval.",
-      "deferred_reason": "The current objective says to leave packages unpublished for now.",
-      "remaining_action": "Do not publish until the user explicitly approves publication."
+      "current_evidence": [
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-07-02-release-0-1-11-evidence.md",
+          "proves": "Release 0.1.11 was published to PyPI and npm, has a GitHub Release, exposes Go module version v0.1.11, and passed post-publish install smokes."
+        },
+        {
+          "kind": "workflow",
+          "path": ".github/workflows/release.yml",
+          "proves": "The guarded release workflow requires publish=true and publish_approval=publish-runcost, then publishes Python and npm packages through the release environment."
+        }
+      ],
+      "completion_check": "Guarded release workflow with publish=true and publish_approval=publish-runcost plus post-publish registry install smokes.",
+      "remaining_action": "Use the same guarded publish and post-publish verification flow for future releases."
     },
     {
       "id": "public_beta_hardening_docs",

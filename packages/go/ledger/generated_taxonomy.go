@@ -77,6 +77,9 @@ var warningCodeNames = []string{
 	"stream_usage_missing",
 	"historical_price_missing",
 	"tool_component_unpriced",
+	"pricing_period_required",
+	"pricing_period_unsupported",
+	"billing_schedule_unsupported",
 	"provider_reported_cost_used",
 	"provider_reported_cost_mismatch",
 }

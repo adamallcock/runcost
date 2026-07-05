@@ -274,20 +274,67 @@ func (effective EffectiveRange) Object() Object {
 	return result
 }
 
+// BillingWindow describes one recurring time window in a canonical billing schedule.
+type BillingWindow struct {
+	Period string
+	Start  string
+	End    string
+}
+
+// Object converts the billing window to the canonical schema-shaped object.
+func (window BillingWindow) Object() Object {
+	return Object{
+		"period": window.Period,
+		"start":  window.Start,
+		"end":    window.End,
+	}
+}
+
+func billingWindowsToAny(windows []BillingWindow) []any {
+	result := make([]any, 0, len(windows))
+	for _, window := range windows {
+		result = append(result, window.Object())
+	}
+	return result
+}
+
+// BillingSchedule describes recurring provider billing periods in UTC.
+type BillingSchedule struct {
+	Timezone       string
+	DefaultPeriod  string
+	BoundaryPolicy string
+	Windows        []BillingWindow
+}
+
+// Object converts the billing schedule to the canonical schema-shaped object.
+func (schedule BillingSchedule) Object() Object {
+	result := Object{
+		"timezone":       schedule.Timezone,
+		"default_period": schedule.DefaultPeriod,
+		"windows":        billingWindowsToAny(schedule.Windows),
+	}
+	if schedule.BoundaryPolicy != "" {
+		result["boundary_policy"] = schedule.BoundaryPolicy
+	}
+	return result
+}
+
 // PriceCard is a typed Go representation of a canonical price card.
 type PriceCard struct {
-	SchemaVersion string
-	ID            string
-	Provider      string
-	Surface       string
-	Model         string
-	Aliases       []string
-	ServiceTier   string
-	Region        string
-	Effective     *EffectiveRange
-	Components    []PriceComponent
-	Source        Source
-	Metadata      Object
+	SchemaVersion   string
+	ID              string
+	Provider        string
+	Surface         string
+	Model           string
+	Aliases         []string
+	ServiceTier     string
+	Region          string
+	PricingPeriod   string
+	BillingSchedule *BillingSchedule
+	Effective       *EffectiveRange
+	Components      []PriceComponent
+	Source          Source
+	Metadata        Object
 }
 
 // Object converts the price card to the canonical schema-shaped object.
@@ -311,6 +358,12 @@ func (card PriceCard) Object() Object {
 	}
 	if card.Region != "" {
 		result["region"] = card.Region
+	}
+	if card.PricingPeriod != "" {
+		result["pricing_period"] = card.PricingPeriod
+	}
+	if card.BillingSchedule != nil {
+		result["billing_schedule"] = card.BillingSchedule.Object()
 	}
 	if card.Effective != nil {
 		result["effective"] = card.Effective.Object()
@@ -648,8 +701,288 @@ func dateValue(value any) (time.Time, bool) {
 	return parsed, true
 }
 
+func dateTimeValue(value any) (time.Time, bool) {
+	if value == nil {
+		return time.Time{}, false
+	}
+	text := asString(value)
+	if !strings.Contains(text, "T") {
+		return time.Time{}, false
+	}
+	parsed, err := time.Parse(time.RFC3339, text)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return parsed.UTC(), true
+}
+
+func unixSecondsPricedAt(value any) string {
+	if value == nil {
+		return ""
+	}
+	seconds, err := strconv.ParseFloat(numberString(value), 64)
+	if err != nil {
+		return ""
+	}
+	if seconds > float64(1<<62) || seconds < -float64(1<<62) {
+		return ""
+	}
+	return time.Unix(int64(seconds), 0).UTC().Format(time.RFC3339)
+}
+
 func usageContext(usageLedger Object) Object {
 	return asObject(usageLedger["context"])
+}
+
+func cardPricingPeriod(card Object) string {
+	if value := asString(card["pricing_period"]); value != "" {
+		return value
+	}
+	return asString(card["pricingPeriod"])
+}
+
+func cardBillingSchedule(card Object) Object {
+	if schedule, ok := objectValue(card["billing_schedule"]); ok {
+		return schedule
+	}
+	if schedule, ok := objectValue(card["billingSchedule"]); ok {
+		return schedule
+	}
+	return Object{}
+}
+
+func normalizeBillingSchedule(schedule Object) Object {
+	if len(schedule) == 0 {
+		return Object{}
+	}
+	normalized := Object{}
+	if value := asString(schedule["timezone"]); value != "" {
+		normalized["timezone"] = value
+	}
+	defaultPeriod := asString(schedule["default_period"])
+	if defaultPeriod == "" {
+		defaultPeriod = asString(schedule["defaultPeriod"])
+	}
+	if defaultPeriod != "" {
+		normalized["default_period"] = defaultPeriod
+	}
+	boundaryPolicy := asString(schedule["boundary_policy"])
+	if boundaryPolicy == "" {
+		boundaryPolicy = asString(schedule["boundaryPolicy"])
+	}
+	if boundaryPolicy != "" {
+		normalized["boundary_policy"] = boundaryPolicy
+	}
+	if _, exists := schedule["windows"]; exists {
+		windows := []any{}
+		for _, rawWindow := range asSlice(schedule["windows"]) {
+			window := asObject(rawWindow)
+			if len(window) == 0 {
+				windows = append(windows, rawWindow)
+				continue
+			}
+			normalizedWindow := Object{}
+			if period := asString(window["period"]); period != "" {
+				normalizedWindow["period"] = period
+			}
+			if start := asString(window["start"]); start != "" {
+				normalizedWindow["start"] = start
+			}
+			if end := asString(window["end"]); end != "" {
+				normalizedWindow["end"] = end
+			}
+			windows = append(windows, normalizedWindow)
+		}
+		normalized["windows"] = windows
+	}
+	return normalized
+}
+
+func timeSeconds(value any) (int, bool) {
+	parts := strings.Split(asString(value), ":")
+	if len(parts) != 2 && len(parts) != 3 {
+		return 0, false
+	}
+	hour, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, false
+	}
+	minute, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, false
+	}
+	second := 0
+	if len(parts) == 3 {
+		second, err = strconv.Atoi(parts[2])
+		if err != nil {
+			return 0, false
+		}
+	}
+	if hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59 {
+		return 0, false
+	}
+	return hour*3600 + minute*60 + second, true
+}
+
+func timeInWindow(current int, start int, end int) bool {
+	if start <= end {
+		return current >= start && current < end
+	}
+	return current >= start || current < end
+}
+
+func pricingPeriodFromSchedule(schedule Object, pricedAt time.Time) Object {
+	timezoneName := asString(schedule["timezone"])
+	if timezoneName == "" {
+		timezoneName = "UTC"
+	}
+	if timezoneName != "UTC" {
+		return Object{"unsupported_timezone": timezoneName}
+	}
+	boundaryPolicy := asString(schedule["boundary_policy"])
+	if boundaryPolicy == "" {
+		boundaryPolicy = asString(schedule["boundaryPolicy"])
+	}
+	if boundaryPolicy == "" {
+		boundaryPolicy = "start_inclusive_end_exclusive"
+	}
+	if boundaryPolicy != "start_inclusive_end_exclusive" {
+		return Object{"unsupported_schedule": "boundary_policy"}
+	}
+	rawWindows, ok := schedule["windows"].([]any)
+	if !ok {
+		return Object{"unsupported_schedule": "windows"}
+	}
+	current := pricedAt.Hour()*3600 + pricedAt.Minute()*60 + pricedAt.Second()
+	for _, rawWindow := range rawWindows {
+		window, ok := objectValue(rawWindow)
+		if !ok {
+			return Object{"unsupported_schedule": "window"}
+		}
+		start, okStart := timeSeconds(window["start"])
+		end, okEnd := timeSeconds(window["end"])
+		period := asString(window["period"])
+		if !okStart || !okEnd || period == "" {
+			return Object{"unsupported_schedule": "window"}
+		}
+		if timeInWindow(current, start, end) {
+			return Object{
+				"pricing_period":   period,
+				"period_selection": "derived_from_priced_at",
+				"pricing_window":   asString(window["start"]) + "-" + asString(window["end"]),
+				"pricing_timezone": timezoneName,
+			}
+		}
+	}
+	defaultPeriod := asString(schedule["default_period"])
+	if defaultPeriod == "" {
+		defaultPeriod = asString(schedule["defaultPeriod"])
+	}
+	if defaultPeriod != "" {
+		return Object{
+			"pricing_period":   defaultPeriod,
+			"period_selection": "derived_from_priced_at",
+			"pricing_window":   "default",
+			"pricing_timezone": timezoneName,
+		}
+	}
+	return Object{}
+}
+
+func pricingPeriodSelection(usageLedger Object, card Object) Object {
+	context := usageContext(usageLedger)
+	if explicit := asString(context["pricing_period"]); explicit != "" {
+		return Object{"pricing_period": explicit, "period_selection": "explicit_context"}
+	}
+	if explicit := asString(context["pricingPeriod"]); explicit != "" {
+		return Object{"pricing_period": explicit, "period_selection": "explicit_context"}
+	}
+	schedule := cardBillingSchedule(card)
+	if len(schedule) == 0 {
+		return Object{}
+	}
+	pricedAt, ok := dateTimeValue(context["priced_at"])
+	if !ok {
+		pricedAt, ok = dateTimeValue(context["pricedAt"])
+	}
+	if !ok {
+		return Object{}
+	}
+	return pricingPeriodFromSchedule(schedule, pricedAt)
+}
+
+func cardPricingPeriodMatches(usageLedger Object, card Object) bool {
+	period := cardPricingPeriod(card)
+	if period == "" {
+		return true
+	}
+	return asString(pricingPeriodSelection(usageLedger, card)["pricing_period"]) == period
+}
+
+func cardPeriodRank(usageLedger Object, card Object) int {
+	period := cardPricingPeriod(card)
+	if period == "" {
+		return 0
+	}
+	if asString(pricingPeriodSelection(usageLedger, card)["pricing_period"]) == period {
+		return 1
+	}
+	return 0
+}
+
+func pricingPeriodsForCards(cards []Object) []any {
+	seen := map[string]bool{}
+	periods := []string{}
+	for _, card := range cards {
+		period := cardPricingPeriod(card)
+		if period == "" || seen[period] {
+			continue
+		}
+		seen[period] = true
+		periods = append(periods, period)
+	}
+	sort.Strings(periods)
+	result := []any{}
+	for _, period := range periods {
+		result = append(result, period)
+	}
+	return result
+}
+
+func requestedPricingPeriodForCards(usageLedger Object, cards []Object) string {
+	context := usageContext(usageLedger)
+	if explicit := asString(context["pricing_period"]); explicit != "" {
+		return explicit
+	}
+	if explicit := asString(context["pricingPeriod"]); explicit != "" {
+		return explicit
+	}
+	for _, card := range cards {
+		selection := pricingPeriodSelection(usageLedger, card)
+		if period := asString(selection["pricing_period"]); period != "" {
+			return period
+		}
+	}
+	return ""
+}
+
+func unsupportedBillingScheduleReason(usageLedger Object, cards []Object) string {
+	context := usageContext(usageLedger)
+	if _, ok := dateTimeValue(context["priced_at"]); !ok {
+		if _, ok := dateTimeValue(context["pricedAt"]); !ok {
+			return ""
+		}
+	}
+	for _, card := range cards {
+		selection := pricingPeriodSelection(usageLedger, card)
+		if timezoneName := asString(selection["unsupported_timezone"]); timezoneName != "" {
+			return timezoneName
+		}
+		if reason := asString(selection["unsupported_schedule"]); reason != "" {
+			return reason
+		}
+	}
+	return ""
 }
 
 func containsString(values []any, target string) bool {
@@ -695,6 +1028,10 @@ func effectiveMatches(card Object, pricedAt string) bool {
 }
 
 func cardContextMatches(usageLedger Object, card Object) bool {
+	return cardContextExceptPeriodMatches(usageLedger, card) && cardPricingPeriodMatches(usageLedger, card)
+}
+
+func cardContextExceptPeriodMatches(usageLedger Object, card Object) bool {
 	context := usageContext(usageLedger)
 	serviceTier := asString(context["service_tier"])
 	requestedServiceTier := serviceTier
@@ -708,7 +1045,11 @@ func cardContextMatches(usageLedger Object, card Object) bool {
 	if region != "" && asString(card["region"]) != "" && asString(card["region"]) != region {
 		return false
 	}
-	return effectiveMatches(card, datePart(context["priced_at"]))
+	pricedAt := datePart(context["priced_at"])
+	if pricedAt == "" {
+		pricedAt = datePart(context["pricedAt"])
+	}
+	return effectiveMatches(card, pricedAt)
 }
 
 func cardScore(usageLedger Object, card Object) int {
@@ -729,6 +1070,9 @@ func cardScore(usageLedger Object, card Object) int {
 	}
 	if card["effective"] != nil {
 		score++
+	}
+	if cardPricingPeriod(card) != "" {
+		score += 4
 	}
 	return score
 }
@@ -764,20 +1108,43 @@ func sourcePriority(options Object) []any {
 
 func matchingCards(usageLedger Object, priceCards []any, options Object) []Object {
 	type scoredCard struct {
-		card  Object
-		index int
-		score int
+		card       Object
+		index      int
+		periodRank int
+		score      int
 	}
 	scored := []scoredCard{}
+	periodContextCards := []Object{}
 	for _, rawCard := range priceCards {
+		card := asObject(rawCard)
+		if cardIdentityMatches(usageLedger, card) && cardPricingPeriod(card) != "" && cardContextExceptPeriodMatches(usageLedger, card) {
+			periodContextCards = append(periodContextCards, card)
+		}
+	}
+	for index, rawCard := range priceCards {
 		card := asObject(rawCard)
 		if !cardIdentityMatches(usageLedger, card) || !cardContextMatches(usageLedger, card) {
 			continue
 		}
 		score := cardScore(usageLedger, card) + sourcePriorityScore(card, options)
-		scored = append(scored, scoredCard{card: card, index: len(scored), score: score})
+		scored = append(scored, scoredCard{card: card, index: index, periodRank: cardPeriodRank(usageLedger, card), score: score})
+	}
+	if len(periodContextCards) > 0 && len(scored) > 0 {
+		hasPeriodMatch := false
+		for _, item := range scored {
+			if item.periodRank == 1 {
+				hasPeriodMatch = true
+				break
+			}
+		}
+		if !hasPeriodMatch && (unsupportedBillingScheduleReason(usageLedger, periodContextCards) != "" || requestedPricingPeriodForCards(usageLedger, periodContextCards) != "") {
+			return nil
+		}
 	}
 	sort.SliceStable(scored, func(left int, right int) bool {
+		if scored[left].periodRank != scored[right].periodRank {
+			return scored[left].periodRank > scored[right].periodRank
+		}
 		if scored[left].score != scored[right].score {
 			return scored[left].score > scored[right].score
 		}
@@ -808,7 +1175,10 @@ func priceLookupCacheKey(usageLedger Object, options Object) string {
 		billedModel(usageLedger),
 		asString(context["service_tier"]),
 		asString(context["region"]),
-		datePart(context["priced_at"]),
+		asString(context["pricing_period"]),
+		asString(context["pricingPeriod"]),
+		asString(context["priced_at"]),
+		asString(context["pricedAt"]),
 	}
 	for _, value := range sourcePriority(options) {
 		parts = append(parts, asString(value))
@@ -1325,7 +1695,47 @@ func noMatchingCardWarning(usageLedger Object, priceCards []any) Object {
 			}
 		}
 	}
+	periodCards := []Object{}
+	for _, card := range identityCards {
+		if cardPricingPeriod(card) == "" {
+			continue
+		}
+		if !cardContextExceptPeriodMatches(usageLedger, card) {
+			continue
+		}
+		periodCards = append(periodCards, card)
+	}
+	if len(periodCards) > 0 {
+		if reason := unsupportedBillingScheduleReason(usageLedger, periodCards); reason != "" {
+			metadata := warningIdentityMetadata(usageLedger)
+			metadata["timezone"] = reason
+			return Object{
+				"code":     "billing_schedule_unsupported",
+				"message":  fmt.Sprintf("Billing schedule %s is not supported.", reason),
+				"metadata": metadata,
+			}
+		}
+		if requestedPeriod := requestedPricingPeriodForCards(usageLedger, periodCards); requestedPeriod != "" {
+			metadata := warningIdentityMetadata(usageLedger)
+			metadata["pricing_period"] = requestedPeriod
+			return Object{
+				"code":     "pricing_period_unsupported",
+				"message":  fmt.Sprintf("No price card found for pricing period %s.", requestedPeriod),
+				"metadata": metadata,
+			}
+		}
+		metadata := warningIdentityMetadata(usageLedger)
+		metadata["pricing_periods"] = pricingPeriodsForCards(periodCards)
+		return Object{
+			"code":     "pricing_period_required",
+			"message":  "Pricing period is required for period-specific price cards.",
+			"metadata": metadata,
+		}
+	}
 	pricedAt := datePart(context["priced_at"])
+	if pricedAt == "" {
+		pricedAt = datePart(context["pricedAt"])
+	}
 	if pricedAt != "" && len(identityCards) > 0 {
 		anyEffective := false
 		for _, card := range identityCards {
@@ -1533,7 +1943,11 @@ func stalePriceWarning(usageLedger Object, card Object, options Object) (Object,
 	if !ok {
 		return nil, false
 	}
-	pricedAt, ok := dateValue(usageContext(usageLedger)["priced_at"])
+	context := usageContext(usageLedger)
+	pricedAt, ok := dateValue(context["priced_at"])
+	if !ok {
+		pricedAt, ok = dateValue(context["pricedAt"])
+	}
 	if !ok {
 		return nil, false
 	}
@@ -1861,13 +2275,26 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		card := asObject(matches[0]["card"])
 		priceComponent := asObject(matches[0]["price_component"])
 		componentMetadata := asObject(matches[0]["component_metadata"])
-		appendTraceDecision(trace, Object{
+		periodSelection := pricingPeriodSelection(componentUsageLedger, card)
+		periodMetadata := Object{}
+		if asString(periodSelection["pricing_period"]) == cardPricingPeriod(card) {
+			for _, key := range []string{"pricing_period", "period_selection", "pricing_window", "pricing_timezone"} {
+				if value := periodSelection[key]; value != nil {
+					periodMetadata[key] = value
+				}
+			}
+		}
+		traceDecision := Object{
 			"type":                     "price_component_match",
 			"component":                asString(component["name"]),
 			"candidate_price_card_ids": matchPriceCardIDs(matches),
 			"selected_price_card_id":   asString(card["id"]),
 			"selected_source":          asString(asObject(card["source"])["name"]),
-		})
+		}
+		for key, value := range periodMetadata {
+			traceDecision[key] = value
+		}
+		appendTraceDecision(trace, traceDecision)
 		if asString(card["model"]) != componentBilledModel && containsString(asSlice(card["aliases"]), componentBilledModel) {
 			previousBilledModel := componentBilledModel
 			if componentBillingModel(component) == "" {
@@ -1930,6 +2357,9 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		}
 		outputMetadata := Object{}
 		for key, value := range asObject(component["metadata"]) {
+			outputMetadata[key] = value
+		}
+		for key, value := range periodMetadata {
 			outputMetadata[key] = value
 		}
 		for key, value := range componentMetadata {
@@ -2406,11 +2836,15 @@ func xaiServerSideToolUsageComponents(response Object, usage Object) ([]any, str
 }
 
 func baseUsageLedger(provider string, surface string, requestedModel string, returnedModel string, components []any, rawUsage Object) Object {
+	return baseUsageLedgerWithContext(provider, surface, requestedModel, returnedModel, components, rawUsage, Object{})
+}
+
+func baseUsageLedgerWithContext(provider string, surface string, requestedModel string, returnedModel string, components []any, rawUsage Object, context Object) Object {
 	model := returnedModel
 	if model == "" {
 		model = requestedModel
 	}
-	return Object{
+	ledger := Object{
 		"schema_version": "0.1",
 		"provider":       provider,
 		"surface":        surface,
@@ -2423,6 +2857,32 @@ func baseUsageLedger(provider string, surface string, requestedModel string, ret
 		"components": components,
 		"raw_usage":  rawUsage,
 	}
+	if len(context) > 0 {
+		ledger["context"] = context
+	}
+	return ledger
+}
+
+func usageContextFromOptions(response Object, provider string, options Object) Object {
+	context := Object{}
+	for key, value := range asObject(options["context"]) {
+		context[key] = value
+	}
+	if pricedAt := asString(options["priced_at"]); pricedAt != "" {
+		context["priced_at"] = pricedAt
+	} else if pricedAt := asString(options["pricedAt"]); pricedAt != "" {
+		context["priced_at"] = pricedAt
+	} else if provider == "deepseek" && asString(context["priced_at"]) == "" && asString(context["pricedAt"]) == "" {
+		if createdPricedAt := unixSecondsPricedAt(response["created"]); createdPricedAt != "" {
+			context["priced_at"] = createdPricedAt
+		}
+	}
+	if pricingPeriod := asString(options["pricing_period"]); pricingPeriod != "" {
+		context["pricing_period"] = pricingPeriod
+	} else if pricingPeriod := asString(options["pricingPeriod"]); pricingPeriod != "" {
+		context["pricing_period"] = pricingPeriod
+	}
+	return context
 }
 
 var openAICompatibleChatProviders = map[string]string{
@@ -3279,13 +3739,14 @@ func extractOpenAICompatibleChatCompletionsUsage(response Object, options Object
 	if requestedModel == "" {
 		requestedModel = asString(response["model"])
 	}
+	context := usageContextFromOptions(response, provider, options)
 
-	return baseUsageLedger(provider, surface, requestedModel, asString(response["model"]), compactComponents([]any{
+	return baseUsageLedgerWithContext(provider, surface, requestedModel, asString(response["model"]), compactComponents([]any{
 		positiveComponent("input_uncached_tokens", subtract(prompt, cachedInput), "token", "$.usage.prompt_tokens"),
 		positiveComponent("input_cache_read_tokens", cachedInput, "token", cachedSourcePath),
 		positiveComponent("output_text_tokens", subtract(completion, reasoning), "token", "$.usage.completion_tokens"),
 		positiveComponent("output_reasoning_tokens", reasoning, "token", reasoningSourcePath),
-	}), usage)
+	}), usage, context)
 }
 
 func extractOpenAIChatCompletionsUsage(response Object, options Object) Object {
@@ -5420,16 +5881,37 @@ func componentAmount(entry Object, keys ...string) any {
 func sourceCachePriceCards(entry Object) []any {
 	for _, key := range []string{"price_cards", "priceCards", "cards"} {
 		if cards, ok := entry[key].([]any); ok {
-			filtered := []any{}
-			for _, rawCard := range cards {
-				if _, ok := rawCard.(map[string]any); ok {
-					filtered = append(filtered, rawCard)
-				}
-			}
-			return filtered
+			return canonicalPriceCards(cards)
 		}
 	}
 	return []any{}
+}
+
+func normalizePriceCard(card Object) Object {
+	normalized := Object{}
+	for key, value := range card {
+		normalized[key] = value
+	}
+	schedule := asObject(normalized["billing_schedule"])
+	if len(schedule) == 0 {
+		schedule = asObject(normalized["billingSchedule"])
+	}
+	schedule = normalizeBillingSchedule(schedule)
+	if len(schedule) > 0 {
+		normalized["billing_schedule"] = schedule
+		delete(normalized, "billingSchedule")
+	}
+	return normalized
+}
+
+func canonicalPriceCards(rawCards []any) []any {
+	filtered := []any{}
+	for _, rawCard := range rawCards {
+		if card, ok := rawCard.(map[string]any); ok {
+			filtered = append(filtered, normalizePriceCard(card))
+		}
+	}
+	return filtered
 }
 
 func sourceCacheSource(entry Object) Object {
@@ -5824,10 +6306,10 @@ func addOfficialSnapshotComponent(components *[]any, row Object, componentName s
 // snapshots into canonical price cards.
 func PriceCardsFromOfficialSnapshot(data Object) []any {
 	if rawCards, ok := data["price_cards"].([]any); ok {
-		return rawCards
+		return canonicalPriceCards(rawCards)
 	}
 	if rawCards, ok := data["priceCards"].([]any); ok {
-		return rawCards
+		return canonicalPriceCards(rawCards)
 	}
 	source := sourceInfo(data, "official-snapshot", "file://official-pricing-snapshot")
 	providerDefault := asString(data["provider"])
@@ -5839,6 +6321,11 @@ func PriceCardsFromOfficialSnapshot(data Object) []any {
 	if perDefault == "0" {
 		perDefault = "1000000"
 	}
+	scheduleDefault := asObject(data["billing_schedule"])
+	if len(scheduleDefault) == 0 {
+		scheduleDefault = asObject(data["billingSchedule"])
+	}
+	scheduleDefault = normalizeBillingSchedule(scheduleDefault)
 	toolPriceDefaults := asObject(data["tool_prices"])
 	if len(toolPriceDefaults) == 0 {
 		toolPriceDefaults = asObject(data["toolPrices"])
@@ -5940,7 +6427,13 @@ func PriceCardsFromOfficialSnapshot(data Object) []any {
 			cardID = asString(row["priceCardId"])
 		}
 		if cardID == "" {
-			cardID = fmt.Sprintf("%s:%s:official-snapshot", provider, model)
+			if pricingPeriod := asString(row["pricing_period"]); pricingPeriod != "" {
+				cardID = fmt.Sprintf("%s:%s:%s:official-snapshot", provider, model, pricingPeriod)
+			} else if pricingPeriod := asString(row["pricingPeriod"]); pricingPeriod != "" {
+				cardID = fmt.Sprintf("%s:%s:%s:official-snapshot", provider, model, pricingPeriod)
+			} else {
+				cardID = fmt.Sprintf("%s:%s:official-snapshot", provider, model)
+			}
 		}
 		sourceLabel := asString(row["source_label"])
 		if sourceLabel == "" {
@@ -5976,6 +6469,24 @@ func PriceCardsFromOfficialSnapshot(data Object) []any {
 		if region := asString(row["region"]); region != "" {
 			card["region"] = region
 		}
+		pricingPeriod := asString(row["pricing_period"])
+		if pricingPeriod == "" {
+			pricingPeriod = asString(row["pricingPeriod"])
+		}
+		if pricingPeriod != "" {
+			card["pricing_period"] = pricingPeriod
+		}
+		schedule := asObject(row["billing_schedule"])
+		if len(schedule) == 0 {
+			schedule = asObject(row["billingSchedule"])
+		}
+		schedule = normalizeBillingSchedule(schedule)
+		if len(schedule) == 0 {
+			schedule = scheduleDefault
+		}
+		if len(schedule) > 0 {
+			card["billing_schedule"] = schedule
+		}
 		if effective, ok := row["effective"].(map[string]any); ok {
 			card["effective"] = effective
 		}
@@ -5988,10 +6499,10 @@ func PriceCardsFromOfficialSnapshot(data Object) []any {
 // canonical price cards. Already-canonical price_cards are returned unchanged.
 func PriceCardsFromUserPricing(data Object) []any {
 	if rawCards, ok := data["price_cards"].([]any); ok {
-		return rawCards
+		return canonicalPriceCards(rawCards)
 	}
 	if rawCards, ok := data["priceCards"].([]any); ok {
-		return rawCards
+		return canonicalPriceCards(rawCards)
 	}
 	source := sourceInfo(data, "user-pricing", "file://user-pricing")
 	providerDefault := asString(data["provider"])
@@ -6003,6 +6514,15 @@ func PriceCardsFromUserPricing(data Object) []any {
 	if serviceTierDefault == "" {
 		serviceTierDefault = asString(data["serviceTier"])
 	}
+	pricingPeriodDefault := asString(data["pricing_period"])
+	if pricingPeriodDefault == "" {
+		pricingPeriodDefault = asString(data["pricingPeriod"])
+	}
+	scheduleDefault := asObject(data["billing_schedule"])
+	if len(scheduleDefault) == 0 {
+		scheduleDefault = asObject(data["billingSchedule"])
+	}
+	scheduleDefault = normalizeBillingSchedule(scheduleDefault)
 	regionDefault := asString(data["region"])
 	perDefault := numberString(data["per"])
 	if perDefault == "0" {
@@ -6024,6 +6544,15 @@ func PriceCardsFromUserPricing(data Object) []any {
 			}
 			if card["source"] == nil {
 				card["source"] = source
+			}
+			schedule := asObject(card["billing_schedule"])
+			if len(schedule) == 0 {
+				schedule = asObject(card["billingSchedule"])
+			}
+			schedule = normalizeBillingSchedule(schedule)
+			if len(schedule) > 0 {
+				card["billing_schedule"] = schedule
+				delete(card, "billingSchedule")
 			}
 			cards = append(cards, card)
 			continue
@@ -6088,6 +6617,27 @@ func PriceCardsFromUserPricing(data Object) []any {
 		}
 		if serviceTier != "" {
 			card["service_tier"] = serviceTier
+		}
+		pricingPeriod := asString(entry["pricing_period"])
+		if pricingPeriod == "" {
+			pricingPeriod = asString(entry["pricingPeriod"])
+		}
+		if pricingPeriod == "" {
+			pricingPeriod = pricingPeriodDefault
+		}
+		if pricingPeriod != "" {
+			card["pricing_period"] = pricingPeriod
+		}
+		schedule := asObject(entry["billing_schedule"])
+		if len(schedule) == 0 {
+			schedule = asObject(entry["billingSchedule"])
+		}
+		schedule = normalizeBillingSchedule(schedule)
+		if len(schedule) == 0 {
+			schedule = scheduleDefault
+		}
+		if len(schedule) > 0 {
+			card["billing_schedule"] = schedule
 		}
 		region := asString(entry["region"])
 		if region == "" {

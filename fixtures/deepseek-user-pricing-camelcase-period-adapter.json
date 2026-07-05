@@ -1,0 +1,110 @@
+{
+  "name": "deepseek-user-pricing-camelcase-period-adapter",
+  "description": "Normalizes camelCase user-pricing billing schedules and pricing periods before selecting the DeepSeek peak card.",
+  "metadata": {
+    "requirement_ids": ["RC-FIXTURE-CONFORMANCE", "RC-PRICING-PERIOD", "RC-SOURCE-ADAPTER"],
+    "provider": "deepseek",
+    "surface": "deepseek.chat_completions",
+    "scenario": "source_adapter",
+    "tags": ["component:output_text_tokens", "pricing_period", "source:user-pricing", "source_adapter"],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "deepseek",
+      "surface": "deepseek.chat_completions",
+      "model": {
+        "requested": "deepseek-v4-pro",
+        "billed": "deepseek-v4-pro",
+        "alias_resolution": "none"
+      },
+      "context": {
+        "priced_at": "2026-07-15T06:30:00Z"
+      },
+      "components": [
+        {
+          "name": "output_text_tokens",
+          "quantity": "1000000",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_source": {
+      "type": "user-pricing",
+      "data": {
+        "provider": "deepseek",
+        "surface": "deepseek.chat_completions",
+        "per": "1000000",
+        "source": {
+          "name": "synthetic-user-pricing",
+          "retrieved_at": "2026-07-15T00:00:00Z",
+          "license": "synthetic-fixture"
+        },
+        "billingSchedule": {
+          "timezone": "UTC",
+          "defaultPeriod": "regular",
+          "boundaryPolicy": "start_inclusive_end_exclusive",
+          "windows": [
+            {"period": "peak", "start": "01:00", "end": "04:00"},
+            {"period": "peak", "start": "06:00", "end": "10:00"}
+          ]
+        },
+        "models": [
+          {
+            "id": "deepseek-v4-pro",
+            "priceCardId": "deepseek:deepseek-v4-pro:regular:user-pricing",
+            "pricingPeriod": "regular",
+            "output": "0.87"
+          },
+          {
+            "id": "deepseek-v4-pro",
+            "priceCardId": "deepseek:deepseek-v4-pro:peak:user-pricing",
+            "pricingPeriod": "peak",
+            "output": "1.74"
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "deepseek",
+      "surface": "deepseek.chat_completions",
+      "model": {
+        "requested": "deepseek-v4-pro",
+        "billed": "deepseek-v4-pro",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "output_text_tokens",
+          "quantity": "1000000",
+          "unit": "token",
+          "unit_price": "0.00000174",
+          "cost": "1.74",
+          "price_card_id": "deepseek:deepseek-v4-pro:peak:user-pricing",
+          "discount_eligible": true,
+          "metadata": {
+            "pricing_period": "peak",
+            "period_selection": "derived_from_priced_at",
+            "pricing_window": "06:00-10:00",
+            "pricing_timezone": "UTC"
+          }
+        }
+      ],
+      "total": "1.74",
+      "price_sources": [
+        {
+          "name": "synthetic-user-pricing",
+          "retrieved_at": "2026-07-15T00:00:00Z",
+          "license": "synthetic-fixture"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

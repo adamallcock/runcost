@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from importlib.resources import files
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal, getcontext
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
@@ -128,11 +128,202 @@ def _date_value(value: Any) -> Optional[date]:
     text = _date_part(value)
     if not text:
         return None
-    return date.fromisoformat(text)
+    try:
+        return date.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def _datetime_value(value: Any) -> Optional[datetime]:
+    if value is None:
+        return None
+    text = str(value)
+    if "T" not in text:
+        return None
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
+def _unix_seconds_priced_at(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    try:
+        seconds = int(_decimal(value))
+        parsed = datetime.fromtimestamp(seconds, timezone.utc)
+    except Exception:
+        return None
+    return parsed.isoformat().replace("+00:00", "Z")
 
 
 def _usage_context(usage_ledger: Dict[str, Any]) -> Dict[str, Any]:
     return usage_ledger.get("context", {})
+
+
+def _card_pricing_period(card: Dict[str, Any]) -> Optional[str]:
+    value = card.get("pricing_period") or card.get("pricingPeriod")
+    return str(value) if value else None
+
+
+def _card_billing_schedule(card: Dict[str, Any]) -> Dict[str, Any]:
+    schedule = card.get("billing_schedule") or card.get("billingSchedule") or {}
+    return schedule if isinstance(schedule, dict) else {}
+
+
+def _normalize_billing_schedule(schedule: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(schedule, dict):
+        return None
+    normalized: Dict[str, Any] = {}
+    timezone_name = schedule.get("timezone")
+    if timezone_name is not None:
+        normalized["timezone"] = timezone_name
+    default_period = schedule.get("default_period") or schedule.get("defaultPeriod")
+    if default_period is not None:
+        normalized["default_period"] = default_period
+    boundary_policy = schedule.get("boundary_policy") or schedule.get("boundaryPolicy")
+    if boundary_policy is not None:
+        normalized["boundary_policy"] = boundary_policy
+    if isinstance(schedule.get("windows"), list):
+        windows = []
+        for window in schedule["windows"]:
+            if not isinstance(window, dict):
+                windows.append(window)
+                continue
+            normalized_window = {
+                "period": window.get("period"),
+                "start": window.get("start"),
+                "end": window.get("end"),
+            }
+            windows.append({key: value for key, value in normalized_window.items() if value is not None})
+        normalized["windows"] = windows
+    elif "windows" in schedule:
+        normalized["windows"] = schedule["windows"]
+    return normalized
+
+
+def _time_seconds(value: Any) -> Optional[int]:
+    if not isinstance(value, str):
+        return None
+    parts = value.split(":")
+    if len(parts) not in {2, 3}:
+        return None
+    try:
+        hour = int(parts[0])
+        minute = int(parts[1])
+        second = int(parts[2]) if len(parts) == 3 else 0
+    except ValueError:
+        return None
+    if hour < 0 or hour > 23 or minute < 0 or minute > 59 or second < 0 or second > 59:
+        return None
+    return hour * 3600 + minute * 60 + second
+
+
+def _time_in_window(current: int, start: int, end: int) -> bool:
+    if start <= end:
+        return start <= current < end
+    return current >= start or current < end
+
+
+def _pricing_period_from_schedule(schedule: Dict[str, Any], priced_at: datetime) -> Dict[str, Any]:
+    timezone_name = schedule.get("timezone", "UTC")
+    if timezone_name != "UTC":
+        return {"unsupported_timezone": timezone_name}
+    boundary_policy = schedule.get("boundary_policy") or schedule.get("boundaryPolicy") or "start_inclusive_end_exclusive"
+    if boundary_policy != "start_inclusive_end_exclusive":
+        return {"unsupported_schedule": "boundary_policy"}
+    windows = schedule.get("windows")
+    if not isinstance(windows, list):
+        return {"unsupported_schedule": "windows"}
+    current = priced_at.hour * 3600 + priced_at.minute * 60 + priced_at.second
+    for window in windows:
+        if not isinstance(window, dict):
+            return {"unsupported_schedule": "window"}
+        start = _time_seconds(window.get("start"))
+        end = _time_seconds(window.get("end"))
+        period = window.get("period")
+        if start is None or end is None or not period:
+            return {"unsupported_schedule": "window"}
+        if _time_in_window(current, start, end):
+            return {
+                "pricing_period": str(period),
+                "period_selection": "derived_from_priced_at",
+                "pricing_window": f"{window.get('start')}-{window.get('end')}",
+                "pricing_timezone": timezone_name,
+            }
+    default_period = schedule.get("default_period") or schedule.get("defaultPeriod")
+    if default_period:
+        return {
+            "pricing_period": str(default_period),
+            "period_selection": "derived_from_priced_at",
+            "pricing_window": "default",
+            "pricing_timezone": timezone_name,
+        }
+    return {}
+
+
+def _pricing_period_selection(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> Dict[str, Any]:
+    context = _usage_context(usage_ledger)
+    explicit = context.get("pricing_period") or context.get("pricingPeriod")
+    if explicit:
+        return {"pricing_period": str(explicit), "period_selection": "explicit_context"}
+    schedule = _card_billing_schedule(card)
+    if not schedule:
+        return {}
+    priced_at = _datetime_value(context.get("priced_at") or context.get("pricedAt"))
+    if priced_at is None:
+        return {}
+    return _pricing_period_from_schedule(schedule, priced_at)
+
+
+def _card_pricing_period_matches(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> bool:
+    card_period = _card_pricing_period(card)
+    if not card_period:
+        return True
+    selection = _pricing_period_selection(usage_ledger, card)
+    return selection.get("pricing_period") == card_period
+
+
+def _card_period_rank(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> int:
+    card_period = _card_pricing_period(card)
+    if not card_period:
+        return 0
+    selection = _pricing_period_selection(usage_ledger, card)
+    return 1 if selection.get("pricing_period") == card_period else 0
+
+
+def _pricing_periods_for_cards(cards: Iterable[Dict[str, Any]]) -> List[str]:
+    return sorted({period for card in cards if (period := _card_pricing_period(card))})
+
+
+def _requested_pricing_period_for_cards(usage_ledger: Dict[str, Any], cards: Iterable[Dict[str, Any]]) -> Optional[str]:
+    context = _usage_context(usage_ledger)
+    explicit = context.get("pricing_period") or context.get("pricingPeriod")
+    if explicit:
+        return str(explicit)
+    for card in cards:
+        selection = _pricing_period_selection(usage_ledger, card)
+        if selection.get("pricing_period"):
+            return str(selection["pricing_period"])
+    return None
+
+
+def _unsupported_billing_schedule_reason(usage_ledger: Dict[str, Any], cards: Iterable[Dict[str, Any]]) -> Optional[str]:
+    context = _usage_context(usage_ledger)
+    if _datetime_value(context.get("priced_at") or context.get("pricedAt")) is None:
+        return None
+    for card in cards:
+        selection = _pricing_period_selection(usage_ledger, card)
+        if selection.get("unsupported_timezone"):
+            return str(selection["unsupported_timezone"])
+        if selection.get("unsupported_schedule"):
+            return str(selection["unsupported_schedule"])
+    return None
 
 
 def _card_identity_matches(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> bool:
@@ -164,11 +355,15 @@ def _effective_matches(card: Dict[str, Any], priced_at: Optional[str]) -> bool:
 
 
 def _card_context_matches(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> bool:
+    return _card_context_except_period_matches(usage_ledger, card) and _card_pricing_period_matches(usage_ledger, card)
+
+
+def _card_context_except_period_matches(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> bool:
     context = _usage_context(usage_ledger)
     service_tier = context.get("service_tier")
     requested_service_tier = service_tier or "standard"
     region = context.get("region")
-    priced_at = _date_part(context.get("priced_at"))
+    priced_at = _date_part(context.get("priced_at") or context.get("pricedAt"))
 
     if card.get("service_tier") and card["service_tier"] != requested_service_tier:
         return False
@@ -189,6 +384,8 @@ def _card_score(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> int:
         score += 2
     if card.get("effective"):
         score += 1
+    if _card_pricing_period(card):
+        score += 4
     return score
 
 
@@ -207,15 +404,29 @@ def _matching_cards(
     price_cards: Iterable[Dict[str, Any]],
     price_source_priority: Optional[Iterable[str]] = None,
 ) -> List[Dict[str, Any]]:
+    cards = list(price_cards)
     scored_cards = []
-    for index, card in enumerate(price_cards):
+    period_context_cards = [
+        card
+        for card in cards
+        if _card_identity_matches(usage_ledger, card)
+        and _card_pricing_period(card)
+        and _card_context_except_period_matches(usage_ledger, card)
+    ]
+    for index, card in enumerate(cards):
         if not _card_identity_matches(usage_ledger, card):
             continue
         if not _card_context_matches(usage_ledger, card):
             continue
+        period_rank = _card_period_rank(usage_ledger, card)
         score = _card_score(usage_ledger, card) + _source_priority_score(card, price_source_priority)
         source_name = str((card.get("source") or {}).get("name", ""))
-        scored_cards.append((-score, source_name, str(card.get("id", "")), index, card))
+        scored_cards.append((-period_rank, -score, source_name, str(card.get("id", "")), index, card))
+    if period_context_cards and scored_cards and not any(item[0] == -1 for item in scored_cards):
+        unsupported_reason = _unsupported_billing_schedule_reason(usage_ledger, period_context_cards)
+        requested_period = _requested_pricing_period_for_cards(usage_ledger, period_context_cards)
+        if unsupported_reason or requested_period:
+            return []
     return [item[-1] for item in sorted(scored_cards, key=lambda item: item[:-1])]
 
 
@@ -230,7 +441,8 @@ def _price_lookup_cache_key(
         _billed_model(usage_ledger),
         context.get("service_tier") or "",
         context.get("region") or "",
-        _date_part(context.get("priced_at")) or "",
+        context.get("pricing_period") or context.get("pricingPeriod") or "",
+        context.get("priced_at") or context.get("pricedAt") or "",
         tuple(source_priority),
     )
 
@@ -637,7 +849,42 @@ def _no_matching_card_warning(
                 "service_tier": service_tier,
             },
         }
-    priced_at = _date_part(context.get("priced_at"))
+    period_cards = [
+        card
+        for card in identity_cards
+        if _card_pricing_period(card)
+        and _card_context_except_period_matches(usage_ledger, card)
+    ]
+    if period_cards:
+        unsupported_reason = _unsupported_billing_schedule_reason(usage_ledger, period_cards)
+        if unsupported_reason:
+            return {
+                "code": "billing_schedule_unsupported",
+                "message": f"Billing schedule {unsupported_reason} is not supported.",
+                "metadata": {
+                    **_warning_identity_metadata(usage_ledger),
+                    "timezone": unsupported_reason,
+                },
+            }
+        requested_period = _requested_pricing_period_for_cards(usage_ledger, period_cards)
+        if requested_period:
+            return {
+                "code": "pricing_period_unsupported",
+                "message": f"No price card found for pricing period {requested_period}.",
+                "metadata": {
+                    **_warning_identity_metadata(usage_ledger),
+                    "pricing_period": requested_period,
+                },
+            }
+        return {
+            "code": "pricing_period_required",
+            "message": "Pricing period is required for period-specific price cards.",
+            "metadata": {
+                **_warning_identity_metadata(usage_ledger),
+                "pricing_periods": _pricing_periods_for_cards(period_cards),
+            },
+        }
+    priced_at = _date_part(context.get("priced_at") or context.get("pricedAt"))
     if priced_at and identity_cards and not any(_effective_matches(card, priced_at) for card in identity_cards):
         return {
             "code": "historical_price_missing",
@@ -799,7 +1046,8 @@ def _stale_price_warning(
     threshold = _stale_after_days(usage_ledger, stale_after_days)
     if threshold is None:
         return None
-    priced_at = _date_value(_usage_context(usage_ledger).get("priced_at"))
+    context = _usage_context(usage_ledger)
+    priced_at = _date_value(context.get("priced_at") or context.get("pricedAt"))
     retrieved_at = _date_value((card.get("source") or {}).get("retrieved_at"))
     if priced_at is None or retrieved_at is None:
         return None
@@ -1054,16 +1302,23 @@ def calculate_cost(
         card = match["card"]
         price_component = match["price_component"]
         component_metadata = match.get("component_metadata")
+        period_selection = _pricing_period_selection(component_usage_ledger, card)
+        period_metadata = {
+            key: value
+            for key, value in period_selection.items()
+            if key in {"pricing_period", "period_selection", "pricing_window", "pricing_timezone"}
+            and period_selection.get("pricing_period") == _card_pricing_period(card)
+        }
         if trace is not None:
-            trace["decisions"].append(
-                {
-                    "type": "price_component_match",
-                    "component": component["name"],
-                    "candidate_price_card_ids": [candidate["card"]["id"] for candidate in matches],
-                    "selected_price_card_id": card["id"],
-                    "selected_source": card["source"]["name"],
-                }
-            )
+            decision = {
+                "type": "price_component_match",
+                "component": component["name"],
+                "candidate_price_card_ids": [candidate["card"]["id"] for candidate in matches],
+                "selected_price_card_id": card["id"],
+                "selected_source": card["source"]["name"],
+            }
+            decision.update(period_metadata)
+            trace["decisions"].append(decision)
         if card["model"] != component_billed_model and component_billed_model in card.get("aliases", []):
             previous_billed_model = component_billed_model
             if not _component_billing_model(component):
@@ -1126,6 +1381,8 @@ def calculate_cost(
         output_metadata = {}
         if isinstance(component.get("metadata"), dict):
             output_metadata.update(component["metadata"])
+        if period_metadata:
+            output_metadata.update(period_metadata)
         if component_metadata:
             output_metadata.update(component_metadata)
         if output_metadata:
@@ -1460,9 +1717,10 @@ def _base_usage_ledger(
     returned_model: Optional[str],
     components: List[Dict[str, Any]],
     raw_usage: Dict[str, Any],
+    context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     model = returned_model or requested_model
-    return {
+    ledger = {
         "schema_version": "0.1",
         "provider": provider,
         "surface": surface,
@@ -1475,6 +1733,24 @@ def _base_usage_ledger(
         "components": components,
         "raw_usage": raw_usage,
     }
+    if context:
+        ledger["context"] = context
+    return ledger
+
+
+def _usage_context_from_options(response: Dict[str, Any], provider: str, options: Dict[str, Any]) -> Dict[str, Any]:
+    context = dict(options.get("context") or {})
+    priced_at = options.get("priced_at") or options.get("pricedAt")
+    if priced_at is not None:
+        context["priced_at"] = str(priced_at)
+    elif provider == "deepseek" and "priced_at" not in context and "pricedAt" not in context:
+        created_priced_at = _unix_seconds_priced_at(response.get("created"))
+        if created_priced_at:
+            context["priced_at"] = created_priced_at
+    pricing_period = options.get("pricing_period") or options.get("pricingPeriod")
+    if pricing_period is not None:
+        context["pricing_period"] = str(pricing_period)
+    return context
 
 
 def _openai_responses_payload(response: Dict[str, Any]) -> Dict[str, Any]:
@@ -2007,6 +2283,7 @@ def extract_openai_compatible_chat_completions_usage(response: Dict[str, Any], *
     completion_tokens = usage.get("completion_tokens", 0)
     surface = options.get("surface", "openai.chat_completions")
     provider = options.get("provider", OPENAI_COMPATIBLE_CHAT_PROVIDERS.get(surface, "openai"))
+    context = _usage_context_from_options(response, provider, options)
 
     return _base_usage_ledger(
         provider=provider,
@@ -2014,6 +2291,7 @@ def extract_openai_compatible_chat_completions_usage(response: Dict[str, Any], *
         requested_model=options.get("model", response.get("model")),
         returned_model=response.get("model"),
         raw_usage=usage,
+        context=context,
         components=_compact_components(
             [
                 _positive_component("input_uncached_tokens", prompt_tokens - cached_input, "token", "$.usage.prompt_tokens"),
@@ -3892,9 +4170,18 @@ def _component_amount(entry: Dict[str, Any], *keys: str) -> Any:
     return None
 
 
+def _normalize_price_card(card: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = dict(card)
+    schedule = _normalize_billing_schedule(normalized.get("billing_schedule") or normalized.get("billingSchedule"))
+    if schedule:
+        normalized["billing_schedule"] = schedule
+        normalized.pop("billingSchedule", None)
+    return normalized
+
+
 def _price_cards_from_canonical_cards(raw_cards: Any) -> List[Dict[str, Any]]:
     if isinstance(raw_cards, list):
-        return [card for card in raw_cards if isinstance(card, dict)]
+        return [_normalize_price_card(card) for card in raw_cards if isinstance(card, dict)]
     return []
 
 
@@ -3902,7 +4189,7 @@ def _source_cache_price_cards(entry: Dict[str, Any]) -> List[Dict[str, Any]]:
     for key in ("price_cards", "priceCards", "cards"):
         cards = entry.get(key)
         if isinstance(cards, list):
-            return [card for card in cards if isinstance(card, dict)]
+            return _price_cards_from_canonical_cards(cards)
     return []
 
 
@@ -4146,6 +4433,7 @@ def price_cards_from_official_snapshot(data: Any, **options: Any) -> List[Dict[s
     provider_default = data.get("provider") or options.get("provider", "unknown")
     surface_default = data.get("surface") or options.get("surface")
     per_default = _number_string(data.get("per", "1000000"))
+    schedule_default = _normalize_billing_schedule(data.get("billing_schedule") or data.get("billingSchedule"))
     tool_price_defaults = data.get("tool_prices") or data.get("toolPrices") or {}
     if not isinstance(tool_price_defaults, dict):
         tool_price_defaults = {}
@@ -4201,9 +4489,13 @@ def price_cards_from_official_snapshot(data: Any, **options: Any) -> List[Dict[s
         _official_snapshot_component(components, pricing_row, "attachment_search_units", "call", ("attachment_search",), "1")
         if not components:
             continue
+        pricing_period = row.get("pricing_period") or row.get("pricingPeriod")
+        default_card_id = f"{provider}:{model}:official-snapshot"
+        if pricing_period:
+            default_card_id = f"{provider}:{model}:{pricing_period}:official-snapshot"
         card = {
             "schema_version": "0.1",
-            "id": row.get("price_card_id") or row.get("priceCardId") or f"{provider}:{model}:official-snapshot",
+            "id": row.get("price_card_id") or row.get("priceCardId") or default_card_id,
             "provider": provider,
             "model": model,
             "aliases": row.get("aliases", []),
@@ -4216,6 +4508,11 @@ def price_cards_from_official_snapshot(data: Any, **options: Any) -> List[Dict[s
         for key in ("service_tier", "region"):
             if row.get(key):
                 card[key] = row[key]
+        if pricing_period:
+            card["pricing_period"] = pricing_period
+        schedule = _normalize_billing_schedule(row.get("billing_schedule") or row.get("billingSchedule")) or schedule_default
+        if schedule:
+            card["billing_schedule"] = schedule
         if isinstance(row.get("effective"), dict):
             card["effective"] = row["effective"]
         metadata = {
@@ -4244,6 +4541,8 @@ def price_cards_from_user_pricing(data: Any, **options: Any) -> List[Dict[str, A
     provider_default = data.get("provider") or options.get("provider", "user")
     surface_default = data.get("surface") or options.get("surface")
     service_tier_default = data.get("service_tier") or data.get("serviceTier")
+    pricing_period_default = data.get("pricing_period") or data.get("pricingPeriod")
+    schedule_default = _normalize_billing_schedule(data.get("billing_schedule") or data.get("billingSchedule"))
     region_default = data.get("region")
     per_default = _number_string(data.get("per", "1000000"))
     cards: List[Dict[str, Any]] = []
@@ -4256,6 +4555,10 @@ def price_cards_from_user_pricing(data: Any, **options: Any) -> List[Dict[str, A
             card.setdefault("schema_version", "0.1")
             card.setdefault("model", card.get("id"))
             card.setdefault("source", source)
+            schedule = _normalize_billing_schedule(card.get("billing_schedule") or card.get("billingSchedule"))
+            if schedule:
+                card["billing_schedule"] = schedule
+                card.pop("billingSchedule", None)
             cards.append(card)
             continue
 
@@ -4291,6 +4594,12 @@ def price_cards_from_user_pricing(data: Any, **options: Any) -> List[Dict[str, A
         service_tier = entry.get("service_tier") or entry.get("serviceTier") or service_tier_default
         if service_tier:
             card["service_tier"] = service_tier
+        pricing_period = entry.get("pricing_period") or entry.get("pricingPeriod") or pricing_period_default
+        if pricing_period:
+            card["pricing_period"] = pricing_period
+        schedule = _normalize_billing_schedule(entry.get("billing_schedule") or entry.get("billingSchedule")) or schedule_default
+        if schedule:
+            card["billing_schedule"] = schedule
         region = entry.get("region") or region_default
         if region:
             card["region"] = region
@@ -4393,6 +4702,9 @@ def from_response(
     provider: Optional[str] = None,
     surface: str,
     model: Optional[str] = None,
+    context: Optional[Dict[str, Any]] = None,
+    priced_at: Optional[str] = None,
+    pricing_period: Optional[str] = None,
     storage_days: Optional[Any] = None,
     storageDays: Optional[Any] = None,
     ag2_usage_mode: Optional[str] = None,
@@ -4418,6 +4730,12 @@ def from_response(
         options["provider"] = provider
     if model:
         options["model"] = model
+    if context:
+        options["context"] = context
+    if priced_at is not None:
+        options["priced_at"] = priced_at
+    if pricing_period is not None:
+        options["pricing_period"] = pricing_period
     if storage_days is not None:
         options["storage_days"] = storage_days
     if storageDays is not None:

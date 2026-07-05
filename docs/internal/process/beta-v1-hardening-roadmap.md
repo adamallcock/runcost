@@ -75,10 +75,10 @@ Current release evidence:
 - Remote tag `v0.1.0` has been verified from a clean temporary Go module
   without a local `replace`; evidence is recorded in
   `docs/internal/reports/2026-05-26-go-tag-verification-0-1-0.md`.
-- Actual PyPI/npm publication remains intentionally disabled until trusted
-  publishing is configured externally and publishing is explicitly approved.
-  The workflow also requires `publish_approval=publish-runcost` when
-  `publish=true`, so accidental publication fails before publish jobs can run.
+- Release `0.1.11` was published on 2026-07-02 through the guarded release
+  workflow. Current registry, provenance, Go tag, and post-publish install smoke
+  evidence is recorded in
+  `docs/internal/reports/2026-07-02-release-0-1-11-evidence.md`.
 - The Python distribution-name decision is recorded in
   `docs/internal/decisions/2026-05-27-python-distribution-name.md`: publish
   `runcost-ai` on PyPI while preserving `import runcost` and the `runcost` CLI.

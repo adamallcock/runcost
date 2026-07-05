@@ -23,7 +23,7 @@ The recommended catalog source priority is exposed as
 | LiteLLM model prices JSON | `price_cards_from_litellm` / `priceCardsFromLiteLLM` / `PriceCardsFromLiteLLM` | Handles token, cached token, and reasoning token fields that map cleanly to RunCost components. |
 | OpenRouter models API | `price_cards_from_openrouter_models` / `priceCardsFromOpenRouterModels` / `PriceCardsFromOpenRouterModels` | Handles prompt, completion, cache, reasoning, request, image, web search, and tiered context fields covered by fixtures. |
 | models.dev API catalog | `price_cards_from_models_dev` / `priceCardsFromModelsDev` / `PriceCardsFromModelsDev` | Handles per-million token prices, cache read/write, reasoning, audio token fields, context tiers, capabilities, limits, and MIT source metadata covered by fixtures. |
-| Reviewed official pricing snapshots | `price_cards_from_official_snapshot` / `priceCardsFromOfficialSnapshot` / `PriceCardsFromOfficialSnapshot` | Handles reviewed provider pricing page rows with source URL, retrieval time, version/license metadata, effective dates, aliases, token prices, and tool/search unit prices. |
+| Reviewed official pricing snapshots | `price_cards_from_official_snapshot` / `priceCardsFromOfficialSnapshot` / `PriceCardsFromOfficialSnapshot` | Handles reviewed provider pricing page rows with source URL, retrieval time, version/license metadata, effective dates, aliases, pricing periods, UTC billing schedules, token prices, and tool/search unit prices. |
 | Portkey pricing data | `price_cards_from_portkey` / `priceCardsFromPortkey` / `PriceCardsFromPortkey` | Handles token, cache, reasoning, and web-search price fields covered by fixtures. |
 | RunCost source-cache envelope | `price_cards_from_source_cache` / `priceCardsFromSourceCache` / `PriceCardsFromSourceCache` | Handles offline refresh/cache bundles that carry source URL, retrieval time, checksum, generated time, and canonical price cards. |
 | Bundled default source-cache catalog | `default_price_cards` / `defaultPriceCards` / `DefaultPriceCards` | Loads the reviewed package data generated from `llm-prices`, LiteLLM, OpenRouter, models.dev, and targeted official pricing/redirect snapshots. |
@@ -61,6 +61,8 @@ Every source adapter should:
 
 - Return canonical `PriceCard` objects.
 - Preserve source name, URL, and retrieval time when available.
+- Preserve `pricing_period` and `billing_schedule` fields when the source can
+  prove repeating time-window pricing.
 - Drop records that cannot be safely converted.
 - Avoid guessing units when a source field is ambiguous.
 - Prefer warnings and fixture expansion over silent behavior changes.

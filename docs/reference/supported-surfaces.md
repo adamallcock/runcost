@@ -39,7 +39,7 @@ For the full fixture-derived provider/surface/language matrix, see
 | xAI | Chat Completions through OpenAI-compatible usage | Fixture-backed |
 | xAI | Responses through OpenAI-compatible usage | Fixture-backed |
 | Mistral | Chat Completions through OpenAI-compatible usage | Fixture-backed |
-| DeepSeek | Chat Completions through OpenAI-compatible usage plus cache hit and miss fields | Fixture-backed |
+| DeepSeek | Chat Completions through OpenAI-compatible usage plus cache hit and miss fields; response `created` timestamp feeds `context.priced_at` for pricing-period selection | Fixture-backed |
 | Azure OpenAI | Chat Completions through OpenAI-compatible usage | Fixture-backed |
 | Hugging Face Inference Providers | Chat Completions through OpenAI-compatible usage | Fixture-backed |
 | Cohere | Chat | Fixture-backed |
@@ -100,6 +100,10 @@ For the full fixture-derived provider/surface/language matrix, see
 - OpenAI Conversations are documented as state resources, not standalone usage-bearing model responses. Price Responses calls that attach to Conversations through the fixture-backed OpenAI Responses extractor.
 - Anthropic Messages extraction is fixture-backed for standard prompt caching, streaming final usage, and Fable 5 fallback billing variants: direct zero-bill classifier blocks, server-side fallback, mid-stream fallback with per-model output attribution, sticky-served fallback turns, and client-side fallback-credit retries.
 - OpenAI Responses hosted tool extraction is fixture-backed for web search, file search, code interpreter calls, computer-use action counts, and function-call counts. Responses usage detail fields for orchestration input, cached orchestration input, and orchestration output are mapped onto the existing input, cache-read, and output token components when present.
+- Pricing-period selection is fixture-backed for DeepSeek-style UTC peak and
+  regular windows. When a provider response does not contain a usable timestamp,
+  callers can set `context.priced_at` on normalized usage or pass an explicit
+  `pricing_period` through their own usage ledger.
 - Tool/feature pricing is complete for the current exit gate: OpenAI-style hosted tools, OpenRouter/provider-reported costs, custom internal tools, OpenAI organization usage completions text/cache/audio tokens, OpenAI Embeddings per-response and organization usage bucket tokens, OpenAI Images token/image-unit usage, OpenAI organization usage image buckets, OpenAI organization usage audio speech character buckets, normalized generated media, Cohere Rerank search units, OpenAI audio transcription duration/token usage, OpenAI organization usage audio transcription seconds, OpenAI Vector Stores `usage_bytes` to GB-day conversion with an explicit storage-day window, OpenAI organization usage code-interpreter `num_sessions`, runtime-second, and GB-day storage pricing. Broader provider-specific storage/session extraction and live validation remain beta hardening.
 - Gemini Live API extraction uses `google.gemini.live`, reads `usageMetadata.promptTokensDetails` and `usageMetadata.responseTokensDetails`, maps `AUDIO` entries to `input_audio_tokens` and `output_audio_tokens`, and preserves `usageMetadata.totalTokenCount` as raw usage rather than pricing it directly. The bundled default catalog includes a reviewed `google-official` card for `gemini-3.5-live-translate-preview`.
 - Google Gemini Interactions extraction uses `google.gemini.interactions`, reads v2.9.0 `metadata.total_usage`, camelCase `metadata.totalUsage`, or legacy `metadata.usage`, maps lower-case modality token arrays into the canonical token components, and treats `google_search` grounding counts as `web_search_units`; broader grounding/tool pricing still depends on caller-supplied price cards.

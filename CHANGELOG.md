@@ -16,6 +16,19 @@ limitations.
 
 - No unreleased changes yet.
 
+## 0.1.12
+
+- Add generic pricing-period selection for peak, regular, and other
+  time-window price cards across Python, JavaScript/TypeScript, and Go.
+- Extract DeepSeek chat completion `created` timestamps into `context.priced_at`
+  so UTC peak-window pricing can be derived from raw provider responses.
+- Add fixture-backed warnings for missing, unsupported, and unsupported-timezone
+  pricing periods, plus debug trace metadata for selected period windows.
+- Normalize billing schedules from official-snapshot, user-pricing, source-cache,
+  and canonical price-card adapters, including camelCase user-owned source data.
+- Keep bundled DeepSeek default catalog prices unchanged until peak-valley
+  prices are verified from official evidence.
+
 ## 0.1.11
 
 - Add Anthropic Claude Fable 5 fallback billing extraction and pricing behavior

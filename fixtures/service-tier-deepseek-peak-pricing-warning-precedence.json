@@ -1,0 +1,98 @@
+{
+  "name": "service-tier-deepseek-peak-pricing-warning-precedence",
+  "description": "Preserves service-tier unsupported diagnostics when period-specific DeepSeek cards exist only for a different tier.",
+  "metadata": {
+    "requirement_ids": ["RC-FIXTURE-CONFORMANCE", "RC-PRICING-PERIOD", "RC-SERVICE-TIER"],
+    "provider": "deepseek",
+    "surface": "deepseek.chat_completions",
+    "scenario": "service_tier",
+    "tags": ["component:output_text_tokens", "pricing_period", "service_tier", "warning:service_tier_unsupported"],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "deepseek",
+      "surface": "deepseek.chat_completions",
+      "model": {
+        "requested": "deepseek-v4-pro",
+        "billed": "deepseek-v4-pro",
+        "alias_resolution": "none"
+      },
+      "context": {
+        "service_tier": "priority",
+        "pricing_period": "peak"
+      },
+      "components": [
+        {
+          "name": "output_text_tokens",
+          "quantity": "1000000",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "deepseek:deepseek-v4-pro:regular:standard",
+        "provider": "deepseek",
+        "surface": "deepseek.chat_completions",
+        "model": "deepseek-v4-pro",
+        "service_tier": "standard",
+        "pricing_period": "regular",
+        "components": [
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {"amount": "0.87", "currency": "USD", "per": "1000000"}
+          }
+        ],
+        "source": {"name": "fixture", "retrieved_at": "2026-07-15T00:00:00Z"}
+      },
+      {
+        "schema_version": "0.1",
+        "id": "deepseek:deepseek-v4-pro:peak:standard",
+        "provider": "deepseek",
+        "surface": "deepseek.chat_completions",
+        "model": "deepseek-v4-pro",
+        "service_tier": "standard",
+        "pricing_period": "peak",
+        "components": [
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {"amount": "1.74", "currency": "USD", "per": "1000000"}
+          }
+        ],
+        "source": {"name": "fixture", "retrieved_at": "2026-07-15T00:00:00Z"}
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "deepseek",
+      "surface": "deepseek.chat_completions",
+      "model": {
+        "requested": "deepseek-v4-pro",
+        "billed": "deepseek-v4-pro",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "service_tier_unsupported",
+          "message": "No price card found for service tier priority.",
+          "metadata": {
+            "model": "deepseek-v4-pro",
+            "service_tier": "priority"
+          }
+        }
+      ]
+    }
+  }
+}

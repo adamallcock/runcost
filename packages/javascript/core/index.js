@@ -202,6 +202,185 @@ function usageContext(usageLedger) {
   return usageLedger.context || {};
 }
 
+function dateTimeValue(value) {
+  if (value === undefined || value === null) return null;
+  const text = String(value);
+  if (!text.includes("T") || !/(Z|[+-]\d\d:\d\d)$/.test(text)) return null;
+  const parsed = Date.parse(text);
+  return Number.isNaN(parsed) ? null : new Date(parsed);
+}
+
+function unixSecondsPricedAt(value) {
+  if (value === undefined || value === null) return null;
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds)) return null;
+  const date = new Date(Math.trunc(seconds) * 1000);
+  if (Number.isNaN(date.getTime())) return null;
+  try {
+    return date.toISOString().replace(".000Z", "Z");
+  } catch {
+    return null;
+  }
+}
+
+function cardPricingPeriod(card) {
+  const value = card.pricing_period || card.pricingPeriod;
+  return value ? String(value) : null;
+}
+
+function cardBillingSchedule(card) {
+  const schedule = card.billing_schedule || card.billingSchedule || {};
+  return schedule && typeof schedule === "object" ? schedule : {};
+}
+
+function normalizeBillingSchedule(schedule) {
+  if (!schedule || typeof schedule !== "object") return null;
+  const normalized = {};
+  if (schedule.timezone !== undefined) normalized.timezone = schedule.timezone;
+  const defaultPeriod = schedule.default_period ?? schedule.defaultPeriod;
+  if (defaultPeriod !== undefined) normalized.default_period = defaultPeriod;
+  const boundaryPolicy = schedule.boundary_policy ?? schedule.boundaryPolicy;
+  if (boundaryPolicy !== undefined) normalized.boundary_policy = boundaryPolicy;
+  if (Array.isArray(schedule.windows)) {
+    normalized.windows = schedule.windows.map((window) => {
+      if (!window || typeof window !== "object") return window;
+      const normalizedWindow = {};
+      if (window.period !== undefined) normalizedWindow.period = window.period;
+      if (window.start !== undefined) normalizedWindow.start = window.start;
+      if (window.end !== undefined) normalizedWindow.end = window.end;
+      return normalizedWindow;
+    });
+  } else if ("windows" in schedule) {
+    normalized.windows = schedule.windows;
+  }
+  return normalized;
+}
+
+function timeSeconds(value) {
+  if (typeof value !== "string") return null;
+  const parts = value.split(":");
+  if (![2, 3].includes(parts.length)) return null;
+  const [hourText, minuteText, secondText = "0"] = parts;
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    !Number.isInteger(second) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59 ||
+    second < 0 ||
+    second > 59
+  ) {
+    return null;
+  }
+  return hour * 3600 + minute * 60 + second;
+}
+
+function timeInWindow(current, start, end) {
+  if (start <= end) return current >= start && current < end;
+  return current >= start || current < end;
+}
+
+function pricingPeriodFromSchedule(schedule, pricedAt) {
+  const timezone = schedule.timezone || "UTC";
+  if (timezone !== "UTC") {
+    return { unsupported_timezone: timezone };
+  }
+  const boundaryPolicy = schedule.boundary_policy || schedule.boundaryPolicy || "start_inclusive_end_exclusive";
+  if (boundaryPolicy !== "start_inclusive_end_exclusive") {
+    return { unsupported_schedule: "boundary_policy" };
+  }
+  if (!Array.isArray(schedule.windows)) {
+    return { unsupported_schedule: "windows" };
+  }
+  const current = (
+    pricedAt.getUTCHours() * 3600 +
+    pricedAt.getUTCMinutes() * 60 +
+    pricedAt.getUTCSeconds()
+  );
+  for (const window of schedule.windows) {
+    if (!window || typeof window !== "object") return { unsupported_schedule: "window" };
+    const start = timeSeconds(window.start);
+    const end = timeSeconds(window.end);
+    if (start === null || end === null || !window.period) {
+      return { unsupported_schedule: "window" };
+    }
+    if (timeInWindow(current, start, end)) {
+      return {
+        pricing_period: String(window.period),
+        period_selection: "derived_from_priced_at",
+        pricing_window: `${window.start}-${window.end}`,
+        pricing_timezone: timezone
+      };
+    }
+  }
+  const defaultPeriod = schedule.default_period || schedule.defaultPeriod;
+  if (defaultPeriod) {
+    return {
+      pricing_period: String(defaultPeriod),
+      period_selection: "derived_from_priced_at",
+      pricing_window: "default",
+      pricing_timezone: timezone
+    };
+  }
+  return {};
+}
+
+function pricingPeriodSelection(usageLedger, card) {
+  const context = usageContext(usageLedger);
+  const explicit = context.pricing_period || context.pricingPeriod;
+  if (explicit) {
+    return { pricing_period: String(explicit), period_selection: "explicit_context" };
+  }
+  const schedule = cardBillingSchedule(card);
+  if (Object.keys(schedule).length === 0) return {};
+  const pricedAt = dateTimeValue(context.priced_at || context.pricedAt);
+  if (!pricedAt) return {};
+  return pricingPeriodFromSchedule(schedule, pricedAt);
+}
+
+function cardPricingPeriodMatches(usageLedger, card) {
+  const period = cardPricingPeriod(card);
+  if (!period) return true;
+  return pricingPeriodSelection(usageLedger, card).pricing_period === period;
+}
+
+function cardPeriodRank(usageLedger, card) {
+  const period = cardPricingPeriod(card);
+  if (!period) return 0;
+  return pricingPeriodSelection(usageLedger, card).pricing_period === period ? 1 : 0;
+}
+
+function pricingPeriodsForCards(cards) {
+  return [...new Set(cards.map(cardPricingPeriod).filter(Boolean))].sort();
+}
+
+function requestedPricingPeriodForCards(usageLedger, cards) {
+  const context = usageContext(usageLedger);
+  const explicit = context.pricing_period || context.pricingPeriod;
+  if (explicit) return String(explicit);
+  for (const card of cards) {
+    const selection = pricingPeriodSelection(usageLedger, card);
+    if (selection.pricing_period) return String(selection.pricing_period);
+  }
+  return null;
+}
+
+function unsupportedBillingScheduleReason(usageLedger, cards) {
+  const context = usageContext(usageLedger);
+  if (!dateTimeValue(context.priced_at || context.pricedAt)) return null;
+  for (const card of cards) {
+    const selection = pricingPeriodSelection(usageLedger, card);
+    if (selection.unsupported_timezone) return String(selection.unsupported_timezone);
+    if (selection.unsupported_schedule) return String(selection.unsupported_schedule);
+  }
+  return null;
+}
+
 function compareText(left, right) {
   if (left < right) return -1;
   if (left > right) return 1;
@@ -311,9 +490,13 @@ function effectiveMatches(card, pricedAt) {
 }
 
 function cardContextMatches(usageLedger, card) {
+  return cardContextExceptPeriodMatches(usageLedger, card) && cardPricingPeriodMatches(usageLedger, card);
+}
+
+function cardContextExceptPeriodMatches(usageLedger, card) {
   const context = usageContext(usageLedger);
   const requestedServiceTier = context.service_tier || "standard";
-  const pricedAt = datePart(context.priced_at);
+  const pricedAt = datePart(context.priced_at || context.pricedAt);
   if (card.service_tier && card.service_tier !== requestedServiceTier) {
     return false;
   }
@@ -331,6 +514,7 @@ function cardScore(usageLedger, card) {
   if (card.service_tier === requestedServiceTier) score += 4;
   if (context.region && card.region === context.region) score += 2;
   if (card.effective) score += 1;
+  if (cardPricingPeriod(card)) score += 4;
   return score;
 }
 
@@ -346,14 +530,30 @@ function sourcePriorityScore(card, priceSourcePriority) {
 }
 
 function matchingCards(usageLedger, priceCards, priceSourcePriority = []) {
-  return priceCards
-    .map((card, index) => ({
+  const periodContextCards = priceCards.filter((card) => (
+    cardIdentityMatches(usageLedger, card) &&
+    cardPricingPeriod(card) &&
+    cardContextExceptPeriodMatches(usageLedger, card)
+  ));
+  const scored = [];
+  for (let index = 0; index < priceCards.length; index += 1) {
+    const card = priceCards[index];
+    if (!cardIdentityMatches(usageLedger, card) || !cardContextMatches(usageLedger, card)) continue;
+    scored.push({
       card,
       index,
+      periodRank: cardPeriodRank(usageLedger, card),
       score: cardScore(usageLedger, card) + sourcePriorityScore(card, priceSourcePriority)
-    }))
-    .filter(({ card }) => cardIdentityMatches(usageLedger, card) && cardContextMatches(usageLedger, card))
+    });
+  }
+  if (periodContextCards.length > 0 && scored.length > 0 && !scored.some((item) => item.periodRank === 1)) {
+    const unsupportedReason = unsupportedBillingScheduleReason(usageLedger, periodContextCards);
+    const requestedPeriod = requestedPricingPeriodForCards(usageLedger, periodContextCards);
+    if (unsupportedReason || requestedPeriod) return [];
+  }
+  return scored
     .sort((a, b) => (
+      b.periodRank - a.periodRank ||
       b.score - a.score ||
       compareText(String((a.card.source || {}).name || ""), String((b.card.source || {}).name || "")) ||
       compareText(String(a.card.id || ""), String(b.card.id || "")) ||
@@ -370,7 +570,8 @@ function priceLookupCacheKey(usageLedger, sourcePriority = []) {
     billedModel(usageLedger),
     context.service_tier || "",
     context.region || "",
-    datePart(context.priced_at) || "",
+    context.pricing_period || context.pricingPeriod || "",
+    context.priced_at || context.pricedAt || "",
     sourcePriority
   ]);
 }
@@ -760,8 +961,44 @@ function noMatchingCardWarning(usageLedger, priceCards) {
       }
     };
   }
+  const periodCards = identityCards.filter((card) => (
+    cardPricingPeriod(card) &&
+    cardContextExceptPeriodMatches(usageLedger, card)
+  ));
+  if (periodCards.length > 0) {
+    const unsupportedReason = unsupportedBillingScheduleReason(usageLedger, periodCards);
+    if (unsupportedReason) {
+      return {
+        code: "billing_schedule_unsupported",
+        message: `Billing schedule ${unsupportedReason} is not supported.`,
+        metadata: {
+          ...warningIdentityMetadata(usageLedger),
+          timezone: unsupportedReason
+        }
+      };
+    }
+    const requestedPeriod = requestedPricingPeriodForCards(usageLedger, periodCards);
+    if (requestedPeriod) {
+      return {
+        code: "pricing_period_unsupported",
+        message: `No price card found for pricing period ${requestedPeriod}.`,
+        metadata: {
+          ...warningIdentityMetadata(usageLedger),
+          pricing_period: requestedPeriod
+        }
+      };
+    }
+    return {
+      code: "pricing_period_required",
+      message: "Pricing period is required for period-specific price cards.",
+      metadata: {
+        ...warningIdentityMetadata(usageLedger),
+        pricing_periods: pricingPeriodsForCards(periodCards)
+      }
+    };
+  }
 
-  const pricedAt = datePart(context.priced_at);
+  const pricedAt = datePart(context.priced_at || context.pricedAt);
   if (
     pricedAt &&
     identityCards.length > 0 &&
@@ -936,7 +1173,8 @@ function stalePriceWarning(usageLedger, card, thresholdValue) {
   if (threshold === null) {
     return null;
   }
-  const pricedAt = dateValue(usageContext(usageLedger).priced_at);
+  const context = usageContext(usageLedger);
+  const pricedAt = dateValue(context.priced_at || context.pricedAt);
   const retrievedAt = dateValue((card.source || {}).retrieved_at);
   if (pricedAt === null || retrievedAt === null) {
     return null;
@@ -1168,13 +1406,23 @@ export function calculateCost({
     }
     const match = matches[0];
     const { card, priceComponent, componentMetadata } = match;
+    const periodSelection = pricingPeriodSelection(componentUsageLedger, card);
+    const periodMetadata = {};
+    if (periodSelection.pricing_period === cardPricingPeriod(card)) {
+      for (const key of ["pricing_period", "period_selection", "pricing_window", "pricing_timezone"]) {
+        if (periodSelection[key] !== undefined) {
+          periodMetadata[key] = periodSelection[key];
+        }
+      }
+    }
     if (trace) {
       trace.decisions.push({
         type: "price_component_match",
         component: component.name,
         candidate_price_card_ids: matches.map(({ card: matchedCard }) => matchedCard.id),
         selected_price_card_id: card.id,
-        selected_source: card.source.name
+        selected_source: card.source.name,
+        ...periodMetadata
       });
     }
     if (card.model !== componentBilledModel && (card.aliases || []).includes(componentBilledModel)) {
@@ -1245,9 +1493,10 @@ export function calculateCost({
       discount_eligible: discountEligible
     };
     const outputMetadata = {
-      ...(component.metadata && typeof component.metadata === "object" ? component.metadata : {}),
-      ...(componentMetadata || {})
+      ...(component.metadata && typeof component.metadata === "object" ? component.metadata : {})
     };
+    Object.assign(outputMetadata, periodMetadata);
+    Object.assign(outputMetadata, componentMetadata || {});
     if (Object.keys(outputMetadata).length > 0) {
       costComponent.metadata = outputMetadata;
     }
@@ -1543,8 +1792,8 @@ function xaiServerSideToolUsageComponents(response, usage) {
   };
 }
 
-function baseUsageLedger({ provider, surface, requestedModel, returnedModel, components, rawUsage }) {
-  return {
+function baseUsageLedger({ provider, surface, requestedModel, returnedModel, components, rawUsage, context }) {
+  const ledger = {
     schema_version: "0.1",
     provider,
     surface,
@@ -1557,6 +1806,28 @@ function baseUsageLedger({ provider, surface, requestedModel, returnedModel, com
     components,
     raw_usage: rawUsage
   };
+  if (context && Object.keys(context).length > 0) {
+    ledger.context = context;
+  }
+  return ledger;
+}
+
+function usageContextFromOptions(response, provider, options = {}) {
+  const context = { ...(options.context || {}) };
+  const pricedAt = options.priced_at ?? options.pricedAt;
+  if (pricedAt !== undefined && pricedAt !== null) {
+    context.priced_at = String(pricedAt);
+  } else if (provider === "deepseek" && context.priced_at === undefined && context.pricedAt === undefined) {
+    const createdPricedAt = unixSecondsPricedAt(response.created);
+    if (createdPricedAt) {
+      context.priced_at = createdPricedAt;
+    }
+  }
+  const pricingPeriod = options.pricing_period ?? options.pricingPeriod;
+  if (pricingPeriod !== undefined && pricingPeriod !== null) {
+    context.pricing_period = String(pricingPeriod);
+  }
+  return context;
 }
 
 function openAIResponsesPayload(response) {
@@ -2173,13 +2444,16 @@ export function extractOpenAICompatibleChatCompletionsUsage(response, options = 
   const prompt = usage.prompt_tokens ?? ((usage.prompt_cache_hit_tokens || 0) + (usage.prompt_cache_miss_tokens || 0));
   const completion = usage.completion_tokens || 0;
   const surface = options.surface || "openai.chat_completions";
+  const provider = options.provider || OPENAI_COMPATIBLE_CHAT_PROVIDERS[surface] || "openai";
+  const context = usageContextFromOptions(response, provider, options);
 
   return baseUsageLedger({
-    provider: options.provider || OPENAI_COMPATIBLE_CHAT_PROVIDERS[surface] || "openai",
+    provider,
     surface,
     requestedModel: options.model || response.model,
     returnedModel: response.model,
     rawUsage: usage,
+    context,
     components: compactComponents([
       positiveComponent("input_uncached_tokens", prompt - cachedInput.value, "token", "$.usage.prompt_tokens"),
       positiveComponent("input_cache_read_tokens", cachedInput.value, "token", cachedInput.sourcePath),
@@ -4055,8 +4329,20 @@ function componentAmount(entry, keys) {
   return undefined;
 }
 
+function normalizePriceCard(card) {
+  const normalized = { ...card };
+  const schedule = normalizeBillingSchedule(normalized.billing_schedule || normalized.billingSchedule);
+  if (schedule) {
+    normalized.billing_schedule = schedule;
+    delete normalized.billingSchedule;
+  }
+  return normalized;
+}
+
 function canonicalPriceCards(rawCards) {
-  return Array.isArray(rawCards) ? rawCards.filter((card) => card && typeof card === "object") : [];
+  return Array.isArray(rawCards)
+    ? rawCards.filter((card) => card && typeof card === "object").map((card) => normalizePriceCard(card))
+    : [];
 }
 
 function sourceCachePriceCards(entry) {
@@ -4307,6 +4593,7 @@ export function priceCardsFromOfficialSnapshot(data, options = {}) {
   const providerDefault = data.provider || options.provider || "unknown";
   const surfaceDefault = data.surface || options.surface;
   const perDefault = numberString(data.per || "1000000");
+  const scheduleDefault = normalizeBillingSchedule(data.billing_schedule || data.billingSchedule);
   const toolPriceDefaults = data.tool_prices && typeof data.tool_prices === "object"
     ? data.tool_prices
     : data.toolPrices && typeof data.toolPrices === "object"
@@ -4367,9 +4654,13 @@ export function priceCardsFromOfficialSnapshot(data, options = {}) {
     addOfficialSnapshotComponent(components, pricingRow, "code_interpreter_call_units", "call", ["code_interpreter_call", "code_interpreter", "code_execution"], "1");
     addOfficialSnapshotComponent(components, pricingRow, "attachment_search_units", "call", ["attachment_search"], "1");
     if (components.length === 0) return [];
+    const pricingPeriod = row.pricing_period || row.pricingPeriod;
+    const defaultCardId = pricingPeriod
+      ? `${provider}:${model}:${pricingPeriod}:official-snapshot`
+      : `${provider}:${model}:official-snapshot`;
     const card = {
       schema_version: "0.1",
-      id: row.price_card_id || row.priceCardId || `${provider}:${model}:official-snapshot`,
+      id: row.price_card_id || row.priceCardId || defaultCardId,
       provider,
       model,
       aliases: row.aliases || [],
@@ -4388,6 +4679,9 @@ export function priceCardsFromOfficialSnapshot(data, options = {}) {
     if (surface) card.surface = surface;
     if (row.service_tier) card.service_tier = row.service_tier;
     if (row.region) card.region = row.region;
+    if (pricingPeriod) card.pricing_period = pricingPeriod;
+    const schedule = normalizeBillingSchedule(row.billing_schedule || row.billingSchedule) || scheduleDefault;
+    if (schedule) card.billing_schedule = schedule;
     if (row.effective && typeof row.effective === "object") card.effective = row.effective;
     return [card];
   });
@@ -4411,17 +4705,25 @@ export function priceCardsFromUserPricing(data, options = {}) {
   const providerDefault = data.provider || options.provider || "user";
   const surfaceDefault = data.surface || options.surface;
   const serviceTierDefault = data.service_tier || data.serviceTier;
+  const pricingPeriodDefault = data.pricing_period || data.pricingPeriod;
+  const scheduleDefault = normalizeBillingSchedule(data.billing_schedule || data.billingSchedule);
   const regionDefault = data.region;
   const perDefault = numberString(data.per || "1000000");
   return (data.models || []).flatMap((entry) => {
     if (!entry || typeof entry !== "object") return [];
     if (entry.components && entry.provider && (entry.model || entry.id)) {
-      return [{
+      const card = {
         ...entry,
         schema_version: entry.schema_version || "0.1",
         model: entry.model || entry.id,
         source: entry.source || source
-      }];
+      };
+      const schedule = normalizeBillingSchedule(card.billing_schedule || card.billingSchedule);
+      if (schedule) {
+        card.billing_schedule = schedule;
+        delete card.billingSchedule;
+      }
+      return [card];
     }
 
     const model = entry.model || entry.id;
@@ -4452,6 +4754,10 @@ export function priceCardsFromUserPricing(data, options = {}) {
     if (surface) card.surface = surface;
     const serviceTier = entry.service_tier || entry.serviceTier || serviceTierDefault;
     if (serviceTier) card.service_tier = serviceTier;
+    const pricingPeriod = entry.pricing_period || entry.pricingPeriod || pricingPeriodDefault;
+    if (pricingPeriod) card.pricing_period = pricingPeriod;
+    const schedule = normalizeBillingSchedule(entry.billing_schedule || entry.billingSchedule) || scheduleDefault;
+    if (schedule) card.billing_schedule = schedule;
     const region = entry.region || regionDefault;
     if (region) card.region = region;
     if (entry.effective && typeof entry.effective === "object") card.effective = entry.effective;

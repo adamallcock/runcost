@@ -106,13 +106,23 @@ For the current public-beta and V1 caveat register, see
 
 `price_source_disagreement`: multiple matching sources disagree.
 
+`pricing_period_required`: period-specific price cards exist for the model, but
+usage has no full billing timestamp and no explicit pricing period.
+
+`pricing_period_unsupported`: usage requested or derived a pricing period, but
+no matching period-specific price card exists.
+
+`billing_schedule_unsupported`: a candidate price card has a billing schedule
+timezone or shape that the runtime cannot safely evaluate.
+
 `provider_reported_cost_mismatch`: RunCost's computed total differs from a provider-reported total.
 
 `stream_usage_missing`: aggregation expected final streaming usage, or a specific number of call ledgers, but did not observe enough cost ledgers. The aggregate total may be incomplete.
 
 ## Current Limitations
 
-- Registry publishing is not complete.
+- Alpha packages are published, but invoice/dashboard reconciliation remains a
+  separate evidence gate before treating totals as invoice-exact.
 - Go now has typed wrappers for normalized usage, price cards, discounts, and
   core calculation, but raw provider and framework adapter paths are still
   map-backed prototype objects.

@@ -38,7 +38,13 @@
       "properties": {
         "service_tier": { "type": "string" },
         "region": { "type": "string" },
-        "priced_at": { "type": "string", "format": "date-time" },
+        "priced_at": {
+          "oneOf": [
+            { "type": "string", "format": "date" },
+            { "type": "string", "format": "date-time" }
+          ]
+        },
+        "pricing_period": { "type": "string" },
         "request_id": { "type": "string" },
         "trace_id": { "type": "string" }
       }

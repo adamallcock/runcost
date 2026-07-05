@@ -34,6 +34,12 @@
       "type": "string",
       "default": "standard"
     },
+    "pricing_period": {
+      "type": "string"
+    },
+    "billing_schedule": {
+      "$ref": "#/$defs/billing_schedule"
+    },
     "region": {
       "type": "string"
     },
@@ -145,6 +151,39 @@
         },
         "notes": {
           "type": "string"
+        }
+      }
+    },
+    "billing_schedule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timezone", "default_period", "windows"],
+      "properties": {
+        "timezone": { "type": "string", "minLength": 1 },
+        "default_period": { "type": "string", "minLength": 1 },
+        "boundary_policy": {
+          "type": "string",
+          "enum": ["start_inclusive_end_exclusive"]
+        },
+        "windows": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/billing_window" }
+        }
+      }
+    },
+    "billing_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["period", "start", "end"],
+      "properties": {
+        "period": { "type": "string", "minLength": 1 },
+        "start": {
+          "type": "string",
+          "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]{1}(:[0-5][0-9]{1})?$"
+        },
+        "end": {
+          "type": "string",
+          "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]{1}(:[0-5][0-9]{1})?$"
         }
       }
     },

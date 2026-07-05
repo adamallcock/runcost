@@ -30,6 +30,8 @@ export interface UsageContext {
   service_tier?: string;
   region?: string;
   priced_at?: string;
+  pricing_period?: string;
+  pricingPeriod?: string;
   total_input_tokens?: number | string;
   stale_after_days?: number | string;
   price_stale_after_days?: number | string;
@@ -98,6 +100,19 @@ export interface SourceInfo {
   license?: string;
 }
 
+export interface BillingWindow {
+  period: string;
+  start: string;
+  end: string;
+}
+
+export interface BillingSchedule {
+  timezone: string;
+  default_period: string;
+  boundary_policy?: "start_inclusive_end_exclusive";
+  windows: BillingWindow[];
+}
+
 export interface PriceCard {
   schema_version: SchemaVersion;
   id: string;
@@ -107,6 +122,8 @@ export interface PriceCard {
   aliases?: string[];
   service_tier?: string;
   region?: string;
+  pricing_period?: string;
+  billing_schedule?: BillingSchedule;
   effective?: EffectiveDateRange;
   components: PriceComponent[];
   source: SourceInfo;
@@ -243,6 +260,30 @@ export interface HistoricalPriceMissingWarningMetadata {
   [key: string]: unknown;
 }
 
+export interface PricingPeriodRequiredWarningMetadata {
+  provider: string;
+  surface: string;
+  model: string;
+  pricing_periods: string[];
+  [key: string]: unknown;
+}
+
+export interface PricingPeriodUnsupportedWarningMetadata {
+  provider: string;
+  surface: string;
+  model: string;
+  pricing_period: string;
+  [key: string]: unknown;
+}
+
+export interface BillingScheduleUnsupportedWarningMetadata {
+  provider: string;
+  surface: string;
+  model: string;
+  timezone: string;
+  [key: string]: unknown;
+}
+
 export interface ProviderReportedCostWarningMetadata {
   provider_reported_cost: MoneyString;
   calculated_total: MoneyString;
@@ -262,6 +303,9 @@ export type WarningMetadata =
   | DiscountNotAppliedWarningMetadata
   | StreamUsageMissingWarningMetadata
   | HistoricalPriceMissingWarningMetadata
+  | PricingPeriodRequiredWarningMetadata
+  | PricingPeriodUnsupportedWarningMetadata
+  | BillingScheduleUnsupportedWarningMetadata
   | ProviderReportedCostWarningMetadata;
 
 interface BaseCostWarning<Code extends WarningCode, Metadata extends WarningMetadata> {
@@ -289,6 +333,9 @@ export type CostWarning =
   | BaseCostWarning<"discount_not_applied", DiscountNotAppliedWarningMetadata>
   | BaseCostWarning<"stream_usage_missing", StreamUsageMissingWarningMetadata>
   | BaseCostWarning<"historical_price_missing", HistoricalPriceMissingWarningMetadata>
+  | BaseCostWarning<"pricing_period_required", PricingPeriodRequiredWarningMetadata>
+  | BaseCostWarning<"pricing_period_unsupported", PricingPeriodUnsupportedWarningMetadata>
+  | BaseCostWarning<"billing_schedule_unsupported", BillingScheduleUnsupportedWarningMetadata>
   | BaseCostWarning<"provider_reported_cost_used", ProviderReportedCostWarningMetadata>
   | BaseCostWarning<"provider_reported_cost_mismatch", ProviderReportedCostWarningMetadata>;
 
@@ -302,6 +349,10 @@ export interface DebugDecision {
   price_card_id?: string;
   selected_price_card_id?: string;
   selected_source?: string;
+  pricing_period?: string;
+  period_selection?: string;
+  pricing_window?: string;
+  pricing_timezone?: string;
   candidate_price_card_ids?: string[];
   source_priority?: string[];
   policy_id?: string;
@@ -377,6 +428,11 @@ export interface ExtractOptions {
   provider?: string;
   surface: string;
   model?: string;
+  context?: UsageContext;
+  priced_at?: string;
+  pricedAt?: string;
+  pricing_period?: string;
+  pricingPeriod?: string;
   storage_days?: string | number;
   storageDays?: string | number;
   ag2_usage_mode?: "actual" | "total" | "including_cached" | "usage_excluding_cached_inference" | "usage_including_cached_inference";
