@@ -59,6 +59,6 @@ exports.
   provider export or dashboard reduction. Use
   `docs/internal/process/invoice-dashboard-comparison.md` to convert that reviewed
   evidence into the machine-checkable comparison format.
-- PyPI and npm were later published in release `0.1.11`; current release
-  evidence is recorded in
-  `docs/internal/reports/2026-07-02-release-0-1-11-evidence.md`.
+- PyPI and npm were later published and remain verified through release
+  `0.1.12`; current release evidence is recorded in
+  `docs/internal/reports/2026-07-05-release-0-1-12-evidence.md`.
