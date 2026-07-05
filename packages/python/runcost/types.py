@@ -27,6 +27,7 @@ class UsageContext(TypedDict, total=False):
     service_tier: str
     region: str
     priced_at: str
+    pricing_period: str
     total_input_tokens: DecimalString
     stale_after_days: int
     price_stale_after_days: int
@@ -94,6 +95,22 @@ class SourceInfo(TypedDict, total=False):
     license: str
 
 
+class BillingWindow(TypedDict):
+    period: str
+    start: str
+    end: str
+
+
+class _BillingScheduleRequired(TypedDict):
+    timezone: str
+    default_period: str
+    windows: List[BillingWindow]
+
+
+class BillingSchedule(_BillingScheduleRequired, total=False):
+    boundary_policy: Literal["start_inclusive_end_exclusive"]
+
+
 class PriceCard(TypedDict, total=False):
     schema_version: SchemaVersion
     id: str
@@ -103,6 +120,8 @@ class PriceCard(TypedDict, total=False):
     aliases: List[str]
     service_tier: str
     region: str
+    pricing_period: str
+    billing_schedule: BillingSchedule
     effective: Dict[str, Optional[str]]
     components: List[PriceComponent]
     source: SourceInfo
@@ -230,6 +249,27 @@ class HistoricalPriceMissingWarningMetadata(TypedDict):
     priced_at: str
 
 
+class PricingPeriodRequiredWarningMetadata(TypedDict):
+    provider: str
+    surface: str
+    model: str
+    pricing_periods: List[str]
+
+
+class PricingPeriodUnsupportedWarningMetadata(TypedDict):
+    provider: str
+    surface: str
+    model: str
+    pricing_period: str
+
+
+class BillingScheduleUnsupportedWarningMetadata(TypedDict):
+    provider: str
+    surface: str
+    model: str
+    timezone: str
+
+
 class ProviderReportedCostWarningMetadata(TypedDict):
     provider_reported_cost: MoneyString
     calculated_total: MoneyString
@@ -248,6 +288,9 @@ WarningMetadata = Union[
     DiscountNotAppliedWarningMetadata,
     StreamUsageMissingWarningMetadata,
     HistoricalPriceMissingWarningMetadata,
+    PricingPeriodRequiredWarningMetadata,
+    PricingPeriodUnsupportedWarningMetadata,
+    BillingScheduleUnsupportedWarningMetadata,
     ProviderReportedCostWarningMetadata,
 ]
 
@@ -272,6 +315,10 @@ class DebugDecision(TypedDict, total=False):
     price_card_id: str
     selected_price_card_id: str
     selected_source: str
+    pricing_period: str
+    period_selection: str
+    pricing_window: str
+    pricing_timezone: str
     candidate_price_card_ids: List[str]
     source_priority: List[str]
     policy_id: str

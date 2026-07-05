@@ -147,6 +147,10 @@ Mapping:
 - `usage.completion_tokens_details.reasoning_tokens` -> `output_reasoning_tokens`.
 - `usage.output_tokens_details.reasoning_tokens` is accepted as a compatibility fallback for SDKs that expose chat reasoning under the newer output details name.
 - `usage.total_tokens` is preserved in raw usage but is never priced directly.
+- For DeepSeek chat completions, top-level `created` is promoted to
+  `context.priced_at` so reviewed UTC pricing-period schedules can select peak
+  or regular price cards. Caller-supplied context still takes precedence for
+  backfills and invoice reconciliation.
 
 Notes:
 

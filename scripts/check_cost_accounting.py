@@ -3,17 +3,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
+import sys
 from collections import Counter, defaultdict
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+PYTHON_PACKAGE = ROOT / "packages" / "python"
+JAVASCRIPT_CORE = ROOT / "packages" / "javascript" / "core" / "index.js"
 FIXTURE_DIR = ROOT / "fixtures"
 REPORT_PATH = ROOT / "docs" / "internal" / "reports" / "2026-06-06-cost-accounting-coverage.md"
 PUBLIC_API_REGISTRY = ROOT / "fixtures" / "source-files" / "public-api-registry.json"
 TAXONOMY = ROOT / "schemas" / "taxonomy.json"
 FIXTURE_PATHS = sorted(FIXTURE_DIR.glob("*.json"))
+
+sys.path.insert(0, str(PYTHON_PACKAGE))
+
+from runcost import calculate_cost  # noqa: E402
 
 COMPONENT_WARNING_CODES = {
     "component_unpriced",
@@ -24,6 +32,9 @@ COMPONENT_WARNING_CODES = {
 LEDGER_LEVEL_NO_PRICE_WARNING_CODES = {
     "historical_price_missing",
     "price_not_found",
+    "pricing_period_required",
+    "pricing_period_unsupported",
+    "billing_schedule_unsupported",
     "service_tier_unsupported",
     "unknown_model",
     "unknown_provider",
@@ -327,6 +338,102 @@ def check_public_api_evidence(registry: dict[str, Any], fixture_names: set[str])
     return errors
 
 
+def malformed_schedule_runtime_case() -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    usage = {
+        "schema_version": "0.1",
+        "provider": "deepseek",
+        "surface": "deepseek.chat_completions",
+        "model": {
+            "requested": "deepseek-v4-pro",
+            "billed": "deepseek-v4-pro",
+            "alias_resolution": "none",
+        },
+        "context": {"priced_at": "2026-07-15T01:30:00Z"},
+        "components": [{"name": "output_text_tokens", "quantity": "1000000", "unit": "token"}],
+    }
+    cards = [
+        {
+            "schema_version": "0.1",
+            "id": "deepseek:malformed:regular",
+            "provider": "deepseek",
+            "surface": "deepseek.chat_completions",
+            "model": "deepseek-v4-pro",
+            "pricing_period": "regular",
+            "billing_schedule": {
+                "timezone": "UTC",
+                "default_period": "regular",
+                "boundary_policy": "start_inclusive_end_exclusive",
+                "windows": [{"period": "peak", "start": "25:00", "end": "04:00"}],
+            },
+            "components": [
+                {
+                    "usage_component": "output_text_tokens",
+                    "unit": "token",
+                    "price": {"amount": "0.87", "currency": "USD", "per": "1000000"},
+                }
+            ],
+            "source": {"name": "runtime-guard"},
+        },
+        {
+            "schema_version": "0.1",
+            "id": "deepseek:malformed:peak",
+            "provider": "deepseek",
+            "surface": "deepseek.chat_completions",
+            "model": "deepseek-v4-pro",
+            "pricing_period": "peak",
+            "billing_schedule": {
+                "timezone": "UTC",
+                "default_period": "regular",
+                "boundary_policy": "start_inclusive_end_exclusive",
+                "windows": [{"period": "peak", "start": "25:00", "end": "04:00"}],
+            },
+            "components": [
+                {
+                    "usage_component": "output_text_tokens",
+                    "unit": "token",
+                    "price": {"amount": "1.74", "currency": "USD", "per": "1000000"},
+                }
+            ],
+            "source": {"name": "runtime-guard"},
+        },
+    ]
+    return usage, cards
+
+
+def check_malformed_schedule_runtime_guard() -> list[str]:
+    usage, cards = malformed_schedule_runtime_case()
+    python_result = calculate_cost(usage_ledger=usage, price_cards=cards)
+    errors = []
+    if python_result.get("components"):
+        errors.append("python malformed billing schedule guard priced a component")
+    python_warnings = python_result.get("warnings", [])
+    if not python_warnings or python_warnings[0].get("code") != "billing_schedule_unsupported":
+        errors.append(f"python malformed billing schedule guard produced {python_warnings!r}")
+
+    script = f"""
+      import {{ calculateCost }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
+      const usageLedger = {json.dumps(usage)};
+      const priceCards = {json.dumps(cards)};
+      const result = calculateCost({{ usageLedger, priceCards }});
+      process.stdout.write(JSON.stringify(result));
+    """
+    completed = subprocess.run(
+        ["node", "--input-type=module", "-e", script],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    javascript_result = json.loads(completed.stdout)
+    if javascript_result.get("components"):
+        errors.append("javascript malformed billing schedule guard priced a component")
+    javascript_warnings = javascript_result.get("warnings", [])
+    if not javascript_warnings or javascript_warnings[0].get("code") != "billing_schedule_unsupported":
+        errors.append(f"javascript malformed billing schedule guard produced {javascript_warnings!r}")
+    return errors
+
+
 def table(counter: Counter[str], columns: tuple[str, str]) -> list[str]:
     lines = [f"| {columns[0]} | {columns[1]} |", "|---|---:|"]
     for key, count in sorted(counter.items()):
@@ -444,6 +551,7 @@ def main() -> int:
         errors.extend(check_gemini_reported_output_thinking_split(path, fixture))
     errors.extend(check_source_component_requirements(fixtures))
     errors.extend(check_public_api_evidence(registry, {path.name for path, _ in loaded}))
+    errors.extend(check_malformed_schedule_runtime_guard())
 
     report = build_report(fixtures, registry)
     if args.write_report:

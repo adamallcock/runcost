@@ -125,6 +125,9 @@
             "stream_usage_missing",
             "historical_price_missing",
             "tool_component_unpriced",
+            "pricing_period_required",
+            "pricing_period_unsupported",
+            "billing_schedule_unsupported",
             "provider_reported_cost_used",
             "provider_reported_cost_mismatch"
           ]
@@ -198,6 +201,10 @@
         "price_card_id": { "type": "string" },
         "selected_price_card_id": { "type": "string" },
         "selected_source": { "type": "string" },
+        "pricing_period": { "type": "string" },
+        "period_selection": { "type": "string" },
+        "pricing_window": { "type": "string" },
+        "pricing_timezone": { "type": "string" },
         "candidate_price_card_ids": {
           "type": "array",
           "items": { "type": "string" }

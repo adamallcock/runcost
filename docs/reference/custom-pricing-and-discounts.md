@@ -115,6 +115,59 @@ Supported conditions today:
 - `min_total_input_tokens`
 - `max_total_input_tokens`
 
+## Pricing Periods
+
+Use `pricing_period` plus a UTC `billing_schedule` when a provider publishes
+different base prices for repeating billing windows, such as peak and regular
+hours. The usage ledger can provide either an explicit
+`context.pricing_period` or a full timestamp in `context.priced_at`.
+
+The following example is synthetic DeepSeek-like user pricing. Replace the
+model names, periods, windows, and amounts with verified provider or
+contract-specific prices before using it for billing.
+
+```json
+{
+  "schema_version": "0.1",
+  "id": "deepseek:deepseek-v4-pro:peak",
+  "provider": "deepseek",
+  "surface": "deepseek.chat_completions",
+  "model": "deepseek-v4-pro",
+  "pricing_period": "peak",
+  "billing_schedule": {
+    "timezone": "UTC",
+    "default_period": "regular",
+    "boundary_policy": "start_inclusive_end_exclusive",
+    "windows": [
+      {"period": "peak", "start": "01:00", "end": "04:00"},
+      {"period": "peak", "start": "06:00", "end": "10:00"}
+    ]
+  },
+  "components": [
+    {
+      "usage_component": "output_text_tokens",
+      "unit": "token",
+      "price": {"amount": "1.74", "currency": "USD", "per": "1000000"}
+    }
+  ],
+  "source": {"name": "synthetic-example"}
+}
+```
+
+Rules:
+
+- Use price periods for provider-published base prices, not customer-specific
+  discounts.
+- Do not encode peak usage as new usage components.
+- Do not overload `service_tier`; service tier remains reserved for requested
+  or served capacity modes such as standard, priority, batch, or provisioned.
+- Schedules are evaluated in UTC today. Normalize provider-local windows into
+  UTC in a reviewed snapshot.
+- Windows are start-inclusive and end-exclusive.
+- If only period-specific price cards match and usage has no full timestamp or
+  explicit period, RunCost emits `pricing_period_required` instead of silently
+  choosing a regular price.
+
 ## Discounts And Markups
 
 A discount policy applies after component costs are calculated.

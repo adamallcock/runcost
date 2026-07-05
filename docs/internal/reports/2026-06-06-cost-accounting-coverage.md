@@ -13,7 +13,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 
 ## Summary
 
-- Fixtures scanned: 143
+- Fixtures scanned: 163
 - Public API capabilities scanned: 14
 - Provider/surface component rows: 34
 - Price-source component rows: 11
@@ -24,19 +24,19 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | Scenario | Fixtures |
 |---|---:|
 | `aggregation` | 2 |
-| `debug_trace` | 1 |
+| `debug_trace` | 2 |
 | `discount` | 2 |
 | `framework_adapter` | 17 |
 | `long_context` | 2 |
-| `normalized_usage` | 12 |
+| `normalized_usage` | 22 |
 | `provider_reported` | 4 |
-| `raw_provider_response` | 69 |
+| `raw_provider_response` | 71 |
 | `service_mode` | 3 |
-| `service_tier` | 3 |
-| `source_adapter` | 14 |
-| `source_priority` | 2 |
+| `service_tier` | 4 |
+| `source_adapter` | 16 |
+| `source_priority` | 3 |
 | `strict_error` | 1 |
-| `warning` | 11 |
+| `warning` | 14 |
 
 ## Components
 
@@ -60,12 +60,12 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `input_cache_write_tokens` | 17 |
 | `input_image_tokens` | 4 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 115 |
+| `input_uncached_tokens` | 116 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 10 |
 | `output_image_tokens` | 3 |
 | `output_reasoning_tokens` | 47 |
-| `output_text_tokens` | 99 |
+| `output_text_tokens` | 118 |
 | `output_video_tokens` | 2 |
 | `request_units` | 3 |
 | `rerank_search_units` | 2 |
