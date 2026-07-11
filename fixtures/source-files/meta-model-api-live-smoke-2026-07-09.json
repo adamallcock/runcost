@@ -1,0 +1,128 @@
+{
+  "base_url": "https://api.meta.ai/v1",
+  "chat_completions": {
+    "ledger": {
+      "component_names": [
+        "input_uncached_tokens",
+        "input_cache_read_tokens",
+        "output_text_tokens",
+        "output_reasoning_tokens"
+      ],
+      "model": {
+        "alias_resolution": "none",
+        "billed": "muse-spark-1.1",
+        "requested": "muse-spark-1.1",
+        "returned": "muse-spark-1.1"
+      },
+      "price_source_names": [
+        "Meta Model API reviewed public-preview pricing snapshot"
+      ],
+      "provider": "meta",
+      "raw_response_retained": false,
+      "surface": "meta.chat_completions",
+      "total": "0.00015475",
+      "warning_codes": []
+    },
+    "response": {
+      "choice_count": 1,
+      "completion_detail_keys": [
+        "reasoning_tokens"
+      ],
+      "finish_reason": "length",
+      "message_content_present": false,
+      "message_refusal_present": false,
+      "message_role": "assistant",
+      "model": "muse-spark-1.1",
+      "object": "chat.completion",
+      "prompt_detail_keys": [
+        "cached_tokens"
+      ],
+      "raw_response_retained": false,
+      "status": 200,
+      "usage_keys": [
+        "completion_tokens",
+        "completion_tokens_details",
+        "prompt_tokens",
+        "prompt_tokens_details",
+        "total_tokens"
+      ]
+    },
+    "surface": "meta.chat_completions"
+  },
+  "exactness": "live_provider_response_catalog_prices_not_invoice_exact",
+  "generated_at": "2026-07-10T21:25:18Z",
+  "mode": "live",
+  "model": "muse-spark-1.1",
+  "models": {
+    "model_count": 1,
+    "model_ids": [
+      "muse-spark-1.1"
+    ],
+    "object": "list",
+    "raw_response_retained": false,
+    "status": 200
+  },
+  "pricing_authority": "reviewed_preview_not_primary_source_verified",
+  "product_truth_policy": {
+    "needs_product_truth": "Convert any live discrepancy into a fixture, structured warning, documented limitation, or extractor/source-adapter fix.",
+    "privacy": "The report omits prompts, messages, response content, headers, account identifiers, and raw provider responses."
+  },
+  "provider": "meta",
+  "raw_response_retained": false,
+  "responses": {
+    "ledger": {
+      "component_names": [
+        "input_uncached_tokens",
+        "input_cache_read_tokens",
+        "output_text_tokens",
+        "output_reasoning_tokens"
+      ],
+      "model": {
+        "alias_resolution": "none",
+        "billed": "muse-spark-1.1",
+        "requested": "muse-spark-1.1",
+        "returned": "muse-spark-1.1"
+      },
+      "price_source_names": [
+        "Meta Model API reviewed public-preview pricing snapshot"
+      ],
+      "provider": "meta",
+      "raw_response_retained": false,
+      "surface": "meta.responses",
+      "total": "0.00015475",
+      "warning_codes": []
+    },
+    "response": {
+      "input_detail_keys": [
+        "cached_tokens"
+      ],
+      "model": "muse-spark-1.1",
+      "object": "response",
+      "output_count": 1,
+      "output_detail_keys": [
+        "reasoning_tokens"
+      ],
+      "raw_response_retained": false,
+      "response_status": "incomplete",
+      "status": 200,
+      "usage_keys": [
+        "input_tokens",
+        "input_tokens_details",
+        "output_tokens",
+        "output_tokens_details",
+        "total_tokens"
+      ]
+    },
+    "surface": "meta.responses"
+  },
+  "safe_to_attach_to_issue": true,
+  "sanitized": true,
+  "schema_version": "0.1",
+  "secret_values_emitted": false,
+  "source": {
+    "name": "meta-model-api-live-smoke",
+    "retrieved_at": "2026-07-09T00:00:00Z",
+    "url": "https://developer.meta.com/ai/resources/blog/build-with-muse-spark/"
+  },
+  "status": "passed"
+}

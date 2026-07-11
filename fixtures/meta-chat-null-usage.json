@@ -1,0 +1,56 @@
+{
+  "name": "meta-chat-null-usage",
+  "description": "Treats a Meta Chat Completions payload with null usage as an empty compatibility ledger instead of raising a language-specific exception.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "meta",
+    "surface": "meta.chat_completions",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "meta",
+      "null_usage",
+      "raw_provider_response"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "extract": {
+      "provider": "meta",
+      "surface": "meta.chat_completions",
+      "model": "muse-spark-1.1"
+    },
+    "raw_response": {
+      "id": "chatcmpl_meta_null_usage_fixture",
+      "object": "chat.completion",
+      "model": "muse-spark-1.1",
+      "usage": null
+    },
+    "price_cards": []
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "meta",
+      "surface": "meta.chat_completions",
+      "model": {
+        "requested": "muse-spark-1.1",
+        "returned": "muse-spark-1.1",
+        "billed": "muse-spark-1.1",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

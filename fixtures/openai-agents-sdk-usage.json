@@ -1,6 +1,6 @@
 {
   "name": "openai-agents-sdk-usage",
-  "description": "Extracts OpenAI Agents SDK usage objects while preserving per-request usage entries in raw usage.",
+  "description": "Extracts OpenAI Agents SDK usage objects with cache reads and writes while preserving per-request usage entries in raw usage.",
   "metadata": {
     "requirement_ids": [
       "RC-FIXTURE-CONFORMANCE",
@@ -12,6 +12,7 @@
     "tags": [
       "adapter:openai_agents.usage",
       "component:input_cache_read_tokens",
+      "component:input_cache_write_tokens",
       "component:input_uncached_tokens",
       "component:output_reasoning_tokens",
       "component:output_text_tokens",
@@ -33,7 +34,8 @@
       "usage": {
         "input_tokens": 300,
         "input_tokens_details": {
-          "cached_tokens": 120
+          "cached_tokens": 120,
+          "cache_write_tokens": 60
         },
         "output_tokens": 140,
         "output_tokens_details": {
@@ -54,7 +56,10 @@
       "adapter": "openai_agents.usage",
       "provider": "openai",
       "surface": "openai.responses",
-      "model": "gpt-5-nano"
+      "model": "gpt-5-nano",
+      "context": {
+        "service_tier": "default"
+      }
     },
     "price_cards": [
       {
@@ -63,6 +68,7 @@
         "provider": "openai",
         "surface": "openai.responses",
         "model": "gpt-5-nano",
+        "service_tier": "standard",
         "aliases": [
           "gpt-5-nano-2026-05-24"
         ],
@@ -81,6 +87,15 @@
             "unit": "token",
             "price": {
               "amount": "0.1",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_write_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1.25",
               "currency": "USD",
               "per": "1000000"
             }
@@ -126,10 +141,10 @@
       "components": [
         {
           "name": "input_uncached_tokens",
-          "quantity": "180",
+          "quantity": "120",
           "unit": "token",
           "unit_price": "0.000001",
-          "cost": "0.00018",
+          "cost": "0.00012",
           "price_card_id": "openai:gpt-5-nano:agents-fixture",
           "discount_eligible": true
         },
@@ -139,6 +154,15 @@
           "unit": "token",
           "unit_price": "0.0000001",
           "cost": "0.000012",
+          "price_card_id": "openai:gpt-5-nano:agents-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "60",
+          "unit": "token",
+          "unit_price": "0.00000125",
+          "cost": "0.000075",
           "price_card_id": "openai:gpt-5-nano:agents-fixture",
           "discount_eligible": true
         },
@@ -161,7 +185,7 @@
           "discount_eligible": true
         }
       ],
-      "total": "0.000752",
+      "total": "0.000767",
       "price_sources": [
         {
           "name": "fixture",

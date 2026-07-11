@@ -92,8 +92,10 @@ Source reference:
 Mapping:
 
 - Read `usage`, `context_wrapper.usage`, `context.usage`, or a raw usage-shaped object.
-- `input_tokens` minus `input_tokens_details.cached_tokens` -> `input_uncached_tokens`.
+- `input_tokens` minus `input_tokens_details.cached_tokens` and
+  `input_tokens_details.cache_write_tokens` -> `input_uncached_tokens`.
 - `input_tokens_details.cached_tokens` -> `input_cache_read_tokens`.
+- `input_tokens_details.cache_write_tokens` -> `input_cache_write_tokens`.
 - `output_tokens` minus `output_tokens_details.reasoning_tokens` -> `output_text_tokens`.
 - `output_tokens_details.reasoning_tokens` -> `output_reasoning_tokens`.
 - `request_usage_entries` is preserved in raw usage for audit/debug use.

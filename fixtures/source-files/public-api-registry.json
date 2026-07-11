@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1",
-  "updated_at": "2026-06-19",
+  "updated_at": "2026-07-09",
   "description": "Machine-readable registry for the public RunCost package APIs. Schemas define data contracts; this registry defines exported capability parity.",
   "capabilities": [
     {
@@ -113,6 +113,18 @@
       "languages": {
         "python": { "runtime": ["extract_openai_compatible_chat_completions_usage", "extract_openrouter_chat_completions_usage"], "types": [] },
         "javascript": { "runtime": ["extractOpenAICompatibleChatCompletionsUsage", "extractOpenRouterChatCompletionsUsage"], "types": [] },
+        "go": { "runtime": ["ExtractUsageLedger"], "types": [] }
+      }
+    },
+    {
+      "id": "provider_extractors_meta",
+      "category": "provider_extractor",
+      "status": "polyglot",
+      "notes": "Meta Model API compatibility for Responses-style and OpenAI-compatible chat usage, with credentialed sanitized live smoke evidence for /models, /chat/completions, and /responses.",
+      "evidence": ["fixtures/meta-chat-raw-cached-reasoning.json", "fixtures/meta-responses-raw-tools-warning.json", "fixtures/source-files/meta-model-api-live-smoke-2026-07-09.json"],
+      "languages": {
+        "python": { "runtime": ["extract_meta_chat_completions_usage", "extract_meta_responses_usage"], "types": [] },
+        "javascript": { "runtime": ["extractMetaChatCompletionsUsage", "extractMetaResponsesUsage"], "types": [] },
         "go": { "runtime": ["ExtractUsageLedger"], "types": [] }
       }
     },

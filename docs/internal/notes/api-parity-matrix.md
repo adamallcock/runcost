@@ -83,6 +83,8 @@ exports.
 | Groq | Yes | Yes | Yes | `groq-chat-raw-cache.json` |
 | xAI / Grok Chat Completions | Yes | Yes | Yes | `xai-chat-raw-cache-reasoning.json` |
 | xAI / Grok Responses | Yes | Yes | Yes | `xai-responses-raw-cache-reasoning.json` |
+| Meta Model API Responses | Yes | Yes | Yes | `extract_meta_responses_usage`, `extractMetaResponsesUsage`; `meta-responses-raw-tools-warning.json` |
+| Meta Model API Chat Completions | Yes | Yes | Yes | `extract_meta_chat_completions_usage`, `extractMetaChatCompletionsUsage`; `meta-chat-raw-cached-reasoning.json` |
 | Cohere | Yes | Yes | Yes | `extract_cohere_chat_usage`, `extractCohereChatUsage`, `extract_cohere_rerank_usage`, `extractCohereRerankUsage`; `cohere-chat-raw-usage-billed-units.json`, `cohere-chat-raw-meta-billed-units.json`, `cohere-rerank-raw-billed-units.json` |
 | Mistral | Yes | Yes | Yes | `mistral-chat-raw-cache.json` |
 | Hugging Face Inference Providers | Yes | Yes | Yes | `huggingface-chat-raw-basic.json` |
@@ -99,7 +101,7 @@ exports.
 | Portkey Models pricing shape | Yes | Yes | Yes | `price_cards_from_portkey`, `priceCardsFromPortkey`, `PriceCardsFromPortkey`; `portkey-adapter-basic.json` |
 | OpenRouter `/models` API | Yes | Yes | Yes | `price_cards_from_openrouter_models`, `priceCardsFromOpenRouterModels`, `PriceCardsFromOpenRouterModels`; `openrouter-models-adapter-basic.json`, `openrouter-models-adapter-tiered.json` |
 | models.dev API catalog | Yes | Yes | Yes | `price_cards_from_models_dev`, `priceCardsFromModelsDev`, `PriceCardsFromModelsDev`; `models-dev-adapter-basic.json` |
-| Reviewed official pricing snapshots | Yes | Yes | Yes | `price_cards_from_official_snapshot`, `priceCardsFromOfficialSnapshot`, `PriceCardsFromOfficialSnapshot`; `official-snapshot-adapter-basic.json` |
+| Reviewed official/public-preview pricing snapshots | Yes | Yes | Yes | `price_cards_from_official_snapshot`, `priceCardsFromOfficialSnapshot`, `PriceCardsFromOfficialSnapshot`; `official-snapshot-adapter-basic.json`, `meta-reviewed-preview-snapshot-adapter.json` |
 | RunCost source-cache envelope | Yes | Yes | Yes | `price_cards_from_source_cache`, `priceCardsFromSourceCache`, `PriceCardsFromSourceCache`; `source-cache-adapter-basic.json` |
 | Local JSON price-source file | Yes | Yes | Yes | `price_cards_from_json_file`, `priceCardsFromJSONFile`, `PriceCardsFromJSONFile`; `user-pricing-json-file-loader.json` |
 | Local YAML price-source file | Yes | Yes | Yes | `price_cards_from_yaml_file`, `priceCardsFromYAMLFile`, `PriceCardsFromYAMLFile`; `user-pricing-yaml-file-loader.json` |

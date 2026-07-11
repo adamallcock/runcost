@@ -1,6 +1,6 @@
 {
   "name": "openai-chat-raw-cached-reasoning",
-  "description": "Raw OpenAI Chat Completions response with cached prompt and reasoning completion tokens.",
+  "description": "Raw OpenAI Chat Completions response with cache reads, cache writes, and reasoning completion tokens.",
   "metadata": {
     "requirement_ids": [
       "RC-FIXTURE-CONFORMANCE",
@@ -12,6 +12,7 @@
     "tags": [
       "cache",
       "component:input_cache_read_tokens",
+      "component:input_cache_write_tokens",
       "component:input_uncached_tokens",
       "component:output_reasoning_tokens",
       "component:output_text_tokens",
@@ -33,10 +34,12 @@
       "id": "chatcmpl_fixture",
       "object": "chat.completion",
       "model": "gpt-5.4",
+      "service_tier": "priority",
       "usage": {
         "prompt_tokens": 200,
         "prompt_tokens_details": {
-          "cached_tokens": 50
+          "cached_tokens": 50,
+          "cache_write_tokens": 30
         },
         "completion_tokens": 60,
         "completion_tokens_details": {
@@ -52,6 +55,7 @@
         "provider": "openai",
         "surface": "openai.chat_completions",
         "model": "gpt-5.4",
+        "service_tier": "priority",
         "components": [
           {
             "usage_component": "input_uncached_tokens",
@@ -67,6 +71,15 @@
             "unit": "token",
             "price": {
               "amount": "0.0000002",
+              "currency": "USD",
+              "per": "1"
+            }
+          },
+          {
+            "usage_component": "input_cache_write_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "0.0000025",
               "currency": "USD",
               "per": "1"
             }
@@ -112,10 +125,10 @@
       "components": [
         {
           "name": "input_uncached_tokens",
-          "quantity": "150",
+          "quantity": "120",
           "unit": "token",
           "unit_price": "0.000002",
-          "cost": "0.0003",
+          "cost": "0.00024",
           "price_card_id": "openai:gpt-5.4:chat:raw-fixture",
           "discount_eligible": true
         },
@@ -125,6 +138,15 @@
           "unit": "token",
           "unit_price": "0.0000002",
           "cost": "0.00001",
+          "price_card_id": "openai:gpt-5.4:chat:raw-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "30",
+          "unit": "token",
+          "unit_price": "0.0000025",
+          "cost": "0.000075",
           "price_card_id": "openai:gpt-5.4:chat:raw-fixture",
           "discount_eligible": true
         },
@@ -147,7 +169,7 @@
           "discount_eligible": true
         }
       ],
-      "total": "0.00079",
+      "total": "0.000805",
       "price_sources": [
         {
           "name": "fixture",

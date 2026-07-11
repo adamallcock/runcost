@@ -5,6 +5,7 @@ import hashlib
 import json
 import subprocess
 import sys
+from decimal import Decimal
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,6 +28,7 @@ CATALOG_PATHS = [
 ]
 
 EXPECTED_SOURCES = {
+    "openai-official": "official-snapshot",
     "anthropic-official": "official-snapshot",
     "google-official": "official-snapshot",
     "llm-prices": "llm-prices",
@@ -96,7 +98,7 @@ def check_language_loaders() -> None:
                 "const cache = defaultSourceCache();"
                 "const cards = defaultPriceCards();"
                 "if (cache.metadata.price_card_count !== cards.length) throw new Error('JS count mismatch');"
-                "if (DEFAULT_PRICE_SOURCE_PRIORITY[0] !== 'anthropic-official') throw new Error('JS priority mismatch');"
+                "if (DEFAULT_PRICE_SOURCE_PRIORITY[0] !== 'openai-official') throw new Error('JS priority mismatch');"
                 "console.log(cards.length);"
             ),
         ],
@@ -194,6 +196,196 @@ def check_xai_aliases() -> None:
         assert_true("unknown_model" not in warning_codes, f"xAI redirected slug {slug} must resolve through the default catalog")
         assert_true(ledger["model"]["billed"] == slug, f"xAI redirected slug {slug} must not masquerade as grok-4.3 alias")
         assert_true(ledger["total"] == "0.00375", f"xAI redirected slug {slug} must use Grok 4.3 token rates")
+
+
+def check_openai_gpt56() -> None:
+    cards = default_price_cards()
+    official_cards = [
+        card for card in cards
+        if card.get("provider") == "openai" and (card.get("source") or {}).get("name") == "openai-official"
+    ]
+    by_id = {card.get("id"): card for card in official_cards}
+    models = ("gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna")
+    tiers = ("standard", "batch", "flex", "priority")
+    expected_ids = {
+        f"openai:{model}:{tier}:official-snapshot"
+        for model in models
+        for tier in tiers
+    }
+    assert_true(set(by_id) == expected_ids, f"OpenAI GPT-5.6 official card ids mismatch: {sorted(set(by_id) ^ expected_ids)}")
+
+    component_order = (
+        "input_uncached_tokens",
+        "input_cache_read_tokens",
+        "input_cache_write_tokens",
+        "output_text_tokens",
+        "output_reasoning_tokens",
+    )
+    expected_rates = {
+        ("gpt-5.6-sol", "standard"): (("5", "0.5", "6.25", "30", "30"), ("10", "1", "12.5", "45", "45")),
+        ("gpt-5.6-sol", "batch"): (("2.5", "0.25", "3.125", "15", "15"), ("5", "0.5", "6.25", "22.5", "22.5")),
+        ("gpt-5.6-sol", "flex"): (("2.5", "0.25", "3.125", "15", "15"), ("5", "0.5", "6.25", "22.5", "22.5")),
+        ("gpt-5.6-sol", "priority"): (("10", "1", "12.5", "60", "60"), None),
+        ("gpt-5.6-terra", "standard"): (("2.5", "0.25", "3.125", "15", "15"), ("5", "0.5", "6.25", "22.5", "22.5")),
+        ("gpt-5.6-terra", "batch"): (("1.25", "0.125", "1.5625", "7.5", "7.5"), ("2.5", "0.25", "3.125", "11.25", "11.25")),
+        ("gpt-5.6-terra", "flex"): (("1.25", "0.125", "1.5625", "7.5", "7.5"), ("2.5", "0.25", "3.125", "11.25", "11.25")),
+        ("gpt-5.6-terra", "priority"): (("5", "0.5", "6.25", "30", "30"), None),
+        ("gpt-5.6-luna", "standard"): (("1", "0.1", "1.25", "6", "6"), ("2", "0.2", "2.5", "9", "9")),
+        ("gpt-5.6-luna", "batch"): (("0.5", "0.05", "0.625", "3", "3"), ("1", "0.1", "1.25", "4.5", "4.5")),
+        ("gpt-5.6-luna", "flex"): (("0.5", "0.05", "0.625", "3", "3"), ("1", "0.1", "1.25", "4.5", "4.5")),
+        ("gpt-5.6-luna", "priority"): (("2", "0.2", "2.5", "12", "12"), None),
+    }
+    for (model, tier), (short_rates, long_rates) in expected_rates.items():
+        card = by_id[f"openai:{model}:{tier}:official-snapshot"]
+        short_components = {
+            component.get("usage_component"): component
+            for component in card.get("components", [])
+            if (component.get("conditions") or {}).get("max_total_input_tokens") == "272000"
+        }
+        long_components = {
+            component.get("usage_component"): component
+            for component in card.get("components", [])
+            if (component.get("conditions") or {}).get("min_total_input_tokens") == "272001"
+        }
+        actual_short = tuple(Decimal(short_components[name]["price"]["amount"]) for name in component_order)
+        assert_true(actual_short == tuple(Decimal(rate) for rate in short_rates), f"{model} {tier} short-context rate matrix mismatch")
+        if long_rates is None:
+            assert_true(not long_components, f"{model} {tier} must not invent unpublished long-context rates")
+        else:
+            actual_long = tuple(Decimal(long_components[name]["price"]["amount"]) for name in component_order)
+            assert_true(actual_long == tuple(Decimal(rate) for rate in long_rates), f"{model} {tier} long-context rate matrix mismatch")
+
+    sol_standard = by_id["openai:gpt-5.6-sol:standard:official-snapshot"]
+    assert_true(sol_standard.get("aliases") == ["gpt-5.6"], "gpt-5.6 alias must resolve to Sol")
+    capabilities = (sol_standard.get("metadata") or {}).get("source_capabilities") or {}
+    assert_true(capabilities.get("cache_min_life_minutes") == 30, "GPT-5.6 cache minimum lifetime metadata mismatch")
+    assert_true(capabilities.get("explicit_cache_breakpoints") is True, "GPT-5.6 explicit cache breakpoint metadata missing")
+    assert_true(capabilities.get("long_context_threshold_tokens") == 272000, "GPT-5.6 long-context threshold metadata mismatch")
+
+    short_ledger = from_response(
+        response={
+            "model": "gpt-5.6",
+            "service_tier": "default",
+            "usage": {
+                "input_tokens": 1000,
+                "input_tokens_details": {"cached_tokens": 200, "cache_write_tokens": 100},
+                "output_tokens": 100,
+                "output_tokens_details": {"reasoning_tokens": 20},
+                "total_tokens": 1100,
+            },
+        },
+        provider="openai",
+        surface="openai.responses",
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    short_components = {component.get("name"): component for component in short_ledger.get("components", [])}
+    assert_true(short_ledger["model"]["billed"] == "gpt-5.6-sol", "gpt-5.6 alias must bill as Sol")
+    assert_true(short_ledger["total"] == "0.007225", "GPT-5.6 Sol standard cache-write total mismatch")
+    assert_true(short_components["input_uncached_tokens"]["quantity"] == "700", "Responses cache write must be excluded from uncached input")
+    assert_true(short_components["input_cache_write_tokens"]["unit_price"] == "0.00000625", "Sol standard cache-write unit price mismatch")
+
+    long_ledger = from_response(
+        response={
+            "model": "gpt-5.6-terra",
+            "usage": {
+                "input_tokens": 272001,
+                "input_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0},
+                "output_tokens": 100,
+                "output_tokens_details": {"reasoning_tokens": 0},
+                "total_tokens": 272101,
+            },
+        },
+        provider="openai",
+        surface="openai.responses",
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    long_components = {component.get("name"): component for component in long_ledger.get("components", [])}
+    assert_true(long_ledger["total"] == "1.362255", "GPT-5.6 Terra long-context total mismatch")
+    assert_true(long_components["input_uncached_tokens"]["unit_price"] == "0.000005", "Terra long-context input price mismatch")
+    assert_true(long_components["output_text_tokens"]["unit_price"] == "0.0000225", "Terra long-context output price mismatch")
+
+    boundary_ledger = from_response(
+        response={
+            "model": "gpt-5.6-luna",
+            "usage": {
+                "input_tokens": 272000,
+                "input_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0},
+                "output_tokens": 1,
+                "output_tokens_details": {"reasoning_tokens": 0},
+                "total_tokens": 272001,
+            },
+        },
+        provider="openai",
+        surface="openai.responses",
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    boundary_components = {component.get("name"): component for component in boundary_ledger.get("components", [])}
+    assert_true(boundary_ledger["total"] == "0.272006", "GPT-5.6 short-context boundary total mismatch")
+    assert_true(boundary_components["input_uncached_tokens"]["unit_price"] == "0.000001", "272,000 input tokens must retain the short-context rate")
+
+    flex_ledger = from_response(
+        response={
+            "model": "gpt-5.6-luna",
+            "service_tier": "flex",
+            "usage": {
+                "prompt_tokens": 1000,
+                "prompt_tokens_details": {"cached_tokens": 100, "cache_write_tokens": 50},
+                "completion_tokens": 100,
+                "completion_tokens_details": {"reasoning_tokens": 0},
+                "total_tokens": 1100,
+            },
+        },
+        provider="openai",
+        surface="openai.chat_completions",
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    assert_true(flex_ledger["total"] == "0.00076125", "GPT-5.6 Luna Flex cache-write total mismatch")
+    assert_true(
+        all(component["price_card_id"] == "openai:gpt-5.6-luna:flex:official-snapshot" for component in flex_ledger.get("components", [])),
+        "GPT-5.6 Luna Flex response must select the Flex official card",
+    )
+
+    fallback_card = {
+        "schema_version": "0.1",
+        "id": "openai:gpt-5.6-sol:priority:lower-priority-fallback",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-5.6-sol",
+        "service_tier": "priority",
+        "components": [
+            {
+                "usage_component": component_name,
+                "unit": "token",
+                "price": {"amount": "1", "currency": "USD", "per": "1000000"},
+            }
+            for component_name in component_order
+        ],
+        "source": {"name": "openrouter", "retrieved_at": "2026-07-10T00:00:00Z"},
+    }
+    priority_long = from_response(
+        response={
+            "model": "gpt-5.6-sol",
+            "service_tier": "priority",
+            "usage": {
+                "input_tokens": 272001,
+                "input_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0},
+                "output_tokens": 1,
+                "output_tokens_details": {"reasoning_tokens": 0},
+                "total_tokens": 272002,
+            },
+        },
+        provider="openai",
+        surface="openai.responses",
+        price_cards=[*cards, fallback_card],
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    warning_codes = [warning.get("code") for warning in priority_long.get("warnings", [])]
+    assert_true(priority_long["total"] == "0", "Unpublished Priority long-context rates must not fall back to short-context pricing")
+    assert_true("long_context_rule_missing" in warning_codes, "Priority long-context usage must fail closed with a long-context warning")
 
 
 def check_anthropic_fable_mythos() -> None:
@@ -533,6 +725,7 @@ def main() -> int:
     catalog = check_files_match()
     check_catalog_shape(catalog)
     check_language_loaders()
+    check_openai_gpt56()
     check_xai_aliases()
     check_anthropic_fable_mythos()
     check_google_service_tiers()

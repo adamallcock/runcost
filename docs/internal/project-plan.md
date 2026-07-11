@@ -61,7 +61,7 @@ Current prototype capabilities:
 - Exact alias resolution through price-card aliases.
 - Component-aware discount policies.
 - Simon Willison `llm-prices` adapter.
-- LiteLLM, Portkey, OpenRouter models, models.dev, reviewed official snapshots, source-cache, local JSON/YAML files, explicit source refresh, user compact pricing, and Helicone model-registry adapter prototypes.
+- LiteLLM, Portkey, OpenRouter models, models.dev, reviewed official/public-preview snapshots, source-cache, local JSON/YAML files, explicit source refresh, user compact pricing, and Helicone model-registry adapter prototypes.
 - Strict mode and compatibility mode.
 - Effective-date price-card selection.
 - Service-tier and region price-card matching.
@@ -1527,7 +1527,7 @@ Sprint exit criteria:
 - `npm test` validates schemas and runs all language conformance tests.
 - At least 16 fixtures pass across Python, JavaScript, and Go.
 - Strict mode and compatibility mode behavior is documented and tested.
-- Five real upstream price-source adapters beyond `llm-prices` exist in prototype form, plus reviewed official snapshots and a user compact pricing adapter.
+- Five real upstream price-source adapters beyond `llm-prices` exist in prototype form, plus reviewed official/public-preview snapshots and a user compact pricing adapter.
 - Multi-call cost-ledger aggregation is fixture-backed across Python, JavaScript/TypeScript, and Go.
 - OpenAI Responses, Anthropic Messages, and Gemini generateContent final streaming usage shapes are fixture-backed across Python, JavaScript/TypeScript, and Go.
 - The plan for code generation, schema validation, and package release synchronization is documented and actionable.

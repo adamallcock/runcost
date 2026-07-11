@@ -1,0 +1,66 @@
+{
+  "schema_version": "0.1",
+  "provider": "meta",
+  "source": {
+    "name": "Meta Model API reviewed public-preview pricing snapshot",
+    "url": "https://dev.meta.ai/docs/getting-started/sdks",
+    "retrieved_at": "2026-07-09T00:00:00Z",
+    "version": "2026-07-09",
+    "license": "reviewed"
+  },
+  "rows": [
+    {
+      "price_card_id": "meta:muse-spark:reviewed-preview-snapshot",
+      "model": "muse-spark",
+      "aliases": [
+        "Muse Spark",
+        "meta/muse-spark"
+      ],
+      "input": "0.40",
+      "cached_input": "0.40",
+      "output": "2.00",
+      "reasoning": "2.00",
+      "effective": {
+        "from": "2026-07-09"
+      },
+      "source_label": "Meta Model API public preview pricing",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token"
+        ],
+        "cache_read_priced_as_input": true,
+        "reasoning_priced_as_output": true,
+        "official_docs_login_gated_in_codex": true,
+        "primary_pricing_source_verified": false
+      },
+      "notes": "Meta docs were login-gated in Codex on 2026-07-09; Meta for Developers public-preview search text listed base Muse Spark at $0.40/M input and $2.00/M output."
+    },
+    {
+      "price_card_id": "meta:muse-spark-1.1:reviewed-preview-snapshot",
+      "model": "muse-spark-1.1",
+      "aliases": [
+        "Muse Spark 1.1",
+        "meta/muse-spark-1.1",
+        "muse-spark-1_1"
+      ],
+      "input": "1.25",
+      "cached_input": "1.25",
+      "output": "4.25",
+      "reasoning": "4.25",
+      "effective": {
+        "from": "2026-07-09"
+      },
+      "source_label": "Meta Model API public preview pricing",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token"
+        ],
+        "cache_read_priced_as_input": true,
+        "reasoning_priced_as_output": true,
+        "official_docs_login_gated_in_codex": true,
+        "primary_pricing_source_verified": false
+      },
+      "notes": "Meta docs were login-gated in Codex on 2026-07-09; public-preview prices were cross-checked against Axios and Reuters/WTVB reporting."
+    }
+  ]
+}

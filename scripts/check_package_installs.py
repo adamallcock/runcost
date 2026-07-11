@@ -98,7 +98,7 @@ def check_python_install(source_root: Path, workdir: Path) -> None:
         [
             str(python),
             "-c",
-            "from pathlib import Path; from runcost import aggregate_cost_ledgers, calculate_cost, from_response, default_price_cards, default_source_cache, DEFAULT_PRICE_SOURCE_PRIORITY, extract_google_interactions_usage, extract_bedrock_invoke_model_usage, extract_cohere_rerank_usage, extract_openai_audio_transcription_usage, extract_openai_embeddings_usage, extract_openai_images_usage, extract_openai_usage_audio_speeches_usage, extract_openai_usage_audio_transcriptions_usage, extract_openai_usage_code_interpreter_sessions_usage, extract_openai_usage_completions_usage, extract_openai_usage_embeddings_usage, extract_openai_usage_images_usage, extract_openai_vector_store_storage_usage, from_ag2_usage_summary, from_haystack_generator_result, from_langsmith_run, from_litellm_response, from_openai_agents_usage, from_openrouter_sdk_response, from_semantic_kernel_telemetry, from_vercel_ai_sdk_stream_finish, track_langchain_costs, price_cards_from_helicone, price_cards_from_json_file, price_cards_from_yaml_file, price_cards_from_models_dev, price_cards_from_official_snapshot, price_cards_from_source_cache, price_cards_from_user_pricing; from runcost.types import UsageLedger, WarningCode; p=Path('prices.json'); p.write_text('{\"provider\":\"test\",\"models\":[{\"id\":\"test\",\"prices\":{\"input\":\"1\"}}]}'); y=Path('prices.yaml'); y.write_text('provider: test\\nmodels:\\n  - id: test\\n    prices:\\n      input: \"1\"\\n'); print(aggregate_cost_ledgers, calculate_cost, from_response, len(default_price_cards()), default_source_cache()['metadata']['price_card_count'], DEFAULT_PRICE_SOURCE_PRIORITY[0], extract_google_interactions_usage, extract_bedrock_invoke_model_usage, extract_cohere_rerank_usage, extract_openai_audio_transcription_usage, extract_openai_embeddings_usage, extract_openai_images_usage, extract_openai_usage_audio_speeches_usage, extract_openai_usage_audio_transcriptions_usage, extract_openai_usage_code_interpreter_sessions_usage, extract_openai_usage_completions_usage, extract_openai_usage_embeddings_usage, extract_openai_usage_images_usage, extract_openai_vector_store_storage_usage, from_ag2_usage_summary, from_haystack_generator_result, from_langsmith_run, from_litellm_response, from_openai_agents_usage, from_openrouter_sdk_response, from_semantic_kernel_telemetry, from_vercel_ai_sdk_stream_finish, track_langchain_costs, price_cards_from_helicone, price_cards_from_json_file(p), price_cards_from_yaml_file(y), price_cards_from_models_dev, price_cards_from_official_snapshot, price_cards_from_source_cache, price_cards_from_user_pricing, UsageLedger, WarningCode)",
+            "from pathlib import Path; from runcost import aggregate_cost_ledgers, calculate_cost, from_response, default_price_cards, default_source_cache, DEFAULT_PRICE_SOURCE_PRIORITY, extract_google_interactions_usage, extract_bedrock_invoke_model_usage, extract_cohere_rerank_usage, extract_meta_chat_completions_usage, extract_meta_responses_usage, extract_openai_audio_transcription_usage, extract_openai_embeddings_usage, extract_openai_images_usage, extract_openai_usage_audio_speeches_usage, extract_openai_usage_audio_transcriptions_usage, extract_openai_usage_code_interpreter_sessions_usage, extract_openai_usage_completions_usage, extract_openai_usage_embeddings_usage, extract_openai_usage_images_usage, extract_openai_vector_store_storage_usage, from_ag2_usage_summary, from_haystack_generator_result, from_langsmith_run, from_litellm_response, from_openai_agents_usage, from_openrouter_sdk_response, from_semantic_kernel_telemetry, from_vercel_ai_sdk_stream_finish, track_langchain_costs, price_cards_from_helicone, price_cards_from_json_file, price_cards_from_yaml_file, price_cards_from_models_dev, price_cards_from_official_snapshot, price_cards_from_source_cache, price_cards_from_user_pricing; from runcost.types import UsageLedger, WarningCode; p=Path('prices.json'); p.write_text('{\"provider\":\"test\",\"models\":[{\"id\":\"test\",\"prices\":{\"input\":\"1\"}}]}'); y=Path('prices.yaml'); y.write_text('provider: test\\nmodels:\\n  - id: test\\n    prices:\\n      input: \"1\"\\n'); print(aggregate_cost_ledgers, calculate_cost, from_response, len(default_price_cards()), default_source_cache()['metadata']['price_card_count'], DEFAULT_PRICE_SOURCE_PRIORITY[0], extract_google_interactions_usage, extract_bedrock_invoke_model_usage, extract_cohere_rerank_usage, extract_meta_chat_completions_usage, extract_meta_responses_usage, extract_openai_audio_transcription_usage, extract_openai_embeddings_usage, extract_openai_images_usage, extract_openai_usage_audio_speeches_usage, extract_openai_usage_audio_transcriptions_usage, extract_openai_usage_code_interpreter_sessions_usage, extract_openai_usage_completions_usage, extract_openai_usage_embeddings_usage, extract_openai_usage_images_usage, extract_openai_vector_store_storage_usage, from_ag2_usage_summary, from_haystack_generator_result, from_langsmith_run, from_litellm_response, from_openai_agents_usage, from_openrouter_sdk_response, from_semantic_kernel_telemetry, from_vercel_ai_sdk_stream_finish, track_langchain_costs, price_cards_from_helicone, price_cards_from_json_file(p), price_cards_from_yaml_file(y), price_cards_from_models_dev, price_cards_from_official_snapshot, price_cards_from_source_cache, price_cards_from_user_pricing, UsageLedger, WarningCode)",
         ],
         workdir,
     )
@@ -137,33 +137,102 @@ print("python gemini live package smoke passed")
         encoding="utf-8",
     )
     run([str(python), str(python_live_check)], workdir)
-    python_default_openai_check = workdir / "python-default-openai-check.py"
-    python_default_openai_check.write_text(
+    python_provider_check = workdir / "python-provider-check.py"
+    python_provider_check.write_text(
         """
-from runcost import default_price_cards, from_response
+from runcost import DEFAULT_PRICE_SOURCE_PRIORITY, default_price_cards, from_response
 
-ledger = from_response(
+cards = default_price_cards()
+cache_write = from_response(
     {
-        "model": "gpt-4.1-mini-2025-04-14",
+        "model": "gpt-5.6",
         "usage": {
-            "input_tokens": 36,
-            "input_tokens_details": {"cached_tokens": 6},
-            "output_tokens": 87,
-            "output_tokens_details": {"reasoning_tokens": 12},
+            "input_tokens": 1000,
+            "input_tokens_details": {"cached_tokens": 200, "cache_write_tokens": 100},
+            "output_tokens": 100,
+            "output_tokens_details": {"reasoning_tokens": 20},
         },
     },
     provider="openai",
     surface="openai.responses",
-    model="gpt-4.1-mini",
-    price_cards=default_price_cards(),
+    price_cards=cards,
+    price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
 )
-assert ledger["total"] == "0.0001518", ledger
-assert ledger["warnings"] == [], ledger
-print("python OpenAI default catalog package smoke passed")
+assert cache_write["total"] == "0.007225", cache_write
+
+def luna(input_tokens):
+    return from_response(
+        {
+            "model": "gpt-5.6-luna",
+            "usage": {
+                "input_tokens": input_tokens,
+                "input_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0},
+                "output_tokens": 1,
+                "output_tokens_details": {"reasoning_tokens": 0},
+            },
+        },
+        provider="openai",
+        surface="openai.responses",
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+
+assert luna(272000)["total"] == "0.272006"
+assert luna(272001)["total"] == "0.544011"
+priority = from_response(
+    {
+        "model": "gpt-5.6-sol",
+        "service_tier": "priority",
+        "usage": {
+            "input_tokens": 272001,
+            "input_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0},
+            "output_tokens": 1,
+            "output_tokens_details": {"reasoning_tokens": 0},
+        },
+    },
+    provider="openai",
+    surface="openai.responses",
+    price_cards=cards,
+    price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+)
+assert priority["total"] == "0", priority
+assert "long_context_rule_missing" in {warning["code"] for warning in priority["warnings"]}, priority
+
+meta_card = {
+    "schema_version": "0.1",
+    "id": "meta:muse-spark-1.1:install-smoke",
+    "provider": "meta",
+    "surface": "meta.chat_completions",
+    "model": "muse-spark-1.1",
+    "components": [
+        {"usage_component": "input_uncached_tokens", "unit": "token", "price": {"amount": "1", "currency": "USD", "per": "1000000"}},
+        {"usage_component": "input_cache_read_tokens", "unit": "token", "price": {"amount": "0.1", "currency": "USD", "per": "1000000"}},
+        {"usage_component": "output_text_tokens", "unit": "token", "price": {"amount": "4", "currency": "USD", "per": "1000000"}},
+        {"usage_component": "output_reasoning_tokens", "unit": "token", "price": {"amount": "4", "currency": "USD", "per": "1000000"}},
+    ],
+    "source": {"name": "install-smoke"},
+}
+meta = from_response(
+    {
+        "model": "muse-spark-1.1",
+        "usage": {
+            "prompt_tokens": 100,
+            "prompt_tokens_details": {"cached_tokens": 20},
+            "completion_tokens": 40,
+            "completion_tokens_details": {"reasoning_tokens": 10},
+        },
+    },
+    provider="meta",
+    surface="meta.chat_completions",
+    price_cards=[meta_card],
+)
+assert meta["total"] == "0.000242", meta
+assert from_response({"model": "muse-spark-1.1", "usage": None}, provider="meta", surface="meta.responses", price_cards=[])["total"] == "0"
+print("python GPT-5.6 and Meta package smoke passed")
 """,
         encoding="utf-8",
     )
-    run([str(python), str(python_default_openai_check)], workdir)
+    run([str(python), str(python_provider_check)], workdir)
     run(
         [
             str(venv_dir / "bin" / "runcost"),
@@ -197,7 +266,7 @@ def check_javascript_install(source_root: Path, workdir: Path) -> None:
             "node",
             "--input-type=module",
             "-e",
-            'import fs from "node:fs"; import { aggregateCostLedgers, calculateCost, fromResponse, defaultPriceCards, defaultSourceCache, DEFAULT_PRICE_SOURCE_PRIORITY, extractGoogleInteractionsUsage, extractBedrockInvokeModelUsage, extractCohereRerankUsage, extractOpenAIAudioTranscriptionUsage, extractOpenAIEmbeddingsUsage, extractOpenAIImagesUsage, extractOpenAIUsageAudioSpeechesUsage, extractOpenAIUsageAudioTranscriptionsUsage, extractOpenAIUsageCodeInterpreterSessionsUsage, extractOpenAIUsageCompletionsUsage, extractOpenAIUsageEmbeddingsUsage, extractOpenAIUsageImagesUsage, extractOpenAIVectorStoreStorageUsage, fromAG2UsageSummary, fromHaystackGeneratorResult, fromLangSmithRun, fromLiteLLMResponse, fromOpenAIAgentsUsage, fromOpenRouterAgentResult, fromOpenRouterSDKResponse, fromSemanticKernelTelemetry, fromVercelAISDKStreamFinish, createRunCostVercelMiddleware, createRunCostVercelOnFinish, priceCardsFromHelicone, priceCardsFromJSONFile, priceCardsFromYAMLFile, priceCardsFromModelsDev, priceCardsFromOfficialSnapshot, priceCardsFromSourceCache, priceCardsFromUserPricing } from "runcost"; fs.writeFileSync("prices.json", JSON.stringify({ provider: "test", models: [{ id: "test", prices: { input: "1" } }] })); fs.writeFileSync("prices.yaml", "provider: test\\nmodels:\\n  - id: test\\n    prices:\\n      input: \\"1\\"\\n"); console.log(typeof aggregateCostLedgers, typeof calculateCost, typeof fromResponse, defaultPriceCards().length, defaultSourceCache().metadata.price_card_count, DEFAULT_PRICE_SOURCE_PRIORITY[0], typeof extractGoogleInteractionsUsage, typeof extractBedrockInvokeModelUsage, typeof extractCohereRerankUsage, typeof extractOpenAIAudioTranscriptionUsage, typeof extractOpenAIEmbeddingsUsage, typeof extractOpenAIImagesUsage, typeof extractOpenAIUsageAudioSpeechesUsage, typeof extractOpenAIUsageAudioTranscriptionsUsage, typeof extractOpenAIUsageCodeInterpreterSessionsUsage, typeof extractOpenAIUsageCompletionsUsage, typeof extractOpenAIUsageEmbeddingsUsage, typeof extractOpenAIUsageImagesUsage, typeof extractOpenAIVectorStoreStorageUsage, typeof fromAG2UsageSummary, typeof fromHaystackGeneratorResult, typeof fromLangSmithRun, typeof fromLiteLLMResponse, typeof fromOpenAIAgentsUsage, typeof fromOpenRouterAgentResult, typeof fromOpenRouterSDKResponse, typeof fromSemanticKernelTelemetry, typeof fromVercelAISDKStreamFinish, typeof createRunCostVercelMiddleware, typeof createRunCostVercelOnFinish, typeof priceCardsFromHelicone, priceCardsFromJSONFile("prices.json").length, priceCardsFromYAMLFile("prices.yaml").length, typeof priceCardsFromModelsDev, typeof priceCardsFromOfficialSnapshot, typeof priceCardsFromSourceCache, typeof priceCardsFromUserPricing);',
+            'import fs from "node:fs"; import { aggregateCostLedgers, calculateCost, fromResponse, defaultPriceCards, defaultSourceCache, DEFAULT_PRICE_SOURCE_PRIORITY, extractGoogleInteractionsUsage, extractBedrockInvokeModelUsage, extractCohereRerankUsage, extractMetaChatCompletionsUsage, extractMetaResponsesUsage, extractOpenAIAudioTranscriptionUsage, extractOpenAIEmbeddingsUsage, extractOpenAIImagesUsage, extractOpenAIUsageAudioSpeechesUsage, extractOpenAIUsageAudioTranscriptionsUsage, extractOpenAIUsageCodeInterpreterSessionsUsage, extractOpenAIUsageCompletionsUsage, extractOpenAIUsageEmbeddingsUsage, extractOpenAIUsageImagesUsage, extractOpenAIVectorStoreStorageUsage, fromAG2UsageSummary, fromHaystackGeneratorResult, fromLangSmithRun, fromLiteLLMResponse, fromOpenAIAgentsUsage, fromOpenRouterAgentResult, fromOpenRouterSDKResponse, fromSemanticKernelTelemetry, fromVercelAISDKStreamFinish, createRunCostVercelMiddleware, createRunCostVercelOnFinish, priceCardsFromHelicone, priceCardsFromJSONFile, priceCardsFromYAMLFile, priceCardsFromModelsDev, priceCardsFromOfficialSnapshot, priceCardsFromSourceCache, priceCardsFromUserPricing } from "runcost"; fs.writeFileSync("prices.json", JSON.stringify({ provider: "test", models: [{ id: "test", prices: { input: "1" } }] })); fs.writeFileSync("prices.yaml", "provider: test\\nmodels:\\n  - id: test\\n    prices:\\n      input: \\"1\\"\\n"); console.log(typeof aggregateCostLedgers, typeof calculateCost, typeof fromResponse, defaultPriceCards().length, defaultSourceCache().metadata.price_card_count, DEFAULT_PRICE_SOURCE_PRIORITY[0], typeof extractGoogleInteractionsUsage, typeof extractBedrockInvokeModelUsage, typeof extractCohereRerankUsage, typeof extractMetaChatCompletionsUsage, typeof extractMetaResponsesUsage, typeof extractOpenAIAudioTranscriptionUsage, typeof extractOpenAIEmbeddingsUsage, typeof extractOpenAIImagesUsage, typeof extractOpenAIUsageAudioSpeechesUsage, typeof extractOpenAIUsageAudioTranscriptionsUsage, typeof extractOpenAIUsageCodeInterpreterSessionsUsage, typeof extractOpenAIUsageCompletionsUsage, typeof extractOpenAIUsageEmbeddingsUsage, typeof extractOpenAIUsageImagesUsage, typeof extractOpenAIVectorStoreStorageUsage, typeof fromAG2UsageSummary, typeof fromHaystackGeneratorResult, typeof fromLangSmithRun, typeof fromLiteLLMResponse, typeof fromOpenAIAgentsUsage, typeof fromOpenRouterAgentResult, typeof fromOpenRouterSDKResponse, typeof fromSemanticKernelTelemetry, typeof fromVercelAISDKStreamFinish, typeof createRunCostVercelMiddleware, typeof createRunCostVercelOnFinish, typeof priceCardsFromHelicone, priceCardsFromJSONFile("prices.json").length, priceCardsFromYAMLFile("prices.yaml").length, typeof priceCardsFromModelsDev, typeof priceCardsFromOfficialSnapshot, typeof priceCardsFromSourceCache, typeof priceCardsFromUserPricing);',
         ],
         project_dir,
     )
@@ -210,6 +279,9 @@ def check_javascript_install(source_root: Path, workdir: Path) -> None:
         """
 import { DEFAULT_PRICE_SOURCE_PRIORITY, defaultPriceCards, fromResponse } from "runcost";
 
+if (DEFAULT_PRICE_SOURCE_PRIORITY[0] !== "openai-official") {
+  throw new Error(JSON.stringify(DEFAULT_PRICE_SOURCE_PRIORITY));
+}
 const model = "gemini-3.5-live-translate-preview";
 const ledger = fromResponse({
   modelVersion: model,
@@ -238,32 +310,99 @@ console.log("javascript gemini live package smoke passed");
         encoding="utf-8",
     )
     run(["node", str(js_live_check)], project_dir)
-    js_default_openai_check = project_dir / "default-openai-check.mjs"
-    js_default_openai_check.write_text(
+    js_provider_check = project_dir / "provider-check.mjs"
+    js_provider_check.write_text(
         """
-import { defaultPriceCards, fromResponse } from "runcost";
+import { DEFAULT_PRICE_SOURCE_PRIORITY, defaultPriceCards, fromResponse } from "runcost";
 
-const ledger = fromResponse({
-  model: "gpt-4.1-mini-2025-04-14",
+const cards = defaultPriceCards();
+const cacheWrite = fromResponse({
+  model: "gpt-5.6",
   usage: {
-    input_tokens: 36,
-    input_tokens_details: { cached_tokens: 6 },
-    output_tokens: 87,
-    output_tokens_details: { reasoning_tokens: 12 }
+    input_tokens: 1000,
+    input_tokens_details: { cached_tokens: 200, cache_write_tokens: 100 },
+    output_tokens: 100,
+    output_tokens_details: { reasoning_tokens: 20 }
   }
 }, {
   provider: "openai",
   surface: "openai.responses",
-  model: "gpt-4.1-mini",
-  priceCards: defaultPriceCards()
+  priceCards: cards,
+  priceSourcePriority: DEFAULT_PRICE_SOURCE_PRIORITY
 });
-if (ledger.total !== "0.0001518") throw new Error(JSON.stringify(ledger));
-if (ledger.warnings.length !== 0) throw new Error(JSON.stringify(ledger));
-console.log("javascript OpenAI default catalog package smoke passed");
+if (cacheWrite.total !== "0.007225") throw new Error(JSON.stringify(cacheWrite));
+
+const luna = (inputTokens) => fromResponse({
+  model: "gpt-5.6-luna",
+  usage: {
+    input_tokens: inputTokens,
+    input_tokens_details: { cached_tokens: 0, cache_write_tokens: 0 },
+    output_tokens: 1,
+    output_tokens_details: { reasoning_tokens: 0 }
+  }
+}, {
+  provider: "openai",
+  surface: "openai.responses",
+  priceCards: cards,
+  priceSourcePriority: DEFAULT_PRICE_SOURCE_PRIORITY
+});
+if (luna(272000).total !== "0.272006") throw new Error(JSON.stringify(luna(272000)));
+if (luna(272001).total !== "0.544011") throw new Error(JSON.stringify(luna(272001)));
+const priority = fromResponse({
+  model: "gpt-5.6-sol",
+  service_tier: "priority",
+  usage: {
+    input_tokens: 272001,
+    input_tokens_details: { cached_tokens: 0, cache_write_tokens: 0 },
+    output_tokens: 1,
+    output_tokens_details: { reasoning_tokens: 0 }
+  }
+}, {
+  provider: "openai",
+  surface: "openai.responses",
+  priceCards: cards,
+  priceSourcePriority: DEFAULT_PRICE_SOURCE_PRIORITY
+});
+if (priority.total !== "0" || !priority.warnings.some(({ code }) => code === "long_context_rule_missing")) {
+  throw new Error(JSON.stringify(priority));
+}
+
+const metaCard = {
+  schema_version: "0.1",
+  id: "meta:muse-spark-1.1:install-smoke",
+  provider: "meta",
+  surface: "meta.chat_completions",
+  model: "muse-spark-1.1",
+  components: [
+    { usage_component: "input_uncached_tokens", unit: "token", price: { amount: "1", currency: "USD", per: "1000000" } },
+    { usage_component: "input_cache_read_tokens", unit: "token", price: { amount: "0.1", currency: "USD", per: "1000000" } },
+    { usage_component: "output_text_tokens", unit: "token", price: { amount: "4", currency: "USD", per: "1000000" } },
+    { usage_component: "output_reasoning_tokens", unit: "token", price: { amount: "4", currency: "USD", per: "1000000" } }
+  ],
+  source: { name: "install-smoke" }
+};
+const meta = fromResponse({
+  model: "muse-spark-1.1",
+  usage: {
+    prompt_tokens: 100,
+    prompt_tokens_details: { cached_tokens: 20 },
+    completion_tokens: 40,
+    completion_tokens_details: { reasoning_tokens: 10 }
+  }
+}, {
+  provider: "meta",
+  surface: "meta.chat_completions",
+  priceCards: [metaCard]
+});
+if (meta.total !== "0.000242") throw new Error(JSON.stringify(meta));
+if (fromResponse({ model: "muse-spark-1.1", usage: null }, { provider: "meta", surface: "meta.responses", priceCards: [] }).total !== "0") {
+  throw new Error("Meta null usage compatibility failed");
+}
+console.log("javascript GPT-5.6 and Meta package smoke passed");
 """,
         encoding="utf-8",
     )
-    run(["node", str(js_default_openai_check)], project_dir)
+    run(["node", str(js_provider_check)], project_dir)
 
 
 def check_go_install(source_root: Path, workdir: Path) -> None:
@@ -292,7 +431,7 @@ func TestImport(t *testing.T) {
     if len(ledger.DefaultPriceCards()) < 7000 {
         t.Fatalf("unexpected bundled default price card count: %d", len(ledger.DefaultPriceCards()))
     }
-    if len(ledger.DefaultPriceSourcePriority) == 0 || ledger.DefaultPriceSourcePriority[0] != "anthropic-official" {
+    if len(ledger.DefaultPriceSourcePriority) == 0 || ledger.DefaultPriceSourcePriority[0] != "openai-official" {
         t.Fatalf("unexpected default price priority: %#v", ledger.DefaultPriceSourcePriority)
     }
     model := "gemini-3.5-live-translate-preview"
@@ -331,29 +470,122 @@ func TestImport(t *testing.T) {
     if len(liveSources) != 1 || liveSources[0].(ledger.Object)["name"] != "google-official" {
         t.Fatalf("unexpected Gemini Live price sources: %#v", liveResult)
     }
-    openaiResult := ledger.FromResponse(
+    cacheWrite := ledger.FromResponse(
         ledger.Object{
-            "model": "gpt-4.1-mini-2025-04-14",
+            "model": "gpt-5.6",
             "usage": ledger.Object{
-                "input_tokens": 36,
-                "input_tokens_details": ledger.Object{"cached_tokens": 6},
-                "output_tokens": 87,
-                "output_tokens_details": ledger.Object{"reasoning_tokens": 12},
+                "input_tokens": 1000,
+                "input_tokens_details": ledger.Object{"cached_tokens": 200, "cache_write_tokens": 100},
+                "output_tokens": 100,
+                "output_tokens_details": ledger.Object{"reasoning_tokens": 20},
             },
         },
         ledger.Object{
             "provider": "openai",
             "surface": "openai.responses",
-            "model": "gpt-4.1-mini",
+            "price_source_priority": ledger.DefaultPriceSourcePriority,
         },
         ledger.DefaultPriceCards(),
         nil,
     )
-    if openaiResult["total"] != "0.0001518" {
-        t.Fatalf("unexpected OpenAI default catalog total: %#v", openaiResult)
+    if cacheWrite["total"] != "0.007225" {
+        t.Fatalf("unexpected GPT-5.6 cache-write total: %#v", cacheWrite)
     }
-    if len(openaiResult["warnings"].([]any)) != 0 {
-        t.Fatalf("unexpected OpenAI default catalog warnings: %#v", openaiResult)
+
+    luna := func(inputTokens int) ledger.Object {
+        return ledger.FromResponse(
+            ledger.Object{
+                "model": "gpt-5.6-luna",
+                "usage": ledger.Object{
+                    "input_tokens": inputTokens,
+                    "input_tokens_details": ledger.Object{"cached_tokens": 0, "cache_write_tokens": 0},
+                    "output_tokens": 1,
+                    "output_tokens_details": ledger.Object{"reasoning_tokens": 0},
+                },
+            },
+            ledger.Object{
+                "provider": "openai",
+                "surface": "openai.responses",
+                "price_source_priority": ledger.DefaultPriceSourcePriority,
+            },
+            ledger.DefaultPriceCards(),
+            nil,
+        )
+    }
+    if short := luna(272000); short["total"] != "0.272006" {
+        t.Fatalf("unexpected GPT-5.6 short-boundary total: %#v", short)
+    }
+    if long := luna(272001); long["total"] != "0.544011" {
+        t.Fatalf("unexpected GPT-5.6 long-boundary total: %#v", long)
+    }
+    priority := ledger.FromResponse(
+        ledger.Object{
+            "model": "gpt-5.6-sol",
+            "service_tier": "priority",
+            "usage": ledger.Object{
+                "input_tokens": 272001,
+                "input_tokens_details": ledger.Object{"cached_tokens": 0, "cache_write_tokens": 0},
+                "output_tokens": 1,
+                "output_tokens_details": ledger.Object{"reasoning_tokens": 0},
+            },
+        },
+        ledger.Object{
+            "provider": "openai",
+            "surface": "openai.responses",
+            "price_source_priority": ledger.DefaultPriceSourcePriority,
+        },
+        ledger.DefaultPriceCards(),
+        nil,
+    )
+    priorityWarning := false
+    for _, rawWarning := range priority["warnings"].([]any) {
+        if rawWarning.(ledger.Object)["code"] == "long_context_rule_missing" {
+            priorityWarning = true
+        }
+    }
+    if priority["total"] != "0" || !priorityWarning {
+        t.Fatalf("GPT-5.6 Priority long context must fail closed: %#v", priority)
+    }
+
+    metaCard := ledger.Object{
+        "schema_version": "0.1",
+        "id": "meta:muse-spark-1.1:install-smoke",
+        "provider": "meta",
+        "surface": "meta.chat_completions",
+        "model": "muse-spark-1.1",
+        "components": []any{
+            ledger.Object{"usage_component": "input_uncached_tokens", "unit": "token", "price": ledger.Object{"amount": "1", "currency": "USD", "per": "1000000"}},
+            ledger.Object{"usage_component": "input_cache_read_tokens", "unit": "token", "price": ledger.Object{"amount": "0.1", "currency": "USD", "per": "1000000"}},
+            ledger.Object{"usage_component": "output_text_tokens", "unit": "token", "price": ledger.Object{"amount": "4", "currency": "USD", "per": "1000000"}},
+            ledger.Object{"usage_component": "output_reasoning_tokens", "unit": "token", "price": ledger.Object{"amount": "4", "currency": "USD", "per": "1000000"}},
+        },
+        "source": ledger.Object{"name": "install-smoke"},
+    }
+    meta := ledger.FromResponse(
+        ledger.Object{
+            "model": "muse-spark-1.1",
+            "usage": ledger.Object{
+                "prompt_tokens": 100,
+                "prompt_tokens_details": ledger.Object{"cached_tokens": 20},
+                "completion_tokens": 40,
+                "completion_tokens_details": ledger.Object{"reasoning_tokens": 10},
+            },
+        },
+        ledger.Object{"provider": "meta", "surface": "meta.chat_completions"},
+        []any{metaCard},
+        nil,
+    )
+    if meta["total"] != "0.000242" {
+        t.Fatalf("unexpected Meta package total: %#v", meta)
+    }
+    metaNull := ledger.FromResponse(
+        ledger.Object{"model": "muse-spark-1.1", "usage": nil},
+        ledger.Object{"provider": "meta", "surface": "meta.responses"},
+        []any{},
+        nil,
+    )
+    if metaNull["total"] != "0" {
+        t.Fatalf("unexpected Meta null-usage total: %#v", metaNull)
     }
     result := ledger.AggregateCostLedgers([]any{}, ledger.Object{
         "stream_final_usage_expected": true,

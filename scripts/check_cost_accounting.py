@@ -328,7 +328,7 @@ def check_public_api_evidence(registry: dict[str, Any], fixture_names: set[str])
         fixture_evidence = []
         for evidence in capability.get("evidence", []):
             evidence_path = Path(evidence)
-            if evidence_path.parts[:1] != ("fixtures",):
+            if evidence_path.parts[:1] != ("fixtures",) or len(evidence_path.parts) != 2:
                 continue
             fixture_evidence.append(evidence_path.name)
             if evidence_path.name not in fixture_names:

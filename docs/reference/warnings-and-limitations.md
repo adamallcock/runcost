@@ -133,6 +133,9 @@ timezone or shape that the runtime cannot safely evaluate.
 - Official price-page monitoring and pull-request automation are not implemented.
 - Tool-call pricing coverage exists only for selected fixtures and provider shapes.
 - Historical point-in-time pricing exists in the model but is not comprehensive.
+- OpenAI publishes GPT-5.6 Priority pricing only for short context. Priority
+  requests above 272,000 input tokens return `long_context_rule_missing` rather
+  than falling back to the cheaper short-context rate.
 - Framework adapters cover selected usage metadata objects plus initial LangChain callback/context-manager and Vercel `wrapGenerate` / `onFinish` helpers, not every framework callback or streaming pattern.
 - Semantic Kernel, LangSmith, OpenRouter-compatible SDK paths, OpenAI Agents SDK usage objects, and Vercel `streamText` finish objects now have fixture-backed plain-object adapters. Sanitized smoke harnesses exist, but real app validation is still expanding.
 - Haystack, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, LangSmith exports, and Semantic Kernel telemetry are covered only for selected metadata or summary shapes.

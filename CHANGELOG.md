@@ -16,6 +16,26 @@ limitations.
 
 - No unreleased changes yet.
 
+## 0.1.13
+
+- Add primary-source-backed GPT-5.6 Sol, Terra, and Luna pricing for Standard,
+  Batch, Flex, and Priority service tiers, including cache reads, 1.25x cache
+  writes, and the 272,000-token long-context boundary.
+- Extract OpenAI cache-write usage from Responses, Chat Completions, and Agents
+  SDK payloads across Python, JavaScript/TypeScript, and Go without double
+  charging writes as uncached input.
+- Fail closed when a reviewed official conditional pricing rule has no matching
+  long-context rate while preserving ordinary fallback between third-party
+  price sources.
+- Add Meta Model API Responses and Chat Completions compatibility, public
+  Python/JavaScript helpers, sanitized credentialed smoke evidence, and null
+  usage handling across all three languages.
+- Retain media-corroborated Meta preview rates as an explicit opt-in fixture,
+  excluding them from the default catalog until exact rates are verified from
+  a primary Meta pricing source.
+- Expand shared conformance coverage to 170 fixtures and exercise both GPT-5.6
+  and Meta behavior from installed Python, npm, and Go artifacts.
+
 ## 0.1.12
 
 - Add generic pricing-period selection for peak, regular, and other

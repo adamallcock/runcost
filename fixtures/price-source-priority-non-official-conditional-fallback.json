@@ -1,0 +1,129 @@
+{
+  "name": "price-source-priority-non-official-conditional-fallback",
+  "description": "Allows a lower-priority source to price usage when a non-official higher-priority adapter has a conditional gap.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-SOURCE-PRIORITY"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "source_priority",
+    "tags": [
+      "component:input_uncached_tokens",
+      "source_priority"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "options": {
+      "price_source_priority": [
+        "models.dev",
+        "openrouter"
+      ]
+    },
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-fallback",
+        "billed": "gpt-fallback",
+        "alias_resolution": "none"
+      },
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "200",
+          "unit": "token"
+        }
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-fallback:models-dev",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-fallback",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1",
+              "currency": "USD",
+              "per": "1000000"
+            },
+            "conditions": {
+              "max_total_input_tokens": "100"
+            }
+          }
+        ],
+        "source": {
+          "name": "models.dev",
+          "retrieved_at": "2026-07-10T00:00:00Z"
+        }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-fallback:openrouter",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-fallback",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "2",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "openrouter",
+          "retrieved_at": "2026-07-10T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-fallback",
+        "billed": "gpt-fallback",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "200",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.0004",
+          "price_card_id": "openai:gpt-fallback:openrouter",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.0004",
+      "price_sources": [
+        {
+          "name": "openrouter",
+          "retrieved_at": "2026-07-10T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}
