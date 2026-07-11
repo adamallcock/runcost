@@ -13,9 +13,9 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 
 ## Summary
 
-- Fixtures scanned: 163
-- Public API capabilities scanned: 14
-- Provider/surface component rows: 34
+- Fixtures scanned: 170
+- Public API capabilities scanned: 15
+- Provider/surface component rows: 36
 - Price-source component rows: 11
 - Gemini separate output/thinking fixtures: 6
 
@@ -30,11 +30,11 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `long_context` | 2 |
 | `normalized_usage` | 22 |
 | `provider_reported` | 4 |
-| `raw_provider_response` | 71 |
+| `raw_provider_response` | 75 |
 | `service_mode` | 3 |
 | `service_tier` | 4 |
-| `source_adapter` | 16 |
-| `source_priority` | 3 |
+| `source_adapter` | 17 |
+| `source_priority` | 5 |
 | `strict_error` | 1 |
 | `warning` | 14 |
 
@@ -55,22 +55,22 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `file_search_units` | 2 |
 | `image_generation_units` | 3 |
 | `input_audio_tokens` | 10 |
-| `input_cache_read_tokens` | 55 |
+| `input_cache_read_tokens` | 58 |
 | `input_cache_write_1h_tokens` | 2 |
-| `input_cache_write_tokens` | 17 |
+| `input_cache_write_tokens` | 20 |
 | `input_image_tokens` | 4 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 116 |
+| `input_uncached_tokens` | 121 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 10 |
 | `output_image_tokens` | 3 |
-| `output_reasoning_tokens` | 47 |
-| `output_text_tokens` | 118 |
+| `output_reasoning_tokens` | 50 |
+| `output_text_tokens` | 121 |
 | `output_video_tokens` | 2 |
 | `request_units` | 3 |
 | `rerank_search_units` | 2 |
 | `storage_gb_days` | 2 |
-| `tool_call_units` | 4 |
+| `tool_call_units` | 5 |
 | `tool_execution_seconds` | 1 |
 | `transcription_seconds` | 3 |
 | `video_generation_units` | 1 |
@@ -112,6 +112,8 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `google` | `google.gemini.live` | `input_audio_tokens`, `output_audio_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
 | `groq` | `groq.chat_completions` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_text_tokens` |
 | `huggingface` | `huggingface.chat_completions` | `input_uncached_tokens`, `output_text_tokens` |
+| `meta` | `meta.chat_completions` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
+| `meta` | `meta.responses` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `tool_call_units` |
 | `mistral` | `mistral.chat_completions` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_text_tokens` |
 | `multi` | `normalized.feature_pricing` | `audio_generation_units`, `endpoint_runtime_seconds`, `image_generation_units`, `input_uncached_tokens`, `rerank_search_units`, `tool_execution_seconds`, `transcription_seconds`, `video_generation_units` |
 | `openai` | `openai.audio_transcriptions` | `input_audio_tokens`, `input_uncached_tokens`, `output_text_tokens`, `transcription_seconds` |
@@ -139,6 +141,6 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `core` | 4 |
 | `framework_adapter` | 1 |
 | `language_specific` | 2 |
-| `provider_extractor` | 4 |
+| `provider_extractor` | 5 |
 | `source_adapter` | 1 |
 | `type_contract` | 2 |

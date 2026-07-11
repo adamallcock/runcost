@@ -60,11 +60,22 @@ files, pin them by checksum, and combine them with user overrides.
 
 RunCost also ships an optional reviewed default source-cache catalog in each
 package. It is generated from `llm-prices`, LiteLLM, OpenRouter,
-`models.dev`, and reviewed official snapshots for targeted provider pricing gaps
-and redirects, and can be loaded without network access through
+`models.dev`, and reviewed official snapshots for targeted provider pricing
+gaps and redirects, and can be loaded without network access through
 `default_price_cards()` / `defaultPriceCards()` / `DefaultPriceCards()`.
 Applications with stricter review requirements can still commit their own
 source-cache files and pass those cards explicitly.
+
+The bundled reviewed catalog includes an `openai-official` snapshot for the
+GPT-5.6 family. It models Standard, Batch, Flex, and Priority service tiers,
+cache-read and cache-write prices, and the published 272,000-token long-context
+boundary. The snapshot records the 30-minute minimum cache lifetime as metadata;
+it does not invent a separate duration-priced cache component.
+
+The Meta Model API compatibility fixtures include a reviewed public-preview
+snapshot for opt-in estimates, but those media-corroborated rates are not in the
+bundled default catalog. RunCost will only promote them to default package data
+after the exact rates can be verified from a primary Meta pricing source.
 
 ## Trust Order
 

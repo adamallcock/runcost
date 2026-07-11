@@ -18,7 +18,7 @@ import (
 var defaultSourceCacheJSON []byte
 
 // DefaultPriceSourcePriority is the recommended source priority for the bundled catalog.
-var DefaultPriceSourcePriority = []string{"anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"}
+var DefaultPriceSourcePriority = []string{"openai-official", "anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"}
 
 var componentOrder = func() map[string]int {
 	orders := map[string]int{}
@@ -1240,6 +1240,48 @@ func findPriceComponents(usageLedger Object, priceCards []Object, component Obje
 	return matches
 }
 
+func authoritativeSourceCandidates(usageLedger Object, candidates []Object, priority []any) []Object {
+	if len(candidates) == 0 || len(priority) == 0 {
+		return candidates
+	}
+	sourceName := asString(asObject(asObject(candidates[0]["card"])["source"])["name"])
+	prioritized := false
+	for _, value := range priority {
+		if asString(value) == sourceName {
+			prioritized = true
+			break
+		}
+	}
+	if !prioritized {
+		return candidates
+	}
+	metadata := asObject(asObject(candidates[0]["card"])["metadata"])
+	if len(asObject(metadata["official_snapshot"])) == 0 {
+		return candidates
+	}
+	filtered := []Object{}
+	for _, candidate := range candidates {
+		candidateSource := asString(asObject(asObject(candidate["card"])["source"])["name"])
+		if candidateSource == sourceName {
+			filtered = append(filtered, candidate)
+		}
+	}
+	hasConditions := false
+	for _, candidate := range filtered {
+		priceComponent := asObject(candidate["price_component"])
+		if len(asObject(priceComponent["conditions"])) > 0 {
+			hasConditions = true
+		}
+		if conditionsMatch(usageLedger, priceComponent) {
+			return candidates
+		}
+	}
+	if !hasConditions {
+		return candidates
+	}
+	return filtered
+}
+
 func warningIdentityMetadata(usageLedger Object) Object {
 	return Object{
 		"provider": asString(usageLedger["provider"]),
@@ -2247,7 +2289,11 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 			continue
 		}
 
-		candidates := candidatePriceComponents(candidateCards, component)
+		candidates := authoritativeSourceCandidates(
+			componentUsageLedger,
+			candidatePriceComponents(candidateCards, component),
+			sourcePriority(options),
+		)
 		matches := []Object{}
 		for _, match := range candidates {
 			if conditionsMatch(componentUsageLedger, asObject(match["price_component"])) {
@@ -2863,10 +2909,30 @@ func baseUsageLedgerWithContext(provider string, surface string, requestedModel 
 	return ledger
 }
 
+func normalizeOpenAIServiceTier(value any) string {
+	tier := strings.ToLower(strings.TrimSpace(asString(value)))
+	if tier == "auto" || tier == "default" || tier == "standard" {
+		return "standard"
+	}
+	return tier
+}
+
 func usageContextFromOptions(response Object, provider string, options Object) Object {
 	context := Object{}
 	for key, value := range asObject(options["context"]) {
 		context[key] = value
+	}
+	if provider == "openai" {
+		contextTier := context["service_tier"]
+		if contextTier == nil {
+			contextTier = context["serviceTier"]
+		}
+		if contextTier != nil {
+			if normalizedTier := normalizeOpenAIServiceTier(contextTier); normalizedTier != "" {
+				context["service_tier"] = normalizedTier
+			}
+			delete(context, "serviceTier")
+		}
 	}
 	if pricedAt := asString(options["priced_at"]); pricedAt != "" {
 		context["priced_at"] = pricedAt
@@ -2882,6 +2948,25 @@ func usageContextFromOptions(response Object, provider string, options Object) O
 	} else if pricingPeriod := asString(options["pricingPeriod"]); pricingPeriod != "" {
 		context["pricing_period"] = pricingPeriod
 	}
+	serviceTier := options["service_tier"]
+	if serviceTier == nil {
+		serviceTier = options["serviceTier"]
+	}
+	if serviceTier == nil && provider == "openai" {
+		serviceTier = response["service_tier"]
+		if serviceTier == nil {
+			serviceTier = response["serviceTier"]
+		}
+	}
+	if serviceTier != nil && context["service_tier"] == nil {
+		normalizedTier := asString(serviceTier)
+		if provider == "openai" {
+			normalizedTier = normalizeOpenAIServiceTier(serviceTier)
+		}
+		if normalizedTier != "" {
+			context["service_tier"] = normalizedTier
+		}
+	}
 	return context
 }
 
@@ -2890,6 +2975,7 @@ var openAICompatibleChatProviders = map[string]string{
 	"openrouter.chat_completions":   "openrouter",
 	"groq.chat_completions":         "groq",
 	"xai.chat_completions":          "xai",
+	"meta.chat_completions":         "meta",
 	"mistral.chat_completions":      "mistral",
 	"deepseek.chat_completions":     "deepseek",
 	"azure.openai.chat_completions": "azure",
@@ -2918,6 +3004,14 @@ func openAICompatibleCachedInput(usage Object) (any, string) {
 		return getNumber(usage, "prompt_cache_hit_tokens"), "$.usage.prompt_cache_hit_tokens"
 	}
 	return json.Number("0"), "$.usage.prompt_tokens_details.cached_tokens"
+}
+
+func openAICompatibleCacheWrite(usage Object) (any, string) {
+	promptDetails := asObject(usage["prompt_tokens_details"])
+	if _, ok := promptDetails["cache_write_tokens"]; ok {
+		return getNumber(usage, "prompt_tokens_details", "cache_write_tokens"), "$.usage.prompt_tokens_details.cache_write_tokens"
+	}
+	return json.Number("0"), "$.usage.prompt_tokens_details.cache_write_tokens"
 }
 
 func openAICompatibleReasoningOutput(usage Object) (any, string) {
@@ -2998,7 +3092,7 @@ func ExtractUsageLedger(response Object, options Object) Object {
 
 	surface := asString(options["surface"])
 	switch surface {
-	case "openai.responses", "xai.responses":
+	case "openai.responses", "xai.responses", "meta.responses":
 		return extractOpenAIResponsesUsage(response, options)
 	case "openai.embeddings":
 		return extractOpenAIEmbeddingsUsage(response, options)
@@ -3128,11 +3222,12 @@ func extractOpenAIResponsesUsage(response Object, options Object) Object {
 	inputDetails := asObject(usage["input_tokens_details"])
 	outputDetails := asObject(usage["output_tokens_details"])
 	cachedInput := getNumber(inputDetails, "cached_tokens")
+	cacheWrite := getNumber(inputDetails, "cache_write_tokens")
 	orchestrationInput, orchestrationCachedInput, orchestrationOutput := openAIResponsesOrchestrationUsage(usage)
 	reasoning := getNumber(outputDetails, "reasoning_tokens")
 	input := getNumber(usage, "input_tokens")
 	output := getNumber(usage, "output_tokens")
-	inputUncached := add(subtract(input, cachedInput), subtract(orchestrationInput, orchestrationCachedInput))
+	inputUncached := add(subtract(subtract(input, cachedInput), cacheWrite), subtract(orchestrationInput, orchestrationCachedInput))
 	inputCacheRead := add(cachedInput, orchestrationCachedInput)
 	outputText := add(subtract(output, reasoning), orchestrationOutput)
 	toolComponents := []any{}
@@ -3146,6 +3241,8 @@ func extractOpenAIResponsesUsage(response Object, options Object) Object {
 	if provider == "" {
 		if surface == "xai.responses" {
 			provider = "xai"
+		} else if surface == "meta.responses" {
+			provider = "meta"
 		} else {
 			provider = "openai"
 		}
@@ -3214,11 +3311,13 @@ func extractOpenAIResponsesUsage(response Object, options Object) Object {
 	components := []any{
 		positiveComponent("input_uncached_tokens", inputUncached, "token", "$.usage.input_tokens + $.usage.input_tokens_details.orchestration_input_tokens"),
 		positiveComponent("input_cache_read_tokens", inputCacheRead, "token", "$.usage.input_tokens_details.cached_tokens + $.usage.input_tokens_details.orchestration_input_cached_tokens"),
+		positiveComponent("input_cache_write_tokens", cacheWrite, "token", "$.usage.input_tokens_details.cache_write_tokens"),
 		positiveComponent("output_text_tokens", outputText, "token", "$.usage.output_tokens + $.usage.output_tokens_details.orchestration_output_tokens"),
 		positiveComponent("output_reasoning_tokens", reasoning, "token", "$.usage.output_tokens_details.reasoning_tokens"),
 	}
 	components = append(components, toolComponents...)
-	return baseUsageLedger(provider, surface, requestedModel, asString(response["model"]), compactComponents(components), usage)
+	context := usageContextFromOptions(response, provider, options)
+	return baseUsageLedgerWithContext(provider, surface, requestedModel, asString(response["model"]), compactComponents(components), usage, context)
 }
 
 func extractOpenAIEmbeddingsUsage(response Object, options Object) Object {
@@ -3721,6 +3820,7 @@ func extractOpenAICompatibleChatCompletionsUsage(response Object, options Object
 	response = openAICompatibleChatPayload(response)
 	usage := asObject(response["usage"])
 	cachedInput, cachedSourcePath := openAICompatibleCachedInput(usage)
+	cacheWrite, cacheWriteSourcePath := openAICompatibleCacheWrite(usage)
 	reasoning, reasoningSourcePath := openAICompatibleReasoningOutput(usage)
 	prompt := getNumber(usage, "prompt_tokens")
 	if _, ok := usage["prompt_tokens"]; !ok {
@@ -3742,8 +3842,9 @@ func extractOpenAICompatibleChatCompletionsUsage(response Object, options Object
 	context := usageContextFromOptions(response, provider, options)
 
 	return baseUsageLedgerWithContext(provider, surface, requestedModel, asString(response["model"]), compactComponents([]any{
-		positiveComponent("input_uncached_tokens", subtract(prompt, cachedInput), "token", "$.usage.prompt_tokens"),
+		positiveComponent("input_uncached_tokens", subtract(subtract(prompt, cachedInput), cacheWrite), "token", "$.usage.prompt_tokens"),
 		positiveComponent("input_cache_read_tokens", cachedInput, "token", cachedSourcePath),
+		positiveComponent("input_cache_write_tokens", cacheWrite, "token", cacheWriteSourcePath),
 		positiveComponent("output_text_tokens", subtract(completion, reasoning), "token", "$.usage.completion_tokens"),
 		positiveComponent("output_reasoning_tokens", reasoning, "token", reasoningSourcePath),
 	}), usage, context)
@@ -5179,7 +5280,9 @@ func openAIAgentsUsagePayload(response Object) (Object, string, Object) {
 
 func extractOpenAIAgentsUsage(response Object, options Object) Object {
 	usage, sourceRoot, sourceRootValue := openAIAgentsUsagePayload(response)
-	cachedInput := getNumber(nestedObject(usage, "input_tokens_details"), "cached_tokens")
+	inputDetails := nestedObject(usage, "input_tokens_details")
+	cachedInput := getNumber(inputDetails, "cached_tokens")
+	cacheWrite := getNumber(inputDetails, "cache_write_tokens")
 	reasoning := getNumber(nestedObject(usage, "output_tokens_details"), "reasoning_tokens")
 	inputTokens := getNumber(usage, "input_tokens")
 	outputTokens := getNumber(usage, "output_tokens")
@@ -5206,12 +5309,14 @@ func extractOpenAIAgentsUsage(response Object, options Object) Object {
 		requestedModel = returnedModel
 	}
 
-	return baseUsageLedger(provider, surface, requestedModel, returnedModel, compactComponents([]any{
-		positiveComponent("input_uncached_tokens", subtract(inputTokens, cachedInput), "token", sourceRoot+".input_tokens"),
+	context := usageContextFromOptions(sourceRootValue, provider, options)
+	return baseUsageLedgerWithContext(provider, surface, requestedModel, returnedModel, compactComponents([]any{
+		positiveComponent("input_uncached_tokens", subtract(subtract(inputTokens, cachedInput), cacheWrite), "token", sourceRoot+".input_tokens"),
 		positiveComponent("input_cache_read_tokens", cachedInput, "token", sourceRoot+".input_tokens_details.cached_tokens"),
+		positiveComponent("input_cache_write_tokens", cacheWrite, "token", sourceRoot+".input_tokens_details.cache_write_tokens"),
 		positiveComponent("output_text_tokens", subtract(outputTokens, reasoning), "token", sourceRoot+".output_tokens"),
 		positiveComponent("output_reasoning_tokens", reasoning, "token", sourceRoot+".output_tokens_details.reasoning_tokens"),
-	}), usage)
+	}), usage, context)
 }
 
 func langSmithUsagePayload(response Object) (Object, string) {
@@ -6807,6 +6912,7 @@ func FromResponse(response Object, options Object, priceCards []any, discountPol
 	surface := asString(options["surface"])
 	if surface != "openai.responses" &&
 		surface != "xai.responses" &&
+		surface != "meta.responses" &&
 		surface != "openai.embeddings" &&
 		surface != "openai.audio_transcriptions" &&
 		surface != "openai.images" &&

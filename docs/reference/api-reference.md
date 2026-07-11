@@ -69,6 +69,8 @@ Output:
 | OpenAI Chat Completions | `extract_openai_chat_completions_usage` | `extractOpenAIChatCompletionsUsage` | via dispatch |
 | OpenAI-compatible Chat Completions | `extract_openai_compatible_chat_completions_usage` | `extractOpenAICompatibleChatCompletionsUsage` | via dispatch |
 | OpenRouter Chat Completions | `extract_openrouter_chat_completions_usage` | `extractOpenRouterChatCompletionsUsage` | via dispatch |
+| Meta Model API Responses | `extract_meta_responses_usage` | `extractMetaResponsesUsage` | via dispatch |
+| Meta Model API Chat Completions | `extract_meta_chat_completions_usage` | `extractMetaChatCompletionsUsage` | via dispatch |
 | Anthropic Messages | `extract_anthropic_messages_usage` | `extractAnthropicMessagesUsage` | via dispatch |
 | Gemini or Vertex `generateContent` | `extract_gemini_generate_content_usage` | `extractGeminiGenerateContentUsage` | via dispatch |
 | Gemini Live API | `extract_gemini_live_usage` | `extractGeminiLiveUsage` | via dispatch |
@@ -116,6 +118,11 @@ Streaming final usage:
 - Gemini Live API accepts top-level `usageMetadata`, or a `chunks` / `stream` collection where the final server message carries `usageMetadata`.
 - Google Gemini Interactions accepts top-level/event `metadata.total_usage`, camelCase `metadata.totalUsage`, legacy `metadata.usage`, or `chunks` / `stream` / `events` collections and uses the last event carrying usage metadata.
 - These are final-usage extraction paths, not arbitrary partial-token estimation.
+- Meta Model API support is fixture-backed and credentialed-smoke-backed for
+  `/models`, `/chat/completions`, and `/responses` on
+  `https://api.meta.ai/v1`. A reviewed public-preview snapshot supports opt-in
+  compatibility estimates, but Meta prices are excluded from the default
+  catalog until exact rates are verified from a primary Meta pricing source.
 
 ## Price Source Adapters
 

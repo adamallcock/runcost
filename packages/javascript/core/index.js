@@ -59,7 +59,7 @@ const TOOL_OR_FEATURE_COMPONENTS = new Set([
   "endpoint_runtime_seconds",
   "storage_gb_days"
 ]);
-export const DEFAULT_PRICE_SOURCE_PRIORITY = ["anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"];
+export const DEFAULT_PRICE_SOURCE_PRIORITY = ["openai-official", "anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"];
 
 function normalizeDecimalString(value) {
   if (value === null || value === undefined) {
@@ -641,6 +641,28 @@ function findPriceComponents(usageLedger, priceCards, component) {
   return candidatePriceComponents(priceCards, component).filter(({ priceComponent }) => {
     return conditionsMatch(usageLedger, priceComponent);
   });
+}
+
+function authoritativeSourceCandidates(usageLedger, candidates, sourcePriority) {
+  if (candidates.length === 0 || !sourcePriority || sourcePriority.length === 0) {
+    return candidates;
+  }
+  const sourceName = (candidates[0].card.source || {}).name || "";
+  if (!sourcePriority.includes(sourceName)) {
+    return candidates;
+  }
+  const metadata = candidates[0].card.metadata || {};
+  if (!metadata.official_snapshot || typeof metadata.official_snapshot !== "object") {
+    return candidates;
+  }
+  const sourceCandidates = candidates.filter(({ card }) => ((card.source || {}).name || "") === sourceName);
+  if (!sourceCandidates.some(({ priceComponent }) => priceComponent.conditions)) {
+    return candidates;
+  }
+  if (sourceCandidates.some(({ priceComponent }) => conditionsMatch(usageLedger, priceComponent))) {
+    return candidates;
+  }
+  return sourceCandidates;
 }
 
 function warningIdentityMetadata(usageLedger) {
@@ -1377,7 +1399,11 @@ export function calculateCost({
       continue;
     }
 
-    const candidates = candidatePriceComponents(candidateCards, component);
+    const candidates = authoritativeSourceCandidates(
+      componentUsageLedger,
+      candidatePriceComponents(candidateCards, component),
+      sourcePriority
+    );
     let matches = candidates.filter(({ priceComponent }) => {
       return conditionsMatch(componentUsageLedger, priceComponent);
     });
@@ -1812,8 +1838,23 @@ function baseUsageLedger({ provider, surface, requestedModel, returnedModel, com
   return ledger;
 }
 
+function normalizeOpenAIServiceTier(value) {
+  const tier = String(value || "").trim().toLowerCase();
+  if (!tier) return undefined;
+  if (["auto", "default", "standard"].includes(tier)) return "standard";
+  return tier;
+}
+
 function usageContextFromOptions(response, provider, options = {}) {
   const context = { ...(options.context || {}) };
+  if (provider === "openai") {
+    const contextTier = context.service_tier ?? context.serviceTier;
+    if (contextTier !== undefined && contextTier !== null) {
+      const normalizedContextTier = normalizeOpenAIServiceTier(contextTier);
+      if (normalizedContextTier) context.service_tier = normalizedContextTier;
+      delete context.serviceTier;
+    }
+  }
   const pricedAt = options.priced_at ?? options.pricedAt;
   if (pricedAt !== undefined && pricedAt !== null) {
     context.priced_at = String(pricedAt);
@@ -1826,6 +1867,14 @@ function usageContextFromOptions(response, provider, options = {}) {
   const pricingPeriod = options.pricing_period ?? options.pricingPeriod;
   if (pricingPeriod !== undefined && pricingPeriod !== null) {
     context.pricing_period = String(pricingPeriod);
+  }
+  let serviceTier = options.service_tier ?? options.serviceTier;
+  if ((serviceTier === undefined || serviceTier === null) && provider === "openai") {
+    serviceTier = response.service_tier ?? response.serviceTier;
+  }
+  if (serviceTier !== undefined && serviceTier !== null && context.service_tier === undefined) {
+    const normalizedTier = provider === "openai" ? normalizeOpenAIServiceTier(serviceTier) : String(serviceTier);
+    if (normalizedTier) context.service_tier = normalizedTier;
   }
   return context;
 }
@@ -1883,20 +1932,26 @@ export function extractOpenAIResponsesUsage(response, options = {}) {
   response = openAIResponsesPayload(response);
   const usage = response.usage || {};
   const surface = options.surface || "openai.responses";
-  const provider = options.provider || (surface === "xai.responses" ? "xai" : "openai");
+  const responseProviderDefaults = {
+    "xai.responses": "xai",
+    "meta.responses": "meta"
+  };
+  const provider = options.provider || responseProviderDefaults[surface] || "openai";
   const inputDetails = usage.input_tokens_details || {};
   const outputDetails = usage.output_tokens_details || {};
   const cachedInput = inputDetails.cached_tokens ?? 0;
+  const cacheWrite = inputDetails.cache_write_tokens ?? 0;
   const reasoning = outputDetails.reasoning_tokens ?? 0;
   const orchestrationUsage = openAIResponsesOrchestrationUsage(usage);
   const input = usage.input_tokens ?? 0;
   const output = usage.output_tokens ?? 0;
   const inputUncached = addDecimal(
-    subtractDecimal(input, cachedInput),
+    subtractDecimal(subtractDecimal(input, cachedInput), cacheWrite),
     subtractDecimal(orchestrationUsage.input, orchestrationUsage.cachedInput)
   );
   const inputCacheRead = addDecimal(cachedInput, orchestrationUsage.cachedInput);
   const outputText = addDecimal(subtractDecimal(output, reasoning), orchestrationUsage.output);
+  const context = usageContextFromOptions(response, provider, options);
 
   const toolComponents = [];
   let functionCallCount = 0;
@@ -1959,6 +2014,7 @@ export function extractOpenAIResponsesUsage(response, options = {}) {
     requestedModel: options.model || response.model,
     returnedModel: response.model,
     rawUsage: usage,
+    context,
     components: compactComponents([
       positiveComponent(
         "input_uncached_tokens",
@@ -1972,6 +2028,7 @@ export function extractOpenAIResponsesUsage(response, options = {}) {
         "token",
         "$.usage.input_tokens_details.cached_tokens + $.usage.input_tokens_details.orchestration_input_cached_tokens"
       ),
+      positiveComponent("input_cache_write_tokens", cacheWrite, "token", "$.usage.input_tokens_details.cache_write_tokens"),
       positiveComponent(
         "output_text_tokens",
         outputText,
@@ -2375,6 +2432,7 @@ const OPENAI_COMPATIBLE_CHAT_PROVIDERS = {
   "openrouter.chat_completions": "openrouter",
   "groq.chat_completions": "groq",
   "xai.chat_completions": "xai",
+  "meta.chat_completions": "meta",
   "mistral.chat_completions": "mistral",
   "deepseek.chat_completions": "deepseek",
   "azure.openai.chat_completions": "azure",
@@ -2397,6 +2455,19 @@ function openAICompatibleCachedInput(usage) {
   return {
     value: 0,
     sourcePath: "$.usage.prompt_tokens_details.cached_tokens"
+  };
+}
+
+function openAICompatibleCacheWrite(usage) {
+  if (hasOwn(usage.prompt_tokens_details || {}, "cache_write_tokens")) {
+    return {
+      value: usage.prompt_tokens_details.cache_write_tokens || 0,
+      sourcePath: "$.usage.prompt_tokens_details.cache_write_tokens"
+    };
+  }
+  return {
+    value: 0,
+    sourcePath: "$.usage.prompt_tokens_details.cache_write_tokens"
   };
 }
 
@@ -2440,6 +2511,7 @@ export function extractOpenAICompatibleChatCompletionsUsage(response, options = 
   response = openAICompatibleChatPayload(response);
   const usage = response.usage || {};
   const cachedInput = openAICompatibleCachedInput(usage);
+  const cacheWrite = openAICompatibleCacheWrite(usage);
   const reasoning = openAICompatibleReasoningOutput(usage);
   const prompt = usage.prompt_tokens ?? ((usage.prompt_cache_hit_tokens || 0) + (usage.prompt_cache_miss_tokens || 0));
   const completion = usage.completion_tokens || 0;
@@ -2455,8 +2527,9 @@ export function extractOpenAICompatibleChatCompletionsUsage(response, options = 
     rawUsage: usage,
     context,
     components: compactComponents([
-      positiveComponent("input_uncached_tokens", prompt - cachedInput.value, "token", "$.usage.prompt_tokens"),
+      positiveComponent("input_uncached_tokens", prompt - cachedInput.value - cacheWrite.value, "token", "$.usage.prompt_tokens"),
       positiveComponent("input_cache_read_tokens", cachedInput.value, "token", cachedInput.sourcePath),
+      positiveComponent("input_cache_write_tokens", cacheWrite.value, "token", cacheWrite.sourcePath),
       positiveComponent("output_text_tokens", completion - reasoning.value, "token", "$.usage.completion_tokens"),
       positiveComponent("output_reasoning_tokens", reasoning.value, "token", reasoning.sourcePath)
     ])
@@ -2475,6 +2548,22 @@ export function extractOpenRouterChatCompletionsUsage(response, options = {}) {
   return extractOpenAICompatibleChatCompletionsUsage(response, {
     provider: "openrouter",
     surface: "openrouter.chat_completions",
+    ...options
+  });
+}
+
+export function extractMetaChatCompletionsUsage(response, options = {}) {
+  return extractOpenAICompatibleChatCompletionsUsage(response, {
+    provider: "meta",
+    surface: "meta.chat_completions",
+    ...options
+  });
+}
+
+export function extractMetaResponsesUsage(response, options = {}) {
+  return extractOpenAIResponsesUsage(response, {
+    provider: "meta",
+    surface: "meta.responses",
     ...options
   });
 }
@@ -3704,21 +3793,27 @@ function openAIAgentsUsagePayload(response) {
 
 export function extractOpenAIAgentsUsage(response, options = {}) {
   const { usage, sourceRoot, sourceRootValue } = openAIAgentsUsagePayload(response);
-  const cachedInput = nestedObject(usage, ["input_tokens_details"]).cached_tokens || 0;
+  const inputDetails = nestedObject(usage, ["input_tokens_details"]);
+  const cachedInput = inputDetails.cached_tokens || 0;
+  const cacheWrite = inputDetails.cache_write_tokens || 0;
   const reasoning = nestedObject(usage, ["output_tokens_details"]).reasoning_tokens || 0;
   const inputTokens = usage.input_tokens || 0;
   const outputTokens = usage.output_tokens || 0;
   const returnedModel = usage.model || sourceRootValue.model || response.model || options.model;
+  const provider = options.provider || "openai";
+  const context = usageContextFromOptions(sourceRootValue, provider, options);
 
   return baseUsageLedger({
-    provider: options.provider || "openai",
+    provider,
     surface: options.surface || "openai.responses",
     requestedModel: options.model || returnedModel,
     returnedModel,
     rawUsage: usage,
+    context,
     components: compactComponents([
-      positiveComponent("input_uncached_tokens", inputTokens - cachedInput, "token", `${sourceRoot}.input_tokens`),
+      positiveComponent("input_uncached_tokens", inputTokens - cachedInput - cacheWrite, "token", `${sourceRoot}.input_tokens`),
       positiveComponent("input_cache_read_tokens", cachedInput, "token", `${sourceRoot}.input_tokens_details.cached_tokens`),
+      positiveComponent("input_cache_write_tokens", cacheWrite, "token", `${sourceRoot}.input_tokens_details.cache_write_tokens`),
       positiveComponent("output_text_tokens", outputTokens - reasoning, "token", `${sourceRoot}.output_tokens`),
       positiveComponent("output_reasoning_tokens", reasoning, "token", `${sourceRoot}.output_tokens_details.reasoning_tokens`)
     ])
@@ -3898,7 +3993,7 @@ export function extractUsageLedger(response, options = {}) {
   }
 
   const surface = options.surface;
-  if (surface === "openai.responses" || surface === "xai.responses") {
+  if (surface === "openai.responses" || surface === "xai.responses" || surface === "meta.responses") {
     return extractOpenAIResponsesUsage(response, options);
   }
   if (surface === "openai.embeddings") {

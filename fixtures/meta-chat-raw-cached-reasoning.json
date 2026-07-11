@@ -1,0 +1,166 @@
+{
+  "name": "meta-chat-raw-cached-reasoning",
+  "description": "Extracts Meta Model API OpenAI-compatible chat usage with cached prompt and reasoning completion tokens.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR"
+    ],
+    "provider": "meta",
+    "surface": "meta.chat_completions",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "cache",
+      "component:input_cache_read_tokens",
+      "component:input_uncached_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_text_tokens",
+      "meta",
+      "raw_provider_response",
+      "reasoning"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "id": "chatcmpl-meta-fixture",
+      "object": "chat.completion",
+      "created": 1783605600,
+      "model": "muse-spark-1.1",
+      "usage": {
+        "prompt_tokens": 1000,
+        "prompt_tokens_details": {
+          "cached_tokens": 250
+        },
+        "completion_tokens": 300,
+        "completion_tokens_details": {
+          "reasoning_tokens": 80
+        },
+        "total_tokens": 1300
+      }
+    },
+    "extract": {
+      "provider": "meta",
+      "surface": "meta.chat_completions",
+      "model": "muse-spark-1.1"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "meta:muse-spark-1.1:chat:fixture",
+        "provider": "meta",
+        "surface": "meta.chat_completions",
+        "model": "muse-spark-1.1",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1.25",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1.25",
+              "currency": "USD",
+              "per": "1000000"
+            },
+            "notes": "No separate Meta cache-read rate was verified for the public preview; cached input is priced at the published input-token rate."
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4.25",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4.25",
+              "currency": "USD",
+              "per": "1000000"
+            },
+            "notes": "Reasoning output is priced at the published output-token rate until Meta documents a separate reasoning rate."
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-07-09T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "meta",
+      "surface": "meta.chat_completions",
+      "model": {
+        "requested": "muse-spark-1.1",
+        "returned": "muse-spark-1.1",
+        "billed": "muse-spark-1.1",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "750",
+          "unit": "token",
+          "unit_price": "0.00000125",
+          "cost": "0.0009375",
+          "price_card_id": "meta:muse-spark-1.1:chat:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "250",
+          "unit": "token",
+          "unit_price": "0.00000125",
+          "cost": "0.0003125",
+          "price_card_id": "meta:muse-spark-1.1:chat:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "220",
+          "unit": "token",
+          "unit_price": "0.00000425",
+          "cost": "0.000935",
+          "price_card_id": "meta:muse-spark-1.1:chat:fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "80",
+          "unit": "token",
+          "unit_price": "0.00000425",
+          "cost": "0.00034",
+          "price_card_id": "meta:muse-spark-1.1:chat:fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.002525",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-07-09T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

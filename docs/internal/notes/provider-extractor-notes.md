@@ -22,15 +22,20 @@ Source references:
 
 - OpenAI streaming docs list `response.completed` as a common lifecycle event and the API reference shows completed response events carrying a nested `response` object: https://platform.openai.com/docs/api-reference/streaming
 - OpenAI Responses reference documents `usage.input_tokens`, `usage.input_tokens_details.cached_tokens`, `usage.output_tokens`, `usage.output_tokens_details.reasoning_tokens`, and `usage.total_tokens`: https://developers.openai.com/api/reference/resources/responses/methods/create
+- OpenAI prompt caching docs document `usage.input_tokens_details.cache_write_tokens` for GPT-5.6 and later models: https://developers.openai.com/api/docs/guides/prompt-caching
 
 Mapping:
 
 - Non-streaming responses read usage from the top-level `usage` object.
 - Streaming final events with `type == "response.completed"` read usage from `response.usage`.
-- `usage.input_tokens` minus cached tokens -> `input_uncached_tokens`.
+- `usage.input_tokens` minus cache-read and cache-write tokens -> `input_uncached_tokens`.
 - `usage.input_tokens_details.cached_tokens` -> `input_cache_read_tokens`.
+- `usage.input_tokens_details.cache_write_tokens` -> `input_cache_write_tokens`.
 - `usage.output_tokens` minus reasoning tokens -> `output_text_tokens`.
 - `usage.output_tokens_details.reasoning_tokens` -> `output_reasoning_tokens`.
+- OpenAI top-level `service_tier` values `default` and `auto` normalize to
+  `standard`; `batch`, `flex`, and `priority` are preserved for price-card
+  selection.
 
 ## OpenAI Conversations Decision
 
@@ -121,6 +126,7 @@ Surfaces:
 - `openrouter.chat_completions`
 - `groq.chat_completions`
 - `xai.chat_completions`
+- `meta.chat_completions`
 - `mistral.chat_completions`
 - `deepseek.chat_completions`
 - `azure.openai.chat_completions`
@@ -129,6 +135,7 @@ Surfaces:
 Source references:
 
 - OpenRouter chat completions response shows `usage.prompt_tokens`, `usage.completion_tokens`, and `usage.total_tokens`: https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request
+- OpenAI prompt caching docs document `usage.prompt_tokens_details.cache_write_tokens` for GPT-5.6 and later Chat Completions: https://developers.openai.com/api/docs/guides/prompt-caching
 - OpenRouter docs state that token counts in completions responses use the model's native tokenizer, and generation stats can be queried later for auditing: https://openrouter.ai/docs/api/reference/overview
 - Groq prompt caching docs show OpenAI-compatible `usage.prompt_tokens`, `usage.completion_tokens`, `usage.total_tokens`, and `usage.prompt_tokens_details.cached_tokens`: https://console.groq.com/docs/prompt-caching
 - xAI chat completion and prompt caching docs show `usage.prompt_tokens`, `usage.completion_tokens`, `usage.total_tokens`, `usage.prompt_tokens_details.cached_tokens`, and `usage.completion_tokens_details.reasoning_tokens`: https://docs.x.ai/developers/model-capabilities/legacy/chat-completions and https://docs.x.ai/developers/advanced-api-usage/prompt-caching/usage-and-pricing
@@ -136,11 +143,13 @@ Source references:
 - DeepSeek chat completion docs show `usage.prompt_tokens`, `usage.completion_tokens`, `usage.total_tokens`, `usage.prompt_cache_hit_tokens`, `usage.prompt_cache_miss_tokens`, and `usage.completion_tokens_details.reasoning_tokens`: https://api-docs.deepseek.com/api/create-chat-completion/
 - Azure OpenAI REST reference documents `completionUsage` with `prompt_tokens`, `completion_tokens`, `total_tokens`, and optional `completion_tokens_details.reasoning_tokens`: https://learn.microsoft.com/en-us/azure/foundry/openai/reference
 - Hugging Face Inference Providers chat completion docs state the API is OpenAI SDK compatible and response usage includes `prompt_tokens`, `completion_tokens`, and `total_tokens`: https://huggingface.co/docs/inference-providers/tasks/chat-completion
+- Meta Model API SDK docs are currently login-gated at https://dev.meta.ai/docs/getting-started/sdks in this Codex environment. A credentialed sanitized smoke against `https://api.meta.ai/v1` confirmed `/models`, `/chat/completions`, `/responses`, cached-token usage details, and reasoning-token usage details.
 
 Mapping:
 
-- `usage.prompt_tokens` -> `input_uncached_tokens`, less any supported cached prompt field.
+- `usage.prompt_tokens` -> `input_uncached_tokens`, less supported cache-read and cache-write prompt fields.
 - `usage.prompt_tokens_details.cached_tokens` -> `input_cache_read_tokens`.
+- `usage.prompt_tokens_details.cache_write_tokens` -> `input_cache_write_tokens` when present.
 - `usage.prompt_cache_hit_tokens` -> `input_cache_read_tokens` for DeepSeek-compatible responses.
 - `usage.prompt_cache_miss_tokens` is preserved in raw usage and can reconstruct prompt tokens when `usage.prompt_tokens` is absent.
 - `usage.completion_tokens` -> `output_text_tokens`, less any supported reasoning field.
@@ -156,6 +165,47 @@ Notes:
 
 - Provider-specific tool, multimodal, and compound-routing fields remain future fixtures even when the base response shape is OpenAI compatible.
 - The shared generic helper is exposed as `extract_openai_compatible_chat_completions_usage` in Python and `extractOpenAICompatibleChatCompletionsUsage` in JavaScript/TypeScript.
+
+## Meta Model API
+
+Surfaces:
+
+- `meta.responses`
+- `meta.chat_completions`
+
+Source references:
+
+- Meta Model API SDK docs entrypoint: https://dev.meta.ai/docs/getting-started/sdks
+- Meta Model API public developer blog: https://developer.meta.com/ai/resources/blog/build-with-muse-spark/
+- Sanitized live smoke evidence: `fixtures/source-files/meta-model-api-live-smoke-2026-07-09.json`
+- The Verge public-preview coverage: https://www.theverge.com/news/780540/meta-api-ai-vibes-video-code-tools
+- Axios public-preview pricing coverage: https://www.axios.com/2026/07/09/meta-superintelligence-labs-ai-api-muse-spark
+- Reuters/WTVB public-preview pricing coverage: https://whtc.com/2026/07/09/meta-debuts-muse-spark-1-1-api-after-superintelligence-reorg/
+
+Mapping:
+
+- `meta.responses` reuses the Responses-style usage mapping:
+  `usage.input_tokens`, `usage.input_tokens_details.cached_tokens`,
+  `usage.output_tokens`, and `usage.output_tokens_details.reasoning_tokens`.
+- `meta.chat_completions` reuses the OpenAI-compatible chat mapping for
+  `usage.prompt_tokens`, `usage.prompt_tokens_details.cached_tokens`,
+  `usage.completion_tokens`, and
+  `usage.completion_tokens_details.reasoning_tokens`.
+- Function-call items in a Responses-style `output` array are counted as
+  `tool_call_units`; without verified Meta tool prices, those units produce a
+  structured `tool_component_unpriced` warning.
+- `usage.total_tokens` is preserved in raw usage but is never priced directly.
+
+Notes:
+
+- Credentialed live smoke passed for `/models`, `/chat/completions`, and
+  `/responses` on `https://api.meta.ai/v1`; the sanitized evidence file omits
+  prompts, response content, headers, account identifiers, raw responses, and
+  secret values.
+- A reviewed public-preview snapshot is retained for explicit opt-in estimates,
+  but it is not bundled in the default catalog because the exact rates could not
+  be verified from a primary Meta pricing source. Its cache-read and reasoning
+  assumptions remain clearly marked as non-authoritative preview behavior.
 
 ## Cohere Chat
 

@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 getcontext().prec = 50
 
-DEFAULT_PRICE_SOURCE_PRIORITY = ["anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"]
+DEFAULT_PRICE_SOURCE_PRIORITY = ["openai-official", "anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"]
 
 _COMPONENT_ORDER_NAMES = [
     "input_uncached_tokens",
@@ -496,6 +496,32 @@ def _find_price_components(
         for match in _candidate_price_components(price_cards, component)
         if _conditions_match(usage_ledger, match["price_component"])
     ]
+
+
+def _authoritative_source_candidates(
+    usage_ledger: Dict[str, Any],
+    candidates: List[Dict[str, Any]],
+    source_priority: Iterable[str],
+) -> List[Dict[str, Any]]:
+    priority = list(source_priority)
+    if not candidates or not priority:
+        return candidates
+    source_name = str((candidates[0]["card"].get("source") or {}).get("name", ""))
+    if source_name not in priority:
+        return candidates
+    metadata = candidates[0]["card"].get("metadata") or {}
+    if not isinstance(metadata.get("official_snapshot"), dict):
+        return candidates
+    source_candidates = [
+        candidate
+        for candidate in candidates
+        if str((candidate["card"].get("source") or {}).get("name", "")) == source_name
+    ]
+    if not any(candidate["price_component"].get("conditions") for candidate in source_candidates):
+        return candidates
+    if any(_conditions_match(usage_ledger, candidate["price_component"]) for candidate in source_candidates):
+        return candidates
+    return source_candidates
 
 
 def _warning_identity_metadata(usage_ledger: Dict[str, Any]) -> Dict[str, Any]:
@@ -1274,7 +1300,11 @@ def calculate_cost(
                 trace["summary"]["unpriced_components"] += 1
             continue
 
-        candidates = _candidate_price_components(matching_cards, component)
+        candidates = _authoritative_source_candidates(
+            component_usage_ledger,
+            _candidate_price_components(matching_cards, component),
+            source_priority,
+        )
         matches = [
             match
             for match in candidates
@@ -1738,8 +1768,24 @@ def _base_usage_ledger(
     return ledger
 
 
+def _normalize_openai_service_tier(value: Any) -> Optional[str]:
+    tier = str(value or "").strip().lower()
+    if not tier:
+        return None
+    if tier in {"auto", "default", "standard"}:
+        return "standard"
+    return tier
+
+
 def _usage_context_from_options(response: Dict[str, Any], provider: str, options: Dict[str, Any]) -> Dict[str, Any]:
     context = dict(options.get("context") or {})
+    if provider == "openai":
+        context_tier = context.get("service_tier", context.get("serviceTier"))
+        if context_tier is not None:
+            normalized_context_tier = _normalize_openai_service_tier(context_tier)
+            if normalized_context_tier:
+                context["service_tier"] = normalized_context_tier
+            context.pop("serviceTier", None)
     priced_at = options.get("priced_at") or options.get("pricedAt")
     if priced_at is not None:
         context["priced_at"] = str(priced_at)
@@ -1750,6 +1796,13 @@ def _usage_context_from_options(response: Dict[str, Any], provider: str, options
     pricing_period = options.get("pricing_period") or options.get("pricingPeriod")
     if pricing_period is not None:
         context["pricing_period"] = str(pricing_period)
+    service_tier = options.get("service_tier") or options.get("serviceTier")
+    if service_tier is None and provider == "openai":
+        service_tier = response.get("service_tier", response.get("serviceTier"))
+    if service_tier is not None and "service_tier" not in context:
+        normalized_tier = _normalize_openai_service_tier(service_tier) if provider == "openai" else str(service_tier)
+        if normalized_tier:
+            context["service_tier"] = normalized_tier
     return context
 
 
@@ -1783,19 +1836,25 @@ def _sum_openai_responses_orchestration_usage(usages: Iterable[Dict[str, Any]]) 
 
 def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     response = _openai_responses_payload(response)
-    usage = response.get("usage", {})
+    usage = response.get("usage") or {}
     surface = options.get("surface", "openai.responses")
-    provider = options.get("provider") or ("xai" if surface == "xai.responses" else "openai")
+    response_provider_defaults = {
+        "xai.responses": "xai",
+        "meta.responses": "meta",
+    }
+    provider = options.get("provider") or response_provider_defaults.get(surface, "openai")
     input_details = usage.get("input_tokens_details") or {}
     output_details = usage.get("output_tokens_details") or {}
     cached_input = _decimal(input_details.get("cached_tokens") or 0)
+    cache_write = _decimal(input_details.get("cache_write_tokens") or 0)
     orchestration_input, orchestration_cached_input, orchestration_output = _openai_responses_orchestration_usage(usage)
     reasoning = _decimal(output_details.get("reasoning_tokens") or 0)
     input_tokens = _decimal(usage.get("input_tokens") or 0)
     output_tokens = _decimal(usage.get("output_tokens") or 0)
-    input_uncached = input_tokens - cached_input + orchestration_input - orchestration_cached_input
+    input_uncached = input_tokens - cached_input - cache_write + orchestration_input - orchestration_cached_input
     input_cache_read = cached_input + orchestration_cached_input
     output_text = output_tokens - reasoning + orchestration_output
+    context = _usage_context_from_options(response, provider, options)
     tool_components = []
     function_call_count = 0
     explicit_server_side_tool_count = Decimal("0")
@@ -1855,6 +1914,7 @@ def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> 
         requested_model=options.get("model", response.get("model")),
         returned_model=response.get("model"),
         raw_usage=usage,
+        context=context,
         components=_compact_components(
             [
                 _positive_component(
@@ -1870,6 +1930,12 @@ def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> 
                     "$.usage.input_tokens_details.cached_tokens + $.usage.input_tokens_details.orchestration_input_cached_tokens",
                 ),
                 _positive_component(
+                    "input_cache_write_tokens",
+                    _format_decimal(cache_write),
+                    "token",
+                    "$.usage.input_tokens_details.cache_write_tokens",
+                ),
+                _positive_component(
                     "output_text_tokens",
                     _format_decimal(output_text),
                     "token",
@@ -1883,7 +1949,7 @@ def extract_openai_responses_usage(response: Dict[str, Any], **options: Any) -> 
 
 
 def extract_openai_embeddings_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
-    usage = response.get("usage", {})
+    usage = response.get("usage") or {}
     tokens = usage.get("prompt_tokens", usage.get("total_tokens", 0))
     source_path = "$.usage.prompt_tokens" if "prompt_tokens" in usage else "$.usage.total_tokens"
 
@@ -2229,6 +2295,7 @@ OPENAI_COMPATIBLE_CHAT_PROVIDERS = {
     "openrouter.chat_completions": "openrouter",
     "groq.chat_completions": "groq",
     "xai.chat_completions": "xai",
+    "meta.chat_completions": "meta",
     "mistral.chat_completions": "mistral",
     "deepseek.chat_completions": "deepseek",
     "azure.openai.chat_completions": "azure",
@@ -2243,6 +2310,13 @@ def _openai_compatible_cached_input(usage: Dict[str, Any]) -> tuple[Any, str]:
     if "prompt_cache_hit_tokens" in usage:
         return usage.get("prompt_cache_hit_tokens", 0), "$.usage.prompt_cache_hit_tokens"
     return 0, "$.usage.prompt_tokens_details.cached_tokens"
+
+
+def _openai_compatible_cache_write(usage: Dict[str, Any]) -> tuple[Any, str]:
+    prompt_details = usage.get("prompt_tokens_details", {})
+    if "cache_write_tokens" in prompt_details:
+        return prompt_details.get("cache_write_tokens", 0), "$.usage.prompt_tokens_details.cache_write_tokens"
+    return 0, "$.usage.prompt_tokens_details.cache_write_tokens"
 
 
 def _openai_compatible_reasoning_output(usage: Dict[str, Any]) -> tuple[Any, str]:
@@ -2273,8 +2347,9 @@ def _openai_compatible_chat_payload(response: Dict[str, Any]) -> Dict[str, Any]:
 
 def extract_openai_compatible_chat_completions_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     response = _openai_compatible_chat_payload(response)
-    usage = response.get("usage", {})
+    usage = response.get("usage") or {}
     cached_input, cached_source = _openai_compatible_cached_input(usage)
+    cache_write, cache_write_source = _openai_compatible_cache_write(usage)
     reasoning, reasoning_source = _openai_compatible_reasoning_output(usage)
     prompt_tokens = usage.get(
         "prompt_tokens",
@@ -2294,8 +2369,9 @@ def extract_openai_compatible_chat_completions_usage(response: Dict[str, Any], *
         context=context,
         components=_compact_components(
             [
-                _positive_component("input_uncached_tokens", prompt_tokens - cached_input, "token", "$.usage.prompt_tokens"),
+                _positive_component("input_uncached_tokens", prompt_tokens - cached_input - cache_write, "token", "$.usage.prompt_tokens"),
                 _positive_component("input_cache_read_tokens", cached_input, "token", cached_source),
+                _positive_component("input_cache_write_tokens", cache_write, "token", cache_write_source),
                 _positive_component("output_text_tokens", completion_tokens - reasoning, "token", "$.usage.completion_tokens"),
                 _positive_component("output_reasoning_tokens", reasoning, "token", reasoning_source),
             ]
@@ -2313,6 +2389,18 @@ def extract_openrouter_chat_completions_usage(response: Dict[str, Any], **option
     merged_options = {"provider": "openrouter", "surface": "openrouter.chat_completions"}
     merged_options.update(options)
     return extract_openai_compatible_chat_completions_usage(response, **merged_options)
+
+
+def extract_meta_chat_completions_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = {"provider": "meta", "surface": "meta.chat_completions"}
+    merged_options.update(options)
+    return extract_openai_compatible_chat_completions_usage(response, **merged_options)
+
+
+def extract_meta_responses_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+    merged_options = {"provider": "meta", "surface": "meta.responses"}
+    merged_options.update(options)
+    return extract_openai_responses_usage(response, **merged_options)
 
 
 def _anthropic_messages_payload(response: Dict[str, Any]) -> Dict[str, Any]:
@@ -3520,22 +3608,28 @@ def _openai_agents_usage_payload(response: Dict[str, Any]) -> tuple[Dict[str, An
 
 def extract_openai_agents_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
     usage, source_root, source_root_value = _openai_agents_usage_payload(response)
-    cached_input = _nested_dict(usage, "input_tokens_details").get("cached_tokens", 0)
+    input_details = _nested_dict(usage, "input_tokens_details")
+    cached_input = input_details.get("cached_tokens", 0)
+    cache_write = input_details.get("cache_write_tokens", 0)
     reasoning = _nested_dict(usage, "output_tokens_details").get("reasoning_tokens", 0)
     input_tokens = usage.get("input_tokens", 0)
     output_tokens = usage.get("output_tokens", 0)
     returned_model = usage.get("model") or source_root_value.get("model") or response.get("model") or options.get("model")
+    provider = options.get("provider", "openai")
+    context = _usage_context_from_options(source_root_value, provider, options)
 
     return _base_usage_ledger(
-        provider=options.get("provider", "openai"),
+        provider=provider,
         surface=options.get("surface", "openai.responses"),
         requested_model=options.get("model", returned_model),
         returned_model=returned_model,
         raw_usage=usage,
+        context=context,
         components=_compact_components(
             [
-                _positive_component("input_uncached_tokens", input_tokens - cached_input, "token", f"{source_root}.input_tokens"),
+                _positive_component("input_uncached_tokens", input_tokens - cached_input - cache_write, "token", f"{source_root}.input_tokens"),
                 _positive_component("input_cache_read_tokens", cached_input, "token", f"{source_root}.input_tokens_details.cached_tokens"),
+                _positive_component("input_cache_write_tokens", cache_write, "token", f"{source_root}.input_tokens_details.cache_write_tokens"),
                 _positive_component("output_text_tokens", output_tokens - reasoning, "token", f"{source_root}.output_tokens"),
                 _positive_component("output_reasoning_tokens", reasoning, "token", f"{source_root}.output_tokens_details.reasoning_tokens"),
             ]
@@ -3703,7 +3797,7 @@ def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, 
         return extract_openrouter_sdk_response_usage(response, **options)
 
     surface = options.get("surface")
-    if surface in {"openai.responses", "xai.responses"}:
+    if surface in {"openai.responses", "xai.responses", "meta.responses"}:
         return extract_openai_responses_usage(response, **options)
     if surface == "openai.embeddings":
         return extract_openai_embeddings_usage(response, **options)

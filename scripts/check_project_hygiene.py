@@ -173,6 +173,10 @@ PUBLIC_API_NAMES = [
     "extract_ag2_usage_summary_usage",
     "extractOpenRouterChatCompletionsUsage",
     "extract_openrouter_chat_completions_usage",
+    "extractMetaChatCompletionsUsage",
+    "extract_meta_chat_completions_usage",
+    "extractMetaResponsesUsage",
+    "extract_meta_responses_usage",
     "extractOpenAICompatibleChatCompletionsUsage",
     "extract_openai_compatible_chat_completions_usage",
     "extractOpenAIEmbeddingsUsage",
@@ -396,6 +400,11 @@ def check_public_api_artifacts() -> None:
     go_source = (ROOT / "packages/go/ledger/ledger.go").read_text(encoding="utf-8")
     go_examples = (ROOT / "packages/go/ledger/example_test.go").read_text(encoding="utf-8")
 
+    assert_true(
+        'DEFAULT_PRICE_SOURCE_PRIORITY: readonly ["openai-official",' in typescript,
+        "TypeScript default source priority declaration must match the runtime catalog order",
+    )
+
     for name in PUBLIC_API_NAMES:
         assert_true(name in parity, f"API parity matrix missing {name}")
 
@@ -467,6 +476,8 @@ def check_public_api_artifacts() -> None:
         "price_cards_from_json_file",
         "price_cards_from_yaml_file",
         "extract_openai_compatible_chat_completions_usage",
+        "extract_meta_chat_completions_usage",
+        "extract_meta_responses_usage",
         "extract_openai_embeddings_usage",
         "extract_gemini_live_usage",
         "extract_google_interactions_usage",

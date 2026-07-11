@@ -23,6 +23,13 @@ from scripts.refresh_price_sources import (  # noqa: E402
 DEFAULT_SOURCES: list[dict[str, str]] = [
     {
         "source_type": "official-snapshot",
+        "name": "openai-official",
+        "url": "https://developers.openai.com/api/docs/pricing",
+        "input": "fixtures/source-files/openai-official-gpt-56-pricing-snapshot.json",
+        "license": "reviewed",
+    },
+    {
+        "source_type": "official-snapshot",
         "name": "anthropic-official",
         "url": "https://platform.claude.com/docs/en/about-claude/pricing",
         "input": "fixtures/source-files/anthropic-official-pricing-snapshot.json",
@@ -71,7 +78,7 @@ DEFAULT_OUTPUTS = [
     ROOT / "packages" / "go" / "ledger" / "data" / "default-source-cache.json",
 ]
 
-DEFAULT_PRIORITY = ["anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"]
+DEFAULT_PRIORITY = ["openai-official", "anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"]
 
 
 def source_config(raw_config: dict[str, str]) -> dict[str, str]:

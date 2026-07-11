@@ -1,0 +1,183 @@
+{
+  "name": "meta-responses-raw-tools-warning",
+  "description": "Extracts Meta Model API Responses-style usage and warns when hosted tool-call units are present without verified Meta tool pricing.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR",
+      "RC-WARNING-MODE"
+    ],
+    "provider": "meta",
+    "surface": "meta.responses",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "component:input_cache_read_tokens",
+      "component:input_uncached_tokens",
+      "component:output_reasoning_tokens",
+      "component:output_text_tokens",
+      "component:tool_call_units",
+      "meta",
+      "raw_provider_response",
+      "reasoning",
+      "tool_pricing",
+      "warning:tool_component_unpriced"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "raw_response": {
+      "id": "resp_meta_fixture",
+      "object": "response",
+      "model": "muse-spark-1.1",
+      "usage": {
+        "input_tokens": 1200,
+        "input_tokens_details": {
+          "cached_tokens": 200
+        },
+        "output_tokens": 500,
+        "output_tokens_details": {
+          "reasoning_tokens": 125
+        },
+        "total_tokens": 1700
+      },
+      "output": [
+        {
+          "type": "function_call",
+          "name": "open_file",
+          "call_id": "call_meta_fixture"
+        }
+      ]
+    },
+    "extract": {
+      "provider": "meta",
+      "surface": "meta.responses",
+      "model": "muse-spark-1.1"
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "meta:muse-spark-1.1:responses:tokens-only-fixture",
+        "provider": "meta",
+        "surface": "meta.responses",
+        "model": "muse-spark-1.1",
+        "components": [
+          {
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1.25",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "input_cache_read_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "1.25",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4.25",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          },
+          {
+            "usage_component": "output_reasoning_tokens",
+            "unit": "token",
+            "price": {
+              "amount": "4.25",
+              "currency": "USD",
+              "per": "1000000"
+            }
+          }
+        ],
+        "source": {
+          "name": "fixture",
+          "retrieved_at": "2026-07-09T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "meta",
+      "surface": "meta.responses",
+      "model": {
+        "requested": "muse-spark-1.1",
+        "returned": "muse-spark-1.1",
+        "billed": "muse-spark-1.1",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000",
+          "unit": "token",
+          "unit_price": "0.00000125",
+          "cost": "0.00125",
+          "price_card_id": "meta:muse-spark-1.1:responses:tokens-only-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_read_tokens",
+          "quantity": "200",
+          "unit": "token",
+          "unit_price": "0.00000125",
+          "cost": "0.00025",
+          "price_card_id": "meta:muse-spark-1.1:responses:tokens-only-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "375",
+          "unit": "token",
+          "unit_price": "0.00000425",
+          "cost": "0.00159375",
+          "price_card_id": "meta:muse-spark-1.1:responses:tokens-only-fixture",
+          "discount_eligible": true
+        },
+        {
+          "name": "output_reasoning_tokens",
+          "quantity": "125",
+          "unit": "token",
+          "unit_price": "0.00000425",
+          "cost": "0.00053125",
+          "price_card_id": "meta:muse-spark-1.1:responses:tokens-only-fixture",
+          "discount_eligible": true
+        }
+      ],
+      "total": "0.003625",
+      "price_sources": [
+        {
+          "name": "fixture",
+          "retrieved_at": "2026-07-09T00:00:00Z"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "tool_component_unpriced",
+          "message": "No price found for tool or feature component tool_call_units on model muse-spark-1.1.",
+          "metadata": {
+            "component": "tool_call_units",
+            "unit": "call",
+            "model": "muse-spark-1.1"
+          }
+        }
+      ]
+    }
+  }
+}

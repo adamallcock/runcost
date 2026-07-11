@@ -332,6 +332,8 @@ def run_python_fixture(fixture):
                 "openai.vector_stores",
                 "openai.usage.code_interpreter_sessions",
                 "openai.chat_completions",
+                "meta.chat_completions",
+                "meta.responses",
                 "anthropic.messages",
                 "openrouter.chat_completions",
                 "groq.chat_completions",

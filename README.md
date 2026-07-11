@@ -213,8 +213,8 @@ ledger = calculate_cost(
 
 Fixture-backed surfaces include OpenAI Responses and Chat Completions, Anthropic
 Messages, OpenRouter, Gemini and Vertex `generateContent`, AWS Bedrock Converse,
-Cohere Chat and Rerank, OpenAI-compatible providers such as Groq, xAI, Mistral,
-DeepSeek, Azure OpenAI, and Hugging Face Inference Providers, plus selected
+Cohere Chat and Rerank, OpenAI-compatible providers such as Meta, Groq, xAI,
+Mistral, DeepSeek, Azure OpenAI, and Hugging Face Inference Providers, plus selected
 framework objects from LangChain, Vercel AI SDK, OpenAI Agents SDK, LlamaIndex,
 Haystack, LiteLLM, AutoGen/AG2, LangSmith, Semantic Kernel, and OpenRouter SDK
 paths.
