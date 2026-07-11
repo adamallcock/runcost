@@ -612,8 +612,8 @@ Exit gate:
 
 - The library is ready for alpha users from registry or source-install paths.
   First registry publication, trusted-publisher setup, and post-tag Go module
-  verification were completed for `0.1.11`; current release evidence is
-  recorded in `docs/internal/reports/2026-07-05-release-0-1-12-evidence.md`.
+  verification are current through `0.1.13`; release evidence is
+  recorded in `docs/internal/reports/2026-07-10-release-0-1-13-evidence.md`.
 
 ### Milestone 8: Alpha Quality and Feedback
 
@@ -746,9 +746,9 @@ Release rehearsal progress:
   from `github.com/adamallcock/runcost/packages/go/ledger@v<version>` without a
   local `replace`.
 - Trusted-publisher configuration, real-version no-publish workflow execution,
-  real Go tag verification, and publishing are proven for `0.1.12`. Current
+  real Go tag verification, and publishing are proven for `0.1.13`. Current
   evidence is recorded in
-  `docs/internal/reports/2026-07-05-release-0-1-12-evidence.md`.
+  `docs/internal/reports/2026-07-10-release-0-1-13-evidence.md`.
 
 Polyglot hardening progress:
 
@@ -803,13 +803,13 @@ Beta requirements:
 Delivered so far:
 
 - Guarded release workflow and local release dry-run checks exist.
-- PyPI/npm trusted-publishing setup instructions exist, and `0.1.12` was
+- PyPI/npm trusted-publishing setup instructions exist, and `0.1.13` was
   published through the guarded release workflow.
 - Guarded `publish=false` and `publish=true` workflow runs have passed for
-  `0.1.12`; current evidence is recorded in
-  `docs/internal/reports/2026-07-05-release-0-1-12-evidence.md`.
+  `0.1.13`; current evidence is recorded in
+  `docs/internal/reports/2026-07-10-release-0-1-13-evidence.md`.
 - Real Go tag verification exists in the guarded release workflow when a remote
-  `v<version>` tag is present, and `v0.1.12` is available through the Go module
+  `v<version>` tag is present, and `v0.1.13` is available through the Go module
   path.
 - Source-data update ownership, cadence, review checklist, and product-truth
   loop are documented in

@@ -60,5 +60,5 @@ exports.
   `docs/internal/process/invoice-dashboard-comparison.md` to convert that reviewed
   evidence into the machine-checkable comparison format.
 - PyPI and npm were later published and remain verified through release
-  `0.1.12`; current release evidence is recorded in
-  `docs/internal/reports/2026-07-05-release-0-1-12-evidence.md`.
+  `0.1.13`; current release evidence is recorded in
+  `docs/internal/reports/2026-07-10-release-0-1-13-evidence.md`.

@@ -94,7 +94,7 @@ That command creates temporary projects for Python, npm, and Go and verifies tha
 
 - MIT license and package license metadata are present.
 - Guarded registry publish workflow exists for PyPI and npm and has published
-  `0.1.12` through the release environment.
+  `0.1.13` through the release environment.
 - Go module tags, PyPI publishing, and npm publishing are guarded by the maintainer release process.
 - `npm run check:release` verifies package version sync, license metadata, changelog presence, registry README policy, and release workflow guardrails.
 - The npm package ships a package-facing README aligned with the root public README.

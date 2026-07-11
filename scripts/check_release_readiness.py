@@ -32,6 +32,7 @@ REQUIRED_FILES = [
     "docs/internal/process/2026-05-28-public-github-readiness.md",
     "docs/internal/reports/2026-05-28-default-price-catalog-review.md",
     "docs/internal/reports/2026-07-05-release-0-1-12-evidence.md",
+    "docs/internal/reports/2026-07-10-release-0-1-13-evidence.md",
     "docs/reference/price-data-strategy.md",
     "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     ".github/workflows/release.yml",
@@ -46,7 +47,7 @@ REQUIRED_FILES = [
     "packages/javascript/core/README.md",
     "schemas/trusted-publishing-verification.schema.json",
     "fixtures/source-files/trusted-publishing-verification-template.json",
-    "fixtures/source-files/trusted-publishing-verification-2026-07-05.json",
+    "fixtures/source-files/trusted-publishing-verification-2026-07-10.json",
 ]
 
 
@@ -178,8 +179,8 @@ def check_release_docs() -> None:
     release_doc = (ROOT / "docs/internal/process/release-process.md").read_text(encoding="utf-8")
     source_update_doc = (ROOT / "docs/internal/process/2026-05-26-source-data-update-process.md").read_text(encoding="utf-8")
     public_github_doc = (ROOT / "docs/internal/process/2026-05-28-public-github-readiness.md").read_text(encoding="utf-8")
-    release_evidence = (ROOT / "docs/internal/reports/2026-07-05-release-0-1-12-evidence.md").read_text(encoding="utf-8")
-    trusted_publishing = read_json("fixtures/source-files/trusted-publishing-verification-2026-07-05.json")
+    release_evidence = (ROOT / "docs/internal/reports/2026-07-10-release-0-1-13-evidence.md").read_text(encoding="utf-8")
+    trusted_publishing = read_json("fixtures/source-files/trusted-publishing-verification-2026-07-10.json")
     for phrase in [
         "trusted publishing",
         "Go module",
@@ -202,7 +203,7 @@ def check_release_docs() -> None:
         "trusted-publishing-verification",
         "runcost-ai",
         "public-github",
-        "2026-07-05-release-0-1-12-evidence",
+        "2026-07-10-release-0-1-13-evidence",
     ]:
         assert_true(re.search(re.escape(phrase), release_doc, re.IGNORECASE), f"release process missing {phrase}")
 
@@ -233,9 +234,9 @@ def check_release_docs() -> None:
     migration = (ROOT / "docs/guides/2026-05-26-migration-from-hand-written-formulas.md").read_text(encoding="utf-8")
     assert_true("hand-written" in migration.lower(), "migration guide must cover hand-written formulas")
     assert_true("fixture-check" in migration, "migration guide must mention fixture checks")
-    assert_true("2026-07-05-release-0-1-12-evidence" in public_github_doc, "public GitHub readiness must link current release evidence")
-    for phrase in ["v0.1.12", "runcost@0.1.12", "runcost-ai 0.1.12", "Post-Publish Install Smoke"]:
-        assert_true(phrase in release_evidence, f"0.1.12 release evidence missing {phrase}")
+    assert_true("2026-07-10-release-0-1-13-evidence" in public_github_doc, "public GitHub readiness must link current release evidence")
+    for phrase in ["v0.1.13", "runcost@0.1.13", "runcost-ai==0.1.13", "Post-Publish Install Smoke"]:
+        assert_true(phrase in release_evidence, f"0.1.13 release evidence missing {phrase}")
     assert_true(trusted_publishing.get("evidence_type") == "manual_verified", "trusted publishing evidence must be real")
     for registry in ["pypi", "npm"]:
         publisher = trusted_publishing[registry]
