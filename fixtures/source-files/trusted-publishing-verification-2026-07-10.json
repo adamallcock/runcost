@@ -1,0 +1,36 @@
+{
+  "schema_version": "0.1",
+  "generated_at": "2026-07-11T02:18:00Z",
+  "evidence_type": "manual_verified",
+  "safe_to_commit": true,
+  "contains_secret_values": false,
+  "repository": "adamallcock/runcost",
+  "workflow": ".github/workflows/release.yml",
+  "environment": "release",
+  "pypi": {
+    "package": "runcost-ai",
+    "registry": "pypi",
+    "trusted_publisher_configured": true,
+    "provenance_or_oidc_configured": true,
+    "stored_registry_token_required": false,
+    "configured_by": "GitHub Actions release workflow",
+    "verified_at": "2026-07-11T02:16:39Z",
+    "verification_method": "Successful PyPI trusted publish step in the guarded release workflow plus live PyPI 0.1.13 version and file checks",
+    "evidence_url": "https://github.com/adamallcock/runcost/actions/runs/29136027287"
+  },
+  "npm": {
+    "package": "runcost",
+    "registry": "npm",
+    "trusted_publisher_configured": true,
+    "provenance_or_oidc_configured": true,
+    "stored_registry_token_required": false,
+    "configured_by": "GitHub Actions release workflow",
+    "verified_at": "2026-07-11T02:16:39Z",
+    "verification_method": "Successful npm trusted publish with provenance plus live npm 0.1.13 dist-tag, integrity, signature, and attestation checks",
+    "evidence_url": "https://registry.npmjs.org/-/npm/v1/attestations/runcost@0.1.13"
+  },
+  "notes": [
+    "This artifact records sanitized registry-side verification after the v0.1.13 publish workflow.",
+    "No registry credentials, account identifiers, or private registry settings are included."
+  ]
+}

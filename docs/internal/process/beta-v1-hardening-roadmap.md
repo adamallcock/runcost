@@ -75,10 +75,10 @@ Current release evidence:
 - Remote tag `v0.1.0` has been verified from a clean temporary Go module
   without a local `replace`; evidence is recorded in
   `docs/internal/reports/2026-05-26-go-tag-verification-0-1-0.md`.
-- Release `0.1.12` was published on 2026-07-05 through the guarded release
+- Release `0.1.13` was published on 2026-07-10 local time through the guarded release
   workflow. Current registry, provenance, Go tag, and post-publish install smoke
   evidence is recorded in
-  `docs/internal/reports/2026-07-05-release-0-1-12-evidence.md`.
+  `docs/internal/reports/2026-07-10-release-0-1-13-evidence.md`.
 - The Python distribution-name decision is recorded in
   `docs/internal/decisions/2026-05-27-python-distribution-name.md`: publish
   `runcost-ai` on PyPI while preserving `import runcost` and the `runcost` CLI.
