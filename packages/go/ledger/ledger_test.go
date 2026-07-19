@@ -493,20 +493,17 @@ func TestFixtures(t *testing.T) {
 	}
 }
 
-func TestDefaultPriceCatalog(t *testing.T) {
-	cache := DefaultSourceCache()
-	metadata := asObject(cache["metadata"])
-	if metadata["price_card_count"] == nil {
-		t.Fatal("default source cache missing price_card_count")
+func TestFromResponseDoesNotResolvePricesImplicitly(t *testing.T) {
+	result := FromResponse(
+		Object{"model": "gpt-test", "usage": Object{"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}},
+		Object{"provider": "openai", "surface": "openai.chat_completions"},
+		nil,
+		nil,
+	)
+	if asString(result["total"]) != "0" {
+		t.Fatalf("deterministic FromResponse priced without explicit cards: %#v", result)
 	}
-	cards := DefaultPriceCards()
-	if len(cards) < 7000 {
-		t.Fatalf("default price catalog is unexpectedly small: %d", len(cards))
-	}
-	if fmt.Sprint(len(cards)) != fmt.Sprint(metadata["price_card_count"]) {
-		t.Fatalf("default catalog count mismatch: cards=%d metadata=%v", len(cards), metadata["price_card_count"])
-	}
-	if len(DefaultPriceSourcePriority) == 0 || DefaultPriceSourcePriority[0] != "openai-official" {
-		t.Fatalf("unexpected default source priority: %#v", DefaultPriceSourcePriority)
+	if len(asSlice(result["warnings"])) == 0 {
+		t.Fatal("missing explicit-price warning")
 	}
 }

@@ -40,6 +40,15 @@ export interface UsageContext {
   [key: string]: unknown;
 }
 
+export interface Attribution {
+  run_id?: string;
+  session_id?: string;
+  workflow?: string;
+  tenant_id?: string;
+  feature?: string;
+  tags?: Record<string, string>;
+}
+
 export interface UsageTool {
   provider?: string;
   name?: string;
@@ -62,6 +71,7 @@ export interface UsageLedger {
   surface: string;
   model: UsageModel;
   context?: UsageContext;
+  attribution?: Attribution;
   components: UsageComponent[];
   raw_usage?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
@@ -128,6 +138,13 @@ export interface PriceCard {
   components: PriceComponent[];
   source: SourceInfo;
   metadata?: Record<string, unknown>;
+}
+
+export interface CompiledPriceCatalog {
+  readonly __runcostCompiledCatalog: true;
+  readonly priceCards: PriceCard[];
+  readonly byProviderModel: ReadonlyMap<string, PriceCard[]>;
+  readonly byModel: ReadonlyMap<string, PriceCard[]>;
 }
 
 export interface DiscountPolicyMatch {
@@ -388,6 +405,33 @@ export interface CostLedger {
   warnings: CostWarning[];
   debug_trace?: DebugTrace;
   metadata?: Record<string, unknown>;
+  attribution?: Attribution;
+}
+
+export type BatchItemStatus = "succeeded" | "errored" | "canceled" | "expired" | "pending";
+
+export interface BatchItem {
+  id: string;
+  status: BatchItemStatus;
+  http_status?: number;
+  ledger?: CostLedger;
+  error?: { code?: string | number; message: string; type?: string; [key: string]: unknown };
+  attribution?: Attribution;
+  metadata?: Record<string, unknown>;
+}
+
+export interface BatchCostLedger {
+  schema_version: SchemaVersion;
+  provider: string;
+  surface: string;
+  batch_id?: string;
+  currency: string;
+  items: BatchItem[];
+  summary: { total: number; succeeded: number; failed: number; pending: number; total_cost: MoneyString };
+  aggregate: CostLedger;
+  warnings: Array<{ code: string; message: string; metadata: Record<string, unknown> }>;
+  attribution?: Attribution;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AggregateCostLedgersOptions {
@@ -403,11 +447,12 @@ export interface AggregateCostLedgersOptions {
   stream_final_usage_expected?: boolean;
   streamFinalUsagePresent?: boolean;
   stream_final_usage_present?: boolean;
+  attribution?: Attribution;
 }
 
 export interface CalculateCostOptions {
   usageLedger: UsageLedger;
-  priceCards: PriceCard[];
+  priceCards: PriceCard[] | CompiledPriceCatalog;
   discountPolicies?: DiscountPolicy[];
   mode?: CalculationMode;
   staleAfterDays?: number;
@@ -426,7 +471,7 @@ export interface ExtractOptions {
   adapter?: string;
   framework?: string;
   provider?: string;
-  surface: string;
+  surface?: string;
   model?: string;
   context?: UsageContext;
   priced_at?: string;
@@ -444,8 +489,11 @@ export interface ExtractOptions {
 }
 
 export interface FromResponseOptions extends ExtractOptions {
-  priceCards?: PriceCard[];
+  priceCards?: PriceCard[] | CompiledPriceCatalog;
+  price_cards?: PriceCard[] | CompiledPriceCatalog;
   discountPolicies?: DiscountPolicy[];
+  discount_policies?: DiscountPolicy[];
+  attribution?: Attribution;
   mode?: CalculationMode;
   staleAfterDays?: number;
   stale_after_days?: number;
@@ -506,11 +554,135 @@ export interface SourceAdapterOptions {
   source_name?: string;
   provider?: string;
   surface?: string;
+  version?: string;
+  sourceVersion?: string;
+  source_version?: string;
+}
+
+export interface BatchResultsOptions extends FromResponseOptions {
+  provider: string;
+  endpoint?: string;
+  batchId?: string;
+  batch_id?: string;
+}
+
+export interface BudgetEvaluation {
+  schema_version: SchemaVersion;
+  status: "within_budget" | "warning" | "exceeded";
+  estimated_cost: MoneyString;
+  budget: MoneyString;
+  remaining: MoneyString;
+  warning_threshold: DecimalString;
+  currency: string;
+  ledger?: CostLedger;
+}
+
+export interface CostReconciliation {
+  schema_version: SchemaVersion;
+  status: "matched" | "within_tolerance" | "mismatch";
+  calculated_total: MoneyString;
+  reported_total: MoneyString;
+  signed_residual: MoneyString;
+  absolute_residual: MoneyString;
+  tolerance: MoneyString;
+  currency: string;
+}
+
+export interface CatalogArtifact {
+  provider?: string;
+  path: string;
+  sha256: string;
+  bytes: number;
+  price_card_count: number;
+}
+
+export interface CatalogManifest {
+  schema_version: SchemaVersion;
+  algorithm: "sha256";
+  catalog: CatalogArtifact;
+  shards: CatalogArtifact[];
+}
+
+export interface CatalogVerificationArtifact {
+  path: string;
+  exists: boolean;
+  sha256?: string | null;
+  matches: boolean;
+}
+
+export interface CatalogVerification {
+  schema_version: SchemaVersion;
+  valid: boolean;
+  algorithm: "sha256";
+  artifacts: CatalogVerificationArtifact[];
+}
+
+export interface PriceResolutionSource {
+  name: string;
+  type: "external" | "user" | "contract";
+  url?: string;
+  cache_key?: string;
+  status: "selected" | "refreshed" | "cache_fresh" | "cache_validated" | "cache_stale" | "unavailable";
+  retrieved_at?: string;
+  validated_at?: string;
+  checksum?: string;
+  etag?: string;
+  last_modified?: string;
+  card_count: number;
+  priced_component_count?: number;
+  applicable?: boolean;
+  selected?: boolean;
+}
+
+export interface PriceResolution {
+  schema_version: SchemaVersion;
+  selected_source: string | null;
+  price_cards: PriceCard[];
+  sources: PriceResolutionSource[];
+  warnings: Array<{ code: "price_source_unavailable" | "price_source_refresh_failed"; message: string; metadata: { source: string; status: string } }>;
+  resolved_at: string;
+}
+
+export interface PriceResolverOptions {
+  contractPriceCards?: PriceCard[];
+  contract_price_cards?: PriceCard[];
+  sources?: Array<"genai-prices" | "models.dev" | "litellm" | "openrouter">;
+  priceSources?: Array<"genai-prices" | "models.dev" | "litellm" | "openrouter">;
+  price_sources?: Array<"genai-prices" | "models.dev" | "litellm" | "openrouter">;
+  sourceUrls?: Partial<Record<"genai-prices" | "models.dev" | "litellm" | "openrouter", string>>;
+  source_urls?: Partial<Record<"genai-prices" | "models.dev" | "litellm" | "openrouter", string>>;
+  cacheDir?: string;
+  cache_dir?: string;
+  offline?: boolean;
+  refresh?: boolean;
+  maxAgeSeconds?: number;
+  max_age_seconds?: number;
+  timeoutMs?: number;
+  timeout_ms?: number;
+  maxBytes?: number;
+  max_bytes?: number;
+  fetcher?: (input: string, init?: Record<string, unknown>) => Promise<unknown>;
+  now?: string | Date;
+}
+
+export interface PriceCacheEntry {
+  cache_key: string;
+  name?: string;
+  url?: string;
+  retrieved_at?: string;
+  validated_at?: string;
+  checksum?: string;
+  etag?: string;
+  last_modified?: string;
+  card_count?: number;
+  age_seconds?: number | null;
+  status: "valid" | "invalid";
 }
 
 export function calculateCost(options: CalculateCostOptions): CostLedger;
 export function aggregateCostLedgers(options: AggregateCostLedgersOptions): CostLedger;
 export function extractUsageLedger(response: Record<string, unknown>, options: ExtractOptions): UsageLedger;
+export function inferSurface(response: Record<string, unknown>, options?: Pick<ExtractOptions, "provider">): string | undefined;
 export function extractOpenAIResponsesUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractOpenAIEmbeddingsUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
 export function extractOpenAIAudioTranscriptionUsage(response: Record<string, unknown>, options?: Partial<ExtractOptions>): UsageLedger;
@@ -552,14 +724,23 @@ export function priceCardsFromModelsDev(data: Record<string, unknown>, options?:
 export function priceCardsFromOfficialSnapshot(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromPortkey(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromSourceCache(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
-export const DEFAULT_PRICE_SOURCE_PRIORITY: readonly ["openai-official", "anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"];
-export function defaultSourceCache(): Record<string, unknown>;
-export function defaultPriceCards(): PriceCard[];
+export const DEFAULT_EXTERNAL_PRICE_SOURCES: readonly ["genai-prices", "models.dev", "litellm"];
+export const OPENROUTER_EXTERNAL_PRICE_SOURCES: readonly ["openrouter", "genai-prices", "models.dev", "litellm"];
+export const DEFAULT_PRICE_CACHE_MAX_AGE_SECONDS: number;
+export const EXTERNAL_PRICE_SOURCE_URLS: Readonly<Record<"genai-prices" | "models.dev" | "litellm" | "openrouter", string>>;
+export function compilePriceCatalog(priceCards: PriceCard[] | CompiledPriceCatalog): CompiledPriceCatalog;
 export function priceCardsFromJSONFile(path: string, options?: SourceAdapterOptions & { sourceType?: string; source_type?: string }): PriceCard[];
 export function priceCardsFromYAMLFile(path: string, options?: SourceAdapterOptions & { sourceType?: string; source_type?: string }): PriceCard[];
 export function priceCardsFromUserPricing(data: Record<string, unknown> | PriceCard[], options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromHelicone(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
-export function fromResponse(response: Record<string, unknown>, options: FromResponseOptions): CostLedger;
+export function priceCardsFromGenAIPrices(data: Record<string, unknown> | Record<string, unknown>[], options?: SourceAdapterOptions): PriceCard[];
+export function fromResponse(response: Record<string, unknown>, options?: FromResponseOptions): CostLedger;
+export function resolvePriceCatalog(options?: PriceResolverOptions & { provider?: string; usageLedger?: UsageLedger; usage_ledger?: UsageLedger; priceCards?: PriceCard[]; price_cards?: PriceCard[] }): Promise<PriceResolution>;
+export function attachPriceResolution(result: CostLedger, resolution: PriceResolution): CostLedger;
+export function defaultPriceCacheDir(): string;
+export function priceCacheStatus(options?: Pick<PriceResolverOptions, "cacheDir" | "cache_dir" | "now">): Promise<{ schema_version: SchemaVersion; cache_dir: string; checked_at: string; entries: PriceCacheEntry[] }>;
+export function clearPriceCache(options?: Pick<PriceResolverOptions, "cacheDir" | "cache_dir" | "sources">): Promise<{ schema_version: SchemaVersion; cache_dir: string; removed: string[] }>;
+export function fromResponseAuto(response: Record<string, unknown>, options?: FromResponseOptions & PriceResolverOptions): Promise<CostLedger>;
 export function fromLangChainMessage(message: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromVercelAISDKResult(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
 export function fromVercelAISDKStreamFinish(result: Record<string, unknown>, options: FromResponseOptions): CostLedger;
@@ -574,3 +755,17 @@ export function fromOpenRouterSDKResponse(response: Record<string, unknown>, opt
 export function fromOpenRouterAgentResult(result: Record<string, unknown> & { getResponse?: () => Promise<Record<string, unknown>> | Record<string, unknown> }, options: FromResponseOptions): Promise<CostLedger>;
 export function createRunCostVercelMiddleware(options: RunCostVercelMiddlewareOptions): RunCostVercelMiddleware;
 export function createRunCostVercelOnFinish(options: RunCostVercelOnFinishOptions): RunCostVercelOnFinish;
+export function normalizeAttribution(value?: Record<string, unknown>): Attribution;
+export function fromBatchResults(items: Iterable<Record<string, unknown>>, options: BatchResultsOptions): BatchCostLedger;
+export function fromBatchResultsAuto(items: Iterable<Record<string, unknown>>, options: BatchResultsOptions & PriceResolverOptions): Promise<BatchCostLedger>;
+export function usageLedgerFromOTelGenAISpan(span: Record<string, unknown>, options?: Partial<FromResponseOptions>): UsageLedger;
+export function fromOTelGenAISpan(span: Record<string, unknown>, options?: FromResponseOptions): CostLedger;
+export function fromOTelGenAISpanAuto(span: Record<string, unknown>, options?: FromResponseOptions & PriceResolverOptions): Promise<CostLedger>;
+export function otelCostAttributes(costLedger: CostLedger, options?: { prefix?: string }): Record<string, unknown>;
+export function estimateCost(options: FromResponseOptions & { provider: string; surface: string; model: string; components: Record<string, string | number> | UsageComponent[] }): CostLedger;
+export function estimateCostAuto(options: FromResponseOptions & PriceResolverOptions & { provider: string; surface: string; model: string; components: Record<string, string | number> | UsageComponent[] }): Promise<CostLedger>;
+export function evaluateBudget(ledgerOrTotal: CostLedger | MoneyString | number, options: { budget: MoneyString | number; warningThreshold?: DecimalString | number; warning_threshold?: DecimalString | number }): BudgetEvaluation;
+export function reconcileCost(costLedgerOrTotal: CostLedger | MoneyString | number, reportedTotal: MoneyString | number, options?: { tolerance?: MoneyString | number; currency?: string }): CostReconciliation;
+export function canonicalJSONString(value: unknown): string;
+export function sha256Bytes(value: string | Uint8Array): Promise<string>;
+export function verifyCatalogManifest(manifest: CatalogManifest, artifacts?: Record<string, string | Uint8Array>): Promise<CatalogVerification>;

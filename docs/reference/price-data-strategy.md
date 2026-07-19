@@ -43,10 +43,12 @@ These adapters convert source-specific data into canonical RunCost `PriceCard`
 objects. The source adapter fixtures prove representative mappings; they do not
 vend every upstream model row.
 
-## Source Cache Is The Offline Boundary
+## External Resolution And The Offline Boundary
 
-Normal cost calculation never fetches the network. To use public catalog data in
-an application or release, refresh an explicit source-cache envelope:
+The deterministic calculation APIs never fetch the network. The separate auto
+resolver downloads public catalog data, adapts it to canonical cards, and keeps
+a checksummed last-known-good cache. To create a caller-owned reviewed envelope
+instead, refresh it explicitly:
 
 ```bash
 npm run prices:refresh -- \
@@ -58,38 +60,35 @@ The envelope records source URL, retrieval time, checksum, generated time, and
 canonical price cards. Applications can commit their own reviewed source-cache
 files, pin them by checksum, and combine them with user overrides.
 
-RunCost also ships an optional reviewed default source-cache catalog in each
-package. It is generated from `llm-prices`, LiteLLM, OpenRouter,
-`models.dev`, and reviewed official snapshots for targeted provider pricing
-gaps and redirects, and can be loaded without network access through
-`default_price_cards()` / `defaultPriceCards()` / `DefaultPriceCards()`.
-Applications with stricter review requirements can still commit their own
-source-cache files and pass those cards explicitly.
+Published RunCost packages contain no provider price catalog. Node, Python, and
+Go use the operating system's persistent cache; browsers and edge runtimes use
+an in-memory cache. The default freshness window is 24 hours. A stale entry is
+conditionally refreshed with `ETag` or `Last-Modified` when available. If that
+refresh fails, RunCost may use the last-known-good cards with a structured
+`price_source_refresh_failed` warning. Offline cache misses stay visible as
+`price_source_unavailable`.
 
-The bundled reviewed catalog includes an `openai-official` snapshot for the
-GPT-5.6 family. It models Standard, Batch, Flex, and Priority service tiers,
-cache-read and cache-write prices, and the published 272,000-token long-context
-boundary. The snapshot records the 30-minute minimum cache lifetime as metadata;
-it does not invent a separate duration-priced cache component.
-
-The Meta Model API compatibility fixtures include a reviewed public-preview
-snapshot for opt-in estimates, but those media-corroborated rates are not in the
-bundled default catalog. RunCost will only promote them to default package data
-after the exact rates can be verified from a primary Meta pricing source.
+Targeted official snapshots in this repository prove pricing behavior such as
+service tiers, long-context boundaries, and cache-write components. They are
+test evidence, not production package data.
 
 ## Trust Order
 
 Recommended production order:
 
-1. User contract price cards.
-2. Reviewed source-cache snapshots pinned in your app.
-3. The bundled reviewed default catalog.
-4. Public catalog adapters such as `llm-prices`, LiteLLM, OpenRouter, or
-   models.dev.
-5. Provider-reported cost comparison when the provider exposes an authoritative
+1. User or contract price cards.
+2. Caller-owned reviewed source-cache snapshots.
+3. `genai-prices`.
+4. models.dev.
+5. LiteLLM pricing data.
+6. Provider-reported cost comparison when the provider exposes an authoritative
    cost field.
 
-Use `price_source_priority` / `priceSourcePriority` to make this deterministic.
+OpenRouter-billed responses try the OpenRouter models API before the general
+external profile. A resolver calculation selects exactly one catalog and never
+silently combines rates from multiple sources. When callers deliberately pass
+a merged set of explicit cards, `price_source_priority` /
+`priceSourcePriority` controls matching within that caller-owned set.
 
 ## Maintenance Rule
 

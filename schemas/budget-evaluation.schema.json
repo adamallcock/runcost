@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runcost.dev/schemas/budget-evaluation.schema.json",
+  "title": "BudgetEvaluation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "estimated_cost", "budget", "remaining", "warning_threshold", "currency"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "status": { "type": "string", "enum": ["within_budget", "warning", "exceeded"] },
+    "estimated_cost": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+    "budget": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+    "remaining": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+    "warning_threshold": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+    "currency": { "type": "string", "minLength": 3, "maxLength": 3 },
+    "ledger": { "type": "object", "additionalProperties": true }
+  }
+}

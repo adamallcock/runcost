@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 import json
-from importlib.resources import files
 from datetime import date, datetime, timezone
 from decimal import Decimal, getcontext
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
 getcontext().prec = 50
-
-DEFAULT_PRICE_SOURCE_PRIORITY = ["openai-official", "anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"]
 
 _COMPONENT_ORDER_NAMES = [
     "input_uncached_tokens",
@@ -69,6 +66,41 @@ _TOOL_OR_FEATURE_COMPONENTS = {
 }
 
 
+class CompiledPriceCatalog:
+    """Read-only price-card collection indexed by provider and model aliases."""
+
+    def __init__(self, price_cards: Iterable[Dict[str, Any]]) -> None:
+        self.price_cards = list(price_cards)
+        self.by_provider_model: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+        self.by_model: Dict[str, List[Dict[str, Any]]] = {}
+        for card in self.price_cards:
+            provider = str(card.get("provider") or "")
+            names = [str(card.get("model") or ""), *(str(alias) for alias in card.get("aliases", []))]
+            for name in dict.fromkeys(name for name in names if name):
+                self.by_provider_model.setdefault((provider, name), []).append(card)
+                self.by_model.setdefault(name, []).append(card)
+
+    def __iter__(self) -> Iterator[Dict[str, Any]]:
+        return iter(self.price_cards)
+
+    def __len__(self) -> int:
+        return len(self.price_cards)
+
+    def identity_candidates(self, usage_ledger: Dict[str, Any]) -> List[Dict[str, Any]]:
+        return self.by_provider_model.get((str(usage_ledger.get("provider") or ""), _billed_model(usage_ledger)), [])
+
+    def model_candidates(self, usage_ledger: Dict[str, Any]) -> List[Dict[str, Any]]:
+        return self.by_model.get(_billed_model(usage_ledger), [])
+
+
+def compile_price_catalog(price_cards: Iterable[Dict[str, Any]]) -> CompiledPriceCatalog:
+    """Compile price cards once for repeated indexed selection."""
+
+    if isinstance(price_cards, CompiledPriceCatalog):
+        return price_cards
+    return CompiledPriceCatalog(price_cards)
+
+
 def _plain_value(value: Any) -> Any:
     if isinstance(value, dict):
         return {key: _plain_value(child) for key, child in value.items()}
@@ -96,6 +128,39 @@ def _format_decimal(value: Decimal) -> str:
     if normalized == normalized.to_integral():
         return str(normalized.quantize(Decimal("1")))
     return format(normalized, "f").rstrip("0").rstrip(".")
+
+
+def _attribution_string(value: Any) -> Optional[str]:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float, Decimal)):
+        number = _decimal(value)
+        if not number.is_finite():
+            return None
+        return _format_decimal(number)
+    return None
+
+
+def _normalize_attribution(value: Any) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    result: Dict[str, Any] = {}
+    for key in ("run_id", "session_id", "workflow", "tenant_id", "feature"):
+        normalized = _attribution_string(value.get(key))
+        if normalized is not None:
+            result[key] = normalized
+    tags = value.get("tags")
+    if isinstance(tags, dict):
+        normalized_tags = {
+            str(key): normalized
+            for key, child in sorted(tags.items(), key=lambda item: str(item[0]))
+            if (normalized := _attribution_string(child)) is not None
+        }
+        if normalized_tags:
+            result["tags"] = normalized_tags
+    return result
 
 
 def _add(left: str, right: str) -> str:
@@ -988,6 +1053,12 @@ def _policy_matches(
         return False
     if match.get("exclude_components") and component["name"] in match["exclude_components"]:
         return False
+    requested_tags = match.get("tags")
+    if isinstance(requested_tags, dict) and requested_tags:
+        attribution = _normalize_attribution(usage_ledger.get("attribution"))
+        actual_tags = attribution.get("tags") if isinstance(attribution.get("tags"), dict) else {}
+        if any(actual_tags.get(str(key)) != str(value) for key, value in requested_tags.items()):
+            return False
     return True
 
 
@@ -1222,7 +1293,7 @@ def _new_debug_trace() -> Dict[str, Any]:
 def calculate_cost(
     *,
     usage_ledger: Dict[str, Any],
-    price_cards: Iterable[Dict[str, Any]],
+    price_cards: Union[Iterable[Dict[str, Any]], CompiledPriceCatalog],
     discount_policies: Optional[Iterable[Dict[str, Any]]] = None,
     mode: str = "compatibility",
     stale_after_days: Optional[int] = None,
@@ -1232,7 +1303,8 @@ def calculate_cost(
     debug_trace: bool = False,
 ) -> Dict[str, Any]:
     policies = list(discount_policies or [])
-    price_cards_list = list(price_cards)
+    compiled_catalog = compile_price_catalog(price_cards)
+    price_cards_list = compiled_catalog.price_cards
     source_priority = list(price_source_priority or [])
     components = []
     warnings = _usage_metadata_field_warnings(usage_ledger)
@@ -1260,10 +1332,13 @@ def calculate_cost(
         lookup_key = _price_lookup_cache_key(component_usage_ledger, source_priority)
         lookup = price_lookup_cache.get(lookup_key)
         if lookup is None:
+            identity_candidates = compiled_catalog.identity_candidates(component_usage_ledger)
+            model_candidates = compiled_catalog.model_candidates(component_usage_ledger)
             lookup = {
-                "has_model_card": _has_price_card_for_usage(component_usage_ledger, price_cards_list),
-                "matching_cards": _matching_cards(component_usage_ledger, price_cards_list, source_priority),
-                "model_surface_card_exists": _has_price_card_for_model_surface(component_usage_ledger, price_cards_list),
+                "has_model_card": _has_price_card_for_usage(component_usage_ledger, identity_candidates),
+                "matching_cards": _matching_cards(component_usage_ledger, identity_candidates, source_priority),
+                "model_surface_card_exists": _has_price_card_for_model_surface(component_usage_ledger, model_candidates),
+                "identity_candidates": identity_candidates,
             }
             price_lookup_cache[lookup_key] = lookup
         has_model_card = lookup["has_model_card"]
@@ -1294,7 +1369,7 @@ def calculate_cost(
 
         if not matching_cards:
             if component_warning_key not in warned_no_matching_card:
-                warnings.append(_no_matching_card_warning(component_usage_ledger, price_cards_list))
+                warnings.append(_no_matching_card_warning(component_usage_ledger, lookup["identity_candidates"]))
                 warned_no_matching_card.add(component_warning_key)
             if trace is not None:
                 trace["summary"]["unpriced_components"] += 1
@@ -1473,6 +1548,9 @@ def calculate_cost(
         result["debug_trace"] = trace
     if isinstance(usage_ledger.get("metadata"), dict) and usage_ledger["metadata"]:
         result["metadata"] = dict(usage_ledger["metadata"])
+    normalized_attribution = _normalize_attribution(usage_ledger.get("attribution"))
+    if normalized_attribution:
+        result["attribution"] = normalized_attribution
     if mode == "strict" and warnings:
         raise ValueError(f"strict mode cost calculation failed: {warnings[0]['code']}")
     return result
@@ -1569,6 +1647,7 @@ def aggregate_cost_ledgers(
     expected_ledger_count: Optional[int] = None,
     stream_final_usage_expected: bool = False,
     stream_final_usage_present: bool = True,
+    attribution: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     ledgers = list(cost_ledgers)
     components_by_key: Dict[str, Dict[str, Any]] = {}
@@ -1636,6 +1715,9 @@ def aggregate_cost_ledgers(
         "warnings": _ordered_warnings(warnings),
         "metadata": metadata,
     }
+    normalized_attribution = _normalize_attribution(attribution)
+    if normalized_attribution:
+        result["attribution"] = normalized_attribution
     if mode == "strict" and result["warnings"]:
         raise ValueError(f"strict mode cost aggregation failed: {result['warnings'][0]['code']}")
     return result
@@ -2300,6 +2382,18 @@ OPENAI_COMPATIBLE_CHAT_PROVIDERS = {
     "deepseek.chat_completions": "deepseek",
     "azure.openai.chat_completions": "azure",
     "huggingface.chat_completions": "huggingface",
+    "nvidia.chat_completions": "nvidia",
+    "tinker.chat_completions": "tinker",
+    "kimi.chat_completions": "kimi",
+    "ai21.chat_completions": "ai21",
+    "arcee.chat_completions": "arcee",
+    "cohere.chat_completions_compatible": "cohere",
+    "dashscope.chat_completions": "dashscope",
+    "inception.chat_completions": "inception",
+    "poolside.chat_completions": "poolside",
+    "xiaomi.chat_completions": "xiaomi",
+    "zai.chat_completions": "zai",
+    "zhipu.chat_completions": "zhipu",
 }
 
 
@@ -3823,7 +3917,7 @@ def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, 
         return extract_openai_chat_completions_usage(response, **options)
     if surface in OPENAI_COMPATIBLE_CHAT_PROVIDERS:
         return extract_openai_compatible_chat_completions_usage(response, **options)
-    if surface == "anthropic.messages":
+    if surface in {"anthropic.messages", "minimax.messages"}:
         return extract_anthropic_messages_usage(response, **options)
     if surface in {"google.gemini.generate_content", "vertex.gemini.generate_content"}:
         return extract_gemini_generate_content_usage(response, **options)
@@ -3840,6 +3934,57 @@ def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, 
     if surface == "cohere.rerank":
         return extract_cohere_rerank_usage(response, **options)
     raise ValueError(f"Unsupported surface: {surface}")
+
+
+def infer_surface(response: Dict[str, Any], *, provider: Optional[str] = None) -> Optional[str]:
+    """Infer only response shapes that identify an endpoint unambiguously."""
+
+    payload = _plain_value(response)
+    provider_name = str(provider or "").lower()
+    object_type = str(payload.get("object") or payload.get("type") or "").lower()
+    usage = payload.get("usage") if isinstance(payload.get("usage"), dict) else {}
+    if isinstance(payload.get("usageMetadata"), dict) or isinstance(payload.get("usage_metadata"), dict):
+        return "vertex.gemini.generate_content" if provider_name in {"vertex", "google-vertex"} else "google.gemini.generate_content"
+    if object_type == "message" and ("input_tokens" in usage or "cache_read_input_tokens" in usage):
+        return "minimax.messages" if provider_name == "minimax" else "anthropic.messages"
+    if object_type == "response" or str(payload.get("id") or "").startswith("resp_") or (
+        "output" in payload and "input_tokens" in usage
+    ):
+        if provider_name == "xai":
+            return "xai.responses"
+        if provider_name == "meta":
+            return "meta.responses"
+        return "openai.responses"
+    if object_type == "list" and isinstance(payload.get("data"), list) and "prompt_tokens" in usage:
+        return "openai.embeddings"
+    if isinstance(payload.get("choices"), list) and usage:
+        provider_surfaces = {
+            "openai": "openai.chat_completions",
+            "openrouter": "openrouter.chat_completions",
+            "groq": "groq.chat_completions",
+            "xai": "xai.chat_completions",
+            "meta": "meta.chat_completions",
+            "mistral": "mistral.chat_completions",
+            "deepseek": "deepseek.chat_completions",
+            "azure": "azure.openai.chat_completions",
+            "huggingface": "huggingface.chat_completions",
+            "nvidia": "nvidia.chat_completions",
+            "tinker": "tinker.chat_completions",
+            "kimi": "kimi.chat_completions",
+            "ai21": "ai21.chat_completions",
+            "arcee": "arcee.chat_completions",
+            "cohere": "cohere.chat_completions_compatible",
+            "dashscope": "dashscope.chat_completions",
+            "inception": "inception.chat_completions",
+            "poolside": "poolside.chat_completions",
+            "xiaomi": "xiaomi.chat_completions",
+            "zai": "zai.chat_completions",
+            "zhipu": "zhipu.chat_completions",
+        }
+        return provider_surfaces.get(provider_name) or ("openai.chat_completions" if not provider_name else None)
+    if isinstance(payload.get("metrics"), dict) and isinstance(payload.get("usage"), dict):
+        return "aws.bedrock.converse"
+    return None
 
 
 def _unsupported_surface_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
@@ -4344,17 +4489,6 @@ def price_cards_from_source_cache(data: Any, **_: Any) -> List[Dict[str, Any]]:
     return cards
 
 
-def default_source_cache() -> Dict[str, Any]:
-    """Return the bundled reviewed default source-cache catalog."""
-    resource = files("runcost").joinpath("data/default-source-cache.json")
-    return json.loads(resource.read_text(encoding="utf-8"))
-
-
-def default_price_cards() -> List[Dict[str, Any]]:
-    """Return price cards from the bundled reviewed default catalog."""
-    return price_cards_from_source_cache(default_source_cache())
-
-
 def price_cards_from_json_file(path: Any, source_type: str = "user-pricing", **options: Any) -> List[Dict[str, Any]]:
     file_path = Path(path)
     data = json.loads(file_path.read_text(encoding="utf-8"))
@@ -4794,7 +4928,7 @@ def from_response(
     adapter: Optional[str] = None,
     framework: Optional[str] = None,
     provider: Optional[str] = None,
-    surface: str,
+    surface: Optional[str] = None,
     model: Optional[str] = None,
     context: Optional[Dict[str, Any]] = None,
     priced_at: Optional[str] = None,
@@ -4806,7 +4940,8 @@ def from_response(
     anthropicFallbackCredit: Optional[bool] = None,
     fallback_credit: Optional[bool] = None,
     fallbackCredit: Optional[bool] = None,
-    price_cards: Iterable[Dict[str, Any]],
+    attribution: Optional[Dict[str, Any]] = None,
+    price_cards: Optional[Iterable[Dict[str, Any]]] = None,
     discount_policies: Optional[Iterable[Dict[str, Any]]] = None,
     mode: str = "compatibility",
     stale_after_days: Optional[int] = None,
@@ -4815,7 +4950,8 @@ def from_response(
     price_source_priority: Optional[Iterable[str]] = None,
     debug_trace: bool = False,
 ) -> Dict[str, Any]:
-    options: Dict[str, Any] = {"surface": surface}
+    resolved_surface = surface or infer_surface(response, provider=provider)
+    options: Dict[str, Any] = {"surface": resolved_surface or "unknown"}
     if adapter:
         options["adapter"] = adapter
     if framework:
@@ -4850,10 +4986,28 @@ def from_response(
         if mode == "strict":
             raise
         return _unsupported_surface_ledger(response, **options)
+    if context:
+        merged_context = {**(usage_ledger.get("context") or {}), **context}
+        if usage_ledger.get("provider") == "openai":
+            context_tier = merged_context.get("service_tier", merged_context.get("serviceTier"))
+            if context_tier is not None:
+                normalized_tier = _normalize_openai_service_tier(context_tier)
+                if normalized_tier:
+                    merged_context["service_tier"] = normalized_tier
+                merged_context.pop("serviceTier", None)
+        usage_ledger["context"] = merged_context
+    normalized_attribution = _normalize_attribution(attribution)
+    if normalized_attribution:
+        usage_ledger["attribution"] = normalized_attribution
     extracted_provider_reported_cost = _provider_reported_cost_from_raw_response(response, usage_ledger)
+    resolved_price_cards: Union[Iterable[Dict[str, Any]], CompiledPriceCatalog]
+    if isinstance(price_cards, CompiledPriceCatalog):
+        resolved_price_cards = price_cards
+    else:
+        resolved_price_cards = list(price_cards or [])
     return calculate_cost(
         usage_ledger=usage_ledger,
-        price_cards=price_cards,
+        price_cards=resolved_price_cards,
         discount_policies=discount_policies,
         mode=mode,
         stale_after_days=stale_after_days,

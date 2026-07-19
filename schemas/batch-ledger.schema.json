@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runcost.dev/schemas/batch-ledger.schema.json",
+  "title": "BatchCostLedger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "provider", "surface", "currency", "items", "summary", "aggregate", "warnings"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "provider": { "type": "string", "minLength": 1 },
+    "surface": { "type": "string", "minLength": 1 },
+    "batch_id": { "type": "string" },
+    "currency": { "type": "string", "minLength": 3, "maxLength": 3 },
+    "items": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/batch_item" }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "succeeded", "failed", "pending", "total_cost"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "succeeded": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "pending": { "type": "integer", "minimum": 0 },
+        "total_cost": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" }
+      }
+    },
+    "aggregate": { "$ref": "#/$defs/cost_ledger" },
+    "warnings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/warning" }
+    },
+    "attribution": { "$ref": "#/$defs/attribution" },
+    "metadata": { "type": "object", "additionalProperties": true }
+  },
+  "$defs": {
+    "batch_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status"],
+      "properties": {
+        "id": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["succeeded", "errored", "canceled", "expired", "pending"]
+        },
+        "http_status": { "type": "integer" },
+        "ledger": { "$ref": "#/$defs/cost_ledger" },
+        "error": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["message"],
+          "properties": {
+            "code": { "type": ["string", "integer"] },
+            "message": { "type": "string" },
+            "type": { "type": "string" }
+          }
+        },
+        "attribution": { "$ref": "#/$defs/attribution" },
+        "metadata": { "type": "object", "additionalProperties": true }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "succeeded" } } },
+          "then": { "required": ["ledger"] },
+          "else": { "required": ["error"] }
+        }
+      ]
+    },
+    "cost_ledger": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema_version", "provider", "surface", "model", "currency", "components", "total", "warnings"]
+    },
+    "warning": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["code", "message", "metadata"]
+    },
+    "attribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "run_id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "workflow": { "type": "string" },
+        "tenant_id": { "type": "string" },
+        "feature": { "type": "string" },
+        "tags": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    }
+  }
+}

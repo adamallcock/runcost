@@ -1,0 +1,99 @@
+{
+  "batch": {
+    "aggregate": {
+      "billed_model": "multiple",
+      "component_count": 2,
+      "components": [
+        {
+          "has_nonzero_cost": true,
+          "name": "input_uncached_tokens",
+          "quantity": "11",
+          "unit": "token"
+        },
+        {
+          "has_nonzero_cost": true,
+          "name": "output_text_tokens",
+          "quantity": "5",
+          "unit": "token"
+        }
+      ],
+      "price_sources": [
+        "genai-prices"
+      ],
+      "priced": true,
+      "provider": "openai",
+      "surface": "openai.batch",
+      "warning_codes": []
+    },
+    "created": true,
+    "result_rows": 1,
+    "status": "completed",
+    "summary": {
+      "failed": 0,
+      "pending": 0,
+      "priced": true,
+      "succeeded": 1,
+      "total": 1
+    },
+    "terminal": true,
+    "timed_out_and_cancelled": false,
+    "warning_codes": []
+  },
+  "checked_at": "2026-07-18T22:56:50.259492+00:00",
+  "contains_account_or_request_identifiers": false,
+  "contains_private_payloads": false,
+  "costs_api": {
+    "accessible": false,
+    "attempted": true,
+    "error_code": "unknown",
+    "error_type": "unknown",
+    "http_status": 403,
+    "reconciliation_status": "blocked_admin_scope_or_endpoint_permission"
+  },
+  "evidence_type": "sanitized_live_provider_smoke",
+  "privacy": {
+    "cost_amounts_retained": false,
+    "credential_retained": false,
+    "prompt_was_public_fixed_text": true,
+    "remote_identifiers_retained": false,
+    "response_text_retained": false
+  },
+  "provider": "openai",
+  "remote_files_cleanup": {
+    "all_deleted": true,
+    "attempted": 2
+  },
+  "responses": {
+    "ledger": {
+      "billed_model": "gpt-5.6-luna",
+      "component_count": 2,
+      "components": [
+        {
+          "has_nonzero_cost": true,
+          "name": "input_uncached_tokens",
+          "quantity": "11",
+          "unit": "token"
+        },
+        {
+          "has_nonzero_cost": true,
+          "name": "output_text_tokens",
+          "quantity": "5",
+          "unit": "token"
+        }
+      ],
+      "price_sources": [
+        "genai-prices"
+      ],
+      "priced": true,
+      "provider": "openai",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    "selected_model": "gpt-5.6-luna",
+    "status": "passed",
+    "usage_present": true
+  },
+  "safe_to_commit": true,
+  "schema_version": "0.1",
+  "status": "passed"
+}

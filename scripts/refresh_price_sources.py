@@ -17,6 +17,7 @@ if str(PYTHON_PACKAGE) not in sys.path:
 
 from runcost import (  # noqa: E402
     price_cards_from_helicone,
+    price_cards_from_genai_prices,
     price_cards_from_litellm,
     price_cards_from_llm_prices,
     price_cards_from_models_dev,
@@ -37,6 +38,7 @@ ADAPTERS: dict[str, Adapter] = {
     "portkey": price_cards_from_portkey,
     "user-pricing": price_cards_from_user_pricing,
     "helicone": price_cards_from_helicone,
+    "genai-prices": price_cards_from_genai_prices,
 }
 
 PRESETS: dict[str, dict[str, str]] = {
@@ -55,6 +57,14 @@ PRESETS: dict[str, dict[str, str]] = {
     "models-dev": {
         "source_type": "models-dev",
         "url": "https://models.dev/api.json",
+    },
+    "genai-prices": {
+        "source_type": "genai-prices",
+        "url": "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/data_slim.json",
+    },
+    "litellm": {
+        "source_type": "litellm",
+        "url": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
     },
 }
 

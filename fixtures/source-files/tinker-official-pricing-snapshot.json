@@ -1,0 +1,44 @@
+{
+  "schema_version": "0.1",
+  "provider": "tinker",
+  "surface": "tinker.chat_completions",
+  "source": {
+    "name": "Thinking Machines Tinker official pricing snapshot",
+    "url": "https://tinker-docs.thinkingmachines.ai/tinker/models/",
+    "retrieved_at": "2026-07-15T00:00:00Z",
+    "version": "2026-07-15",
+    "license": "reviewed"
+  },
+  "rows": [
+    {
+      "model": "thinkingmachines/Inkling",
+      "aliases": [
+        "Inkling"
+      ],
+      "service_tier": "standard",
+      "price_card_id": "tinker:thinkingmachines-Inkling:standard:official-snapshot",
+      "input": "3.74",
+      "cached_input": "0.748",
+      "output": "9.36",
+      "source_label": "Tinker Inkling model pricing",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cached_input",
+          "reasoning_effort"
+        ],
+        "reasoning_effort_labels": [
+          "none",
+          "minimal",
+          "low",
+          "medium",
+          "high",
+          "xhigh"
+        ],
+        "reasoning_included_in_output": true,
+        "non_promotional_rate": true
+      },
+      "notes": "Stable non-promotional price: twice the limited-time 50%-discounted rates shown by Tinker. Output includes reasoning because the compatibility response does not report a separate reasoning-token count. The vendor-native label is minimal."
+    }
+  ]
+}

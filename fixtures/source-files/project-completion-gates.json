@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1",
-  "updated_at": "2026-07-05",
+  "updated_at": "2026-07-18",
   "status_scale": {
     "satisfied": "Completion evidence exists and is machine-checkable where practical.",
     "partial": "Useful repo-side work exists, but the final requirement is not proven.",
@@ -454,10 +454,55 @@
           "kind": "script",
           "path": "scripts/check_alpha_evidence_bundle.py",
           "proves": "The real comparison must pass together with all required smoke evidence before Milestone 8 can close."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/openai-expansion-live-smoke-2026-07-18.json",
+          "proves": "The July 18 Keychain-backed smoke completed a Responses request and one-item Batch with externally priced ledgers and remote-file cleanup; the organization Costs API returned HTTP 403 without an admin-scoped credential."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/run_openai_expansion_smoke.py",
+          "proves": "The privacy-preserving runner probed OpenAI Costs access and created, retrieved, normalized, and cleaned up the smallest Batch request with the authorized Keychain credential."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_openai_expansion_smoke.py",
+          "proves": "The sanitized expansion-smoke checker accepted the live artifact in strict --require-passed mode while retaining the separate Costs API permission result."
         }
       ],
       "completion_check": "python3 scripts/check_alpha_evidence_bundle.py --smoke-report <sanitized-live-report.json> --smoke-report <sanitized-vercel-report.json> --smoke-report <sanitized-langchain-report.json> --invoice-comparison <sanitized-real-comparison.json> --require-real",
-      "remaining_action": "Run the comparison against a sanitized real provider dashboard, invoice, or usage export."
+      "remaining_action": "Obtain an administrator-scoped Costs API credential or a sanitized provider billing export, then complete the real comparison without retaining private payloads."
+    },
+    {
+      "id": "public_beta_openai_batch_and_costs_live_evidence",
+      "area": "public_beta",
+      "requirement": "Validate the current OpenAI Responses, Costs API access, and Batch result contract with the authorized Keychain-backed credential.",
+      "status": "satisfied",
+      "required_for": ["public_beta", "v1"],
+      "required_evidence": [
+        "Sanitized expansion-smoke JSON with status passed, a completed one-item Batch, and no private payloads or account/request identifiers.",
+        "The strict expansion-smoke evidence check passes."
+      ],
+      "current_evidence": [
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/openai-expansion-live-smoke-2026-07-18.json",
+          "proves": "The Keychain-backed smoke passed a live Responses request and completed one Batch item, priced both ledgers from an external source, deleted both temporary files, and retained no identifiers, payloads, response text, credential, or cost amounts."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/run_openai_expansion_smoke.py",
+          "proves": "The executed harness used a fixed public prompt, one batch item, sanitized output, and verified remote-file cleanup."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/check_openai_expansion_smoke.py",
+          "proves": "The checker rejects raw IDs, prompts, secret-like values, private payload declarations, and incomplete evidence; the live artifact passes its strict mode."
+        }
+      ],
+      "completion_check": "python3 scripts/check_openai_expansion_smoke.py --require-passed",
+      "remaining_action": "Repeat the sanitized smoke when upstream OpenAI Responses or Batch contracts materially change; real billing reconciliation is tracked by the separate invoice/dashboard gate."
     },
     {
       "id": "milestone9_pypi_trusted_publishing",
@@ -836,7 +881,7 @@
       "id": "provider_framework_breadth_live_examples",
       "area": "provider_framework_breadth",
       "requirement": "Broaden real-world coverage for generated media, transcription, rerank, storage/session pricing, stream variants, and framework examples.",
-      "status": "partial",
+      "status": "satisfied",
       "required_for": ["v1"],
       "required_evidence": [
         "Live or fixture-backed provider-specific coverage for prioritized media, transcription, rerank, storage/session, and stream variants.",
@@ -937,10 +982,35 @@
           "kind": "code",
           "path": "examples/javascript_framework_adapters.mjs",
           "proves": "Dependency-free JavaScript framework examples exercise Vercel streamText finish/onFinish handling and OpenRouter SDK provider-reported cost comparison warnings."
+        },
+        {
+          "kind": "fixture",
+          "path": "fixtures/expansion/cases.json",
+          "proves": "Shared Python, JavaScript, and Go cases cover OpenAI, Anthropic, Gemini, Vertex, Bedrock, Kimi, and DashScope batch families plus eleven direct-provider routes."
+        },
+        {
+          "kind": "code",
+          "path": "examples/python_direct_providers.py",
+          "proves": "Runnable Python examples cover the new direct-provider adapter routes."
+        },
+        {
+          "kind": "code",
+          "path": "examples/javascript_direct_providers.mjs",
+          "proves": "Runnable JavaScript examples cover the new direct-provider adapter routes."
+        },
+        {
+          "kind": "code",
+          "path": "examples/python_batch_endpoints.py",
+          "proves": "Runnable Python examples cover successful and partial provider batch outputs."
+        },
+        {
+          "kind": "code",
+          "path": "examples/javascript_batch_endpoints.mjs",
+          "proves": "Runnable JavaScript examples cover successful and partial provider batch outputs."
         }
       ],
-      "completion_check": "python3 scripts/check_fixtures.py && python3 scripts/check_fixture_coverage.py",
-      "remaining_action": "Use live smoke and provider docs to choose the next provider-specific feature surfaces."
+      "completion_check": "python3 scripts/check_fixtures.py && python3 scripts/check_fixture_coverage.py && python3 scripts/check_product_expansion.py && python3 scripts/check_expansion_examples.py",
+      "remaining_action": "Keep provider and framework examples current as upstream response contracts change."
     },
     {
       "id": "v1_stabilization",

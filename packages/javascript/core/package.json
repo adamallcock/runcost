@@ -1,9 +1,12 @@
 {
   "name": "runcost",
-  "version": "0.1.13",
+  "version": "0.2.0",
   "type": "module",
-  "description": "Alpha cost ledger utility for LLM and agent API responses.",
+  "description": "Auditable LLM API cost calculator and batch ledger for provider responses.",
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "homepage": "https://github.com/adamallcock/runcost#readme",
   "bugs": {
     "url": "https://github.com/adamallcock/runcost/issues"
@@ -17,21 +20,31 @@
     "llm",
     "ai",
     "pricing",
+    "calculator",
     "tokens",
     "cost",
+    "ledger",
+    "batch",
     "agents",
     "openai",
     "anthropic",
+    "gemini",
+    "bedrock",
+    "opentelemetry",
     "usage"
   ],
   "sideEffects": false,
   "main": "index.js",
   "types": "index.d.ts",
+  "bin": {
+    "runcost": "./cli.js"
+  },
   "files": [
     "index.js",
+    "browser.js",
+    "cli.js",
     "index.d.ts",
     "generated",
-    "data",
     "README.md",
     "package.json"
   ],
@@ -39,6 +52,10 @@
     ".": {
       "types": "./index.d.ts",
       "default": "./index.js"
+    },
+    "./browser": {
+      "types": "./index.d.ts",
+      "default": "./browser.js"
     }
   }
 }

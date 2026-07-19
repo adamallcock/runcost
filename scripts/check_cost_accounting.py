@@ -18,6 +18,7 @@ REPORT_PATH = ROOT / "docs" / "internal" / "reports" / "2026-06-06-cost-accounti
 PUBLIC_API_REGISTRY = ROOT / "fixtures" / "source-files" / "public-api-registry.json"
 TAXONOMY = ROOT / "schemas" / "taxonomy.json"
 FIXTURE_PATHS = sorted(FIXTURE_DIR.glob("*.json"))
+EXPANSION_FIXTURE_PATH = FIXTURE_DIR / "expansion" / "cases.json"
 
 sys.path.insert(0, str(PYTHON_PACKAGE))
 
@@ -89,6 +90,11 @@ SOURCE_COMPONENT_REQUIREMENTS = {
         "web_search_units",
     },
 }
+
+# Catalog compilation and integrity helpers only index or verify price artifacts.
+# They never normalize usage or calculate a cost ledger, so usage fixtures would
+# be misleading evidence for this capability.
+NON_USAGE_BEARING_CAPABILITIES = {"compiled_catalog_and_integrity"}
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -319,22 +325,38 @@ def check_source_component_requirements(fixtures: list[dict[str, Any]]) -> list[
     return errors
 
 
-def check_public_api_evidence(registry: dict[str, Any], fixture_names: set[str]) -> list[str]:
+def check_public_api_evidence(registry: dict[str, Any], fixture_evidence_paths: set[str]) -> list[str]:
     errors = []
     checked_categories = {"core", "provider_extractor", "framework_adapter", "source_adapter"}
     for capability in registry.get("capabilities", []):
         if capability.get("category") not in checked_categories:
             continue
-        fixture_evidence = []
+        capability_id = capability["id"]
+        if capability_id in NON_USAGE_BEARING_CAPABILITIES:
+            notes = capability.get("notes", "").lower()
+            if "non-usage-bearing" not in notes:
+                errors.append(f"{capability_id}: non-usage-bearing exception must be documented in registry notes")
+            continue
+
+        fixture_evidence: list[str] = []
         for evidence in capability.get("evidence", []):
-            evidence_path = Path(evidence)
-            if evidence_path.parts[:1] != ("fixtures",) or len(evidence_path.parts) != 2:
+            if not isinstance(evidence, str):
+                errors.append(f"{capability_id}: evidence paths must be strings")
                 continue
-            fixture_evidence.append(evidence_path.name)
-            if evidence_path.name not in fixture_names:
-                errors.append(f"{capability['id']}: fixture evidence missing from accounting scan: {evidence}")
+            evidence_path = Path(evidence)
+            if evidence_path.is_absolute() or ".." in evidence_path.parts:
+                errors.append(f"{capability_id}: fixture evidence path must be repository-relative: {evidence}")
+                continue
+            if evidence_path.parts[:1] != ("fixtures",):
+                continue
+            normalized_path = evidence_path.as_posix()
+            if len(evidence_path.parts) > 2 and normalized_path != "fixtures/expansion/cases.json":
+                continue
+            fixture_evidence.append(normalized_path)
+            if normalized_path not in fixture_evidence_paths:
+                errors.append(f"{capability_id}: fixture evidence missing from accounting inventory: {evidence}")
         if not fixture_evidence:
-            errors.append(f"{capability['id']}: checked public API capability has no fixture-backed accounting evidence")
+            errors.append(f"{capability_id}: checked public API capability has no fixture-backed accounting evidence")
     return errors
 
 
@@ -550,7 +572,10 @@ def main() -> int:
         errors.extend(check_component_tags_accounted(path, fixture))
         errors.extend(check_gemini_reported_output_thinking_split(path, fixture))
     errors.extend(check_source_component_requirements(fixtures))
-    errors.extend(check_public_api_evidence(registry, {path.name for path, _ in loaded}))
+    fixture_evidence_paths = {path.relative_to(ROOT).as_posix() for path, _ in loaded}
+    if EXPANSION_FIXTURE_PATH.exists():
+        fixture_evidence_paths.add(EXPANSION_FIXTURE_PATH.relative_to(ROOT).as_posix())
+    errors.extend(check_public_api_evidence(registry, fixture_evidence_paths))
     errors.extend(check_malformed_schedule_runtime_guard())
 
     report = build_report(fixtures, registry)

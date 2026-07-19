@@ -1,0 +1,14 @@
+{
+  "id": "chatcmpl_public_example",
+  "object": "chat.completion",
+  "model": "kimi-k3",
+  "choices": [],
+  "usage": {
+    "prompt_tokens": 100,
+    "prompt_tokens_details": {
+      "cached_tokens": 20
+    },
+    "completion_tokens": 40,
+    "total_tokens": 140
+  }
+}

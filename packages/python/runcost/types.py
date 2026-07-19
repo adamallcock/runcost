@@ -35,6 +35,15 @@ class UsageContext(TypedDict, total=False):
     trace_id: str
 
 
+class Attribution(TypedDict, total=False):
+    run_id: str
+    session_id: str
+    workflow: str
+    tenant_id: str
+    feature: str
+    tags: Dict[str, str]
+
+
 class UsageTool(TypedDict, total=False):
     provider: str
     name: str
@@ -57,6 +66,7 @@ class UsageLedger(TypedDict, total=False):
     surface: str
     model: UsageModel
     context: UsageContext
+    attribution: Attribution
     components: List[UsageComponent]
     raw_usage: Dict[str, Any]
     metadata: Dict[str, Any]
@@ -353,3 +363,119 @@ class CostLedger(TypedDict, total=False):
     warnings: List[CostWarning]
     debug_trace: DebugTrace
     metadata: Dict[str, Any]
+    attribution: Attribution
+
+
+class BatchError(TypedDict, total=False):
+    code: Union[str, int]
+    message: str
+    type: str
+
+
+class BatchItem(TypedDict, total=False):
+    id: str
+    status: Literal["succeeded", "errored", "canceled", "expired", "pending"]
+    http_status: int
+    ledger: CostLedger
+    error: BatchError
+    attribution: Attribution
+    metadata: Dict[str, Any]
+
+
+class BatchSummary(TypedDict):
+    total: int
+    succeeded: int
+    failed: int
+    pending: int
+    total_cost: MoneyString
+
+
+class BatchCostLedger(TypedDict, total=False):
+    schema_version: SchemaVersion
+    provider: str
+    surface: str
+    batch_id: str
+    currency: str
+    items: List[BatchItem]
+    summary: BatchSummary
+    aggregate: CostLedger
+    warnings: List[Dict[str, Any]]
+    attribution: Attribution
+    metadata: Dict[str, Any]
+
+
+class BudgetEvaluation(TypedDict, total=False):
+    schema_version: SchemaVersion
+    status: Literal["within_budget", "warning", "exceeded"]
+    estimated_cost: MoneyString
+    budget: MoneyString
+    remaining: MoneyString
+    warning_threshold: DecimalString
+    currency: str
+    ledger: CostLedger
+
+
+class CostReconciliation(TypedDict):
+    schema_version: SchemaVersion
+    status: Literal["matched", "within_tolerance", "mismatch"]
+    calculated_total: MoneyString
+    reported_total: MoneyString
+    signed_residual: MoneyString
+    absolute_residual: MoneyString
+    tolerance: MoneyString
+    currency: str
+
+
+class CatalogArtifact(TypedDict, total=False):
+    provider: str
+    path: str
+    sha256: str
+    bytes: int
+    price_card_count: int
+
+
+class CatalogManifest(TypedDict):
+    schema_version: SchemaVersion
+    algorithm: Literal["sha256"]
+    catalog: CatalogArtifact
+    shards: List[CatalogArtifact]
+
+
+class CatalogVerificationArtifact(TypedDict, total=False):
+    path: str
+    exists: bool
+    sha256: Optional[str]
+    matches: bool
+
+
+class CatalogVerification(TypedDict):
+    schema_version: SchemaVersion
+    valid: bool
+    algorithm: Literal["sha256"]
+    artifacts: List[CatalogVerificationArtifact]
+
+
+class PriceResolutionSource(TypedDict, total=False):
+    name: str
+    type: Literal["external", "user", "contract"]
+    url: str
+    cache_key: str
+    status: Literal["selected", "refreshed", "cache_fresh", "cache_validated", "cache_stale", "unavailable"]
+    retrieved_at: str
+    validated_at: str
+    checksum: str
+    etag: str
+    last_modified: str
+    card_count: int
+    priced_component_count: int
+    applicable: bool
+    selected: bool
+
+
+class PriceResolution(TypedDict):
+    schema_version: SchemaVersion
+    selected_source: Optional[str]
+    price_cards: List[PriceCard]
+    sources: List[PriceResolutionSource]
+    warnings: List[CostWarning]
+    resolved_at: str

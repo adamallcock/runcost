@@ -33,6 +33,8 @@ Current warning codes:
 - `price_not_found`
 - `price_stale`
 - `price_source_disagreement`
+- `price_source_unavailable`
+- `price_source_refresh_failed`
 - `usage_field_ignored`
 - `usage_missing`
 - `inclusive_usage_ambiguous`
@@ -42,6 +44,8 @@ Current warning codes:
 - `long_context_rule_missing`
 - `discount_not_applied`
 - `stream_usage_missing`
+- `batch_items_failed`
+- `batch_items_pending`
 - `historical_price_missing`
 - `tool_component_unpriced`
 - `provider_reported_cost_used`
@@ -68,6 +72,8 @@ For the current public-beta and V1 caveat register, see
 | `price_not_found` | `provider`, `surface`, `model` |
 | `price_stale` | `source`, `age_days`, `threshold_days`, `retrieved_at` |
 | `price_source_disagreement` | `component`, `selected_price_card_id`, `candidate_price_card_ids` |
+| `price_source_unavailable` | `source`, `status` |
+| `price_source_refresh_failed` | `source`, `status` |
 | `usage_field_ignored` | `field` |
 | `usage_missing` | `field` |
 | `inclusive_usage_ambiguous` | `field` |
@@ -77,6 +83,8 @@ For the current public-beta and V1 caveat register, see
 | `long_context_rule_missing` | `component`, `unit`, `total_input_tokens` |
 | `discount_not_applied` | `policy_id` |
 | `stream_usage_missing` | `actual_ledger_count` |
+| `batch_items_failed` | `failed`, `total` |
+| `batch_items_pending` | `pending`, `total` |
 | `historical_price_missing` | `model`, `priced_at` |
 | `tool_component_unpriced` | `component`, `unit`, `model` |
 | `provider_reported_cost_used` | `provider_reported_cost`, `calculated_total` |
@@ -106,6 +114,13 @@ For the current public-beta and V1 caveat register, see
 
 `price_source_disagreement`: multiple matching sources disagree.
 
+`price_source_unavailable`: a configured external source could not produce
+usable cards and had no valid last-known-good cache. The resolver may still
+select a later source; attempted-source metadata stays visible.
+
+`price_source_refresh_failed`: refresh failed, so the resolver used a valid
+last-known-good cache and retained its retrieval timestamp.
+
 `pricing_period_required`: period-specific price cards exist for the model, but
 usage has no full billing timestamp and no explicit pricing period.
 
@@ -119,6 +134,14 @@ timezone or shape that the runtime cannot safely evaluate.
 
 `stream_usage_missing`: aggregation expected final streaming usage, or a specific number of call ledgers, but did not observe enough cost ledgers. The aggregate total may be incomplete.
 
+`batch_items_failed`: one or more terminal batch items errored, were canceled,
+or expired. Those items remain visible and are excluded from the successful
+cost aggregate rather than being represented as zero-cost successes.
+
+`batch_items_pending`: one or more batch items do not yet have a terminal
+result. Re-run normalization after retrieving later provider output before
+treating the aggregate as complete.
+
 ## Current Limitations
 
 - Alpha packages are published, but invoice/dashboard reconciliation remains a
@@ -126,7 +149,9 @@ timezone or shape that the runtime cannot safely evaluate.
 - Go now has typed wrappers for normalized usage, price cards, discounts, and
   core calculation, but raw provider and framework adapter paths are still
   map-backed prototype objects.
-- Source adapters are prototypes, not a comprehensive provider price database.
+- Source adapters and the external resolver do not guarantee that every public
+  catalog covers every model, tier, region, or billable feature. Published
+  packages intentionally contain no provider price database.
 - Aggregation is first-class only for already-calculated cost ledgers.
 - Streaming support covers selected final-usage event envelopes for OpenAI Responses, Anthropic Messages, and Gemini generateContent, plus warnings for missing expected final usage. It does not estimate usage from arbitrary partial text chunks.
 - Debug trace exists for core calculator decisions, but provider extractor and framework middleware traces are still shallow.
@@ -143,7 +168,8 @@ timezone or shape that the runtime cannot safely evaluate.
 
 ## Production Guidance
 
-- Pin price-card snapshots used for billing.
+- Pin caller-owned price-card snapshots used for billing, or persist the
+  resolver metadata and review cache freshness.
 - Prefer user overrides for contract rates.
 - Run strict mode in tests.
 - Review warnings before using totals for customer-visible billing.

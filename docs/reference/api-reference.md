@@ -18,6 +18,10 @@ This document describes the public API shape that currently exists across Python
 | Calculate with Go options | N/A | N/A | `CalculateCostWithOptions(options)` |
 | Calculate from typed Go structs | N/A | N/A | `CalculateCostTyped(...)`, `CalculateCostTypedWithOptions(...)` |
 | Aggregate existing ledgers | `aggregate_cost_ledgers(...)` | `aggregateCostLedgers(options)` | `AggregateCostLedgers(costLedgers, options)` |
+| Normalize batch results | `from_batch_results(...)` | `fromBatchResults(items, options)` | `FromBatchResults(items, options)` |
+| Estimate expected components | `estimate_cost(...)` | `estimateCost(options)` | `EstimateCost(options, priceCards, policies)` |
+| Evaluate a stateless budget | `evaluate_budget(...)` | `evaluateBudget(total, options)` | `EvaluateBudget(total, options)` |
+| Reconcile provider cost | `reconcile_cost(...)` | `reconcileCost(ledger, reported, options)` | `ReconcileCost(ledger, reported, options)` |
 
 Inputs:
 
@@ -30,6 +34,9 @@ Inputs:
 - `providerReportedCostMode` / `provider_reported_cost_mode`: `compare` or `use`.
 - `staleAfterDays` / `stale_after_days`: freshness warning threshold.
 - `debugTrace` / `debug_trace`: include an optional decision trace in the returned cost ledger.
+- `attribution`: passive run/session/workflow/tenant/feature metadata and string
+  tags. Discount-policy `match.tags` entries match a required subset of those
+  tags; attribution otherwise has no effect on price selection.
 
 Output:
 
@@ -80,6 +87,10 @@ Output:
 | Cohere Chat | `extract_cohere_chat_usage` | `extractCohereChatUsage` | via dispatch |
 | Cohere Rerank | `extract_cohere_rerank_usage` | `extractCohereRerankUsage` | via dispatch |
 
+OpenAI-compatible dispatch also has explicit provider routes for Tinker,
+NVIDIA, AI21, Arcee, Cohere-compatible chat, DashScope, Inception, Poolside,
+Xiaomi, and ZAI. MiniMax uses its explicit Anthropic-compatible Messages route.
+
 Common one-call helper:
 
 | Language | Function |
@@ -87,6 +98,14 @@ Common one-call helper:
 | Python | `from_response(response, ...)` |
 | JavaScript/TypeScript | `fromResponse(response, options)` |
 | Go | `FromResponse(response, options, priceCards, discountPolicies)` |
+
+Auto-resolving convenience helper (may read or refresh the public price cache):
+
+| Language | Function |
+|---|---|
+| Python | `from_response_auto(response, ...)` |
+| JavaScript/TypeScript | `await fromResponseAuto(response, options)` |
+| Go | `FromResponseAuto(ctx, response, options, priceCards, discountPolicies)` |
 
 ## Framework Adapters
 
@@ -107,6 +126,8 @@ Common one-call helper:
 | Vercel AI SDK middleware | N/A | `createRunCostVercelMiddleware` | N/A |
 | Vercel AI SDK `onFinish` helper | N/A | `createRunCostVercelOnFinish` | N/A |
 | OpenRouter Agent SDK result | N/A | `fromOpenRouterAgentResult` | N/A |
+| OpenTelemetry GenAI span | `usage_ledger_from_otel_genai_span` / `from_otel_genai_span` | `usageLedgerFromOTelGenAISpan` / `fromOTelGenAISpan` | `UsageLedgerFromOTelGenAISpan` / `FromOTelGenAISpan` |
+| OpenTelemetry cost attributes | `otel_cost_attributes` | `otelCostAttributes` | `OTelCostAttributes` |
 
 The framework helpers route through the same cost calculator after extracting canonical usage.
 
@@ -132,22 +153,44 @@ Streaming final usage:
 | LiteLLM model price JSON | `price_cards_from_litellm` | `priceCardsFromLiteLLM` | `PriceCardsFromLiteLLM` |
 | OpenRouter models API | `price_cards_from_openrouter_models` | `priceCardsFromOpenRouterModels` | `PriceCardsFromOpenRouterModels` |
 | models.dev API catalog | `price_cards_from_models_dev` | `priceCardsFromModelsDev` | `PriceCardsFromModelsDev` |
-| Bundled default catalog | `default_price_cards` | `defaultPriceCards` | `DefaultPriceCards` |
 | Reviewed official pricing snapshots | `price_cards_from_official_snapshot` | `priceCardsFromOfficialSnapshot` | `PriceCardsFromOfficialSnapshot` |
 | Portkey pricing data | `price_cards_from_portkey` | `priceCardsFromPortkey` | `PriceCardsFromPortkey` |
 | Local JSON price-source file | `price_cards_from_json_file` | `priceCardsFromJSONFile` | `PriceCardsFromJSONFile` |
 | Local YAML price-source file | `price_cards_from_yaml_file` | `priceCardsFromYAMLFile` | `PriceCardsFromYAMLFile` |
 | User compact pricing data | `price_cards_from_user_pricing` | `priceCardsFromUserPricing` | `PriceCardsFromUserPricing` |
 | Helicone model-registry data | `price_cards_from_helicone` | `priceCardsFromHelicone` | `PriceCardsFromHelicone` |
+| Pydantic `genai-prices` | `price_cards_from_genai_prices` | `priceCardsFromGenAIPrices` | `PriceCardsFromGenAIPrices` |
 
 Adapters return canonical `PriceCard` objects. Users can merge these with their own custom cards and then use `priceSourcePriority` to make overrides deterministic.
 
+## External Price Resolver
+
+| Capability | Python | JavaScript/TypeScript | Go |
+|---|---|---|---|
+| Select one source | `resolve_price_catalog` | `resolvePriceCatalog` | `ResolvePriceCatalog` |
+| Auto-price a response | `from_response_auto` | `fromResponseAuto` | `FromResponseAuto` |
+| Auto-price batch results | `from_batch_results_auto` | `fromBatchResultsAuto` | `FromBatchResultsAuto` |
+| Auto-price an OTel span | `from_otel_genai_span_auto` | `fromOTelGenAISpanAuto` | `FromOTelGenAISpanAuto` |
+| Auto-price an estimate | `estimate_cost_auto` | `estimateCostAuto` | `EstimateCostAuto` |
+| Inspect/clear cache | `price_cache_status`, `clear_price_cache` | `priceCacheStatus`, `clearPriceCache` | `PriceCacheStatus`, `ClearPriceCache` |
+
+Explicit cards always win, including an explicitly empty list. Otherwise the
+general source order is `genai-prices`, models.dev, then LiteLLM. OpenRouter
+usage tries the OpenRouter models API first. Results include `price_resolution`
+metadata with the selected source, attempted sources, cache status, timestamps,
+and operational warnings. Sources are never silently merged.
+
 ## CLI
 
-The Python package installs a small `runcost` command:
+The Python and npm packages install matching quote commands. Python also keeps
+the source/fixture maintenance commands:
 
 | Command | Purpose |
 |---|---|
+| `runcost quote PATH --provider PROVIDER` | Price one provider-response JSON object using external resolution and cache. Use `-` for stdin. |
+| `runcost quote - --jsonl --provider PROVIDER` | Price a JSONL stream with one canonical JSON ledger per input row. |
+| `npx runcost quote PATH --provider PROVIDER` | Run the equivalent npm CLI. |
+| `runcost prices refresh|status|clear` | Refresh, inspect, or clear managed external price-cache entries. |
 | `runcost price-cards --source-type TYPE --input PATH` | Convert one pricing source JSON file to canonical price cards. |
 | `runcost fixture-check PATH` | Calculate one fixture and compare the expected cost-ledger subset when present. |
 
@@ -174,5 +217,9 @@ The trace records price-card candidates, selected component prices, alias resolu
 - `schemas/discount-policy.schema.json`
 - `schemas/cost-ledger.schema.json`
 - `schemas/debug-trace.schema.json`
+- `schemas/batch-ledger.schema.json`
+- `schemas/catalog-manifest.schema.json`
+- `schemas/budget-evaluation.schema.json`
+- `schemas/reconciliation.schema.json`
 
 The schemas are language-neutral and should remain the source of truth for future generated types.

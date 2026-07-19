@@ -1,7 +1,6 @@
 package ledger
 
 import (
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -14,11 +13,48 @@ import (
 	"time"
 )
 
-//go:embed data/default-source-cache.json
-var defaultSourceCacheJSON []byte
+// CompiledPriceCatalog indexes immutable price cards for repeated selection.
+type CompiledPriceCatalog struct {
+	PriceCards      []any
+	byProviderModel map[string][]any
+	byModel         map[string][]any
+}
 
-// DefaultPriceSourcePriority is the recommended source priority for the bundled catalog.
-var DefaultPriceSourcePriority = []string{"openai-official", "anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"}
+// CompilePriceCatalog builds provider/model and alias indexes once.
+func CompilePriceCatalog(priceCards []any) *CompiledPriceCatalog {
+	catalog := &CompiledPriceCatalog{
+		PriceCards:      priceCards,
+		byProviderModel: map[string][]any{},
+		byModel:         map[string][]any{},
+	}
+	for _, rawCard := range priceCards {
+		card := asObject(rawCard)
+		provider := asString(card["provider"])
+		names := []string{asString(card["model"])}
+		for _, alias := range asSlice(card["aliases"]) {
+			names = append(names, asString(alias))
+		}
+		seen := map[string]bool{}
+		for _, name := range names {
+			if name == "" || seen[name] {
+				continue
+			}
+			seen[name] = true
+			providerKey := provider + "\x00" + name
+			catalog.byProviderModel[providerKey] = append(catalog.byProviderModel[providerKey], rawCard)
+			catalog.byModel[name] = append(catalog.byModel[name], rawCard)
+		}
+	}
+	return catalog
+}
+
+func (catalog *CompiledPriceCatalog) identityCandidates(usageLedger Object) []any {
+	return catalog.byProviderModel[asString(usageLedger["provider"])+"\x00"+billedModel(usageLedger)]
+}
+
+func (catalog *CompiledPriceCatalog) modelCandidates(usageLedger Object) []any {
+	return catalog.byModel[billedModel(usageLedger)]
+}
 
 var componentOrder = func() map[string]int {
 	orders := map[string]int{}
@@ -1829,6 +1865,15 @@ func policyMatches(policy Object, usageLedger Object, component Object) bool {
 	if excluded := asSlice(match["exclude_components"]); len(excluded) > 0 && containsString(excluded, asString(component["name"])) {
 		return false
 	}
+	if requestedTags, ok := objectValue(match["tags"]); ok && len(requestedTags) > 0 {
+		attribution := NormalizeAttribution(asObject(usageLedger["attribution"]))
+		actualTags := asObject(attribution["tags"])
+		for key, value := range requestedTags {
+			if asString(actualTags[key]) != asString(value) {
+				return false
+			}
+		}
+	}
 	return true
 }
 
@@ -2203,6 +2248,10 @@ func CalculateCostWithMode(usageLedger Object, priceCards []any, discountPolicie
 // compatibility options such as strict mode, stale price thresholds, and
 // provider-reported cost comparison.
 func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPolicies []any, options Object) Object {
+	return calculateCostWithCompiledOptions(usageLedger, CompilePriceCatalog(priceCards), discountPolicies, options)
+}
+
+func calculateCostWithCompiledOptions(usageLedger Object, catalog *CompiledPriceCatalog, discountPolicies []any, options Object) Object {
 	components := []any{}
 	warnings := usageMetadataFieldWarnings(usageLedger)
 	appliedDiscounts := []any{}
@@ -2231,6 +2280,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		hasModelCard           bool
 		modelSurfaceCardExists bool
 		candidateCards         []Object
+		identityCandidates     []any
 	}
 	priceLookupCache := map[string]priceLookupResult{}
 
@@ -2246,10 +2296,13 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 		lookupKey := priceLookupCacheKey(componentUsageLedger, options)
 		lookup, ok := priceLookupCache[lookupKey]
 		if !ok {
+			identityCandidates := catalog.identityCandidates(componentUsageLedger)
+			modelCandidates := catalog.modelCandidates(componentUsageLedger)
 			lookup = priceLookupResult{
-				hasModelCard:           hasPriceCardForUsage(componentUsageLedger, priceCards),
-				modelSurfaceCardExists: hasPriceCardForModelSurface(componentUsageLedger, priceCards),
-				candidateCards:         matchingCards(componentUsageLedger, priceCards, options),
+				hasModelCard:           hasPriceCardForUsage(componentUsageLedger, identityCandidates),
+				modelSurfaceCardExists: hasPriceCardForModelSurface(componentUsageLedger, modelCandidates),
+				candidateCards:         matchingCards(componentUsageLedger, identityCandidates, options),
+				identityCandidates:     identityCandidates,
 			}
 			priceLookupCache[lookupKey] = lookup
 		}
@@ -2282,7 +2335,7 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 
 		if len(candidateCards) == 0 {
 			if !warnedNoMatchingCard[componentWarningKey] {
-				warnings = append(warnings, noMatchingCardWarning(componentUsageLedger, priceCards))
+				warnings = append(warnings, noMatchingCardWarning(componentUsageLedger, lookup.identityCandidates))
 				warnedNoMatchingCard[componentWarningKey] = true
 			}
 			incrementTraceSummary(trace, "unpriced_components")
@@ -2467,6 +2520,9 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 	}
 	if metadata, ok := objectValue(usageLedger["metadata"]); ok && len(metadata) > 0 {
 		result["metadata"] = metadata
+	}
+	if attribution := NormalizeAttribution(asObject(usageLedger["attribution"])); len(attribution) > 0 {
+		result["attribution"] = attribution
 	}
 	if mode == "strict" && len(warnings) > 0 {
 		panic(fmt.Sprintf("strict mode cost calculation failed: %s", asString(asObject(warnings[0])["code"])))
@@ -2740,6 +2796,9 @@ func AggregateCostLedgers(costLedgers []any, options Object) Object {
 		"warnings":          warnings,
 		"metadata":          metadata,
 	}
+	if attribution := NormalizeAttribution(asObject(options["attribution"])); len(attribution) > 0 {
+		result["attribution"] = attribution
+	}
 	if mode == "strict" && len(warnings) > 0 {
 		panic(fmt.Sprintf("strict mode cost aggregation failed: %s", asString(asObject(warnings[0])["code"])))
 	}
@@ -2971,15 +3030,27 @@ func usageContextFromOptions(response Object, provider string, options Object) O
 }
 
 var openAICompatibleChatProviders = map[string]string{
-	"openai.chat_completions":       "openai",
-	"openrouter.chat_completions":   "openrouter",
-	"groq.chat_completions":         "groq",
-	"xai.chat_completions":          "xai",
-	"meta.chat_completions":         "meta",
-	"mistral.chat_completions":      "mistral",
-	"deepseek.chat_completions":     "deepseek",
-	"azure.openai.chat_completions": "azure",
-	"huggingface.chat_completions":  "huggingface",
+	"openai.chat_completions":            "openai",
+	"openrouter.chat_completions":        "openrouter",
+	"groq.chat_completions":              "groq",
+	"xai.chat_completions":               "xai",
+	"meta.chat_completions":              "meta",
+	"mistral.chat_completions":           "mistral",
+	"deepseek.chat_completions":          "deepseek",
+	"azure.openai.chat_completions":      "azure",
+	"huggingface.chat_completions":       "huggingface",
+	"nvidia.chat_completions":            "nvidia",
+	"tinker.chat_completions":            "tinker",
+	"kimi.chat_completions":              "kimi",
+	"ai21.chat_completions":              "ai21",
+	"arcee.chat_completions":             "arcee",
+	"cohere.chat_completions_compatible": "cohere",
+	"dashscope.chat_completions":         "dashscope",
+	"inception.chat_completions":         "inception",
+	"poolside.chat_completions":          "poolside",
+	"xiaomi.chat_completions":            "xiaomi",
+	"zai.chat_completions":               "zai",
+	"zhipu.chat_completions":             "zhipu",
 }
 
 func isOpenAICompatibleChatSurface(surface string) bool {
@@ -3116,7 +3187,7 @@ func ExtractUsageLedger(response Object, options Object) Object {
 		return extractOpenAIUsageCodeInterpreterSessionsUsage(response, options)
 	case "openai.chat_completions":
 		return extractOpenAIChatCompletionsUsage(response, options)
-	case "anthropic.messages":
+	case "anthropic.messages", "minimax.messages":
 		return extractAnthropicMessagesUsage(response, options)
 	case "google.gemini.generate_content", "vertex.gemini.generate_content":
 		return extractGeminiGenerateContentUsage(response, options)
@@ -4117,7 +4188,11 @@ func extractAnthropicMessagesUsage(response Object, options Object) Object {
 		}
 	}
 
-	ledger := baseUsageLedger(provider, "anthropic.messages", requestedModel, asString(response["model"]), components, usage)
+	surface := asString(options["surface"])
+	if surface == "" {
+		surface = "anthropic.messages"
+	}
+	ledger := baseUsageLedger(provider, surface, requestedModel, asString(response["model"]), components, usage)
 	if len(components) == 0 && classifierZeroBillable {
 		metadata["zero_billable_reason"] = "anthropic_classifier_block"
 	}
@@ -6141,20 +6216,6 @@ func PriceCardsFromSourceCache(data Object) []any {
 	return cards
 }
 
-// DefaultSourceCache returns the bundled reviewed default source-cache catalog.
-func DefaultSourceCache() Object {
-	var data Object
-	if err := json.Unmarshal(defaultSourceCacheJSON, &data); err != nil {
-		return Object{}
-	}
-	return data
-}
-
-// DefaultPriceCards returns price cards from the bundled reviewed default catalog.
-func DefaultPriceCards() []any {
-	return PriceCardsFromSourceCache(DefaultSourceCache())
-}
-
 func fileURL(path string) string {
 	absolute, err := filepath.Abs(path)
 	if err != nil {
@@ -6902,9 +6963,114 @@ func providerReportedCostFromRawResponse(response Object, usageLedger Object) st
 	return xaiProviderReportedCost(response, usageLedger)
 }
 
+// InferSurface identifies only provider-response shapes that are sufficiently
+// distinct to avoid silently guessing between endpoints.
+func InferSurface(response Object, provider string) string {
+	provider = strings.ToLower(provider)
+	objectType := strings.ToLower(asString(response["object"]))
+	if objectType == "" {
+		objectType = strings.ToLower(asString(response["type"]))
+	}
+	usage := asObject(response["usage"])
+	if _, ok := response["usageMetadata"].(map[string]any); ok {
+		if provider == "vertex" || provider == "google-vertex" {
+			return "vertex.gemini.generate_content"
+		}
+		return "google.gemini.generate_content"
+	}
+	if _, ok := response["usage_metadata"].(map[string]any); ok {
+		if provider == "vertex" || provider == "google-vertex" {
+			return "vertex.gemini.generate_content"
+		}
+		return "google.gemini.generate_content"
+	}
+	if objectType == "message" {
+		if _, ok := usage["input_tokens"]; ok {
+			if provider == "minimax" {
+				return "minimax.messages"
+			}
+			return "anthropic.messages"
+		}
+		if _, ok := usage["cache_read_input_tokens"]; ok {
+			if provider == "minimax" {
+				return "minimax.messages"
+			}
+			return "anthropic.messages"
+		}
+	}
+	_, hasOutput := response["output"]
+	_, hasInputTokens := usage["input_tokens"]
+	if objectType == "response" || strings.HasPrefix(asString(response["id"]), "resp_") || (hasOutput && hasInputTokens) {
+		if provider == "xai" {
+			return "xai.responses"
+		}
+		if provider == "meta" {
+			return "meta.responses"
+		}
+		return "openai.responses"
+	}
+	if objectType == "list" {
+		if _, dataIsArray := response["data"].([]any); dataIsArray {
+			if _, ok := usage["prompt_tokens"]; ok {
+				return "openai.embeddings"
+			}
+		}
+	}
+	if len(asSlice(response["choices"])) > 0 || response["choices"] != nil {
+		if len(usage) > 0 {
+			surfaces := map[string]string{
+				"openai":      "openai.chat_completions",
+				"openrouter":  "openrouter.chat_completions",
+				"groq":        "groq.chat_completions",
+				"xai":         "xai.chat_completions",
+				"meta":        "meta.chat_completions",
+				"mistral":     "mistral.chat_completions",
+				"deepseek":    "deepseek.chat_completions",
+				"azure":       "azure.openai.chat_completions",
+				"huggingface": "huggingface.chat_completions",
+				"nvidia":      "nvidia.chat_completions",
+				"tinker":      "tinker.chat_completions",
+				"kimi":        "kimi.chat_completions",
+				"ai21":        "ai21.chat_completions",
+				"arcee":       "arcee.chat_completions",
+				"cohere":      "cohere.chat_completions_compatible",
+				"dashscope":   "dashscope.chat_completions",
+				"inception":   "inception.chat_completions",
+				"poolside":    "poolside.chat_completions",
+				"xiaomi":      "xiaomi.chat_completions",
+				"zai":         "zai.chat_completions",
+				"zhipu":       "zhipu.chat_completions",
+			}
+			if surface := surfaces[provider]; surface != "" {
+				return surface
+			}
+			if provider == "" {
+				return "openai.chat_completions"
+			}
+		}
+	}
+	if _, ok := response["metrics"].(map[string]any); ok && len(usage) > 0 {
+		return "aws.bedrock.converse"
+	}
+	return ""
+}
+
 // FromResponse extracts usage from a raw provider response and immediately
 // calculates a cost ledger from the supplied price cards and discount policies.
 func FromResponse(response Object, options Object, priceCards []any, discountPolicies []any) Object {
+	return fromResponseWithCatalog(response, options, priceCards, discountPolicies, nil)
+}
+
+func fromResponseWithCatalog(response Object, options Object, priceCards []any, discountPolicies []any, compiledCatalog *CompiledPriceCatalog) Object {
+	if options == nil {
+		options = Object{}
+	}
+	if asString(options["surface"]) == "" {
+		options["surface"] = InferSurface(response, asString(options["provider"]))
+		if asString(options["surface"]) == "" {
+			options["surface"] = "unknown"
+		}
+	}
 	mode := asString(options["mode"])
 	if mode == "" {
 		mode = "compatibility"
@@ -6924,6 +7090,7 @@ func FromResponse(response Object, options Object, priceCards []any, discountPol
 		surface != "openai.vector_stores" &&
 		surface != "openai.usage.code_interpreter_sessions" &&
 		surface != "anthropic.messages" &&
+		surface != "minimax.messages" &&
 		surface != "google.gemini.generate_content" &&
 		surface != "vertex.gemini.generate_content" &&
 		surface != "google.gemini.live" &&
@@ -6939,12 +7106,37 @@ func FromResponse(response Object, options Object, priceCards []any, discountPol
 		return unsupportedSurfaceLedger(response, options)
 	}
 	usageLedger := ExtractUsageLedger(response, options)
+	if context, ok := objectValue(options["context"]); ok && len(context) > 0 {
+		mergedContext := cloneObject(asObject(usageLedger["context"]))
+		for key, value := range context {
+			mergedContext[key] = value
+		}
+		if asString(usageLedger["provider"]) == "openai" {
+			contextTier := mergedContext["service_tier"]
+			if contextTier == nil {
+				contextTier = mergedContext["serviceTier"]
+			}
+			if contextTier != nil {
+				if normalizedTier := normalizeOpenAIServiceTier(contextTier); normalizedTier != "" {
+					mergedContext["service_tier"] = normalizedTier
+				}
+				delete(mergedContext, "serviceTier")
+			}
+		}
+		usageLedger["context"] = mergedContext
+	}
+	if attribution := NormalizeAttribution(asObject(options["attribution"])); len(attribution) > 0 {
+		usageLedger["attribution"] = attribution
+	}
 	if _, exists := options["provider_reported_cost"]; !exists {
 		if reportedCost := providerReportedCostFromRawResponse(response, usageLedger); reportedCost != "" {
 			options["provider_reported_cost"] = reportedCost
 		}
 	}
 	options["mode"] = mode
+	if compiledCatalog != nil {
+		return calculateCostWithCompiledOptions(usageLedger, compiledCatalog, discountPolicies, options)
+	}
 	return CalculateCostWithOptions(usageLedger, priceCards, discountPolicies, options)
 }
 

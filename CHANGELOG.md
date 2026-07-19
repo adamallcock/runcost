@@ -14,7 +14,34 @@ limitations.
 
 ## Unreleased
 
-- No unreleased changes yet.
+- No changes after the prepared 0.2.0 work below.
+
+## 0.2.0 (prepared 2026-07-18; not published)
+
+- Add one-call external pricing resolution in Python, JavaScript/browser, and
+  Go using `genai-prices`, models.dev, LiteLLM, and OpenRouter where appropriate;
+  include 24-hour conditional caches, last-known-good fallback, offline mode,
+  source provenance, and matching Python/npm quote and cache-management CLIs.
+- Remove all provider price databases and provider shards from published
+  package artifacts. Keep deterministic calculation network-free and preserve
+  explicit empty-card opt-out behavior.
+- Add itemized batch ledgers for OpenAI Responses, Chat Completions,
+  Embeddings, and Images; Anthropic Message Batches; Gemini Developer and
+  Vertex AI; Bedrock model-invocation jobs; Kimi; and DashScope.
+- Add explicit compatible routes for Tinker/Inkling, NVIDIA, AI21, Arcee,
+  Cohere, DashScope, Inception, Poolside, Xiaomi, ZAI, and MiniMax.
+- Add Pydantic `genai-prices` and OpenTelemetry GenAI adapters, cost attribute
+  enrichment, attribution, pre-call estimates, stateless budgets, and explicit
+  provider-total reconciliation.
+- Compile and memoize caller-owned and externally cached catalogs across Python,
+  JavaScript, and Go; add generic SHA-256 manifests, mutation detection, and
+  enforced latency/memory/package-size budgets.
+- Add a browser/edge-safe npm entrypoint, an
+  eight-page no-account playground, GitHub Pages deployment workflow, canonical/social
+  metadata, and a 1200x630 social card.
+- Publish a generated 202-case RunCost conformance inventory, redaction-safe
+  external fixture workflow, new schemas/types/API registry entries, and
+  runnable provider, batch, framework, and telemetry examples.
 
 ## 0.1.13
 

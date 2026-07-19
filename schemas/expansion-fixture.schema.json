@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runcost.dev/schemas/expansion-fixture.schema.json",
+  "title": "RunCostProductExpansionFixtures",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "price_card_sets", "cases"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "price_card_sets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "$ref": "price-card.schema.json" }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "operation", "input", "expected"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "from_response",
+              "from_batch_results",
+              "price_cards_from_genai_prices",
+              "usage_ledger_from_otel",
+              "from_otel",
+              "estimate_cost",
+              "attach_price_resolution",
+              "evaluate_budget",
+              "reconcile_cost"
+            ]
+          },
+          "input": { "type": "object" },
+          "expected": {},
+          "expected_languages": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["python", "javascript", "go"] }
+          }
+        }
+      }
+    }
+  }
+}

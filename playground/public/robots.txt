@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://adamallcock.github.io/runcost/sitemap.xml
