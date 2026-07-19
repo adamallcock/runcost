@@ -84,9 +84,9 @@ Name checks on May 28, 2026:
 - PyPI `runcost`: already exists, so the Python distribution remains
   `runcost-ai` while the import package and CLI remain `runcost`.
 
-Release `0.1.13` was published on 2026-07-10 local time. Current evidence is
-recorded in
-`docs/internal/reports/2026-07-10-release-0-1-13-evidence.md`.
+Release `0.2.0` was published on 2026-07-18 local time. Current registry,
+provenance, Go module, public-site, and install evidence is recorded in
+`docs/internal/reports/2026-07-18-release-0-2-0-evidence.md`.
 
 Before future publishing:
 

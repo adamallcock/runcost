@@ -24,6 +24,7 @@ REQUIRED_FILES = [
     "docs/internal/reports/2026-05-26-go-tag-verification-0-1-0.md",
     "docs/internal/reports/2026-07-05-release-0-1-12-evidence.md",
     "docs/internal/reports/2026-07-10-release-0-1-13-evidence.md",
+    "docs/internal/reports/2026-07-18-release-0-2-0-evidence.md",
     "docs/guides/package-installation.md",
     "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     "docs/guides/quickstart.md",
