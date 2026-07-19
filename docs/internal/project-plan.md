@@ -623,12 +623,10 @@ Use real applications to validate correctness and ergonomics.
 
 Current status:
 
-- Partial. A sanitized, optional alpha smoke harness exists with deterministic
-  no-network sample mode and API-key-gated live paths for selected direct API
-  calls. Existing checks validate fixtures, local package installs, release
-  artifacts, synthetic examples, and the smoke harness shape, but Milestone 8 is
-  not complete until at least one live run and one invoice/dashboard comparison
-  have been reviewed.
+- Complete for current scope. Credentialed live evidence covers every required
+  smoke scenario, the product-truth loop is closed for reviewed findings, and a
+  matching real OpenAI dashboard cost/activity export has been compared through
+  the privacy-preserving normalized workflow.
 
 Alpha scenarios:
 
@@ -678,12 +676,19 @@ Delivered so far:
   --comparison <path> --require-real` validates future real provider
   dashboard/export comparisons and rejects the checked-in sample as completion
   evidence.
+- `scripts/run_openai_dashboard_export_comparison.py`,
+  `fixtures/source-files/openai-dashboard-export-comparison-2026-07-18.json`,
+  and `docs/internal/reports/2026-07-18-openai-dashboard-export-comparison.md`
+  provide the reviewed real comparison. The durable artifact withholds absolute
+  costs, token volumes, row counts, tier mix, and provider identifiers while
+  retaining full-pricing coverage and the normalized discrepancy.
 - `fixtures/source-files/project-completion-gates.json` and
   `scripts/check_project_completion_gates.py` make the remaining Milestone 8,
   public beta, polyglot, provider breadth, and V1 gates explicit. Normal CI
   validates that the register is well-formed and referenced evidence exists;
   strict flags such as `--require-milestone8`, `--require-public-beta`, and
-  `--require-v1` intentionally fail until the external evidence exists.
+  `--require-v1` distinguish completed evidence from future V1 stabilization.
+  Milestone 8 and public beta pass; V1 remains intentionally incomplete.
 - `docs/internal/process/beta-v1-hardening-roadmap.md` keeps public beta, polyglot
   hardening, provider breadth, and V1 stabilization gates explicit.
 - `scripts/run_vercel_alpha_smoke.mjs` and
@@ -721,8 +726,8 @@ The finalization path is:
 2. Convert all smoke findings into fixtures, warnings, or documented
    limitations, and register the conversion in
    `fixtures/source-files/alpha-smoke-product-truth-register.json`.
-3. Run one invoice/dashboard comparison sample and document exact versus
-   estimated cases.
+3. Run one real invoice/dashboard comparison and document exact, estimated, and
+   unsupported cases without retaining private exports.
 4. Keep `fixtures/source-files/project-completion-gates.json` current as the
    external evidence ledger for Milestone 8, public beta, and V1; use
    `python3 scripts/check_project_completion_gates.py --require-milestone8`
@@ -815,6 +820,9 @@ Delivered so far:
   loop are documented in
   `docs/internal/process/2026-05-26-source-data-update-process.md` and checked by
   release readiness and project hygiene scripts.
+- The strict Milestone 8 evidence bundle and
+  `python3 scripts/check_project_completion_gates.py --require-public-beta`
+  pass with the sanitized real OpenAI dashboard comparison.
 
 Progress criteria:
 
@@ -826,6 +834,9 @@ Progress criteria:
 Exit gate:
 
 - Public users can depend on the package for supported surfaces with documented caveats.
+
+Current result: met for the documented `0.2.0` supported surfaces. Adoption and
+external fixture evidence now determine whether to proceed to V1.
 
 ### Milestone 10: V1
 

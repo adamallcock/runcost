@@ -7,9 +7,9 @@ status: draft
 
 # Beta And V1 Hardening Roadmap
 
-This document keeps the post-private-alpha work explicit. Milestones 0-7 are
-complete for current scope, but public beta and V1 require live evidence,
-publishing proof, generated-artifact discipline, and stronger provider breadth.
+This document keeps the post-private-alpha work explicit. Milestones 0-9 and
+the machine-readable public-beta gate are complete for current scope. V1 still
+requires release-candidate stabilization and continued external validation.
 
 ## Public Beta Gate
 
@@ -63,9 +63,9 @@ python3 scripts/check_project_completion_gates.py --require-public-beta
 python3 scripts/check_project_completion_gates.py --require-v1
 ```
 
-Those strict checks are expected to fail until the live smoke, real invoice or
-dashboard comparison, registry configuration, explicitly approved registry
-publication, and post-live caveat review have actually happened.
+The Milestone 8 and public-beta strict checks pass with the reviewed evidence
+listed below. The V1 strict check remains intentionally incomplete until the
+release-candidate stabilization gate is satisfied.
 
 Current release evidence:
 
@@ -79,6 +79,10 @@ Current release evidence:
   release workflow. Current registry, provenance, Go tag, public-site, and
   post-publish install-smoke evidence is recorded in
   `docs/internal/reports/2026-07-18-release-0-2-0-evidence.md`.
+- A matching real OpenAI dashboard cost and activity export was compared
+  locally, sanitized to normalized evidence, and validated with
+  `--require-real`. The result and non-invoice-exact limitation are recorded in
+  `docs/internal/reports/2026-07-18-openai-dashboard-export-comparison.md`.
 - The Python distribution-name decision is recorded in
   `docs/internal/decisions/2026-05-27-python-distribution-name.md`: publish
   `runcost-ai` on PyPI while preserving `import runcost` and the `runcost` CLI.

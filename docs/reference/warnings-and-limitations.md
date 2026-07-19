@@ -144,8 +144,12 @@ treating the aggregate as complete.
 
 ## Current Limitations
 
-- Alpha packages are published, but invoice/dashboard reconciliation remains a
-  separate evidence gate before treating totals as invoice-exact.
+- A real OpenAI dashboard comparison is documented in
+  `docs/internal/reports/2026-07-18-openai-dashboard-export-comparison.md`, but
+  its public-list-price estimate differs materially from the provider-reported
+  total when provider-internal pricing tiers are present. RunCost totals remain
+  estimates unless a caller supplies the applicable private pricing policy;
+  provider-reported cost remains authoritative for reconciliation.
 - Go now has typed wrappers for normalized usage, price cards, discounts, and
   core calculation, but raw provider and framework adapter paths are still
   map-backed prototype objects.

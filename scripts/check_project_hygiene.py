@@ -25,6 +25,7 @@ REQUIRED_FILES = [
     "docs/internal/reports/2026-07-05-release-0-1-12-evidence.md",
     "docs/internal/reports/2026-07-10-release-0-1-13-evidence.md",
     "docs/internal/reports/2026-07-18-release-0-2-0-evidence.md",
+    "docs/internal/reports/2026-07-18-openai-dashboard-export-comparison.md",
     "docs/guides/package-installation.md",
     "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     "docs/guides/quickstart.md",
@@ -78,6 +79,7 @@ REQUIRED_FILES = [
     "scripts/run_langchain_alpha_smoke.py",
     "scripts/run_alpha_smoke.py",
     "scripts/run_openai_costs_invoice_comparison.py",
+    "scripts/run_openai_dashboard_export_comparison.py",
     "scripts/run_vercel_alpha_smoke.mjs",
     "scripts/generate_contract_docs.py",
     "scripts/refresh_price_sources.py",
@@ -87,6 +89,7 @@ REQUIRED_FILES = [
     "fixtures/source-files/alpha-smoke-samples.json",
     "fixtures/source-files/invoice-dashboard-comparison-sample.json",
     "fixtures/source-files/openai-costs-comparison-source.json",
+    "fixtures/source-files/openai-dashboard-export-comparison-2026-07-18.json",
     "fixtures/source-files/project-completion-gates.json",
     "fixtures/source-files/trusted-publishing-verification-2026-07-10.json",
     "packages/python/runcost/cli.py",
@@ -464,6 +467,11 @@ def check_package_metadata() -> None:
     assert_true(
         "compare_invoice_dashboard.py" in scripts.get("compare:invoice", ""),
         "root compare:invoice must run invoice/dashboard comparison command",
+    )
+    assert_true(
+        "run_openai_dashboard_export_comparison.py"
+        in scripts.get("compare:invoice:openai-dashboard", ""),
+        "root compare:invoice:openai-dashboard must run the privacy-preserving dashboard converter",
     )
     assert_true(
         "check_project_completion_gates.py" in scripts.get("check:gates", ""),

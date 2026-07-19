@@ -1,0 +1,76 @@
+{
+  "comparison_id": "openai-dashboard-export-2026-07-18",
+  "contains_private_billing_export": false,
+  "evidence_type": "real_provider_export",
+  "milestone8_real_evidence": true,
+  "model": "multiple",
+  "provider": "openai",
+  "provider_source": "sanitized_openai_dashboard_csv_exports",
+  "provider_window": "2026-07-18T00:00:00/2026-07-19T00:00:00+00:00",
+  "rows": [
+    {
+      "field": "matching_nonempty_export_pair",
+      "notes": "Matching cost and activity exports were present. Their row counts, identifiers, and absolute values are omitted.",
+      "product_truth_action": {
+        "reason": "Provider sample and RunCost value match for this field.",
+        "type": "none"
+      },
+      "provider_value": "1",
+      "runcost_value": "1",
+      "status": "exact"
+    },
+    {
+      "field": "priced_activity_coverage",
+      "notes": "Coverage is the fully priced activity-row share; row counts and token volumes are omitted.",
+      "product_truth_action": {
+        "reason": "Provider sample and RunCost value match for this field.",
+        "type": "none"
+      },
+      "provider_value": "1",
+      "runcost_value": "1",
+      "status": "exact"
+    },
+    {
+      "field": "currency_is_usd",
+      "notes": "The local converter requires one USD cost-export currency.",
+      "product_truth_action": {
+        "reason": "Provider sample and RunCost value match for this field.",
+        "type": "none"
+      },
+      "provider_value": "1",
+      "runcost_value": "1",
+      "status": "exact"
+    },
+    {
+      "field": "normalized_provider_cost",
+      "notes": "Absolute costs are withheld. The provider total is normalized to 1. RunCost uses external public prices, explicit published batch/flex reductions, average input per request for long-context selection, and a standard public-price baseline for the provider-internal incentivized-tier label.",
+      "product_truth_action": {
+        "reason": "Absolute costs are withheld. The provider total is normalized to 1. RunCost uses external public prices, explicit published batch/flex reductions, average input per request for long-context selection, and a standard public-price baseline for the provider-internal incentivized-tier label.",
+        "type": "documented_limitation"
+      },
+      "provider_value": "1",
+      "runcost_value": "2.213151",
+      "status": "unsupported"
+    },
+    {
+      "field": "normalized_runcost_cost",
+      "notes": "Records the normalized RunCost ledger used by this comparison.",
+      "product_truth_action": {
+        "reason": "Provider sample and RunCost value match for this field.",
+        "type": "none"
+      },
+      "provider_value": "2.213151",
+      "runcost_value": "2.213151",
+      "status": "exact"
+    }
+  ],
+  "runcost_source": "runtime_external_price_resolution_with_explicit_public_tier_policies",
+  "safe_to_commit": true,
+  "schema_version": "0.1",
+  "summary": {
+    "estimated": 0,
+    "exact": 4,
+    "unsupported": 1
+  },
+  "surface": "openai.dashboard.cost_and_activity_exports"
+}

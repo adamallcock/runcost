@@ -108,10 +108,16 @@ The social image is a real 1200 by 630 PNG served with `image/png`.
 `og:image`, `twitter:image`, and `twitter:card=summary_large_image` were visible
 to a Twitterbot request. `robots.txt` allows crawling and links the sitemap.
 
-## Remaining Gate
+## Post-release Reconciliation
 
 The release, registry, provenance, Go module, and public-site gates are
-satisfied for `0.2.0`. The remaining public-beta evidence gate is the
-sanitized comparison of a real provider dashboard, invoice, or usage export
-against a RunCost ledger:
-`milestone8_invoice_dashboard_real_comparison`.
+satisfied for `0.2.0`. A matching real OpenAI dashboard cost and activity
+export was subsequently reduced to privacy-preserving normalized evidence and
+validated with the strict real-comparison check. The result and its material
+provider-internal-tier limitation are documented in
+`docs/internal/reports/2026-07-18-openai-dashboard-export-comparison.md`.
+
+That evidence satisfies `milestone8_invoice_dashboard_real_comparison` without
+claiming invoice exactness. Milestone 8 and the project completion register's
+public-beta gate now pass; the remaining work is distribution and repeated
+external validation, not release mechanics.
