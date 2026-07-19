@@ -1,0 +1,767 @@
+{
+  "schema_version": "0.1",
+  "price_card_sets": {
+    "openai-chat-batch": [
+      {
+        "schema_version": "0.1",
+        "id": "fixture:openai:chat:batch",
+        "provider": "openai",
+        "surface": "openai.chat_completions",
+        "model": "fixture-chat",
+        "service_tier": "batch",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "input_cache_read_tokens", "unit": "token", "price": { "amount": "0.1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_reasoning_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      }
+    ],
+    "openai-responses-batch": [
+      {
+        "schema_version": "0.1",
+        "id": "fixture:openai:responses:batch",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "fixture-response",
+        "service_tier": "batch",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "input_cache_read_tokens", "unit": "token", "price": { "amount": "0.1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "input_cache_write_tokens", "unit": "token", "price": { "amount": "1.25", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_reasoning_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      }
+    ],
+    "openai-embeddings-batch": [
+      {
+        "schema_version": "0.1",
+        "id": "fixture:openai:embeddings:batch",
+        "provider": "openai",
+        "surface": "openai.embeddings",
+        "model": "fixture-embedding",
+        "service_tier": "batch",
+        "components": [
+          { "usage_component": "embedding_tokens", "unit": "token", "price": { "amount": "0.2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      }
+    ],
+    "openai-images-batch": [
+      {
+        "schema_version": "0.1",
+        "id": "fixture:openai:images:batch",
+        "provider": "openai",
+        "surface": "openai.images",
+        "model": "fixture-image",
+        "service_tier": "batch",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "input_image_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_image_tokens", "unit": "token", "price": { "amount": "4", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      }
+    ],
+    "anthropic-batch": [
+      {
+        "schema_version": "0.1",
+        "id": "fixture:anthropic:batch",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "fixture-claude",
+        "service_tier": "batch",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "input_cache_read_tokens", "unit": "token", "price": { "amount": "0.1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "input_cache_write_tokens", "unit": "token", "price": { "amount": "1.25", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      }
+    ],
+    "google-batch": [
+      {
+        "schema_version": "0.1",
+        "id": "fixture:google:batch",
+        "provider": "google",
+        "surface": "google.gemini.generate_content",
+        "model": "fixture-gemini",
+        "service_tier": "batch",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "input_cache_read_tokens", "unit": "token", "price": { "amount": "0.1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_reasoning_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      }
+    ],
+    "vertex-batch": [
+      {
+        "schema_version": "0.1",
+        "id": "fixture:vertex:batch",
+        "provider": "vertex",
+        "surface": "vertex.gemini.generate_content",
+        "model": "fixture-gemini",
+        "service_tier": "batch",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      }
+    ],
+    "bedrock-batch": [
+      {
+        "schema_version": "0.1",
+        "id": "fixture:bedrock:batch",
+        "provider": "bedrock",
+        "surface": "aws.bedrock.invoke_model",
+        "model": "fixture-bedrock",
+        "service_tier": "batch",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      }
+    ],
+    "kimi-batch": [
+      {
+        "schema_version": "0.1",
+        "id": "fixture:kimi:batch",
+        "provider": "kimi",
+        "surface": "kimi.chat_completions",
+        "model": "kimi-k2.6",
+        "service_tier": "batch",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "0.57", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "input_cache_read_tokens", "unit": "token", "price": { "amount": "0.10", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2.40", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      }
+    ],
+    "dashscope-batch": [
+      {
+        "schema_version": "0.1",
+        "id": "fixture:dashscope:batch",
+        "provider": "dashscope",
+        "surface": "dashscope.chat_completions",
+        "model": "qwen-fixture",
+        "service_tier": "batch",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "input_cache_read_tokens", "unit": "token", "price": { "amount": "0.1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      }
+    ],
+    "otel": [
+      {
+        "schema_version": "0.1",
+        "id": "fixture:otel:openai",
+        "provider": "openai",
+        "surface": "openai.chat_completions",
+        "model": "otel-model",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "input_cache_read_tokens", "unit": "token", "price": { "amount": "0.1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "input_cache_write_tokens", "unit": "token", "price": { "amount": "1.25", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_reasoning_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      }
+    ],
+    "provider-routes": [
+      {
+        "schema_version": "0.1",
+        "id": "fixture:routes:tinker",
+        "provider": "tinker",
+        "surface": "tinker.chat_completions",
+        "model": "thinkingmachines/Inkling",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "3.74", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "input_cache_read_tokens", "unit": "token", "price": { "amount": "0.748", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "9.36", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "fixture:routes:nvidia",
+        "provider": "nvidia",
+        "surface": "nvidia.chat_completions",
+        "model": "nvidia/model",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "fixture:routes:zai",
+        "provider": "zai",
+        "surface": "zai.chat_completions",
+        "model": "glm-fixture",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "fixture:routes:ai21",
+        "provider": "ai21",
+        "surface": "ai21.chat_completions",
+        "model": "jamba-fixture",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "fixture:routes:arcee",
+        "provider": "arcee",
+        "surface": "arcee.chat_completions",
+        "model": "arcee-fixture",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "fixture:routes:cohere-compatible",
+        "provider": "cohere",
+        "surface": "cohere.chat_completions_compatible",
+        "model": "command-fixture",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "fixture:routes:dashscope",
+        "provider": "dashscope",
+        "surface": "dashscope.chat_completions",
+        "model": "qwen-fixture",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "fixture:routes:inception",
+        "provider": "inception",
+        "surface": "inception.chat_completions",
+        "model": "mercury-fixture",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "fixture:routes:poolside",
+        "provider": "poolside",
+        "surface": "poolside.chat_completions",
+        "model": "poolside-fixture",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "fixture:routes:xiaomi",
+        "provider": "xiaomi",
+        "surface": "xiaomi.chat_completions",
+        "model": "mimo-fixture",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "fixture:routes:minimax",
+        "provider": "minimax",
+        "surface": "minimax.messages",
+        "model": "minimax-fixture",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "openai-chat-batch-partial",
+      "operation": "from_batch_results",
+      "input": {
+        "provider": "openai",
+        "endpoint": "/v1/chat/completions",
+        "model": "fixture-chat",
+        "batch_id": "batch_fixture",
+        "price_cards_ref": "openai-chat-batch",
+        "items": [
+          {
+            "custom_id": "request-ok",
+            "response": {
+              "status_code": 200,
+              "body": {
+                "object": "chat.completion",
+                "model": "fixture-chat",
+                "choices": [],
+                "usage": { "prompt_tokens": 100, "prompt_tokens_details": { "cached_tokens": 20 }, "completion_tokens": 50, "completion_tokens_details": { "reasoning_tokens": 10 } }
+              }
+            },
+            "error": null
+          },
+          { "custom_id": "request-failed", "response": { "status_code": 429, "body": { "message": "rate limited" } }, "error": { "message": "rate limited" } }
+        ]
+      },
+      "expected": {
+        "batch_id": "batch_fixture",
+        "summary": { "total": 2, "succeeded": 1, "failed": 1, "pending": 0, "total_cost": "0.000182" },
+        "items": [
+          { "id": "request-ok", "status": "succeeded", "metadata": { "service_tier": "batch", "batch_item_id": "request-ok", "batch_id": "batch_fixture" }, "ledger": { "total": "0.000182" } },
+          { "id": "request-failed", "status": "errored", "http_status": 429, "error": { "message": "rate limited" } }
+        ],
+        "warnings": [
+          { "code": "batch_items_failed", "metadata": { "failed": 1, "total": 2 } }
+        ]
+      }
+    },
+    {
+      "id": "openai-chat-batch-pending",
+      "operation": "from_batch_results",
+      "input": {
+        "provider": "openai",
+        "endpoint": "/v1/chat/completions",
+        "model": "fixture-chat",
+        "price_cards_ref": "openai-chat-batch",
+        "items": [
+          { "custom_id": "request-pending", "response": null, "error": null }
+        ]
+      },
+      "expected": {
+        "summary": { "total": 1, "succeeded": 0, "failed": 0, "pending": 1, "total_cost": "0" },
+        "items": [
+          { "id": "request-pending", "status": "pending", "error": { "message": "OpenAI batch item has no response body yet." } }
+        ],
+        "warnings": [
+          { "code": "batch_items_pending", "metadata": { "pending": 1, "total": 1 } }
+        ]
+      }
+    },
+    {
+      "id": "openai-responses-batch",
+      "operation": "from_batch_results",
+      "input": {
+        "provider": "openai",
+        "endpoint": "/v1/responses",
+        "model": "fixture-response",
+        "price_cards_ref": "openai-responses-batch",
+        "items": [
+          { "custom_id": "response-1", "response": { "status_code": 200, "body": { "id": "resp_fixture", "object": "response", "model": "fixture-response", "usage": { "input_tokens": 100, "input_tokens_details": { "cached_tokens": 25, "cache_write_tokens": 15 }, "output_tokens": 40, "output_tokens_details": { "reasoning_tokens": 10 } } } }, "error": null }
+        ]
+      },
+      "expected": { "summary": { "succeeded": 1, "total_cost": "0.00016125" }, "items": [{ "id": "response-1", "status": "succeeded" }] }
+    },
+    {
+      "id": "openai-embeddings-batch",
+      "operation": "from_batch_results",
+      "input": {
+        "provider": "openai",
+        "endpoint": "/v1/embeddings",
+        "model": "fixture-embedding",
+        "price_cards_ref": "openai-embeddings-batch",
+        "items": [
+          { "custom_id": "embedding-1", "response": { "status_code": 200, "body": { "object": "list", "model": "fixture-embedding", "data": [], "usage": { "prompt_tokens": 50, "total_tokens": 50 } } }, "error": null }
+        ]
+      },
+      "expected": { "summary": { "succeeded": 1, "total_cost": "0.00001" } }
+    },
+    {
+      "id": "openai-images-batch",
+      "operation": "from_batch_results",
+      "input": {
+        "provider": "openai",
+        "endpoint": "/v1/images/generations",
+        "surface": "openai.images",
+        "model": "fixture-image",
+        "price_cards_ref": "openai-images-batch",
+        "items": [
+          { "custom_id": "image-1", "response": { "status_code": 200, "body": { "model": "fixture-image", "data": [], "usage": { "input_tokens": 11, "input_tokens_details": { "text_tokens": 8, "image_tokens": 3 }, "output_tokens": 200, "total_tokens": 211 } } }, "error": null }
+        ]
+      },
+      "expected": { "summary": { "succeeded": 1, "total_cost": "0.000814" } }
+    },
+    {
+      "id": "anthropic-message-batch-partial",
+      "operation": "from_batch_results",
+      "input": {
+        "provider": "anthropic",
+        "model": "fixture-claude",
+        "price_cards_ref": "anthropic-batch",
+        "items": [
+          { "custom_id": "claude-ok", "result": { "type": "succeeded", "message": { "id": "msg_fixture", "type": "message", "model": "fixture-claude", "usage": { "input_tokens": 100, "cache_creation_input_tokens": 10, "cache_read_input_tokens": 20, "output_tokens": 50 } } } },
+          { "custom_id": "claude-expired", "result": { "type": "expired" } }
+        ]
+      },
+      "expected": { "summary": { "total": 2, "succeeded": 1, "failed": 1 }, "items": [{ "id": "claude-ok", "status": "succeeded" }, { "id": "claude-expired", "status": "expired" }] }
+    },
+    {
+      "id": "gemini-developer-batch-partial",
+      "operation": "from_batch_results",
+      "input": {
+        "provider": "google",
+        "model": "fixture-gemini",
+        "price_cards_ref": "google-batch",
+        "items": [
+          { "key": "gemini-ok", "response": { "modelVersion": "fixture-gemini", "usageMetadata": { "promptTokenCount": 100, "cachedContentTokenCount": 20, "candidatesTokenCount": 40, "thoughtsTokenCount": 10, "totalTokenCount": 150 } } },
+          { "key": "gemini-error", "error": { "code": 400, "message": "bad request" } }
+        ]
+      },
+      "expected": { "summary": { "total": 2, "succeeded": 1, "failed": 1 }, "items": [{ "id": "gemini-ok", "status": "succeeded" }, { "id": "gemini-error", "status": "errored" }] }
+    },
+    {
+      "id": "vertex-gemini-batch",
+      "operation": "from_batch_results",
+      "input": {
+        "provider": "vertex",
+        "model": "fixture-gemini",
+        "price_cards_ref": "vertex-batch",
+        "items": [
+          { "status": "", "processed_time": "2026-07-18T00:00:00Z", "request": { "labels": { "id": "vertex-1" } }, "response": { "modelVersion": "fixture-gemini", "usageMetadata": { "promptTokenCount": 100, "candidatesTokenCount": 40, "totalTokenCount": 140 } } }
+        ]
+      },
+      "expected": { "summary": { "succeeded": 1, "total_cost": "0.00018" }, "items": [{ "id": "vertex-1", "status": "succeeded", "metadata": { "processed_time": "2026-07-18T00:00:00Z" } }] }
+    },
+    {
+      "id": "bedrock-model-invocation-batch",
+      "operation": "from_batch_results",
+      "input": {
+        "provider": "bedrock",
+        "surface": "aws.bedrock.invoke_model",
+        "model": "fixture-bedrock",
+        "price_cards_ref": "bedrock-batch",
+        "items": [
+          { "recordId": "bedrock-1", "modelInput": {}, "modelOutput": { "id": "msg", "type": "message", "model": "fixture-bedrock", "usage": { "input_tokens": 100, "output_tokens": 40 } } }
+        ]
+      },
+      "expected": { "summary": { "succeeded": 1, "total_cost": "0.00018" }, "items": [{ "id": "bedrock-1", "status": "succeeded" }] }
+    },
+    {
+      "id": "kimi-batch",
+      "operation": "from_batch_results",
+      "input": {
+        "provider": "kimi",
+        "endpoint": "/v1/chat/completions",
+        "model": "kimi-k2.6",
+        "price_cards_ref": "kimi-batch",
+        "items": [
+          { "custom_id": "kimi-1", "response": { "status_code": 200, "body": { "object": "chat.completion", "model": "kimi-k2.6", "choices": [], "usage": { "prompt_tokens": 100, "prompt_tokens_details": { "cached_tokens": 20 }, "completion_tokens": 40 } } }, "error": null }
+        ]
+      },
+      "expected": { "summary": { "succeeded": 1, "total_cost": "0.0001436" }, "items": [{ "id": "kimi-1", "status": "succeeded" }] }
+    },
+    {
+      "id": "dashscope-batch",
+      "operation": "from_batch_results",
+      "input": {
+        "provider": "dashscope",
+        "endpoint": "/v1/chat/completions",
+        "model": "qwen-fixture",
+        "price_cards_ref": "dashscope-batch",
+        "items": [
+          { "custom_id": "dashscope-ok", "response": { "status_code": 200, "body": { "object": "chat.completion", "model": "qwen-fixture", "choices": [], "usage": { "prompt_tokens": 100, "prompt_tokens_details": { "cached_tokens": 20 }, "completion_tokens": 40 } } }, "error": null },
+          { "custom_id": "dashscope-failed", "response": { "status_code": 400, "body": { "message": "invalid request" } }, "error": { "message": "invalid request" } }
+        ]
+      },
+      "expected": { "summary": { "total": 2, "succeeded": 1, "failed": 1, "total_cost": "0.000162" }, "items": [{ "id": "dashscope-ok", "status": "succeeded" }, { "id": "dashscope-failed", "status": "errored" }] }
+    },
+    {
+      "id": "tinker-inkling-route",
+      "operation": "from_response",
+      "input": {
+        "provider": "tinker",
+        "model": "thinkingmachines/Inkling",
+        "price_cards": [
+          {
+            "schema_version": "0.1", "id": "fixture:routes:tinker", "provider": "tinker", "surface": "tinker.chat_completions", "model": "thinkingmachines/Inkling",
+            "components": [
+              { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "3.74", "currency": "USD", "per": "1000000" } },
+              { "usage_component": "input_cache_read_tokens", "unit": "token", "price": { "amount": "0.748", "currency": "USD", "per": "1000000" } },
+              { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "9.36", "currency": "USD", "per": "1000000" } }
+            ], "source": { "name": "fixture" }
+          }
+        ],
+        "response": { "object": "chat.completion", "model": "thinkingmachines/Inkling", "choices": [], "usage": { "prompt_tokens": 100, "prompt_tokens_details": { "cached_tokens": 20 }, "completion_tokens": 40 } }
+      },
+      "expected": { "provider": "tinker", "surface": "tinker.chat_completions", "total": "0.00068856" }
+    },
+    {
+      "id": "nvidia-nim-route",
+      "operation": "from_response",
+      "input": {
+        "provider": "nvidia",
+        "price_cards": [
+          { "schema_version": "0.1", "id": "fixture:routes:nvidia", "provider": "nvidia", "surface": "nvidia.chat_completions", "model": "nvidia/model", "components": [
+            { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+            { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+          ], "source": { "name": "fixture" } }
+        ],
+        "response": { "object": "chat.completion", "model": "nvidia/model", "choices": [], "usage": { "prompt_tokens": 100, "completion_tokens": 40 } }
+      },
+      "expected": { "provider": "nvidia", "surface": "nvidia.chat_completions", "total": "0.00018" }
+    },
+    {
+      "id": "zai-compatible-route",
+      "operation": "from_response",
+      "input": {
+        "provider": "zai",
+        "price_cards": [
+          { "schema_version": "0.1", "id": "fixture:routes:zai", "provider": "zai", "surface": "zai.chat_completions", "model": "glm-fixture", "components": [
+            { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+            { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+          ], "source": { "name": "fixture" } }
+        ],
+        "response": { "object": "chat.completion", "model": "glm-fixture", "choices": [], "usage": { "prompt_tokens": 100, "completion_tokens": 40 } }
+      },
+      "expected": { "provider": "zai", "surface": "zai.chat_completions", "total": "0.00018" }
+    },
+    {
+      "id": "ai21-compatible-route",
+      "operation": "from_response",
+      "input": { "provider": "ai21", "price_cards_ref": "provider-routes", "response": { "object": "chat.completion", "model": "jamba-fixture", "choices": [], "usage": { "prompt_tokens": 100, "completion_tokens": 40 } } },
+      "expected": { "provider": "ai21", "surface": "ai21.chat_completions", "total": "0.00018" }
+    },
+    {
+      "id": "arcee-compatible-route",
+      "operation": "from_response",
+      "input": { "provider": "arcee", "price_cards_ref": "provider-routes", "response": { "object": "chat.completion", "model": "arcee-fixture", "choices": [], "usage": { "prompt_tokens": 100, "completion_tokens": 40 } } },
+      "expected": { "provider": "arcee", "surface": "arcee.chat_completions", "total": "0.00018" }
+    },
+    {
+      "id": "cohere-compatible-route",
+      "operation": "from_response",
+      "input": { "provider": "cohere", "price_cards_ref": "provider-routes", "response": { "object": "chat.completion", "model": "command-fixture", "choices": [], "usage": { "prompt_tokens": 100, "completion_tokens": 40 } } },
+      "expected": { "provider": "cohere", "surface": "cohere.chat_completions_compatible", "total": "0.00018" }
+    },
+    {
+      "id": "dashscope-compatible-route",
+      "operation": "from_response",
+      "input": { "provider": "dashscope", "price_cards_ref": "provider-routes", "response": { "object": "chat.completion", "model": "qwen-fixture", "choices": [], "usage": { "prompt_tokens": 100, "completion_tokens": 40 } } },
+      "expected": { "provider": "dashscope", "surface": "dashscope.chat_completions", "total": "0.00018" }
+    },
+    {
+      "id": "inception-compatible-route",
+      "operation": "from_response",
+      "input": { "provider": "inception", "price_cards_ref": "provider-routes", "response": { "object": "chat.completion", "model": "mercury-fixture", "choices": [], "usage": { "prompt_tokens": 100, "completion_tokens": 40 } } },
+      "expected": { "provider": "inception", "surface": "inception.chat_completions", "total": "0.00018" }
+    },
+    {
+      "id": "poolside-compatible-route",
+      "operation": "from_response",
+      "input": { "provider": "poolside", "price_cards_ref": "provider-routes", "response": { "object": "chat.completion", "model": "poolside-fixture", "choices": [], "usage": { "prompt_tokens": 100, "completion_tokens": 40 } } },
+      "expected": { "provider": "poolside", "surface": "poolside.chat_completions", "total": "0.00018" }
+    },
+    {
+      "id": "xiaomi-compatible-route",
+      "operation": "from_response",
+      "input": { "provider": "xiaomi", "price_cards_ref": "provider-routes", "response": { "object": "chat.completion", "model": "mimo-fixture", "choices": [], "usage": { "prompt_tokens": 100, "completion_tokens": 40 } } },
+      "expected": { "provider": "xiaomi", "surface": "xiaomi.chat_completions", "total": "0.00018" }
+    },
+    {
+      "id": "minimax-anthropic-compatible-route",
+      "operation": "from_response",
+      "input": { "provider": "minimax", "price_cards_ref": "provider-routes", "response": { "id": "msg_minimax_fixture", "type": "message", "model": "minimax-fixture", "usage": { "input_tokens": 100, "output_tokens": 40 } } },
+      "expected": { "provider": "minimax", "surface": "minimax.messages", "total": "0.00018" }
+    },
+    {
+      "id": "otel-genai-usage-netting",
+      "operation": "usage_ledger_from_otel",
+      "input": {
+        "span": {
+          "trace_id": "trace-fixture",
+          "attributes": {
+            "gen_ai.provider.name": "openai",
+            "gen_ai.operation.name": "chat",
+            "gen_ai.request.model": "otel-model",
+            "gen_ai.response.model": "otel-model",
+            "gen_ai.usage.input_tokens": 100,
+            "gen_ai.usage.cache_creation.input_tokens": 10,
+            "gen_ai.usage.cache_read.input_tokens": 20,
+            "gen_ai.usage.output_tokens": 50,
+            "gen_ai.usage.reasoning.output_tokens": 10,
+            "gen_ai.request.temperature": 0
+          }
+        },
+        "attribution": { "run_id": "run-1", "tags": { "attempt": 2, "enabled": true, "ignored": null, "ignored_object": { "private": true }, "team": "eval" } }
+      },
+      "expected": {
+        "provider": "openai",
+        "surface": "openai.chat_completions",
+        "context": { "trace_id": "trace-fixture" },
+        "attribution": { "run_id": "run-1", "tags": { "attempt": "2", "enabled": "true", "team": "eval" } },
+        "components": [
+          { "name": "input_uncached_tokens", "quantity": "70" },
+          { "name": "input_cache_read_tokens", "quantity": "20" },
+          { "name": "input_cache_write_tokens", "quantity": "10" },
+          { "name": "output_text_tokens", "quantity": "40" },
+          { "name": "output_reasoning_tokens", "quantity": "10" }
+        ]
+      }
+    },
+    {
+      "id": "otel-genai-cost",
+      "operation": "from_otel",
+      "input": {
+        "price_cards_ref": "otel",
+        "span": { "attributes": { "gen_ai.provider.name": "openai", "gen_ai.operation.name": "chat", "gen_ai.request.model": "otel-model", "gen_ai.usage.input_tokens": 100, "gen_ai.usage.cache_read.input_tokens": 20, "gen_ai.usage.output_tokens": 50, "gen_ai.usage.reasoning.output_tokens": 10 } }
+      },
+      "expected": { "total": "0.000182", "provider": "openai" }
+    },
+    {
+      "id": "precall-estimate-attribution",
+      "operation": "estimate_cost",
+      "input": {
+        "provider": "openai", "surface": "openai.chat_completions", "model": "otel-model", "price_cards_ref": "otel",
+        "components": { "input_uncached_tokens": 100, "output_text_tokens": 50 },
+        "attribution": { "session_id": "session-1", "workflow": "forecast", "feature": "search", "tags": { "plan": "pilot" } },
+        "discount_policies": [
+          { "schema_version": "0.1", "id": "pilot-attribution-discount", "match": { "tags": { "plan": "pilot" } }, "adjustment": { "type": "percentage_discount", "value": "50" } }
+        ]
+      },
+      "expected": { "total": "0.0001", "attribution": { "session_id": "session-1", "workflow": "forecast", "feature": "search", "tags": { "plan": "pilot" } }, "applied_discounts": [{ "policy_id": "pilot-attribution-discount", "component": "input_uncached_tokens" }, { "policy_id": "pilot-attribution-discount", "component": "output_text_tokens" }], "metadata": { "estimate": true } }
+    },
+    {
+      "id": "precall-estimate-attribution-tag-miss",
+      "operation": "estimate_cost",
+      "input": {
+        "provider": "openai", "surface": "openai.chat_completions", "model": "otel-model", "price_cards_ref": "otel",
+        "components": { "input_uncached_tokens": 100, "output_text_tokens": 50 },
+        "attribution": { "tags": { "plan": "standard" } },
+        "discount_policies": [
+          { "schema_version": "0.1", "id": "pilot-attribution-discount", "match": { "tags": { "plan": "pilot" } }, "adjustment": { "type": "percentage_discount", "value": "50" } }
+        ]
+      },
+      "expected": { "total": "0.0002", "attribution": { "tags": { "plan": "standard" } }, "applied_discounts": [] }
+    },
+    {
+      "id": "budget-warning",
+      "operation": "evaluate_budget",
+      "input": { "ledger_or_total": "0.85", "budget": "1", "warning_threshold": "0.8" },
+      "expected": { "status": "warning", "estimated_cost": "0.85", "budget": "1", "remaining": "0.15" }
+    },
+    {
+      "id": "budget-zero-unspent",
+      "operation": "evaluate_budget",
+      "input": { "ledger_or_total": "0", "budget": "0", "warning_threshold": "0.8" },
+      "expected": { "status": "within_budget", "estimated_cost": "0", "budget": "0", "remaining": "0" }
+    },
+    {
+      "id": "reconciliation-within-tolerance",
+      "operation": "reconcile_cost",
+      "input": { "ledger_or_total": "1.00", "reported_total": "1.01", "tolerance": "0.02" },
+      "expected": { "status": "within_tolerance", "calculated_total": "1", "reported_total": "1.01", "signed_residual": "0.01", "absolute_residual": "0.01" }
+    },
+    {
+      "id": "genai-prices-tiered-dated-scheduled",
+      "operation": "price_cards_from_genai_prices",
+      "input": {
+        "retrieved_at": "2026-07-18T00:00:00Z",
+        "version": "fixture-v1",
+        "data": {
+          "providers": [
+            {
+              "id": "genai-fixture", "name": "GenAI Fixture", "pricing_urls": ["https://example.invalid/pricing"], "provider_match": { "equals": "genai-fixture" },
+              "models": [
+                {
+                  "id": "model-current",
+                  "match": { "or": [{ "equals": "model-alias" }, { "starts_with": "model-" }] },
+                  "context_window": 100000,
+                  "prices": [
+                    { "constraint": {}, "prices": { "input_mtok": { "base": "1", "tiers": [{ "start": 1000, "price": "2" }] }, "cache_read_mtok": "0.1", "output_mtok": "3", "unknown_unit": "9" } },
+                    { "constraint": { "start_date": "2026-01-01" }, "prices": { "input_mtok": "1.5", "output_mtok": "3.5" } },
+                    { "constraint": { "start_time": "00:00:00Z", "end_time": "06:00:00Z" }, "prices": { "input_mtok": "0.5", "output_mtok": "2.5" } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": [
+        { "provider": "genai-fixture", "model": "model-current", "aliases": ["model-alias"], "pricing_period": "default", "source": { "name": "genai-prices", "version": "fixture-v1" } },
+        { "provider": "genai-fixture", "model": "model-current", "effective": { "from": "2026-01-01" }, "pricing_period": "default" },
+        { "provider": "genai-fixture", "model": "model-current", "pricing_period": "scheduled-1", "billing_schedule": { "timezone": "UTC", "default_period": "default" } }
+      ]
+    },
+    {
+      "id": "price-resolution-unavailable-warning",
+      "operation": "attach_price_resolution",
+      "input": {
+        "ledger": {
+          "schema_version": "0.1", "provider": "openai", "surface": "openai.chat_completions",
+          "model": { "requested": "gpt-test", "billed": "gpt-test", "alias_resolution": "none" },
+          "currency": "USD", "components": [], "total": "0", "price_sources": [], "applied_discounts": [], "warnings": []
+        },
+        "resolution": {
+          "schema_version": "0.1", "selected_source": null, "price_cards": [],
+          "sources": [{ "name": "models.dev", "type": "external", "url": "https://models.dev/api.json", "status": "unavailable", "card_count": 0, "selected": false }],
+          "warnings": [{ "code": "price_source_unavailable", "message": "External price source models.dev is unavailable and has no usable cache.", "metadata": { "source": "models.dev", "status": "offline_cache_miss" } }],
+          "resolved_at": "2026-07-18T00:00:00Z"
+        }
+      },
+      "expected": {
+        "metadata": { "price_resolution": { "selected_source": null } },
+        "warnings": [{ "code": "price_source_unavailable", "metadata": { "source": "models.dev", "status": "offline_cache_miss" } }]
+      }
+    },
+    {
+      "id": "price-resolution-refresh-failed-warning",
+      "operation": "attach_price_resolution",
+      "input": {
+        "ledger": {
+          "schema_version": "0.1", "provider": "openai", "surface": "openai.chat_completions",
+          "model": { "requested": "gpt-test", "billed": "gpt-test", "alias_resolution": "none" },
+          "currency": "USD", "components": [], "total": "0", "price_sources": [], "applied_discounts": [], "warnings": []
+        },
+        "resolution": {
+          "schema_version": "0.1", "selected_source": "models.dev", "price_cards": [],
+          "sources": [{ "name": "models.dev", "type": "external", "url": "https://models.dev/api.json", "status": "cache_stale", "card_count": 1, "selected": true }],
+          "warnings": [{ "code": "price_source_refresh_failed", "message": "Could not refresh external price source models.dev; using its last-known-good cache.", "metadata": { "source": "models.dev", "status": "last_known_good" } }],
+          "resolved_at": "2026-07-18T00:00:00Z"
+        }
+      },
+      "expected": {
+        "metadata": { "price_resolution": { "selected_source": "models.dev" } },
+        "warnings": [{ "code": "price_source_refresh_failed", "metadata": { "source": "models.dev", "status": "last_known_good" } }]
+      }
+    }
+  ]
+}

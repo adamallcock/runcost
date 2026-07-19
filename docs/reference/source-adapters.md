@@ -9,11 +9,11 @@ status: active
 
 Source adapters convert external pricing catalogs into RunCost price cards. They are useful for bootstrapping, but user overrides and fixture-backed validation remain the trust boundary. For the difference between fixtures, source adapters, and vendored catalog snapshots, see [Price Data Strategy](price-data-strategy.md).
 
-RunCost packages include an optional reviewed default source-cache catalog
-generated from public sources. Load it with `default_price_cards()` in Python,
-`defaultPriceCards()` in JavaScript/TypeScript, or `DefaultPriceCards()` in Go.
-The recommended catalog source priority is exposed as
-`DEFAULT_PRICE_SOURCE_PRIORITY` / `DefaultPriceSourcePriority`.
+RunCost packages contain adapters and resolution logic, but no provider price
+database. The auto resolver tries `genai-prices`, models.dev, and LiteLLM in
+order, with OpenRouter's models API first only for OpenRouter-billed usage. It
+selects one source per calculation and memoizes the adapted, compiled catalog
+after validating its persistent cache.
 
 ## Supported Prototype Adapters
 
@@ -26,15 +26,18 @@ The recommended catalog source priority is exposed as
 | Reviewed official/public-preview pricing snapshots | `price_cards_from_official_snapshot` / `priceCardsFromOfficialSnapshot` / `PriceCardsFromOfficialSnapshot` | Handles reviewed provider pricing page rows with source URL, retrieval time, version/license metadata, effective dates, aliases, pricing periods, UTC billing schedules, token prices, and tool/search unit prices. |
 | Portkey pricing data | `price_cards_from_portkey` / `priceCardsFromPortkey` / `PriceCardsFromPortkey` | Handles token, cache, reasoning, and web-search price fields covered by fixtures. |
 | RunCost source-cache envelope | `price_cards_from_source_cache` / `priceCardsFromSourceCache` / `PriceCardsFromSourceCache` | Handles offline refresh/cache bundles that carry source URL, retrieval time, checksum, generated time, and canonical price cards. |
-| Bundled default source-cache catalog | `default_price_cards` / `defaultPriceCards` / `DefaultPriceCards` | Loads the reviewed package data generated from `llm-prices`, LiteLLM, OpenRouter, models.dev, and targeted official pricing or redirect snapshots. Reviewed preview-only rates remain opt-in until primary-source verification. |
 | Local JSON price-source file | `price_cards_from_json_file` / `priceCardsFromJSONFile` / `PriceCardsFromJSONFile` | Reads a local JSON file and maps it through one of the supported source adapters, defaulting to user compact pricing data. |
 | Local YAML price-source file | `price_cards_from_yaml_file` / `priceCardsFromYAMLFile` / `PriceCardsFromYAMLFile` | Reads a strict YAML mapping/list/scalar price-source file and maps it through one of the supported source adapters, defaulting to user compact pricing data. |
 | User compact pricing data | `price_cards_from_user_pricing` / `priceCardsFromUserPricing` / `PriceCardsFromUserPricing` | Handles compact JSON/YAML-shaped model records after callers parse them into objects. |
 | Helicone model-registry endpoint data | `price_cards_from_helicone` / `priceCardsFromHelicone` / `PriceCardsFromHelicone` | Handles endpoint pricing arrays, cache multipliers, reasoning, request, web-search, and image/audio/video token modality prices covered by fixtures. |
+| Pydantic `genai-prices` catalog | `price_cards_from_genai_prices` / `priceCardsFromGenAIPrices` / `PriceCardsFromGenAIPrices` | Preserves provider/model identity, cache rates, effective dates, constraints, aliases, tiers, and unsupported capabilities in metadata without adding an upstream package dependency. |
 
 ## Explicit Refresh Command
 
-Normal cost calculation never fetches live pricing data. To refresh a source explicitly, run `npm run prices:refresh --` and write a RunCost source-cache envelope:
+Deterministic calculation never fetches live pricing data. Use
+`from_response_auto` / `fromResponseAuto` / `FromResponseAuto` for the managed
+external path, or refresh a caller-owned source explicitly with
+`npm run prices:refresh --`:
 
 ```bash
 npm run prices:refresh -- \
@@ -53,7 +56,9 @@ npm run prices:refresh -- \
 
 The command records the source URL, retrieval time, SHA-256 checksum, generated time, and converted canonical price cards. Load the generated file with the source-cache adapter or with the local JSON file loader using `source_type="source-cache"` / `sourceType: "source-cache"`.
 
-Supported refresh presets are `llm-prices-current`, `llm-prices-historical`, `openrouter-models`, and `models-dev`. Reviewed official snapshots are refreshed with `--source-type official-snapshot --input path/to/snapshot.json`.
+Supported refresh presets are `llm-prices-current`, `llm-prices-historical`,
+`openrouter-models`, `models-dev`, and `litellm`. Reviewed official snapshots
+are refreshed with `--source-type official-snapshot --input path/to/snapshot.json`.
 
 ## Adapter Contract
 
@@ -89,12 +94,12 @@ const ledger = fromResponse(response, {
 
 If two sources match and disagree, RunCost can emit `price_source_disagreement` warnings while selecting the highest-priority source.
 
-## Planned Source Adapters
+## Browser And Edge
 
-High-value next adapters:
-
-- Historical source bundles with effective dates.
-- More refresh presets for live or vendored source snapshots.
+The `runcost/browser` entrypoint contains the same deterministic core and an
+in-memory external-source cache. It does not include Node filesystem APIs or
+provider catalog shards. Apps that require fully pinned offline pricing can
+ship their own reviewed cards and pass them explicitly.
 
 ## Maintenance Rules
 

@@ -9,6 +9,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "fixtures" / "source-files" / "public-api-registry.json"
 CORE = ROOT / "packages" / "python" / "runcost" / "core.py"
+EXPANSION = ROOT / "packages" / "python" / "runcost" / "expansion.py"
+PRICE_RESOLVER = ROOT / "packages" / "python" / "runcost" / "price_resolver.py"
 TYPES = ROOT / "packages" / "python" / "runcost" / "types.py"
 GENERATED_TAXONOMY = ROOT / "packages" / "python" / "runcost" / "generated" / "taxonomy.py"
 
@@ -37,7 +39,7 @@ def module_defs(path: Path) -> dict[str, ast.AST]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     definitions: dict[str, ast.AST] = {}
     for statement in tree.body:
-        if isinstance(statement, (ast.FunctionDef, ast.ClassDef, ast.Assign)):
+        if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Assign)):
             if isinstance(statement, ast.Assign):
                 for target in statement.targets:
                     if isinstance(target, ast.Name):
@@ -47,7 +49,7 @@ def module_defs(path: Path) -> dict[str, ast.AST]:
     return definitions
 
 
-def check_function_annotations(name: str, node: ast.FunctionDef) -> None:
+def check_function_annotations(name: str, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
     if node.returns is None:
         raise AssertionError(f"Python public function {name} is missing a return annotation")
     for arg in [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]:
@@ -62,14 +64,18 @@ def check_function_annotations(name: str, node: ast.FunctionDef) -> None:
 
 
 def main() -> int:
-    core_defs = module_defs(CORE)
+    runtime_defs = {
+        **module_defs(CORE),
+        **module_defs(EXPANSION),
+        **module_defs(PRICE_RESOLVER),
+    }
     type_defs = {**module_defs(TYPES), **module_defs(GENERATED_TAXONOMY)}
 
     for name in sorted(public_python_runtime_names()):
-        node = core_defs.get(name)
+        node = runtime_defs.get(name)
         if node is None:
-            raise AssertionError(f"Python public runtime API {name} is missing from core.py")
-        if isinstance(node, ast.FunctionDef):
+            raise AssertionError(f"Python public runtime API {name} is missing from a public runtime module")
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             check_function_annotations(name, node)
 
     for name in sorted(public_python_type_names()):

@@ -13,17 +13,24 @@ RunCost answers one narrow question:
 
 The package accepts normalized usage, raw provider responses, or selected framework objects. It returns a componentized cost ledger with line items, totals, price sources, applied discounts, and warnings.
 
-## Install From This Repo
+## Install
 
 Python:
 
 ```bash
-python3 -m pip install git+https://github.com/adamallcock/runcost.git
+pip install runcost-ai
 ```
 
-JavaScript and TypeScript from a cloned checkout:
+JavaScript and TypeScript:
 
 ```bash
+npm install runcost
+```
+
+For a cloned checkout:
+
+```bash
+python3 -m pip install git+https://github.com/adamallcock/runcost.git
 PKG_TGZ=$(npm pack ./packages/javascript/core --silent)
 npm install "./$PKG_TGZ"
 ```
@@ -34,10 +41,64 @@ Go:
 go get github.com/adamallcock/runcost/packages/go/ledger
 ```
 
-The package is alpha. Registry packages are the normal install path; repo and
-tarball install paths are useful for local development and release verification.
+The package is alpha. Registry packages are the normal install path; repository
+and tarball paths are for development and release verification.
 
-## Python
+## Price A Real Response
+
+Python:
+
+```python
+from runcost import from_response_auto
+
+response = {
+    "id": "resp_example",
+    "object": "response",
+    "model": "gpt-4.1-mini-2025-04-14",
+    "usage": {
+        "input_tokens": 36,
+        "input_tokens_details": {"cached_tokens": 6},
+        "output_tokens": 87,
+        "output_tokens_details": {"reasoning_tokens": 12},
+    },
+}
+
+ledger = from_response_auto(response, provider="openai")
+print(ledger["total"])
+print(ledger["components"])
+print(ledger["warnings"])
+```
+
+JavaScript/TypeScript:
+
+```js
+import { fromResponseAuto } from "runcost";
+
+const response = {
+  id: "resp_example",
+  object: "response",
+  model: "gpt-4.1-mini-2025-04-14",
+  usage: {
+    input_tokens: 36,
+    input_tokens_details: { cached_tokens: 6 },
+    output_tokens: 87,
+    output_tokens_details: { reasoning_tokens: 12 }
+  }
+};
+
+const ledger = await fromResponseAuto(response, { provider: "openai" });
+console.log(ledger.total, ledger.components, ledger.warnings);
+```
+
+The convenience APIs select one named external source—normally
+`genai-prices`, models.dev, or LiteLLM—and expose its provenance and cache state
+in the ledger. RunCost does not bundle a provider price database. Pass explicit
+`price_cards` / `priceCards` when you need negotiated rates or a self-contained
+test; an explicitly empty list disables network resolution. Open the
+[browser playground](https://adamallcock.github.io/runcost/playground/) to see
+the same ledger without installing the package.
+
+## Python With Explicit Prices
 
 ```python
 from runcost import from_response
@@ -86,7 +147,7 @@ print(ledger["total"])
 print(ledger["components"])
 ```
 
-## JavaScript
+## JavaScript With Explicit Prices
 
 ```js
 import { fromResponse } from "runcost";
@@ -181,6 +242,9 @@ The Python package installs a small `runcost` command for lightweight local
 checks:
 
 ```bash
+runcost quote response.json --provider openai
+runcost quote - --jsonl --provider openai < responses.jsonl
+npx runcost quote response.json --provider openai
 runcost price-cards --source-type user-pricing --input prices.json
 runcost fixture-check fixtures/my-case.json
 ```
@@ -191,6 +255,7 @@ the full multi-language conformance suite.
 ## Read Next
 
 - [Package Installation](package-installation.md)
+- [Batch, OTel, budgets, and direct providers](2026-07-18-product-expansion-quickstart.md)
 - [Migration From Hand-Written Formulas](2026-05-26-migration-from-hand-written-formulas.md)
 - [API Reference](../reference/api-reference.md)
 - [Custom Pricing And Discounts](../reference/custom-pricing-and-discounts.md)

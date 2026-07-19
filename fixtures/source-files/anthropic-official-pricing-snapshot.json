@@ -33,7 +33,7 @@
         ],
         "long_context_standard_pricing": true
       },
-      "notes": "Standard Anthropic Messages API pricing only. Batch, data-residency, fast-mode, and partner platform pricing are intentionally not modeled in this default snapshot until the matching dimensions are represented in RunCost price-card selection."
+      "notes": "Standard Anthropic Messages API pricing row. Batch is derived as a separate 50%-discounted service tier; data-residency, fast-mode, and partner-platform modifiers remain intentionally unmodeled."
     },
     {
       "model": "claude-mythos-5",
@@ -59,7 +59,7 @@
         "limited_availability": true,
         "long_context_standard_pricing": true
       },
-      "notes": "Anthropic lists Claude Mythos 5 as limited availability. Standard Anthropic Messages API pricing only; batch, data-residency, fast-mode, and partner platform pricing are intentionally not modeled in this default snapshot until the matching dimensions are represented in RunCost price-card selection."
+      "notes": "Anthropic lists Claude Mythos 5 as limited availability. This is the standard Messages API row; batch is derived as a separate 50%-discounted service tier, while data-residency, fast-mode, and partner-platform modifiers remain intentionally unmodeled."
     },
     {
       "model": "claude-opus-4-8",
@@ -84,7 +84,7 @@
         ],
         "long_context_standard_pricing": true
       },
-      "notes": "Standard Anthropic Messages API pricing only. Fast mode, batch, data-residency, and partner platform pricing are intentionally not modeled in this default snapshot until the matching dimensions are represented in RunCost price-card selection."
+      "notes": "Standard Anthropic Messages API pricing row. Batch is derived as a separate 50%-discounted service tier; fast-mode, data-residency, and partner-platform modifiers remain intentionally unmodeled."
     },
     {
       "model": "claude-opus-4-7",
@@ -109,7 +109,7 @@
         ],
         "long_context_standard_pricing": true
       },
-      "notes": "Standard Anthropic Messages API pricing only. Fast mode, batch, data-residency, and partner platform pricing are intentionally not modeled in this default snapshot until the matching dimensions are represented in RunCost price-card selection."
+      "notes": "Standard Anthropic Messages API pricing row. Batch is derived as a separate 50%-discounted service tier; fast-mode, data-residency, and partner-platform modifiers remain intentionally unmodeled."
     },
     {
       "model": "claude-opus-4-6",
@@ -134,7 +134,7 @@
         ],
         "long_context_standard_pricing": true
       },
-      "notes": "Standard Anthropic Messages API pricing only. Fast mode, batch, data-residency, and partner platform pricing are intentionally not modeled in this default snapshot until the matching dimensions are represented in RunCost price-card selection."
+      "notes": "Standard Anthropic Messages API pricing row. Batch is derived as a separate 50%-discounted service tier; fast-mode, data-residency, and partner-platform modifiers remain intentionally unmodeled."
     },
     {
       "model": "claude-opus-4-5-20251101",
@@ -159,7 +159,7 @@
           "cache_read"
         ]
       },
-      "notes": "Standard Anthropic Messages API pricing only. Batch, data-residency, and partner platform pricing are intentionally not modeled in this default snapshot until the matching dimensions are represented in RunCost price-card selection."
+      "notes": "Standard Anthropic Messages API pricing row. Batch is derived as a separate 50%-discounted service tier; data-residency and partner-platform modifiers remain intentionally unmodeled."
     },
     {
       "model": "claude-sonnet-4-6",
@@ -184,7 +184,7 @@
         ],
         "long_context_standard_pricing": true
       },
-      "notes": "Standard Anthropic Messages API pricing only. Batch, data-residency, and partner platform pricing are intentionally not modeled in this default snapshot until the matching dimensions are represented in RunCost price-card selection."
+      "notes": "Standard Anthropic Messages API pricing row. Batch is derived as a separate 50%-discounted service tier; data-residency and partner-platform modifiers remain intentionally unmodeled."
     },
     {
       "model": "claude-sonnet-4-5-20250929",
@@ -209,7 +209,7 @@
           "cache_read"
         ]
       },
-      "notes": "Standard Anthropic Messages API pricing only. Batch, data-residency, and partner platform pricing are intentionally not modeled in this default snapshot until the matching dimensions are represented in RunCost price-card selection."
+      "notes": "Standard Anthropic Messages API pricing row. Batch is derived as a separate 50%-discounted service tier; data-residency and partner-platform modifiers remain intentionally unmodeled."
     },
     {
       "model": "claude-haiku-4-5-20251001",
@@ -234,7 +234,7 @@
           "cache_read"
         ]
       },
-      "notes": "Standard Anthropic Messages API pricing only. Batch, data-residency, and partner platform pricing are intentionally not modeled in this default snapshot until the matching dimensions are represented in RunCost price-card selection."
+      "notes": "Standard Anthropic Messages API pricing row. Batch is derived as a separate 50%-discounted service tier; data-residency and partner-platform modifiers remain intentionally unmodeled."
     }
   ]
 }

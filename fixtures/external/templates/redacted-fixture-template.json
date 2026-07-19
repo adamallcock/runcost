@@ -1,0 +1,10 @@
+{
+  "command": "python3 scripts/create_external_fixture.py --output fixtures/external/my-redacted-case.json",
+  "rules": [
+    "Replace request and account identifiers with synthetic values.",
+    "Remove prompts, completions, headers, credentials, invoices, and account-specific URLs.",
+    "Retain only usage quantities, pricing context, public model names when safe, and reviewed expected ledger values.",
+    "Use example.invalid for any illustrative URL.",
+    "Run the generated fixture in all requested languages before contributing it."
+  ]
+}

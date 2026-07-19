@@ -14,7 +14,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 ## Summary
 
 - Fixtures scanned: 170
-- Public API capabilities scanned: 15
+- Public API capabilities scanned: 21
 - Provider/surface component rows: 36
 - Price-source component rows: 11
 - Gemini separate output/thinking fixtures: 6
@@ -138,9 +138,9 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 
 | Category | Capabilities |
 |---|---:|
-| `core` | 4 |
-| `framework_adapter` | 1 |
+| `core` | 7 |
+| `framework_adapter` | 2 |
 | `language_specific` | 2 |
 | `provider_extractor` | 5 |
-| `source_adapter` | 1 |
+| `source_adapter` | 3 |
 | `type_contract` | 2 |

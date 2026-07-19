@@ -1,0 +1,65 @@
+{
+  "provider": "kimi",
+  "surface": "kimi.chat_completions",
+  "retrieved_at": "2026-07-18T00:00:00Z",
+  "source_name": "kimi-official",
+  "source_url": "https://platform.kimi.ai/docs/pricing/chat-k3",
+  "rows": [
+    {
+      "model": "kimi-k3",
+      "service_tier": "standard",
+      "input": "3.00",
+      "cached_input": "0.30",
+      "output": "15.00",
+      "capabilities": {
+        "pricing_dimensions": ["token", "cached_input", "reasoning_effort"],
+        "reasoning_effort_labels": ["max"],
+        "reasoning_included_in_output": true,
+        "context_window_tokens": 1048576
+      },
+      "notes": "Kimi K3 always reasons; the current top-level reasoning_effort value is max. Output pricing includes reasoning tokens."
+    },
+    {
+      "model": "kimi-k2.7-code",
+      "surface": "kimi.chat_completions",
+      "service_tier": "batch",
+      "cached_input": "0.114",
+      "input": "0.57",
+      "output": "2.40",
+      "capabilities": {
+        "pricing_dimensions": ["token", "cached_input", "service_tier"],
+        "batch_multiplier": "0.60",
+        "context_window_tokens": 262144
+      },
+      "notes": "Published Kimi Batch rate; Kimi Batch costs 60% of the corresponding standard inference price."
+    },
+    {
+      "model": "kimi-k2.6",
+      "surface": "kimi.chat_completions",
+      "service_tier": "batch",
+      "cached_input": "0.10",
+      "input": "0.57",
+      "output": "2.40",
+      "capabilities": {
+        "pricing_dimensions": ["token", "cached_input", "service_tier"],
+        "batch_multiplier": "0.60",
+        "context_window_tokens": 262144
+      },
+      "notes": "Published Kimi Batch rate; Kimi Batch costs 60% of the corresponding standard inference price."
+    },
+    {
+      "model": "kimi-k2.5",
+      "surface": "kimi.chat_completions",
+      "service_tier": "batch",
+      "cached_input": "0.06",
+      "input": "0.36",
+      "output": "1.80",
+      "capabilities": {
+        "pricing_dimensions": ["token", "cached_input", "service_tier"],
+        "batch_multiplier": "0.60",
+        "context_window_tokens": 262144
+      },
+      "notes": "Published Kimi Batch rate; Kimi Batch costs 60% of the corresponding standard inference price."
+    }
+  ]
+}

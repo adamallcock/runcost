@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "runcost-ai"
-version = "0.1.13"
-description = "Alpha cost ledger utility for LLM and agent API responses."
+version = "0.2.0"
+description = "Auditable LLM API cost calculator and batch ledger for provider responses."
 requires-python = ">=3.9"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-keywords = ["llm", "ai", "pricing", "tokens", "cost", "agents", "openai", "anthropic", "usage"]
+keywords = ["llm", "ai", "pricing", "calculator", "tokens", "cost", "ledger", "batch", "agents", "openai", "anthropic", "gemini", "bedrock", "opentelemetry", "usage"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -36,6 +36,3 @@ smoke = [
 
 [tool.setuptools.packages.find]
 where = ["packages/python"]
-
-[tool.setuptools.package-data]
-runcost = ["data/*.json"]

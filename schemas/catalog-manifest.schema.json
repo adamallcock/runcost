@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runcost.dev/schemas/catalog-manifest.schema.json",
+  "title": "CatalogManifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "algorithm", "catalog", "shards"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "algorithm": { "type": "string", "const": "sha256" },
+    "catalog": { "$ref": "#/$defs/artifact" },
+    "shards": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/artifact" },
+          {
+            "type": "object",
+            "required": ["provider"],
+            "properties": { "provider": { "type": "string" } }
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "bytes", "price_card_count"],
+      "properties": {
+        "provider": { "type": "string" },
+        "path": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "price_card_count": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1",
-  "updated_at": "2026-07-09",
+  "updated_at": "2026-07-18",
   "description": "Machine-readable registry for the public RunCost package APIs. Schemas define data contracts; this registry defines exported capability parity.",
   "capabilities": [
     {
@@ -166,11 +166,80 @@
       "id": "source_adapters",
       "category": "source_adapter",
       "status": "polyglot",
-      "evidence": ["fixtures/llm-prices-adapter-basic.json", "fixtures/litellm-adapter-basic.json", "fixtures/openrouter-models-adapter-basic.json", "fixtures/models-dev-adapter-basic.json", "scripts/check_default_price_catalog.py"],
+      "evidence": ["fixtures/llm-prices-adapter-basic.json", "fixtures/litellm-adapter-basic.json", "fixtures/openrouter-models-adapter-basic.json", "fixtures/models-dev-adapter-basic.json", "scripts/check_official_price_snapshots.py"],
       "languages": {
-        "python": { "runtime": ["price_cards_from_llm_prices", "price_cards_from_litellm", "price_cards_from_openrouter_models", "price_cards_from_models_dev", "price_cards_from_official_snapshot", "price_cards_from_portkey", "price_cards_from_source_cache", "default_source_cache", "default_price_cards", "price_cards_from_user_pricing", "price_cards_from_helicone", "price_cards_from_json_file", "price_cards_from_yaml_file"], "types": [] },
-        "javascript": { "runtime": ["priceCardsFromLlmPrices", "priceCardsFromLiteLLM", "priceCardsFromOpenRouterModels", "priceCardsFromModelsDev", "priceCardsFromOfficialSnapshot", "priceCardsFromPortkey", "priceCardsFromSourceCache", "defaultSourceCache", "defaultPriceCards", "priceCardsFromUserPricing", "priceCardsFromHelicone", "priceCardsFromJSONFile", "priceCardsFromYAMLFile"], "types": ["SourceAdapterOptions"] },
-        "go": { "runtime": ["PriceCardsFromLlmPrices", "PriceCardsFromLiteLLM", "PriceCardsFromOpenRouterModels", "PriceCardsFromModelsDev", "PriceCardsFromOfficialSnapshot", "PriceCardsFromPortkey", "PriceCardsFromSourceCache", "DefaultSourceCache", "DefaultPriceCards", "PriceCardsFromUserPricing", "PriceCardsFromHelicone", "PriceCardsFromJSONFile", "PriceCardsFromYAMLFile"], "types": [] }
+        "python": { "runtime": ["price_cards_from_llm_prices", "price_cards_from_litellm", "price_cards_from_openrouter_models", "price_cards_from_models_dev", "price_cards_from_official_snapshot", "price_cards_from_portkey", "price_cards_from_source_cache", "price_cards_from_user_pricing", "price_cards_from_helicone", "price_cards_from_json_file", "price_cards_from_yaml_file"], "types": [] },
+        "javascript": { "runtime": ["priceCardsFromLlmPrices", "priceCardsFromLiteLLM", "priceCardsFromOpenRouterModels", "priceCardsFromModelsDev", "priceCardsFromOfficialSnapshot", "priceCardsFromPortkey", "priceCardsFromSourceCache", "priceCardsFromUserPricing", "priceCardsFromHelicone", "priceCardsFromJSONFile", "priceCardsFromYAMLFile"], "types": ["SourceAdapterOptions"] },
+        "go": { "runtime": ["PriceCardsFromLlmPrices", "PriceCardsFromLiteLLM", "PriceCardsFromOpenRouterModels", "PriceCardsFromModelsDev", "PriceCardsFromOfficialSnapshot", "PriceCardsFromPortkey", "PriceCardsFromSourceCache", "PriceCardsFromUserPricing", "PriceCardsFromHelicone", "PriceCardsFromJSONFile", "PriceCardsFromYAMLFile"], "types": [] }
+      }
+    },
+    {
+      "id": "external_price_resolution",
+      "category": "source_adapter",
+      "status": "polyglot",
+      "notes": "Explicit convenience layer over genai-prices, models.dev, LiteLLM, and OpenRouter. It selects one source, persists transparent last-known-good cache metadata, and never changes the network-free deterministic core APIs.",
+      "evidence": ["fixtures/expansion/cases.json", "scripts/check_external_price_resolution.py", "scripts/check_external_price_resolution.mjs", "packages/go/ledger/price_resolver_test.go", "schemas/price-resolution.schema.json"],
+      "languages": {
+        "python": { "runtime": ["resolve_price_catalog", "from_response_auto", "from_batch_results_auto", "from_otel_genai_span_auto", "estimate_cost_auto", "attach_price_resolution", "default_price_cache_dir", "price_cache_status", "clear_price_cache"], "types": ["PriceResolution", "PriceResolutionSource"] },
+        "javascript": { "runtime": ["resolvePriceCatalog", "fromResponseAuto", "fromBatchResultsAuto", "fromOTelGenAISpanAuto", "estimateCostAuto", "attachPriceResolution", "defaultPriceCacheDir", "priceCacheStatus", "clearPriceCache"], "types": ["PriceResolution", "PriceResolutionSource", "PriceResolverOptions", "PriceCacheEntry"] },
+        "go": { "runtime": ["ResolvePriceCatalog", "FromResponseAuto", "FromBatchResultsAuto", "FromOTelGenAISpanAuto", "EstimateCostAuto", "AttachPriceResolution", "DefaultPriceCacheDir", "PriceCacheStatus", "ClearPriceCache"], "types": [] }
+      }
+    },
+    {
+      "id": "batch_cost_ledgers",
+      "category": "core",
+      "status": "polyglot",
+      "notes": "Normalizes successful, failed, canceled, expired, and pending batch result items without relying on output order.",
+      "evidence": ["fixtures/expansion/cases.json", "schemas/batch-ledger.schema.json"],
+      "languages": {
+        "python": { "runtime": ["from_batch_results"], "types": ["BatchCostLedger", "BatchItem", "BatchSummary", "BatchError"] },
+        "javascript": { "runtime": ["fromBatchResults"], "types": ["BatchCostLedger", "BatchItem", "BatchResultsOptions"] },
+        "go": { "runtime": ["FromBatchResults"], "types": [] }
+      }
+    },
+    {
+      "id": "source_adapter_genai_prices",
+      "category": "source_adapter",
+      "status": "polyglot",
+      "evidence": ["fixtures/expansion/cases.json", "examples/python_pydantic_genai_prices.py", "examples/javascript_genai_prices_otel.mjs"],
+      "languages": {
+        "python": { "runtime": ["price_cards_from_genai_prices"], "types": [] },
+        "javascript": { "runtime": ["priceCardsFromGenAIPrices"], "types": [] },
+        "go": { "runtime": ["PriceCardsFromGenAIPrices"], "types": [] }
+      }
+    },
+    {
+      "id": "otel_genai_adapter",
+      "category": "framework_adapter",
+      "status": "polyglot",
+      "evidence": ["fixtures/expansion/cases.json", "examples/python_pydantic_genai_prices.py", "examples/javascript_genai_prices_otel.mjs"],
+      "languages": {
+        "python": { "runtime": ["usage_ledger_from_otel_genai_span", "from_otel_genai_span", "otel_cost_attributes"], "types": [] },
+        "javascript": { "runtime": ["usageLedgerFromOTelGenAISpan", "fromOTelGenAISpan", "otelCostAttributes"], "types": [] },
+        "go": { "runtime": ["UsageLedgerFromOTelGenAISpan", "FromOTelGenAISpan", "OTelCostAttributes"], "types": [] }
+      }
+    },
+    {
+      "id": "attribution_estimation_budget_reconciliation",
+      "category": "core",
+      "status": "polyglot",
+      "evidence": ["fixtures/expansion/cases.json", "schemas/budget-evaluation.schema.json", "schemas/reconciliation.schema.json"],
+      "languages": {
+        "python": { "runtime": ["normalize_attribution", "estimate_cost", "evaluate_budget", "reconcile_cost"], "types": ["Attribution", "BudgetEvaluation", "CostReconciliation"] },
+        "javascript": { "runtime": ["normalizeAttribution", "estimateCost", "evaluateBudget", "reconcileCost"], "types": ["Attribution", "BudgetEvaluation", "CostReconciliation"] },
+        "go": { "runtime": ["NormalizeAttribution", "EstimateCost", "EvaluateBudget", "ReconcileCost"], "types": [] }
+      }
+    },
+    {
+      "id": "compiled_catalog_and_integrity",
+      "category": "core",
+      "status": "polyglot",
+      "notes": "Explicit non-usage-bearing exception: these APIs index or verify price artifacts and never extract usage or calculate a cost ledger.",
+      "evidence": ["scripts/check_catalog_manifest.py", "scripts/check_catalog_performance.py", "schemas/catalog-manifest.schema.json"],
+      "languages": {
+        "python": { "runtime": ["compile_price_catalog", "verify_catalog_manifest"], "types": ["CatalogArtifact", "CatalogManifest", "CatalogVerification", "CatalogVerificationArtifact"] },
+        "javascript": { "runtime": ["compilePriceCatalog", "verifyCatalogManifest"], "types": ["CompiledPriceCatalog", "CatalogArtifact", "CatalogManifest", "CatalogVerification", "CatalogVerificationArtifact"] },
+        "go": { "runtime": ["CompilePriceCatalog", "VerifyCatalogManifest"], "types": [] }
       }
     }
   ]

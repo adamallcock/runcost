@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runcost.dev/schemas/reconciliation.schema.json",
+  "title": "CostReconciliation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "calculated_total", "reported_total", "signed_residual", "absolute_residual", "tolerance", "currency"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "status": { "type": "string", "enum": ["matched", "within_tolerance", "mismatch"] },
+    "calculated_total": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+    "reported_total": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+    "signed_residual": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+    "absolute_residual": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+    "tolerance": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+    "currency": { "type": "string", "minLength": 3, "maxLength": 3 }
+  }
+}

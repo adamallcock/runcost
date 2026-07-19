@@ -1,14 +1,14 @@
 ---
 title: RunCost Public API Parity Matrix
-date: 2026-05-25
+date: 2026-07-18
 type: reference
-status: draft
+status: active
 ---
 
 # RunCost Public API Parity Matrix
 
-Status: v0.x prototype
-Date: 2026-05-25
+Status: v0.x public contract
+Date: 2026-07-18
 
 This matrix tracks whether the Python, JavaScript/TypeScript, and Go packages expose the same developer-facing capabilities. It is a release gate: public APIs should not drift silently between languages.
 
@@ -52,6 +52,7 @@ exports.
 | Price source disagreement warning | Yes | Yes | Yes | `price-source-disagreement-warning.json` |
 | Byte-stable price-card tie breaking | Yes | Yes | Yes | `byte-stable-price-card-tie-break.json` |
 | Streaming final-usage missing warning | Yes | Yes | Yes | `stream_usage_missing`; `stream-final-usage-missing-warning.json` |
+
 | Streaming final-usage event extraction | Yes | Yes | Yes | OpenAI `response.completed`, Anthropic Messages SSE events, and Gemini stream chunk fixtures |
 | Debug trace / explain mode | Yes | Yes | Yes | `debug-trace-explain-decisions.json`; optional `debug_trace` / `debugTrace` output |
 | Long-context threshold price component selection | Yes | Yes | Yes | `long-context-threshold-selection.json` |
@@ -64,6 +65,20 @@ exports.
 | Required warning metadata payloads | Yes | Yes | Yes | `schemas/taxonomy.json` `warning_metadata_required_keys`; warning fixtures; Python/JS schema checks; Go fixture validation |
 | Componentized cost ledger output | Yes | Yes | Yes | all cost fixtures |
 | Multi-call/session ledger aggregation | Yes | Yes | Yes | Aggregates totals, matching components, price sources, discounts, and warnings from existing ledgers |
+
+## Product Expansion APIs
+
+| Capability | Python | JavaScript/TypeScript | Go | Evidence |
+|---|---:|---:|---:|---|
+| Batch result normalization and aggregation | Yes | Yes | Yes | `from_batch_results`, `fromBatchResults`, `FromBatchResults`; `BatchCostLedger`, `BatchItem`, `BatchSummary`, `BatchError`, `BatchResultsOptions`; `fixtures/expansion/cases.json` and `schemas/batch-ledger.schema.json` |
+| Pydantic `genai-prices` source adapter | Yes | Yes | Yes | `price_cards_from_genai_prices`, `priceCardsFromGenAIPrices`, `PriceCardsFromGenAIPrices`; shared expansion fixtures |
+| OpenTelemetry GenAI normalization and enrichment | Yes | Yes | Yes | `usage_ledger_from_otel_genai_span`, `usageLedgerFromOTelGenAISpan`, `UsageLedgerFromOTelGenAISpan`; `from_otel_genai_span`, `fromOTelGenAISpan`, `FromOTelGenAISpan`; `otel_cost_attributes`, `otelCostAttributes`, `OTelCostAttributes` |
+| Passive attribution | Yes | Yes | Yes | `normalize_attribution`, `normalizeAttribution`, `NormalizeAttribution`; `Attribution` contract and shared fixtures |
+| Pre-call estimation and budget policy | Yes | Yes | Yes | `estimate_cost`, `estimateCost`, `EstimateCost`; `evaluate_budget`, `evaluateBudget`, `EvaluateBudget`; `BudgetEvaluation` and `schemas/budget-evaluation.schema.json` |
+| Provider-cost reconciliation | Yes | Yes | Yes | `reconcile_cost`, `reconcileCost`, `ReconcileCost`; `CostReconciliation` and `schemas/reconciliation.schema.json` |
+| Indexed caller-owned catalog and artifact integrity | Yes | Yes | Yes | `compile_price_catalog`, `compilePriceCatalog`, `CompilePriceCatalog`; `verify_catalog_manifest`, `verifyCatalogManifest`, `VerifyCatalogManifest`; `CatalogArtifact`, `CatalogManifest`, `CatalogVerification`, `CatalogVerificationArtifact`; `scripts/check_catalog_manifest.py` |
+| External source resolution and cache | Yes | Yes | Yes | `resolve_price_catalog`, `resolvePriceCatalog`, `ResolvePriceCatalog`; `from_response_auto`, `fromResponseAuto`, `FromResponseAuto`; `from_batch_results_auto`, `fromBatchResultsAuto`, `FromBatchResultsAuto`; `from_otel_genai_span_auto`, `fromOTelGenAISpanAuto`, `FromOTelGenAISpanAuto`; `estimate_cost_auto`, `estimateCostAuto`, `EstimateCostAuto`; `attach_price_resolution`, `attachPriceResolution`, `AttachPriceResolution`; `price_cache_status`, `priceCacheStatus`, `PriceCacheStatus`; `clear_price_cache`, `clearPriceCache`, `ClearPriceCache`; `scripts/check_external_price_resolution.py`; `schemas/price-resolution.schema.json` |
+| Batch terminal-state warnings | Yes | Yes | Yes | `batch_items_failed`, `batch_items_pending`; shared expansion cases and locked warning taxonomy |
 
 ## Raw Response Extractors
 
@@ -107,7 +122,6 @@ exports.
 | Local YAML price-source file | Yes | Yes | Yes | `price_cards_from_yaml_file`, `priceCardsFromYAMLFile`, `PriceCardsFromYAMLFile`; `user-pricing-yaml-file-loader.json` |
 | User compact pricing data | Yes | Yes | Yes | `price_cards_from_user_pricing`, `priceCardsFromUserPricing`, `PriceCardsFromUserPricing`; `user-pricing-adapter-compact.json` |
 | Helicone cost package data | Yes | Yes | Yes | `price_cards_from_helicone`, `priceCardsFromHelicone`, `PriceCardsFromHelicone`; `helicone-adapter-basic.json` |
-| Bundled reviewed default source-cache catalog | Yes | Yes | Yes | `default_source_cache`, `default_price_cards`, `defaultSourceCache`, `defaultPriceCards`, `DefaultSourceCache`, `DefaultPriceCards`; `scripts/check_default_price_catalog.py`; `docs/internal/reports/2026-05-28-default-price-catalog-review.md` |
 
 ## Usage Components
 

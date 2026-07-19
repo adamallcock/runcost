@@ -49,6 +49,9 @@
         "trace_id": { "type": "string" }
       }
     },
+    "attribution": {
+      "$ref": "#/$defs/attribution"
+    },
     "components": {
       "type": "array",
       "minItems": 0,
@@ -64,6 +67,21 @@
     }
   },
   "$defs": {
+    "attribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "run_id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "workflow": { "type": "string" },
+        "tenant_id": { "type": "string" },
+        "feature": { "type": "string" },
+        "tags": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
     "usage_component": {
       "type": "object",
       "additionalProperties": false,

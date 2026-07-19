@@ -53,12 +53,30 @@
     "debug_trace": {
       "$ref": "#/$defs/debug_trace"
     },
+    "attribution": {
+      "$ref": "#/$defs/attribution"
+    },
     "metadata": {
       "type": "object",
       "additionalProperties": true
     }
   },
   "$defs": {
+    "attribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "run_id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "workflow": { "type": "string" },
+        "tenant_id": { "type": "string" },
+        "feature": { "type": "string" },
+        "tags": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
     "cost_component": {
       "type": "object",
       "additionalProperties": false,
@@ -113,6 +131,8 @@
             "alias_inferred",
             "price_not_found",
             "price_stale",
+            "price_source_unavailable",
+            "price_source_refresh_failed",
             "price_source_disagreement",
             "usage_field_ignored",
             "usage_missing",
@@ -123,6 +143,8 @@
             "long_context_rule_missing",
             "discount_not_applied",
             "stream_usage_missing",
+            "batch_items_failed",
+            "batch_items_pending",
             "historical_price_missing",
             "tool_component_unpriced",
             "pricing_period_required",

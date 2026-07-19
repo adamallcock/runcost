@@ -45,6 +45,8 @@ FORBIDDEN_PUBLIC_README_PHRASES = [
     "docs/reports/",
 ]
 
+PUBLIC_PACKAGE_DESCRIPTION = "Auditable LLM API cost calculator and batch ledger for provider responses."
+
 
 def assert_true(condition: bool, message: str) -> None:
     if not condition:
@@ -90,7 +92,7 @@ def check_readmes() -> None:
         assert_true(phrase in npm_readme, f"npm README missing package readiness phrase: {phrase}")
 
     assert_true("reference/price-data-strategy.md" in docs_index, "docs index must link price data strategy")
-    for phrase in ["Source Adapters Convert Catalogs", "Source Cache Is The Offline Boundary", "optional reviewed default source-cache catalog"]:
+    for phrase in ["Source Adapters Convert Catalogs", "External Resolution And The Offline Boundary", "contain no provider price catalog"]:
         assert_true(phrase in price_strategy, f"price data strategy missing phrase: {phrase}")
 
 
@@ -101,10 +103,10 @@ def check_package_metadata() -> None:
 
     assert_true(root_package.get("private") is True, "workspace package must remain private")
     assert_true(js_package.get("name") == "runcost", "npm package name must be runcost")
-    assert_true(js_package.get("description") == "Alpha cost ledger utility for LLM and agent API responses.", "npm description must be public-ready")
+    assert_true(js_package.get("description") == PUBLIC_PACKAGE_DESCRIPTION, "npm description must be public-ready")
     assert_true("README.md" in js_package.get("files", []), "npm package must include README")
     assert_true(pyproject["project"].get("name") == "runcost-ai", "Python distribution must be runcost-ai")
-    assert_true(pyproject["project"].get("description") == "Alpha cost ledger utility for LLM and agent API responses.", "Python description must be public-ready")
+    assert_true(pyproject["project"].get("description") == PUBLIC_PACKAGE_DESCRIPTION, "Python description must be public-ready")
     assert_true("Development Status :: 3 - Alpha" in pyproject["project"].get("classifiers", []), "Python classifier must be alpha")
 
 

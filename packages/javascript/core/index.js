@@ -59,7 +59,15 @@ const TOOL_OR_FEATURE_COMPONENTS = new Set([
   "endpoint_runtime_seconds",
   "storage_gb_days"
 ]);
-export const DEFAULT_PRICE_SOURCE_PRIORITY = ["openai-official", "anthropic-official", "google-official", "xai-official", "llm-prices", "models.dev", "litellm", "openrouter"];
+export const DEFAULT_EXTERNAL_PRICE_SOURCES = Object.freeze(["genai-prices", "models.dev", "litellm"]);
+export const OPENROUTER_EXTERNAL_PRICE_SOURCES = Object.freeze(["openrouter", ...DEFAULT_EXTERNAL_PRICE_SOURCES]);
+export const DEFAULT_PRICE_CACHE_MAX_AGE_SECONDS = 24 * 60 * 60;
+export const EXTERNAL_PRICE_SOURCE_URLS = Object.freeze({
+  "genai-prices": "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/data_slim.json",
+  "models.dev": "https://models.dev/api.json",
+  litellm: "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+  openrouter: "https://openrouter.ai/api/v1/models"
+});
 
 function normalizeDecimalString(value) {
   if (value === null || value === undefined) {
@@ -122,6 +130,11 @@ function parseDecimal(value) {
   };
 }
 
+function canonicalDecimal(value) {
+  const parsed = parseDecimal(value);
+  return formatDecimal(parsed.value, parsed.scale);
+}
+
 function pow10(scale) {
   return 10n ** BigInt(scale);
 }
@@ -159,6 +172,11 @@ function subtractDecimal(left, right) {
   const av = a.value * pow10(scale - a.scale);
   const bv = b.value * pow10(scale - b.scale);
   return formatDecimal(av - bv, scale);
+}
+
+function compareDecimal(left, right) {
+  const difference = parseDecimal(subtractDecimal(left, right)).value;
+  return difference < 0n ? -1 : difference > 0n ? 1 : 0;
 }
 
 function multiplyDivideDecimal(quantity, amount, per) {
@@ -1052,6 +1070,38 @@ function hasPriceCardForModelSurface(usageLedger, priceCards) {
   return priceCards.some((card) => cardModelSurfaceMatches(usageLedger, card));
 }
 
+export function compilePriceCatalog(priceCards) {
+  if (priceCards && priceCards.__runcostCompiledCatalog === true) return priceCards;
+  const cards = [...(priceCards || [])];
+  const byProviderModel = new Map();
+  const byModel = new Map();
+  for (const card of cards) {
+    const provider = String(card.provider || "");
+    const names = [...new Set([card.model, ...(card.aliases || [])].filter(Boolean).map(String))];
+    for (const name of names) {
+      const providerKey = `${provider}\u0000${name}`;
+      if (!byProviderModel.has(providerKey)) byProviderModel.set(providerKey, []);
+      byProviderModel.get(providerKey).push(card);
+      if (!byModel.has(name)) byModel.set(name, []);
+      byModel.get(name).push(card);
+    }
+  }
+  return Object.freeze({
+    __runcostCompiledCatalog: true,
+    priceCards: cards,
+    byProviderModel,
+    byModel
+  });
+}
+
+function compiledIdentityCandidates(catalog, usageLedger) {
+  return catalog.byProviderModel.get(`${usageLedger.provider || ""}\u0000${billedModel(usageLedger)}`) || [];
+}
+
+function compiledModelCandidates(catalog, usageLedger) {
+  return catalog.byModel.get(billedModel(usageLedger)) || [];
+}
+
 function unknownProviderWarning(usageLedger) {
   return {
     code: "unknown_provider",
@@ -1118,6 +1168,12 @@ function policyMatches(policy, usageLedger, component) {
   if (match.components && !match.components.includes(component.name)) return false;
   if (match.exclude_components && match.exclude_components.includes(component.name)) {
     return false;
+  }
+  if (match.tags && typeof match.tags === "object" && !Array.isArray(match.tags)) {
+    const actualTags = normalizeAttribution(usageLedger.attribution).tags || {};
+    if (Object.entries(match.tags).some(([key, value]) => actualTags[String(key)] !== String(value))) {
+      return false;
+    }
   }
   return true;
 }
@@ -1324,6 +1380,8 @@ export function calculateCost({
   debugTrace,
   debug_trace
 }) {
+  const compiledCatalog = compilePriceCatalog(priceCards);
+  priceCards = compiledCatalog.priceCards;
   const components = [];
   const warnings = usageMetadataFieldWarnings(usageLedger);
   const appliedDiscounts = [];
@@ -1354,10 +1412,13 @@ export function calculateCost({
     const lookupKey = priceLookupCacheKey(componentUsageLedger, sourcePriority);
     let lookup = priceLookupCache.get(lookupKey);
     if (!lookup) {
+      const identityCandidates = compiledIdentityCandidates(compiledCatalog, componentUsageLedger);
+      const modelCandidates = compiledModelCandidates(compiledCatalog, componentUsageLedger);
       lookup = {
-        hasModelCard: hasPriceCardForUsage(componentUsageLedger, priceCards),
-        modelSurfaceCardExists: hasPriceCardForModelSurface(componentUsageLedger, priceCards),
-        candidateCards: matchingCards(componentUsageLedger, priceCards, sourcePriority)
+        hasModelCard: hasPriceCardForUsage(componentUsageLedger, identityCandidates),
+        modelSurfaceCardExists: hasPriceCardForModelSurface(componentUsageLedger, modelCandidates),
+        candidateCards: matchingCards(componentUsageLedger, identityCandidates, sourcePriority),
+        identityCandidates
       };
       priceLookupCache.set(lookupKey, lookup);
     }
@@ -1390,7 +1451,7 @@ export function calculateCost({
 
     if (candidateCards.length === 0) {
       if (!warnedNoMatchingCard.has(componentWarningKey)) {
-        warnings.push(noMatchingCardWarning(componentUsageLedger, priceCards));
+        warnings.push(noMatchingCardWarning(componentUsageLedger, lookup.identityCandidates));
         warnedNoMatchingCard.add(componentWarningKey);
       }
       if (trace) {
@@ -1577,6 +1638,10 @@ export function calculateCost({
   if (usageLedger.metadata && typeof usageLedger.metadata === "object" && Object.keys(usageLedger.metadata).length > 0) {
     result.metadata = { ...usageLedger.metadata };
   }
+  const normalizedAttribution = normalizeAttribution(usageLedger.attribution);
+  if (Object.keys(normalizedAttribution).length > 0) {
+    result.attribution = normalizedAttribution;
+  }
   if (mode === "strict" && orderedWarningList.length > 0) {
     throw new Error(`strict mode cost calculation failed: ${orderedWarningList[0].code}`);
   }
@@ -1626,7 +1691,8 @@ export function aggregateCostLedgers({
   streamFinalUsageExpected,
   stream_final_usage_expected,
   streamFinalUsagePresent,
-  stream_final_usage_present
+  stream_final_usage_present,
+  attribution
 }) {
   const ledgers = costLedgers || cost_ledgers || [];
   const componentsByKey = new Map();
@@ -1705,6 +1771,10 @@ export function aggregateCostLedgers({
     warnings: orderedWarningList,
     metadata
   };
+  const normalizedAttribution = normalizeAttribution(attribution);
+  if (Object.keys(normalizedAttribution).length > 0) {
+    result.attribution = normalizedAttribution;
+  }
   if (mode === "strict" && orderedWarningList.length > 0) {
     throw new Error(`strict mode cost aggregation failed: ${orderedWarningList[0].code}`);
   }
@@ -2436,7 +2506,19 @@ const OPENAI_COMPATIBLE_CHAT_PROVIDERS = {
   "mistral.chat_completions": "mistral",
   "deepseek.chat_completions": "deepseek",
   "azure.openai.chat_completions": "azure",
-  "huggingface.chat_completions": "huggingface"
+  "huggingface.chat_completions": "huggingface",
+  "nvidia.chat_completions": "nvidia",
+  "tinker.chat_completions": "tinker",
+  "kimi.chat_completions": "kimi",
+  "ai21.chat_completions": "ai21",
+  "arcee.chat_completions": "arcee",
+  "cohere.chat_completions_compatible": "cohere",
+  "dashscope.chat_completions": "dashscope",
+  "inception.chat_completions": "inception",
+  "poolside.chat_completions": "poolside",
+  "xiaomi.chat_completions": "xiaomi",
+  "zai.chat_completions": "zai",
+  "zhipu.chat_completions": "zhipu"
 };
 
 function openAICompatibleCachedInput(usage) {
@@ -4032,7 +4114,7 @@ export function extractUsageLedger(response, options = {}) {
   if (hasOwn(OPENAI_COMPATIBLE_CHAT_PROVIDERS, surface)) {
     return extractOpenAICompatibleChatCompletionsUsage(response, options);
   }
-  if (surface === "anthropic.messages") {
+  if (surface === "anthropic.messages" || surface === "minimax.messages") {
     return extractAnthropicMessagesUsage(response, options);
   }
   if (surface === "google.gemini.generate_content" || surface === "vertex.gemini.generate_content") {
@@ -4507,15 +4589,6 @@ export function priceCardsFromSourceCache(data) {
   });
 }
 
-export function defaultSourceCache() {
-  const url = new URL("./data/default-source-cache.json", import.meta.url);
-  return JSON.parse(fs.readFileSync(url, "utf8"));
-}
-
-export function defaultPriceCards() {
-  return priceCardsFromSourceCache(defaultSourceCache());
-}
-
 export function priceCardsFromJSONFile(filePath, options = {}) {
   const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
   const sourceType = options.sourceType || options.source_type || "user-pricing";
@@ -4943,32 +5016,106 @@ export function priceCardsFromHelicone(data, options = {}) {
   });
 }
 
-export function fromResponse(response, options) {
-  const mode = options.mode || "compatibility";
+export function inferSurface(response, options = {}) {
+  const payload = response && typeof response === "object" ? response : {};
+  const provider = String(options.provider || "").toLowerCase();
+  const objectType = String(payload.object || payload.type || "").toLowerCase();
+  const usage = payload.usage && typeof payload.usage === "object" ? payload.usage : {};
+  if ((payload.usageMetadata && typeof payload.usageMetadata === "object") ||
+      (payload.usage_metadata && typeof payload.usage_metadata === "object")) {
+    return ["vertex", "google-vertex"].includes(provider)
+      ? "vertex.gemini.generate_content"
+      : "google.gemini.generate_content";
+  }
+  if (objectType === "message" && (hasOwn(usage, "input_tokens") || hasOwn(usage, "cache_read_input_tokens"))) {
+    return provider === "minimax" ? "minimax.messages" : "anthropic.messages";
+  }
+  if (objectType === "response" || String(payload.id || "").startsWith("resp_") ||
+      (hasOwn(payload, "output") && hasOwn(usage, "input_tokens"))) {
+    if (provider === "xai") return "xai.responses";
+    if (provider === "meta") return "meta.responses";
+    return "openai.responses";
+  }
+  if (objectType === "list" && Array.isArray(payload.data) && hasOwn(usage, "prompt_tokens")) {
+    return "openai.embeddings";
+  }
+  if (Array.isArray(payload.choices) && Object.keys(usage).length > 0) {
+    const surfaces = {
+      openai: "openai.chat_completions",
+      openrouter: "openrouter.chat_completions",
+      groq: "groq.chat_completions",
+      xai: "xai.chat_completions",
+      meta: "meta.chat_completions",
+      mistral: "mistral.chat_completions",
+      deepseek: "deepseek.chat_completions",
+      azure: "azure.openai.chat_completions",
+      huggingface: "huggingface.chat_completions",
+      nvidia: "nvidia.chat_completions",
+      tinker: "tinker.chat_completions",
+      kimi: "kimi.chat_completions",
+      ai21: "ai21.chat_completions",
+      arcee: "arcee.chat_completions",
+      cohere: "cohere.chat_completions_compatible",
+      dashscope: "dashscope.chat_completions",
+      inception: "inception.chat_completions",
+      poolside: "poolside.chat_completions",
+      xiaomi: "xiaomi.chat_completions",
+      zai: "zai.chat_completions",
+      zhipu: "zhipu.chat_completions"
+    };
+    return surfaces[provider] || (!provider ? "openai.chat_completions" : undefined);
+  }
+  if (payload.metrics && typeof payload.metrics === "object" && Object.keys(usage).length > 0) {
+    return "aws.bedrock.converse";
+  }
+  return undefined;
+}
+
+export function fromResponse(response, options = {}) {
+  const resolvedOptions = {
+    ...options,
+    surface: options.surface || inferSurface(response, options) || "unknown"
+  };
+  const mode = resolvedOptions.mode || "compatibility";
   let usageLedger;
   try {
-    usageLedger = extractUsageLedger(response, options);
+    usageLedger = extractUsageLedger(response, resolvedOptions);
   } catch (error) {
     if (mode === "strict") {
       throw error;
     }
-    return unsupportedSurfaceLedger(response, options);
+    return unsupportedSurfaceLedger(response, resolvedOptions);
+  }
+  if (resolvedOptions.context && typeof resolvedOptions.context === "object") {
+    usageLedger.context = { ...(usageLedger.context || {}), ...resolvedOptions.context };
+    if (usageLedger.provider === "openai") {
+      const contextTier = usageLedger.context.service_tier ?? usageLedger.context.serviceTier;
+      if (contextTier !== undefined && contextTier !== null) {
+        const normalizedTier = normalizeOpenAIServiceTier(contextTier);
+        if (normalizedTier) usageLedger.context.service_tier = normalizedTier;
+        delete usageLedger.context.serviceTier;
+      }
+    }
+  }
+  if (resolvedOptions.attribution && typeof resolvedOptions.attribution === "object") {
+    usageLedger.attribution = normalizeAttribution(resolvedOptions.attribution);
   }
   const extractedProviderReportedCost = providerReportedCostFromRawResponse(response, usageLedger);
+  const priceCards = resolvedOptions.priceCards ?? resolvedOptions.price_cards ?? [];
   return calculateCost({
     usageLedger,
-    priceCards: options.priceCards || [],
-    discountPolicies: options.discountPolicies || [],
+    priceCards,
+    discountPolicies: resolvedOptions.discountPolicies || resolvedOptions.discount_policies || [],
     mode,
-    staleAfterDays: options.staleAfterDays,
-    stale_after_days: options.stale_after_days,
-    providerReportedCost: options.providerReportedCost ?? options.provider_reported_cost ?? extractedProviderReportedCost,
-    providerReportedCostMode: options.providerReportedCostMode,
-    provider_reported_cost_mode: options.provider_reported_cost_mode,
-    priceSourcePriority: options.priceSourcePriority,
-    price_source_priority: options.price_source_priority,
-    debugTrace: options.debugTrace,
-    debug_trace: options.debug_trace
+    staleAfterDays: resolvedOptions.staleAfterDays,
+    stale_after_days: resolvedOptions.stale_after_days,
+    providerReportedCost: resolvedOptions.providerReportedCost ?? resolvedOptions.provider_reported_cost ?? extractedProviderReportedCost,
+    providerReportedCostMode: resolvedOptions.providerReportedCostMode,
+    provider_reported_cost_mode: resolvedOptions.provider_reported_cost_mode,
+    priceSourcePriority: resolvedOptions.priceSourcePriority,
+    price_source_priority: resolvedOptions.price_source_priority,
+    debugTrace: resolvedOptions.debugTrace,
+    debug_trace: resolvedOptions.debug_trace
   });
 }
 
@@ -5139,4 +5286,1118 @@ export function createRunCostVercelMiddleware(options = {}) {
       };
     }
   };
+}
+
+const ATTRIBUTION_KEYS = ["run_id", "session_id", "workflow", "tenant_id", "feature"];
+
+function attributionString(value) {
+  if (typeof value === "string") return value;
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "number") return Number.isFinite(value) ? canonicalDecimal(value) : undefined;
+  if (typeof value === "bigint") return value.toString();
+  return undefined;
+}
+
+export function normalizeAttribution(value = {}) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const result = {};
+  for (const key of ATTRIBUTION_KEYS) {
+    const normalized = attributionString(value[key]);
+    if (normalized !== undefined) result[key] = normalized;
+  }
+  if (value.tags && typeof value.tags === "object" && !Array.isArray(value.tags)) {
+    const tags = Object.fromEntries(
+      Object.entries(value.tags)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, child]) => [String(key), attributionString(child)])
+        .filter(([, child]) => child !== undefined)
+    );
+    if (Object.keys(tags).length > 0) result.tags = tags;
+  }
+  return result;
+}
+
+function batchError(value, fallback) {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const result = { ...value };
+    result.message = String(result.message ?? result.detail ?? result.status ?? fallback);
+    return result;
+  }
+  return { message: value === undefined || value === null || value === "" ? fallback : String(value) };
+}
+
+function batchSurfaceFromEndpoint(endpoint, fallback) {
+  if (fallback) return fallback;
+  const text = String(endpoint || "").toLowerCase();
+  if (text.includes("responses")) return "openai.responses";
+  if (text.includes("chat/completions")) return "openai.chat_completions";
+  if (text.includes("embeddings")) return "openai.embeddings";
+  if (text.includes("images")) return "openai.images";
+  if (text.includes("audio/transcriptions")) return "openai.audio_transcriptions";
+  return undefined;
+}
+
+function batchItemId(item, index) {
+  for (const key of ["custom_id", "customId", "recordId", "record_id", "key", "id"]) {
+    if (item[key] !== undefined && item[key] !== null && item[key] !== "") return String(item[key]);
+  }
+  const labels = item.request && typeof item.request === "object" && item.request.labels && typeof item.request.labels === "object"
+    ? item.request.labels : {};
+  for (const key of ["id", "key", "custom_id"]) {
+    if (labels[key] !== undefined && labels[key] !== null && labels[key] !== "") return String(labels[key]);
+  }
+  const response = item.response && typeof item.response === "object" ? item.response : {};
+  for (const key of ["responseId", "response_id", "id"]) {
+    if (response[key] !== undefined && response[key] !== null && response[key] !== "") return String(response[key]);
+  }
+  return String(index);
+}
+
+function unwrapBatchItem(item, options) {
+  const provider = String(options.provider || "").toLowerCase().replaceAll("_", "-");
+  if (["openai", "kimi", "moonshot", "moonshot-ai", "dashscope", "alibaba"].includes(provider)) {
+    const outer = item.response && typeof item.response === "object" ? item.response : {};
+    const rawStatus = outer.status_code ?? outer.statusCode;
+    const httpStatus = rawStatus === undefined || rawStatus === null ? undefined : Number(rawStatus);
+    if (item.error || (Number.isFinite(httpStatus) && (httpStatus < 200 || httpStatus >= 300))) {
+      return { status: "errored", error: batchError(item.error || outer.body, "OpenAI batch item failed."), httpStatus };
+    }
+    if (!outer.body || typeof outer.body !== "object") {
+      return { status: "pending", error: batchError(null, "OpenAI batch item has no response body yet."), httpStatus };
+    }
+    return {
+      status: "succeeded",
+      response: outer.body,
+      httpStatus,
+      surface: provider === "openai"
+        ? batchSurfaceFromEndpoint(options.endpoint || item.url, options.surface)
+        : (options.surface || (["dashscope", "alibaba"].includes(provider) ? "dashscope.chat_completions" : "kimi.chat_completions"))
+    };
+  }
+  if (provider === "anthropic") {
+    const result = item.result && typeof item.result === "object" ? item.result : {};
+    const type = String(result.type || "pending").toLowerCase();
+    if (type === "succeeded" && result.message && typeof result.message === "object") {
+      return { status: "succeeded", response: result.message, surface: "anthropic.messages" };
+    }
+    const status = ["errored", "canceled", "expired"].includes(type) ? type : "pending";
+    return { status, error: batchError(result.error || item.error, `Anthropic batch item is ${status}.`) };
+  }
+  if (["google", "gemini", "google-gemini"].includes(provider)) {
+    if (item.response && typeof item.response === "object") {
+      return { status: "succeeded", response: item.response, surface: "google.gemini.generate_content" };
+    }
+    if ((item.usageMetadata && typeof item.usageMetadata === "object") || (item.usage_metadata && typeof item.usage_metadata === "object")) {
+      return { status: "succeeded", response: item, surface: "google.gemini.generate_content" };
+    }
+    if (item.error || item.status) {
+      return { status: "errored", error: batchError(item.error || item.status, "Gemini batch item failed.") };
+    }
+    return { status: "pending", error: batchError(null, "Gemini batch item has no response yet.") };
+  }
+  if (["vertex", "google-vertex", "vertex-ai"].includes(provider)) {
+    if (item.response && typeof item.response === "object" && Object.keys(item.response).length > 0) {
+      return {
+        status: "succeeded",
+        response: item.response,
+        surface: "vertex.gemini.generate_content",
+        metadata: Object.fromEntries(["processed_time", "processedTime"].filter((key) => item[key] !== undefined).map((key) => [key, item[key]]))
+      };
+    }
+    if (item.status) return { status: "errored", error: batchError(item.status, "Vertex batch item failed.") };
+    return { status: "pending", error: batchError(null, "Vertex batch item has no response yet.") };
+  }
+  if (["bedrock", "aws-bedrock"].includes(provider)) {
+    if (item.error) return { status: "errored", error: batchError(item.error, "Bedrock batch item failed.") };
+    const response = item.modelOutput ?? item.model_output;
+    if (response && typeof response === "object") {
+      return { status: "succeeded", response, surface: options.surface || "aws.bedrock.invoke_model" };
+    }
+    return { status: "pending", error: batchError(null, "Bedrock batch item has no modelOutput yet.") };
+  }
+  throw new Error(`unsupported batch provider: ${options.provider}`);
+}
+
+export function fromBatchResults(items, options = {}) {
+  if (!options.provider) throw new Error("provider is required for batch results");
+  const normalizedProvider = String(options.provider).toLowerCase().replaceAll("_", "-");
+  const supportedProviders = new Set([
+    "openai", "kimi", "moonshot", "moonshot-ai", "dashscope", "alibaba", "anthropic",
+    "google", "gemini", "google-gemini", "vertex", "google-vertex", "vertex-ai", "bedrock", "aws-bedrock"
+  ]);
+  if (!supportedProviders.has(normalizedProvider)) throw new Error(`unsupported batch provider: ${options.provider}`);
+  const attribution = normalizeAttribution(options.attribution);
+  const cards = compilePriceCatalog(options.priceCards ?? options.price_cards ?? []);
+  const outputItems = [];
+  const ledgers = [];
+  [...items].forEach((rawItem, index) => {
+    const item = rawItem && typeof rawItem === "object" ? rawItem : {};
+    const id = batchItemId(item, index);
+    const unwrapped = unwrapBatchItem(item, options);
+    const output = { id, status: unwrapped.status };
+    if (unwrapped.httpStatus !== undefined) output.http_status = unwrapped.httpStatus;
+    if (unwrapped.metadata && Object.keys(unwrapped.metadata).length > 0) output.metadata = unwrapped.metadata;
+    output.metadata = {
+      ...(output.metadata || {}),
+      service_tier: "batch",
+      batch_item_id: id
+    };
+    if (options.batchId ?? options.batch_id) output.metadata.batch_id = options.batchId ?? options.batch_id;
+    if (options.endpoint) output.metadata.endpoint = options.endpoint;
+    if (Object.keys(attribution).length > 0) output.attribution = { ...attribution };
+    if (unwrapped.status === "succeeded") {
+      if (!unwrapped.surface) throw new Error(`surface or endpoint is required for ${options.provider} batch item ${id}`);
+      const context = {
+        ...(options.context || {}),
+        service_tier: "batch",
+        batch_item_id: id
+      };
+      if (options.batchId ?? options.batch_id) context.batch_id = options.batchId ?? options.batch_id;
+      const ledger = fromResponse(unwrapped.response, {
+        ...options,
+        provider: ["google", "gemini", "google-gemini"].includes(String(options.provider).toLowerCase()) ? "google"
+          : ["vertex", "google-vertex", "vertex-ai"].includes(String(options.provider).toLowerCase()) ? "vertex"
+          : ["bedrock", "aws-bedrock"].includes(String(options.provider).toLowerCase()) ? "bedrock"
+          : ["kimi", "moonshot", "moonshot-ai"].includes(String(options.provider).toLowerCase()) ? "kimi"
+          : ["dashscope", "alibaba"].includes(String(options.provider).toLowerCase()) ? "dashscope"
+          : options.provider,
+        surface: unwrapped.surface,
+        context,
+        attribution,
+        priceCards: cards
+      });
+      output.ledger = ledger;
+      ledgers.push(ledger);
+    } else {
+      output.error = unwrapped.error || batchError(null, `Batch item is ${unwrapped.status}.`);
+    }
+    outputItems.push(output);
+  });
+  const aggregate = aggregateCostLedgers({
+    costLedgers: ledgers,
+    provider: options.provider,
+    surface: `${options.provider}.batch`,
+    model: options.model || "multiple",
+    mode: options.mode || "compatibility",
+    attribution
+  });
+  const succeeded = outputItems.filter((item) => item.status === "succeeded").length;
+  const pending = outputItems.filter((item) => item.status === "pending").length;
+  const failed = outputItems.length - succeeded - pending;
+  const warnings = [];
+  if (failed) warnings.push({
+    code: "batch_items_failed",
+    message: `${failed} batch item(s) did not succeed and remain visible in items.`,
+    metadata: { failed, total: outputItems.length }
+  });
+  if (pending) warnings.push({
+    code: "batch_items_pending",
+    message: `${pending} batch item(s) have no terminal result yet.`,
+    metadata: { pending, total: outputItems.length }
+  });
+  const result = {
+    schema_version: "0.1",
+    provider: options.provider,
+    surface: `${options.provider}.batch`,
+    currency: "USD",
+    items: outputItems,
+    summary: { total: outputItems.length, succeeded, failed, pending, total_cost: aggregate.total },
+    aggregate,
+    warnings
+  };
+  const batchId = options.batchId ?? options.batch_id;
+  if (batchId) result.batch_id = String(batchId);
+  if (Object.keys(attribution).length > 0) result.attribution = attribution;
+  return result;
+}
+
+function staticMatchAliases(match) {
+  if (!match || typeof match !== "object" || Array.isArray(match)) return { aliases: [], unsupported: false };
+  if (typeof match.equals === "string") return { aliases: [match.equals], unsupported: false };
+  if (Array.isArray(match.or)) {
+    const children = match.or.map(staticMatchAliases);
+    return {
+      aliases: [...new Set(children.flatMap((child) => child.aliases))].sort(),
+      unsupported: children.some((child) => child.unsupported)
+    };
+  }
+  return { aliases: [], unsupported: Object.keys(match).length > 0 };
+}
+
+function tierValues(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || !hasOwn(value, "base")) {
+    return value === undefined || value === null ? [] : [{ amount: value }];
+  }
+  const tiers = (value.tiers || []).filter((tier) => tier && typeof tier === "object" && tier.start !== undefined)
+    .sort((left, right) => Number(left.start) - Number(right.start));
+  const result = [{ amount: value.base, maximum: tiers.length ? subtractDecimal(tiers[0].start, "1") : undefined }];
+  tiers.forEach((tier, index) => result.push({
+    amount: tier.price,
+    minimum: tier.start,
+    maximum: index + 1 < tiers.length ? subtractDecimal(tiers[index + 1].start, "1") : undefined
+  }));
+  return result.filter((entry) => entry.amount !== undefined && entry.amount !== null);
+}
+
+const GENAI_PRICE_COMPONENTS = {
+  input_mtok: ["input_uncached_tokens", "token", "1000000"],
+  cache_write_mtok: ["input_cache_write_tokens", "token", "1000000"],
+  cache_read_mtok: ["input_cache_read_tokens", "token", "1000000"],
+  output_mtok: ["output_text_tokens", "token", "1000000"],
+  input_audio_mtok: ["input_audio_tokens", "token", "1000000"],
+  cache_audio_read_mtok: ["input_cache_read_tokens", "token", "1000000"],
+  output_audio_mtok: ["output_audio_tokens", "token", "1000000"],
+  requests_kcount: ["request_units", "request", "1000"]
+};
+
+function genAIPriceComponents(prices) {
+  const components = [];
+  const warnings = [];
+  for (const [key, value] of Object.entries(prices || {})) {
+    const mapping = GENAI_PRICE_COMPONENTS[key];
+    if (!mapping) {
+      warnings.push(`unsupported price field retained in metadata: ${key}`);
+      continue;
+    }
+    const [usageComponent, unit, per] = mapping;
+    for (const tier of tierValues(value)) {
+      const component = {
+        usage_component: usageComponent,
+        unit,
+        price: { amount: normalizeDecimalString(tier.amount), currency: "USD", per }
+      };
+      const conditions = {};
+      if (tier.minimum !== undefined) conditions.min_total_input_tokens = normalizeDecimalString(tier.minimum);
+      if (tier.maximum !== undefined) conditions.max_total_input_tokens = normalizeDecimalString(tier.maximum);
+      if (Object.keys(conditions).length > 0) component.conditions = conditions;
+      components.push(component);
+    }
+  }
+  return { components, warnings };
+}
+
+function previousDay(value) {
+  const parsed = new Date(`${value}T00:00:00Z`);
+  parsed.setUTCDate(parsed.getUTCDate() - 1);
+  return parsed.toISOString().slice(0, 10);
+}
+
+export function priceCardsFromGenAIPrices(data, options = {}) {
+  const providers = Array.isArray(data) ? data : (data && Array.isArray(data.providers) ? data.providers : []);
+  const cards = [];
+  for (const rawProvider of providers) {
+    if (!rawProvider || typeof rawProvider !== "object") continue;
+    const provider = String(rawProvider.id || "unknown");
+    const source = { name: "genai-prices" };
+    if (Array.isArray(rawProvider.pricing_urls) && rawProvider.pricing_urls.length) source.url = String(rawProvider.pricing_urls[0]);
+    const retrievedAt = options.retrievedAt ?? options.retrieved_at;
+    const version = options.version ?? options.sourceVersion ?? options.source_version;
+    if (retrievedAt) source.retrieved_at = String(retrievedAt);
+    if (version) source.version = String(version);
+    for (const rawModel of rawProvider.models || []) {
+      if (!rawModel || typeof rawModel !== "object" || !rawModel.id) continue;
+      const model = String(rawModel.id);
+      const match = staticMatchAliases(rawModel.match);
+      const aliases = match.aliases.filter((alias) => alias !== model);
+      const conditional = Array.isArray(rawModel.prices) ? rawModel.prices : [{ prices: rawModel.prices || {} }];
+      const datedStarts = conditional.map((entry) => entry.constraint && entry.constraint.start_date).filter(Boolean).map(String).sort();
+      const timeEntries = conditional.filter((entry) => entry.constraint && (entry.constraint.start_time || entry.constraint.end_time));
+      const schedule = timeEntries.length ? {
+        timezone: "UTC",
+        default_period: "default",
+        boundary_policy: "start_inclusive_end_exclusive",
+        windows: timeEntries.map((entry, index) => ({
+          period: `scheduled-${index + 1}`,
+          start: String(entry.constraint.start_time || "00:00:00").replace(/Z$/, ""),
+          end: String(entry.constraint.end_time || "00:00:00").replace(/Z$/, "")
+        }))
+      } : undefined;
+      const usedCardIds = new Set();
+      conditional.forEach((entry, index) => {
+        if (!entry || typeof entry !== "object" || !entry.prices || typeof entry.prices !== "object") return;
+        const constraint = entry.constraint && typeof entry.constraint === "object" ? entry.constraint : {};
+        const converted = genAIPriceComponents(entry.prices);
+        if (!converted.components.length) return;
+        const adapterWarnings = [...converted.warnings];
+        if (match.unsupported) adapterWarnings.push("non-enumerable model match clause retained in metadata");
+        const card = {
+          schema_version: "0.1",
+          id: `${provider}:${model}:genai-prices:${index}`,
+          provider,
+          model,
+          aliases,
+          components: converted.components,
+          source,
+          metadata: {
+            genai_prices: {
+              provider_name: rawProvider.name ?? null,
+              provider_match: rawProvider.provider_match ?? null,
+              model_match: rawModel.match ?? null,
+              api_pattern: rawProvider.api_pattern ?? null,
+              context_window: rawModel.context_window ?? null,
+              constraint
+            }
+          }
+        };
+        let suffix = "current";
+        if (constraint.start_date) {
+          const start = String(constraint.start_date);
+          suffix = start;
+          card.effective = { from: start };
+          const later = datedStarts.filter((candidate) => candidate > start);
+          if (later.length) card.effective.to = previousDay(later[0]);
+        } else if (datedStarts.length && !Object.keys(constraint).length) {
+          suffix = "historical";
+          card.effective = { to: previousDay(datedStarts[0]) };
+        }
+        if (constraint.start_time || constraint.end_time) {
+          const timeIndex = timeEntries.indexOf(entry) + 1;
+          suffix = `scheduled-${timeIndex}`;
+          card.pricing_period = suffix;
+          card.billing_schedule = schedule;
+        } else if (schedule) {
+          suffix = suffix === "current" ? "default" : `${suffix}-default`;
+          card.pricing_period = "default";
+          card.billing_schedule = schedule;
+        }
+        const unsupportedConstraints = Object.keys(constraint).filter((key) => !["start_date", "start_time", "end_time"].includes(key)).sort();
+        if (unsupportedConstraints.length) adapterWarnings.push(`unsupported constraints retained in metadata: ${unsupportedConstraints.join(", ")}`);
+        if (adapterWarnings.length) card.metadata.adapter_warnings = [...new Set(adapterWarnings)].sort();
+        const baseId = `${provider}:${model}:genai-prices:${suffix}`;
+        card.id = usedCardIds.has(baseId) ? `${baseId}:${index}` : baseId;
+        usedCardIds.add(card.id);
+        cards.push(card);
+      });
+    }
+  }
+  return cards;
+}
+
+const OTEL_PROVIDER_MAP = {
+  openai: "openai",
+  anthropic: "anthropic",
+  "aws.bedrock": "bedrock",
+  "azure.ai.openai": "azure",
+  "gcp.gen_ai": "google",
+  "gcp.vertex_ai": "vertex",
+  x_ai: "xai"
+};
+
+function otelAttributes(span) {
+  if (span && span.attributes && typeof span.attributes === "object") return { ...span.attributes };
+  return Object.fromEntries(Object.entries(span || {}).filter(([key]) => key.includes(".")));
+}
+
+function otelSurface(provider, operation) {
+  if (operation === "generate_content") return provider === "vertex" ? "vertex.gemini.generate_content" : "google.gemini.generate_content";
+  if (provider === "anthropic") return "anthropic.messages";
+  if (provider === "bedrock") return "aws.bedrock.converse";
+  if (operation === "embeddings") return "openai.embeddings";
+  return provider === "openai" ? "openai.chat_completions" : `${provider}.chat_completions`;
+}
+
+export function usageLedgerFromOTelGenAISpan(span, options = {}) {
+  const attributes = otelAttributes(span);
+  const providerAttribute = String(attributes["gen_ai.provider.name"] || "");
+  const provider = options.provider || OTEL_PROVIDER_MAP[providerAttribute] || providerAttribute || "unknown";
+  const operation = String(attributes["gen_ai.operation.name"] || "chat");
+  const requestedModel = String(options.model || attributes["gen_ai.request.model"] || attributes["gen_ai.response.model"] || "unknown");
+  const returnedModel = String(attributes["gen_ai.response.model"] || requestedModel);
+  const inputTotal = attributes["gen_ai.usage.input_tokens"] || 0;
+  const outputTotal = attributes["gen_ai.usage.output_tokens"] || 0;
+  const cacheWrite = attributes["gen_ai.usage.cache_creation.input_tokens"] || 0;
+  const cacheRead = attributes["gen_ai.usage.cache_read.input_tokens"] || 0;
+  const reasoning = attributes["gen_ai.usage.reasoning.output_tokens"] || 0;
+  const componentValues = [
+    ["input_uncached_tokens", subtractDecimal(subtractDecimal(inputTotal, cacheWrite), cacheRead), "$.attributes.gen_ai.usage.input_tokens"],
+    ["input_cache_read_tokens", cacheRead, "$.attributes.gen_ai.usage.cache_read.input_tokens"],
+    ["input_cache_write_tokens", cacheWrite, "$.attributes.gen_ai.usage.cache_creation.input_tokens"],
+    ["output_text_tokens", subtractDecimal(outputTotal, reasoning), "$.attributes.gen_ai.usage.output_tokens"],
+    ["output_reasoning_tokens", reasoning, "$.attributes.gen_ai.usage.reasoning.output_tokens"]
+  ];
+  const components = componentValues.map(([name, rawQuantity, sourcePath]) => {
+    const quantity = parseDecimal(rawQuantity).value < 0n ? "0" : normalizeDecimalString(rawQuantity);
+    return positiveComponent(name, quantity, "token", sourcePath);
+  }).filter(Boolean);
+  const context = {};
+  const serviceTier = attributes["gen_ai.request.service_tier"] || attributes["gen_ai.response.service_tier"] ||
+    attributes["openai.response.service_tier"] || attributes["openai.request.service_tier"];
+  if (serviceTier) context.service_tier = String(serviceTier);
+  const requestId = attributes["gen_ai.response.id"] || attributes["openai.response.id"];
+  if (requestId) context.request_id = String(requestId);
+  const traceId = span && (span.trace_id ?? span.traceId);
+  if (traceId) context.trace_id = String(traceId);
+  const known = new Set([
+    "gen_ai.provider.name", "gen_ai.operation.name", "gen_ai.request.model", "gen_ai.response.model",
+    "gen_ai.usage.input_tokens", "gen_ai.usage.output_tokens", "gen_ai.usage.cache_creation.input_tokens",
+    "gen_ai.usage.cache_read.input_tokens", "gen_ai.usage.reasoning.output_tokens"
+  ]);
+  const ledger = {
+    schema_version: "0.1",
+    provider,
+    surface: options.surface || otelSurface(provider, operation),
+    model: { requested: requestedModel, returned: returnedModel, billed: requestedModel, alias_resolution: "none" },
+    components,
+    raw_usage: Object.fromEntries(Object.entries(attributes).filter(([key]) => key.startsWith("gen_ai.usage."))),
+    metadata: {
+      otel_genai: {
+        operation,
+        provider_attribute: attributes["gen_ai.provider.name"],
+        unknown_attributes: Object.fromEntries(Object.entries(attributes).filter(([key]) => key.startsWith("gen_ai.") && !known.has(key)))
+      }
+    }
+  };
+  if (Object.keys(context).length) ledger.context = context;
+  const attribution = normalizeAttribution(options.attribution);
+  if (Object.keys(attribution).length) ledger.attribution = attribution;
+  return ledger;
+}
+
+export function fromOTelGenAISpan(span, options = {}) {
+  const usageLedger = usageLedgerFromOTelGenAISpan(span, options);
+  const priceCards = compilePriceCatalog(options.priceCards ?? options.price_cards ?? []);
+  return calculateCost({
+    usageLedger,
+    priceCards,
+    discountPolicies: options.discountPolicies ?? options.discount_policies ?? [],
+    mode: options.mode || "compatibility",
+    staleAfterDays: options.staleAfterDays,
+    stale_after_days: options.stale_after_days,
+    debugTrace: options.debugTrace,
+    debug_trace: options.debug_trace
+  });
+}
+
+export function otelCostAttributes(costLedger, options = {}) {
+  const prefix = options.prefix || "runcost";
+  const warnings = Array.isArray(costLedger.warnings) ? costLedger.warnings : [];
+  return {
+    [`${prefix}.cost.total`]: String(costLedger.total || "0"),
+    [`${prefix}.cost.currency`]: String(costLedger.currency || "USD"),
+    [`${prefix}.cost.component_count`]: (costLedger.components || []).length,
+    [`${prefix}.cost.warning_count`]: warnings.length,
+    [`${prefix}.cost.warning_codes`]: warnings.map((warning) => String(warning.code)),
+    [`${prefix}.cost.price_card_ids`]: [...new Set((costLedger.components || []).map((component) => component.price_card_id).filter(Boolean).map(String))].sort()
+  };
+}
+
+export function estimateCost(options = {}) {
+  const rawComponents = Array.isArray(options.components)
+    ? options.components
+    : Object.entries(options.components || {}).map(([name, quantity]) => ({ name, quantity }));
+  const usageLedger = {
+    schema_version: "0.1",
+    provider: options.provider,
+    surface: options.surface,
+    model: { requested: options.model, returned: options.model, billed: options.model, alias_resolution: "none" },
+    components: rawComponents.map((component) => ({ ...component, quantity: normalizeDecimalString(component.quantity || 0), unit: component.unit || "token" })),
+    metadata: { estimate: true }
+  };
+  if (options.context) usageLedger.context = { ...options.context };
+  const attribution = normalizeAttribution(options.attribution);
+  if (Object.keys(attribution).length) usageLedger.attribution = attribution;
+  const priceCards = compilePriceCatalog(options.priceCards ?? options.price_cards ?? []);
+  return calculateCost({
+    usageLedger,
+    priceCards,
+    discountPolicies: options.discountPolicies ?? options.discount_policies ?? [],
+    mode: options.mode || "compatibility",
+    staleAfterDays: options.staleAfterDays,
+    stale_after_days: options.stale_after_days,
+    debugTrace: options.debugTrace,
+    debug_trace: options.debug_trace
+  });
+}
+
+export function evaluateBudget(ledgerOrTotal, options = {}) {
+  const ledger = ledgerOrTotal && typeof ledgerOrTotal === "object" ? ledgerOrTotal : null;
+  const total = ledger ? ledger.total || "0" : ledgerOrTotal;
+  const budget = normalizeDecimalString(options.budget);
+  const threshold = normalizeDecimalString(options.warningThreshold ?? options.warning_threshold ?? "0.8");
+  if (parseDecimal(budget).value < 0n) throw new Error("budget must be non-negative");
+  if (compareDecimal(threshold, "0") < 0 || compareDecimal(threshold, "1") > 0) throw new Error("warning_threshold must be between 0 and 1");
+  const warningAmount = multiplyDivideDecimal(budget, threshold, "1");
+  const status = compareDecimal(total, budget) > 0
+    ? "exceeded"
+    : compareDecimal(budget, "0") > 0 && compareDecimal(total, warningAmount) >= 0
+      ? "warning"
+      : "within_budget";
+  const result = {
+    schema_version: "0.1",
+    status,
+    estimated_cost: normalizeDecimalString(total),
+    budget,
+    remaining: subtractDecimal(budget, total),
+    warning_threshold: threshold,
+    currency: ledger ? ledger.currency || "USD" : "USD"
+  };
+  if (ledger) result.ledger = ledger;
+  return result;
+}
+
+export function reconcileCost(costLedgerOrTotal, reportedTotal, options = {}) {
+  const ledger = costLedgerOrTotal && typeof costLedgerOrTotal === "object" ? costLedgerOrTotal : null;
+  const calculated = canonicalDecimal(ledger ? ledger.total || "0" : costLedgerOrTotal);
+  const reported = canonicalDecimal(reportedTotal);
+  const tolerance = canonicalDecimal(options.tolerance || "0");
+  if (parseDecimal(tolerance).value < 0n) throw new Error("tolerance must be non-negative");
+  const residual = subtractDecimal(reported, calculated);
+  const absolute = residual.startsWith("-") ? residual.slice(1) : residual;
+  const status = compareDecimal(absolute, "0") === 0 ? "matched" : compareDecimal(absolute, tolerance) <= 0 ? "within_tolerance" : "mismatch";
+  return {
+    schema_version: "0.1",
+    status,
+    calculated_total: calculated,
+    reported_total: reported,
+    signed_residual: residual,
+    absolute_residual: absolute,
+    tolerance,
+    currency: ledger ? ledger.currency || options.currency || "USD" : options.currency || "USD"
+  };
+}
+
+const EXTERNAL_PRICE_MEMORY_CACHE = new Map();
+const EXTERNAL_PRICE_DISK_CACHE = new Map();
+const EXTERNAL_PRICE_COMPILED_CATALOGS = new WeakMap();
+const INCOMPLETE_PRICE_WARNING_CODES = new Set([
+  "unknown_provider", "unknown_model", "price_not_found", "component_unpriced",
+  "tool_component_unpriced", "source_capability_unsupported", "service_tier_unsupported",
+  "long_context_rule_missing", "historical_price_missing", "pricing_period_required",
+  "pricing_period_unsupported", "billing_schedule_unsupported"
+]);
+
+function nodeRuntimeAvailable() {
+  return typeof RUNCOST_BROWSER_RUNTIME === "undefined" && typeof process !== "undefined" && Boolean(process.versions && process.versions.node);
+}
+
+function clonePriceValue(value) {
+  return typeof structuredClone === "function" ? structuredClone(value) : JSON.parse(JSON.stringify(value));
+}
+
+export function defaultPriceCacheDir() {
+  if (!nodeRuntimeAvailable()) return "memory://runcost/prices";
+  if (process.env.RUNCOST_PRICE_CACHE_DIR) return path.resolve(process.env.RUNCOST_PRICE_CACHE_DIR);
+  const home = process.env.HOME || process.env.USERPROFILE || ".";
+  if (process.platform === "darwin") return path.join(home, "Library", "Caches", "runcost", "prices");
+  if (process.platform === "win32") {
+    return path.join(process.env.LOCALAPPDATA || path.join(home, "AppData", "Local"), "runcost", "prices");
+  }
+  return path.join(process.env.XDG_CACHE_HOME || path.join(home, ".cache"), "runcost", "prices");
+}
+
+function resolverNow(value) {
+  const result = value instanceof Date ? new Date(value.getTime()) : value ? new Date(value) : new Date();
+  if (Number.isNaN(result.getTime())) throw new TypeError("now must be a valid ISO timestamp, Date, or undefined");
+  return result;
+}
+
+function resolverTimestamp(value) {
+  return value.toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+function parseResolverTimestamp(value) {
+  if (!value) return null;
+  const result = new Date(value);
+  return Number.isNaN(result.getTime()) ? null : result;
+}
+
+function resolverSafeURL(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || (url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname));
+  } catch {
+    return false;
+  }
+}
+
+async function resolverChecksum(value) {
+  const bytes = typeof value === "string" ? new TextEncoder().encode(value) : value;
+  return `sha256:${await sha256Bytes(bytes)}`;
+}
+
+async function resolverCacheKey(source, url) {
+  const safeSource = String(source).replace(/[^A-Za-z0-9.-]/g, "-");
+  const urlHash = await sha256Bytes(new TextEncoder().encode(url));
+  return `${safeSource}-${urlHash.slice(0, 12)}.json`;
+}
+
+async function readResolverCache(cacheDir, source, url) {
+  const cacheKey = await resolverCacheKey(source, url);
+  let data;
+  if (!nodeRuntimeAvailable() || String(cacheDir).startsWith("memory://")) {
+    data = EXTERNAL_PRICE_MEMORY_CACHE.get(`${cacheDir}/${cacheKey}`);
+  } else {
+    const filePath = path.join(cacheDir, cacheKey);
+    if (!fs.existsSync(filePath)) return { cacheKey, data: null };
+    const stat = fs.statSync(filePath);
+    const signature = `${stat.ino}:${stat.size}:${stat.mtimeMs}`;
+    const memoized = EXTERNAL_PRICE_DISK_CACHE.get(filePath);
+    if (memoized?.signature === signature) return { cacheKey, data: memoized.data };
+    try {
+      data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    } catch {
+      return { cacheKey, data: null };
+    }
+    EXTERNAL_PRICE_DISK_CACHE.set(filePath, { signature, data });
+  }
+  if (!data || data.schema_version !== "0.1" || !data.source || !Array.isArray(data.price_cards)) return { cacheKey, data: null };
+  if (data.source.name !== source || data.source.url !== url) return { cacheKey, data: null };
+  if (data.cards_checksum && await resolverChecksum(stableStringify(data.price_cards)) !== data.cards_checksum) {
+    return { cacheKey, data: null };
+  }
+  return { cacheKey, data };
+}
+
+function atomicWriteResolverCache(cacheDir, cacheKey, data) {
+  const cloned = clonePriceValue(data);
+  if (!nodeRuntimeAvailable() || String(cacheDir).startsWith("memory://")) {
+    EXTERNAL_PRICE_MEMORY_CACHE.set(`${cacheDir}/${cacheKey}`, cloned);
+    return;
+  }
+  fs.mkdirSync(cacheDir, { recursive: true });
+  const destination = path.join(cacheDir, cacheKey);
+  const temporary = path.join(cacheDir, `.${cacheKey}.${process.pid}.${Date.now()}.tmp`);
+  try {
+    fs.writeFileSync(temporary, `${JSON.stringify(cloned, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+    fs.renameSync(temporary, destination);
+    const stat = fs.statSync(destination);
+    EXTERNAL_PRICE_DISK_CACHE.set(destination, { signature: `${stat.ino}:${stat.size}:${stat.mtimeMs}`, data: cloned });
+  } finally {
+    if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
+  }
+}
+
+function compiledExternalPriceCatalog(priceCards) {
+  if (priceCards?.__runcostCompiledCatalog === true) return priceCards;
+  if (!Array.isArray(priceCards)) return compilePriceCatalog(priceCards || []);
+  const cached = EXTERNAL_PRICE_COMPILED_CATALOGS.get(priceCards);
+  if (cached) return cached;
+  const compiled = compilePriceCatalog(priceCards);
+  EXTERNAL_PRICE_COMPILED_CATALOGS.set(priceCards, compiled);
+  return compiled;
+}
+
+function resolverCacheAge(cache, now) {
+  const checked = parseResolverTimestamp(cache?.source?.validated_at || cache?.source?.retrieved_at);
+  return checked ? Math.max(0, (now.getTime() - checked.getTime()) / 1000) : null;
+}
+
+function resolverSourceWarning(code, source, status) {
+  return {
+    code,
+    message: code === "price_source_refresh_failed"
+      ? `Could not refresh external price source ${source}; using its last-known-good cache.`
+      : `External price source ${source} is unavailable and has no usable cache.`,
+    metadata: { source, status }
+  };
+}
+
+async function fetchResolverSource(url, options) {
+  if (!resolverSafeURL(url)) throw new Error("price source URL must use HTTPS (loopback HTTP is allowed for tests)");
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), options.timeoutMs) : null;
+  try {
+    const fetcher = options.fetcher || globalThis.fetch;
+    if (typeof fetcher !== "function") throw new Error("Fetch API is unavailable in this runtime");
+    const response = await fetcher(url, {
+      headers: { Accept: "application/json", ...options.headers },
+      redirect: "follow",
+      signal: controller?.signal
+    });
+    const status = Number(response.status ?? 200);
+    const headers = {};
+    if (response.headers && typeof response.headers.forEach === "function") {
+      response.headers.forEach((value, key) => { headers[String(key).toLowerCase()] = String(value); });
+    } else if (response.headers && typeof response.headers === "object") {
+      Object.entries(response.headers).forEach(([key, value]) => { headers[String(key).toLowerCase()] = String(value); });
+    }
+    const finalURL = String(response.url || url);
+    if (!resolverSafeURL(finalURL)) throw new Error("price source redirected to an unsupported URL");
+    if (status === 304) return { status, headers, body: new Uint8Array(), url: finalURL };
+    let body;
+    if (typeof response.arrayBuffer === "function") body = new Uint8Array(await response.arrayBuffer());
+    else if (response.body instanceof Uint8Array) body = response.body;
+    else if (typeof response.body === "string") body = new TextEncoder().encode(response.body);
+    else if (typeof response.text === "function") body = new TextEncoder().encode(await response.text());
+    else throw new Error("price source response has no readable body");
+    if (body.byteLength > options.maxBytes) throw new Error(`price source exceeds the ${options.maxBytes}-byte safety limit`);
+    return { status, headers, body, url: finalURL };
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+function adaptExternalPriceSource(source, payload, options) {
+  if (source === "genai-prices") return priceCardsFromGenAIPrices(payload, options);
+  if (source === "models.dev") return priceCardsFromModelsDev(payload, options);
+  if (source === "litellm") return priceCardsFromLiteLLM(payload, options);
+  if (source === "openrouter") return priceCardsFromOpenRouterModels(payload, options);
+  throw new Error(`unsupported external price source: ${source}`);
+}
+
+async function resolveExternalSourceState(source, options) {
+  const { cacheKey, data: cache } = await readResolverCache(options.cacheDir, source, options.url);
+  const age = cache ? resolverCacheAge(cache, options.now) : null;
+  const state = { name: source, type: "external", url: options.url, cache_key: cacheKey, status: "unavailable", card_count: cache?.price_cards?.length || 0 };
+  if (cache) {
+    ["retrieved_at", "validated_at", "checksum", "etag", "last_modified"].forEach((key) => {
+      if (cache.source[key]) state[key] = cache.source[key];
+    });
+  }
+  if (options.offline) {
+    if (cache) {
+      state.status = age !== null && age <= options.maxAgeSeconds ? "cache_fresh" : "cache_stale";
+      state.priceCards = cache.price_cards;
+      return { state, warnings: [] };
+    }
+    return { state, warnings: [resolverSourceWarning("price_source_unavailable", source, "offline_cache_miss")] };
+  }
+  if (cache && !options.refresh && age !== null && age <= options.maxAgeSeconds) {
+    state.status = "cache_fresh";
+    state.priceCards = cache.price_cards;
+    return { state, warnings: [] };
+  }
+  const conditionalHeaders = {};
+  if (cache?.source?.etag) conditionalHeaders["If-None-Match"] = cache.source.etag;
+  if (cache?.source?.last_modified) conditionalHeaders["If-Modified-Since"] = cache.source.last_modified;
+  try {
+    const response = await fetchResolverSource(options.url, { ...options, headers: conditionalHeaders });
+    const checkedAt = resolverTimestamp(options.now);
+    if (response.status === 304) {
+      if (!cache) throw new Error("received 304 without a cached representation");
+      cache.source.validated_at = checkedAt;
+      cache.source.etag = response.headers.etag || cache.source.etag;
+      cache.source.last_modified = response.headers["last-modified"] || cache.source.last_modified;
+      atomicWriteResolverCache(options.cacheDir, cacheKey, cache);
+      Object.assign(state, { status: "cache_validated", validated_at: checkedAt, etag: cache.source.etag, last_modified: cache.source.last_modified, priceCards: cache.price_cards });
+      return { state, warnings: [] };
+    }
+    if (response.status < 200 || response.status >= 300) throw new Error(`price source returned HTTP ${response.status}`);
+    const payload = JSON.parse(new TextDecoder().decode(response.body));
+    const priceCards = JSON.parse(JSON.stringify(adaptExternalPriceSource(source, payload, {
+      sourceUrl: response.url, source_url: response.url, retrievedAt: checkedAt, retrieved_at: checkedAt
+    })));
+    if (!priceCards.length) throw new Error("price source produced no supported price cards");
+    const envelope = {
+      schema_version: "0.1",
+      source: { name: source, type: "external", url: options.url, resolved_url: response.url, retrieved_at: checkedAt, validated_at: checkedAt, checksum: await resolverChecksum(response.body) },
+      cards_checksum: await resolverChecksum(stableStringify(priceCards)),
+      price_cards: priceCards
+    };
+    if (response.headers.etag) envelope.source.etag = response.headers.etag;
+    if (response.headers["last-modified"]) envelope.source.last_modified = response.headers["last-modified"];
+    atomicWriteResolverCache(options.cacheDir, cacheKey, envelope);
+    Object.assign(state, {
+      status: "refreshed", retrieved_at: checkedAt, validated_at: checkedAt, checksum: envelope.source.checksum,
+      etag: envelope.source.etag, last_modified: envelope.source.last_modified, card_count: priceCards.length, priceCards
+    });
+    return { state, warnings: [] };
+  } catch {
+    if (cache) {
+      state.status = "cache_stale";
+      state.priceCards = cache.price_cards;
+      return { state, warnings: [resolverSourceWarning("price_source_refresh_failed", source, "last_known_good")] };
+    }
+    return { state, warnings: [resolverSourceWarning("price_source_unavailable", source, "fetch_failed")] };
+  }
+}
+
+function externalSourceOrder(provider, requestedSources) {
+  const raw = requestedSources !== undefined
+    ? [...requestedSources].map(String)
+    : String(provider || "").toLowerCase() === "openrouter"
+      ? [...OPENROUTER_EXTERNAL_PRICE_SOURCES]
+      : [...DEFAULT_EXTERNAL_PRICE_SOURCES];
+  const result = [];
+  raw.forEach((source) => {
+    if (!Object.hasOwn(EXTERNAL_PRICE_SOURCE_URLS, source)) throw new Error(`unsupported external price source: ${source}`);
+    if (!result.includes(source)) result.push(source);
+  });
+  if (!result.length) throw new Error("at least one external price source is required");
+  return result;
+}
+
+function externalCandidateQuality(usageLedger, priceCards) {
+  const ledger = calculateCost({ usageLedger, priceCards: compiledExternalPriceCatalog(priceCards) });
+  const codes = new Set((ledger.warnings || []).map((warning) => String(warning.code)));
+  return { complete: ![...codes].some((code) => INCOMPLETE_PRICE_WARNING_CODES.has(code)), pricedComponents: (ledger.components || []).length };
+}
+
+export async function resolvePriceCatalog(options = {}) {
+  const explicitCards = options.contractPriceCards ?? options.contract_price_cards ?? options.priceCards ?? options.price_cards;
+  const now = resolverNow(options.now);
+  if (explicitCards !== undefined) {
+    const cards = Array.isArray(explicitCards) ? explicitCards : [...explicitCards];
+    return {
+      schema_version: "0.1", selected_source: "user", price_cards: cards,
+      sources: [{ name: "user", type: options.contractPriceCards !== undefined || options.contract_price_cards !== undefined ? "contract" : "user", status: "selected", card_count: cards.length }],
+      warnings: [], resolved_at: resolverTimestamp(now)
+    };
+  }
+  const usageLedger = options.usageLedger ?? options.usage_ledger;
+  const provider = options.provider || usageLedger?.provider;
+  const order = externalSourceOrder(provider, options.sources ?? options.priceSources ?? options.price_sources);
+  const sourceURLs = { ...EXTERNAL_PRICE_SOURCE_URLS, ...(options.sourceUrls || options.source_urls || {}) };
+  const cacheDir = options.cacheDir || options.cache_dir || defaultPriceCacheDir();
+  const maxAgeSeconds = Number(options.maxAgeSeconds ?? options.max_age_seconds ?? DEFAULT_PRICE_CACHE_MAX_AGE_SECONDS);
+  if (!Number.isFinite(maxAgeSeconds) || maxAgeSeconds < 0) throw new Error("maxAgeSeconds must be a non-negative number");
+  const sourceStates = [];
+  const operationalWarnings = [];
+  let firstPartial = null;
+  let selected = null;
+  for (const source of order) {
+    const resolved = await resolveExternalSourceState(source, {
+      url: sourceURLs[source], cacheDir, offline: Boolean(options.offline), refresh: Boolean(options.refresh), maxAgeSeconds,
+      timeoutMs: Number(options.timeoutMs ?? options.timeout_ms ?? 15000), maxBytes: Number(options.maxBytes ?? options.max_bytes ?? 64 * 1024 * 1024),
+      fetcher: options.fetcher, now
+    });
+    const priceCards = resolved.state.priceCards || [];
+    delete resolved.state.priceCards;
+    sourceStates.push(resolved.state);
+    operationalWarnings.push(...resolved.warnings);
+    if (!priceCards.length) continue;
+    if (!usageLedger) { selected = { source, priceCards }; break; }
+    const quality = externalCandidateQuality(usageLedger, priceCards);
+    resolved.state.priced_component_count = quality.pricedComponents;
+    resolved.state.applicable = quality.pricedComponents > 0;
+    if (quality.pricedComponents > 0 && !firstPartial) firstPartial = { source, priceCards };
+    if (quality.complete) { selected = { source, priceCards }; break; }
+  }
+  selected ||= firstPartial;
+  sourceStates.forEach((state) => { state.selected = state.name === selected?.source; });
+  if (!selected) operationalWarnings.push({
+    code: "price_source_unavailable", message: "No configured external price source produced applicable price cards.",
+    metadata: { source: order.join(","), status: "no_applicable_source" }
+  });
+  const seen = new Set();
+  const warnings = operationalWarnings.filter((warning) => {
+    const key = `${warning.code}\0${warning.metadata.source}\0${warning.metadata.status}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return {
+    schema_version: "0.1", selected_source: selected?.source || null, price_cards: selected?.priceCards || [],
+    sources: sourceStates, warnings, resolved_at: resolverTimestamp(now)
+  };
+}
+
+function priceResolutionMetadata(resolution) {
+  return {
+    schema_version: resolution.schema_version || "0.1",
+    selected_source: resolution.selected_source,
+    sources: resolution.sources || [],
+    resolved_at: resolution.resolved_at
+  };
+}
+
+export function attachPriceResolution(result, resolution) {
+  result.metadata = { ...(result.metadata || {}), price_resolution: priceResolutionMetadata(resolution) };
+  const warnings = [...(result.warnings || [])];
+  const existing = new Set(warnings.map((warning) => `${warning.code}\0${stableStringify(warning.metadata || {})}`));
+  (resolution.warnings || []).forEach((warning) => {
+    const key = `${warning.code}\0${stableStringify(warning.metadata || {})}`;
+    if (!existing.has(key)) {
+      warnings.push({ ...warning });
+      existing.add(key);
+    }
+  });
+  result.warnings = warnings;
+  return result;
+}
+
+const RESOLVER_OPTION_NAMES = new Map([
+  ["contractPriceCards", "contractPriceCards"], ["contract_price_cards", "contractPriceCards"],
+  ["sources", "sources"], ["priceSources", "sources"], ["price_sources", "sources"],
+  ["sourceUrls", "sourceUrls"], ["source_urls", "sourceUrls"],
+  ["cacheDir", "cacheDir"], ["cache_dir", "cacheDir"], ["offline", "offline"],
+  ["refresh", "refresh"], ["maxAgeSeconds", "maxAgeSeconds"], ["max_age_seconds", "maxAgeSeconds"],
+  ["timeoutMs", "timeoutMs"], ["timeout_ms", "timeoutMs"], ["maxBytes", "maxBytes"],
+  ["max_bytes", "maxBytes"], ["fetcher", "fetcher"], ["now", "now"]
+]);
+
+function splitResolverOptions(options) {
+  const calculation = { ...options };
+  const resolver = {};
+  RESOLVER_OPTION_NAMES.forEach((target, source) => {
+    if (Object.hasOwn(calculation, source)) {
+      resolver[target] = calculation[source];
+      delete calculation[source];
+    }
+  });
+  return { calculation, resolver };
+}
+
+export async function fromResponseAuto(response, options = {}) {
+  const { calculation, resolver } = splitResolverOptions(options);
+  const explicitCards = calculation.priceCards ?? calculation.price_cards;
+  delete calculation.priceCards;
+  delete calculation.price_cards;
+  if (explicitCards !== undefined) {
+    const resolution = await resolvePriceCatalog({ ...resolver, priceCards: explicitCards });
+    return attachPriceResolution(fromResponse(response, { ...calculation, priceCards: compiledExternalPriceCatalog(resolution.price_cards) }), resolution);
+  }
+  const resolvedOptions = { ...calculation, surface: calculation.surface || inferSurface(response, calculation) || "unknown" };
+  let usageLedger;
+  try {
+    usageLedger = extractUsageLedger(response, resolvedOptions);
+  } catch {
+    return fromResponse(response, { ...calculation, priceCards: [] });
+  }
+  const resolution = await resolvePriceCatalog({ ...resolver, usageLedger, provider: usageLedger.provider });
+  return attachPriceResolution(fromResponse(response, { ...calculation, priceCards: compiledExternalPriceCatalog(resolution.price_cards) }), resolution);
+}
+
+export async function fromBatchResultsAuto(items, options = {}) {
+  const { calculation, resolver } = splitResolverOptions(options);
+  const explicitCards = calculation.priceCards ?? calculation.price_cards;
+  delete calculation.priceCards;
+  delete calculation.price_cards;
+  const resolution = await resolvePriceCatalog({ ...resolver, provider: calculation.provider, priceCards: explicitCards });
+  const result = fromBatchResults(items, { ...calculation, priceCards: compiledExternalPriceCatalog(resolution.price_cards) });
+  result.metadata = { ...(result.metadata || {}), price_resolution: priceResolutionMetadata(resolution) };
+  attachPriceResolution(result.aggregate, resolution);
+  (result.items || []).forEach((item) => {
+    if (item.ledger) attachPriceResolution(item.ledger, resolution);
+  });
+  const existing = new Set((result.warnings || []).map((warning) => `${warning.code}\0${stableStringify(warning.metadata || {})}`));
+  (resolution.warnings || []).forEach((warning) => {
+    const key = `${warning.code}\0${stableStringify(warning.metadata || {})}`;
+    if (!existing.has(key)) {
+      result.warnings.push({ ...warning });
+      existing.add(key);
+    }
+  });
+  return result;
+}
+
+export async function fromOTelGenAISpanAuto(span, options = {}) {
+  const { calculation, resolver } = splitResolverOptions(options);
+  const explicitCards = calculation.priceCards ?? calculation.price_cards;
+  delete calculation.priceCards;
+  delete calculation.price_cards;
+  const usageLedger = usageLedgerFromOTelGenAISpan(span, calculation);
+  const resolution = await resolvePriceCatalog({ ...resolver, provider: usageLedger.provider, usageLedger, priceCards: explicitCards });
+  return attachPriceResolution(fromOTelGenAISpan(span, { ...calculation, priceCards: compiledExternalPriceCatalog(resolution.price_cards) }), resolution);
+}
+
+export async function estimateCostAuto(options = {}) {
+  const { calculation, resolver } = splitResolverOptions(options);
+  const explicitCards = calculation.priceCards ?? calculation.price_cards;
+  delete calculation.priceCards;
+  delete calculation.price_cards;
+  const rawComponents = Array.isArray(calculation.components)
+    ? calculation.components
+    : Object.entries(calculation.components || {}).map(([name, quantity]) => ({ name, quantity }));
+  const usageLedger = {
+    schema_version: "0.1",
+    provider: calculation.provider,
+    surface: calculation.surface,
+    model: { requested: calculation.model, returned: calculation.model, billed: calculation.model, alias_resolution: "none" },
+    components: rawComponents.map((component) => ({
+      name: String(component.name), quantity: normalizeDecimalString(component.quantity || 0), unit: component.unit || "token"
+    }))
+  };
+  if (calculation.context) usageLedger.context = { ...calculation.context };
+  const resolution = await resolvePriceCatalog({ ...resolver, provider: calculation.provider, usageLedger, priceCards: explicitCards });
+  return attachPriceResolution(estimateCost({ ...calculation, priceCards: compiledExternalPriceCatalog(resolution.price_cards) }), resolution);
+}
+
+export async function priceCacheStatus(options = {}) {
+  const cacheDir = options.cacheDir || options.cache_dir || defaultPriceCacheDir();
+  const now = resolverNow(options.now);
+  const entries = [];
+  if (!nodeRuntimeAvailable() || String(cacheDir).startsWith("memory://")) {
+    for (const [key, raw] of [...EXTERNAL_PRICE_MEMORY_CACHE.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+      if (!key.startsWith(`${cacheDir}/`)) continue;
+      const data = clonePriceValue(raw);
+      const age = resolverCacheAge(data, now);
+      entries.push({
+        cache_key: key.slice(String(cacheDir).length + 1), name: data.source?.name, url: data.source?.url,
+        retrieved_at: data.source?.retrieved_at, validated_at: data.source?.validated_at,
+        checksum: data.source?.checksum, etag: data.source?.etag, last_modified: data.source?.last_modified,
+        card_count: data.price_cards?.length || 0, age_seconds: age === null ? null : Math.floor(age), status: "valid"
+      });
+    }
+  } else if (fs.existsSync(cacheDir)) {
+    for (const cacheKey of fs.readdirSync(cacheDir).filter((name) => name.endsWith(".json")).sort()) {
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(cacheDir, cacheKey), "utf8"));
+        const age = resolverCacheAge(data, now);
+        const valid = data?.source && Array.isArray(data.price_cards);
+        entries.push({
+          cache_key: cacheKey, name: data?.source?.name, url: data?.source?.url,
+          retrieved_at: data?.source?.retrieved_at, validated_at: data?.source?.validated_at,
+          checksum: data?.source?.checksum, etag: data?.source?.etag, last_modified: data?.source?.last_modified,
+          card_count: Array.isArray(data?.price_cards) ? data.price_cards.length : 0,
+          age_seconds: age === null ? null : Math.floor(age), status: valid ? "valid" : "invalid"
+        });
+      } catch {
+        entries.push({ cache_key: cacheKey, status: "invalid" });
+      }
+    }
+  }
+  return { schema_version: "0.1", cache_dir: cacheDir, checked_at: resolverTimestamp(now), entries };
+}
+
+export async function clearPriceCache(options = {}) {
+  const cacheDir = options.cacheDir || options.cache_dir || defaultPriceCacheDir();
+  const requested = options.sources ? new Set([...options.sources].map(String)) : null;
+  const removed = [];
+  const selected = (cacheKey) => {
+    const source = cacheKey.replace(/-[0-9a-f]{12}\.json$/, "");
+    return !requested || requested.has(source);
+  };
+  if (!nodeRuntimeAvailable() || String(cacheDir).startsWith("memory://")) {
+    for (const key of [...EXTERNAL_PRICE_MEMORY_CACHE.keys()]) {
+      const cacheKey = key.slice(String(cacheDir).length + 1);
+      if (key.startsWith(`${cacheDir}/`) && selected(cacheKey)) {
+        EXTERNAL_PRICE_MEMORY_CACHE.delete(key);
+        removed.push(cacheKey);
+      }
+    }
+  } else if (fs.existsSync(cacheDir)) {
+    for (const cacheKey of fs.readdirSync(cacheDir).filter((name) => name.endsWith(".json")).sort()) {
+      if (!selected(cacheKey)) continue;
+      const filePath = path.join(cacheDir, cacheKey);
+      fs.unlinkSync(filePath);
+      EXTERNAL_PRICE_DISK_CACHE.delete(filePath);
+      removed.push(cacheKey);
+    }
+  }
+  return { schema_version: "0.1", cache_dir: cacheDir, removed };
+}
+
+export function canonicalJSONString(value) {
+  return `${stableStringify(value)}\n`;
+}
+
+export async function sha256Bytes(value) {
+  const bytes = typeof value === "string" ? new TextEncoder().encode(value) : value;
+  if (!globalThis.crypto || !globalThis.crypto.subtle) throw new Error("Web Crypto SHA-256 is unavailable in this runtime");
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((part) => part.toString(16).padStart(2, "0")).join("");
+}
+
+export async function verifyCatalogManifest(manifest, artifacts = {}) {
+  const entries = [manifest && manifest.catalog, ...(manifest && Array.isArray(manifest.shards) ? manifest.shards : [])];
+  const checked = [];
+  let valid = Boolean(
+    manifest && manifest.schema_version === "0.1" && manifest.algorithm === "sha256" &&
+    manifest.catalog && typeof manifest.catalog === "object" && Array.isArray(manifest.shards)
+  );
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object" || !entry.path || typeof entry.sha256 !== "string" || entry.sha256.length !== 64) {
+      valid = false;
+      checked.push({ path: entry && entry.path ? String(entry.path) : "", exists: false, sha256: null, matches: false });
+      continue;
+    }
+    const value = artifacts[entry.path];
+    const exists = value !== undefined;
+    const digest = exists ? await sha256Bytes(value) : null;
+    const matches = exists && digest === entry.sha256;
+    valid = valid && matches;
+    checked.push({ path: entry.path, exists, sha256: digest, matches });
+  }
+  return { schema_version: "0.1", valid, algorithm: "sha256", artifacts: checked };
 }

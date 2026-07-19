@@ -32,8 +32,16 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Install playground dependencies
+        run: npm ci --prefix playground
+
       - name: Run conformance tests
         run: npm test
+
+      - name: Run expansion and playground checks
+        run: |
+          npm run check:expansion
+          npm run check:playground
 
       - name: Run framework alpha smoke samples
         run: |
@@ -53,11 +61,20 @@ jobs:
           npm run example:py
           npm run example:framework:js
           npm run example:framework:py
+          npm run example:providers:js
+          npm run example:providers:py
+          npm run example:batch:js
+          npm run example:batch:py
+          npm run example:otel:js
+          npm run example:otel:py
 
       - name: Compile Python files
         run: |
           python3 -m py_compile \
             packages/python/runcost/core.py \
+            packages/python/runcost/expansion.py \
+            packages/python/runcost/price_resolver.py \
+            packages/python/runcost/cli.py \
             packages/python/runcost/types.py \
             packages/python/runcost/__init__.py \
             scripts/check_fixtures.py \
@@ -65,7 +82,8 @@ jobs:
             scripts/check_fixture_coverage.py \
             scripts/check_fixture_generator.py \
             scripts/check_source_refresh.py \
-            scripts/check_default_price_catalog.py \
+            scripts/check_external_price_resolution.py \
+            scripts/check_official_price_snapshots.py \
             scripts/check_alpha_smoke_contract.py \
             scripts/check_alpha_smoke.py \
             scripts/check_alpha_smoke_preflight.py \
@@ -91,8 +109,51 @@ jobs:
             scripts/run_alpha_smoke.py \
             scripts/run_openai_costs_invoice_comparison.py \
             scripts/refresh_price_sources.py \
-            scripts/build_default_price_catalog.py \
+            scripts/build_price_catalog_artifacts.py \
             scripts/check_schema_taxonomy.py \
+            scripts/check_browser_entrypoint.py \
+            scripts/check_catalog_manifest.py \
+            scripts/check_catalog_performance.py \
+            scripts/check_cli_activation.py \
+            scripts/check_expansion_examples.py \
+            scripts/check_external_fixture_workflow.py \
+            scripts/check_openai_expansion_smoke.py \
+            scripts/check_playground_site.py \
+            scripts/check_product_expansion.py \
+            scripts/run_openai_expansion_smoke.py \
+            scripts/generate_conformance_report.py \
             scripts/create_fixture.py \
+            examples/python_batch_endpoints.py \
+            examples/python_direct_providers.py \
+            examples/python_pydantic_genai_prices.py \
             examples/python_framework_adapters.py \
             examples/python_basic.py
+
+  compatibility:
+    name: Python ${{ matrix.python }} / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: "3.9"
+            node: "20"
+          - python: "3.14"
+            node: "24"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Check compatible core and CLIs
+        run: |
+          python3 scripts/check_product_expansion.py
+          python3 scripts/check_cli_activation.py
+          python3 scripts/check_browser_entrypoint.py
+          python3 scripts/check_expansion_examples.py

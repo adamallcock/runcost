@@ -16,6 +16,8 @@ TYPESCRIPT_DECLARATIONS = ROOT / "packages" / "javascript" / "core" / "index.d.t
 TYPESCRIPT_RUNTIME = ROOT / "packages" / "javascript" / "core" / "index.js"
 TYPESCRIPT_GENERATED = ROOT / "packages" / "javascript" / "core" / "generated" / "taxonomy.d.ts"
 GO_SOURCE = ROOT / "packages" / "go" / "ledger" / "ledger.go"
+GO_EXPANSION_SOURCE = ROOT / "packages" / "go" / "ledger" / "expansion.go"
+GO_PRICE_RESOLVER_SOURCE = ROOT / "packages" / "go" / "ledger" / "price_resolver.go"
 PARITY_MATRIX = ROOT / "docs" / "internal" / "notes" / "api-parity-matrix.md"
 GENERATED_API_DOCS = ROOT / "docs" / "generated" / "public-api-registry.md"
 
@@ -93,7 +95,9 @@ def check_api_exports(registry: dict[str, Any]) -> None:
         "generated": text(TYPESCRIPT_GENERATED),
         "runtime": text(TYPESCRIPT_RUNTIME),
     }
-    go_sources = {"source": text(GO_SOURCE)}
+    go_sources = {
+        "source": text(GO_SOURCE) + "\n" + text(GO_EXPANSION_SOURCE) + "\n" + text(GO_PRICE_RESOLVER_SOURCE)
+    }
     parity_matrix = text(PARITY_MATRIX)
     generated_api_docs = text(GENERATED_API_DOCS)
     assert_true("public-api-registry.json" in parity_matrix, "API parity matrix must link the public API registry")

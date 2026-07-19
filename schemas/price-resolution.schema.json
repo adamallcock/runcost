@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://runcost.dev/schemas/price-resolution.schema.json",
+  "title": "PriceResolution",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "selected_source", "price_cards", "sources", "warnings", "resolved_at"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "0.1" },
+    "selected_source": { "type": ["string", "null"] },
+    "price_cards": {
+      "type": "array",
+      "items": { "$ref": "price-card.schema.json" }
+    },
+    "sources": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/source_state" }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/warning" }
+    },
+    "resolved_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "source_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "status", "card_count"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["external", "user", "contract"] },
+        "url": { "type": "string", "format": "uri" },
+        "cache_key": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["selected", "refreshed", "cache_fresh", "cache_validated", "cache_stale", "unavailable"]
+        },
+        "retrieved_at": { "type": "string", "format": "date-time" },
+        "validated_at": { "type": "string", "format": "date-time" },
+        "checksum": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "etag": { "type": "string" },
+        "last_modified": { "type": "string" },
+        "card_count": { "type": "integer", "minimum": 0 },
+        "priced_component_count": { "type": "integer", "minimum": 0 },
+        "applicable": { "type": "boolean" },
+        "selected": { "type": "boolean" }
+      }
+    },
+    "warning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "metadata"],
+      "properties": {
+        "code": { "type": "string", "enum": ["price_source_unavailable", "price_source_refresh_failed"] },
+        "message": { "type": "string" },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "status"],
+          "properties": {
+            "source": { "type": "string" },
+            "status": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

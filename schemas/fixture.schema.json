@@ -39,6 +39,10 @@
           "type": "string",
           "enum": [
             "aggregation",
+            "attribution",
+            "batch",
+            "budget",
+            "conformance",
             "debug_trace",
             "discount",
             "framework_adapter",
@@ -51,6 +55,7 @@
             "source_adapter",
             "source_priority",
             "strict_error",
+            "telemetry",
             "warning"
           ]
         },

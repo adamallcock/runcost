@@ -10,6 +10,9 @@ status: active
 Start here if you are using RunCost in an application:
 
 - [Quickstart](guides/quickstart.md)
+- [Batch, telemetry, budgets, and direct providers](guides/2026-07-18-product-expansion-quickstart.md)
+- [External fixture contributions](guides/external-fixture-contributions.md)
+- [Integration case-study template](guides/2026-07-18-integration-case-study-template.md)
 - [Package installation](guides/package-installation.md)
 - [API reference](reference/api-reference.md)
 - [Supported surfaces](reference/supported-surfaces.md)
@@ -27,6 +30,8 @@ Generated contract references:
 - [Fixture support matrix](generated/fixture-support-matrix.md)
 - [Warning coverage](generated/warning-coverage.md)
 - [Public API registry](generated/public-api-registry.md)
+- [Conformance report](generated/conformance-report.md)
+- [Catalog performance budgets](reference/catalog-performance-budgets.md)
 - [Beta and V1 caveats](generated/beta-v1-caveats.md)
 
 Maintainer planning, release evidence, and implementation history live under

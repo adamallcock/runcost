@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://adamallcock.github.io/runcost/</loc></url>
+  <url><loc>https://adamallcock.github.io/runcost/playground/</loc></url>
+  <url><loc>https://adamallcock.github.io/runcost/batch/</loc></url>
+  <url><loc>https://adamallcock.github.io/runcost/methodology/</loc></url>
+  <url><loc>https://adamallcock.github.io/runcost/openai-cost-calculator/</loc></url>
+  <url><loc>https://adamallcock.github.io/runcost/anthropic-cost-calculator/</loc></url>
+  <url><loc>https://adamallcock.github.io/runcost/gemini-cost-calculator/</loc></url>
+  <url><loc>https://adamallcock.github.io/runcost/batch-api-cost-calculator/</loc></url>
+</urlset>

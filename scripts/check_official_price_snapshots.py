@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import hashlib
 import json
-import subprocess
 import sys
+import copy
 from decimal import Decimal
 from pathlib import Path
 
@@ -14,29 +13,19 @@ if str(PYTHON_PACKAGE) not in sys.path:
     sys.path.insert(0, str(PYTHON_PACKAGE))
 
 from runcost import (  # noqa: E402
-    DEFAULT_PRICE_SOURCE_PRIORITY,
     calculate_cost,
-    default_price_cards,
-    default_source_cache,
     from_response,
+    price_cards_from_official_snapshot,
 )
 
-CATALOG_PATHS = [
-    ROOT / "packages" / "python" / "runcost" / "data" / "default-source-cache.json",
-    ROOT / "packages" / "javascript" / "core" / "data" / "default-source-cache.json",
-    ROOT / "packages" / "go" / "ledger" / "data" / "default-source-cache.json",
-]
-
-EXPECTED_SOURCES = {
-    "openai-official": "official-snapshot",
-    "anthropic-official": "official-snapshot",
-    "google-official": "official-snapshot",
-    "llm-prices": "llm-prices",
-    "litellm": "litellm",
-    "openrouter": "openrouter-models",
-    "models.dev": "models-dev",
-    "xai-official": "official-snapshot",
+DEFAULT_PRICE_SOURCE_PRIORITY = ["openai-official", "anthropic-official", "google-official", "xai-official"]
+SNAPSHOTS = {
+    "openai-official-gpt-56-pricing-snapshot.json": "openai-official",
+    "anthropic-official-pricing-snapshot.json": "anthropic-official",
+    "google-official-pricing-snapshot.json": "google-official",
+    "xai-official-pricing-snapshot.json": "xai-official",
 }
+_FIXTURE_CARDS: list[dict] | None = None
 
 
 def assert_true(condition: bool, message: str) -> None:
@@ -44,70 +33,54 @@ def assert_true(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
-def read_catalog(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
+def _half(value: str) -> str:
+    number = Decimal(str(value)) / Decimal("2")
+    text = format(number, "f")
+    return (text.rstrip("0").rstrip(".") if "." in text else text) or "0"
 
 
-def check_files_match() -> dict:
-    hashes = []
-    for path in CATALOG_PATHS:
-        assert_true(path.exists(), f"missing default catalog: {path.relative_to(ROOT)}")
-        raw = path.read_bytes()
-        hashes.append(hashlib.sha256(raw).hexdigest())
-    assert_true(len(set(hashes)) == 1, "default catalog copies must be byte-identical across packages")
-    return read_catalog(CATALOG_PATHS[0])
+def _batch_card(raw_card: dict, provider: str) -> dict:
+    card = copy.deepcopy(raw_card)
+    card["service_tier"] = "batch"
+    card_id = str(card["id"])
+    card["id"] = card_id.replace(":standard:", ":batch:") if ":standard:" in card_id else card_id.replace(":official-snapshot", ":batch:official-snapshot")
+    for component in card.get("components", []):
+        name = component.get("usage_component")
+        if provider == "anthropic" or name not in {"input_cache_read_tokens", "input_cache_write_tokens", "input_cache_write_1h_tokens"}:
+            component["price"]["amount"] = _half(component["price"]["amount"])
+    return card
 
 
-def check_catalog_shape(catalog: dict) -> None:
-    assert_true(catalog.get("schema_version") == "0.1", "catalog schema_version must be 0.1")
-    assert_true(catalog.get("name") == "runcost-default-source-cache", "catalog name mismatch")
-    assert_true(catalog.get("source_priority") == DEFAULT_PRICE_SOURCE_PRIORITY, "catalog source priority mismatch")
-    sources = catalog.get("sources")
-    assert_true(isinstance(sources, list) and len(sources) == len(EXPECTED_SOURCES), "catalog must include the expected source entries")
-    source_map = {source.get("name"): source for source in sources if isinstance(source, dict)}
-    assert_true(set(source_map) == set(EXPECTED_SOURCES), f"unexpected catalog sources: {sorted(source_map)}")
-    total_cards = 0
-    for name, source_type in EXPECTED_SOURCES.items():
-        source = source_map[name]
-        assert_true(source.get("type") == source_type, f"{name} source type mismatch")
-        assert_true(str(source.get("url", "")).startswith("https://"), f"{name} must retain source URL")
-        assert_true(str(source.get("retrieved_at", "")).endswith("Z"), f"{name} must retain retrieved_at")
-        assert_true(str(source.get("checksum", "")).startswith("sha256:"), f"{name} must retain sha256 checksum")
-        cards = source.get("price_cards")
-        assert_true(isinstance(cards, list) and cards, f"{name} must include price cards")
-        total_cards += len(cards)
-    metadata = catalog.get("metadata") or {}
-    assert_true(metadata.get("source_count") == len(EXPECTED_SOURCES), "metadata source_count mismatch")
-    assert_true(metadata.get("price_card_count") == total_cards, "metadata price_card_count mismatch")
-    assert_true(total_cards >= 7000, f"default catalog should be broad, found only {total_cards} cards")
+def default_price_cards() -> list[dict]:
+    """Load small official snapshots only as explicit conformance fixtures."""
+
+    global _FIXTURE_CARDS
+    if _FIXTURE_CARDS is None:
+        cards: list[dict] = []
+        for filename, source_name in SNAPSHOTS.items():
+            snapshot = json.loads((ROOT / "fixtures" / "source-files" / filename).read_text(encoding="utf-8"))
+            adapted = price_cards_from_official_snapshot(snapshot)
+            for card in adapted:
+                card["source"] = {**(card.get("source") or {}), "name": source_name}
+            cards.extend(adapted)
+            if filename.startswith("anthropic-"):
+                cards.extend(_batch_card(card, "anthropic") for card in adapted if card.get("service_tier") in (None, "standard"))
+            if filename.startswith("google-"):
+                cards.extend(_batch_card(card, "google") for card in adapted if card.get("service_tier") == "standard")
+        _FIXTURE_CARDS = cards
+    return copy.deepcopy(_FIXTURE_CARDS)
 
 
-def check_language_loaders() -> None:
-    python_catalog = default_source_cache()
-    python_cards = default_price_cards()
-    assert_true(python_catalog.get("metadata", {}).get("price_card_count") == len(python_cards), "Python default_price_cards count mismatch")
-
-    js = subprocess.run(
-        [
-            "node",
-            "--input-type=module",
-            "-e",
-            (
-                "import { defaultPriceCards, defaultSourceCache, DEFAULT_PRICE_SOURCE_PRIORITY } "
-                f"from {json.dumps((ROOT / 'packages/javascript/core/index.js').as_uri())};"
-                "const cache = defaultSourceCache();"
-                "const cards = defaultPriceCards();"
-                "if (cache.metadata.price_card_count !== cards.length) throw new Error('JS count mismatch');"
-                "if (DEFAULT_PRICE_SOURCE_PRIORITY[0] !== 'openai-official') throw new Error('JS priority mismatch');"
-                "console.log(cards.length);"
-            ),
-        ],
-        cwd=ROOT,
-        check=True,
-        text=True,
-        stdout=subprocess.PIPE,
-    )
-    assert_true(int(js.stdout.strip()) == len(python_cards), "JavaScript default_price_cards count mismatch")
+def check_fixture_shape() -> int:
+    cards = default_price_cards()
+    assert_true(len(cards) >= 70, f"official conformance fixtures unexpectedly small: {len(cards)}")
+    assert_true(all(str((card.get("source") or {}).get("url", "")).startswith("https://") for card in cards), "official fixture cards must retain source URLs")
+    assert_true(not any((ROOT / path).exists() for path in [
+        "packages/python/runcost/data/default-source-cache.json",
+        "packages/javascript/core/data/default-source-cache.json",
+        "packages/go/ledger/data/default-source-cache.json",
+    ]), "published package trees must not contain a bundled default price catalog")
+    return len(cards)
 
 
 def check_xai_aliases() -> None:
@@ -172,7 +145,7 @@ def check_xai_aliases() -> None:
             price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
         )
         warning_codes = [warning["code"] for warning in ledger.get("warnings", [])]
-        assert_true("unknown_model" not in warning_codes, f"xAI alias {alias} must resolve through the default catalog")
+        assert_true("unknown_model" not in warning_codes, f"xAI alias {alias} must resolve through the explicit snapshot cards")
         assert_true(ledger["model"]["billed"] == "grok-4.3", f"xAI alias {alias} must bill as grok-4.3")
         assert_true(ledger["total"] != "0", f"xAI alias {alias} must produce a non-zero price")
 
@@ -193,7 +166,7 @@ def check_xai_aliases() -> None:
             price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
         )
         warning_codes = [warning["code"] for warning in ledger.get("warnings", [])]
-        assert_true("unknown_model" not in warning_codes, f"xAI redirected slug {slug} must resolve through the default catalog")
+        assert_true("unknown_model" not in warning_codes, f"xAI redirected slug {slug} must resolve through the explicit snapshot cards")
         assert_true(ledger["model"]["billed"] == slug, f"xAI redirected slug {slug} must not masquerade as grok-4.3 alias")
         assert_true(ledger["total"] == "0.00375", f"xAI redirected slug {slug} must use Grok 4.3 token rates")
 
@@ -394,12 +367,16 @@ def check_anthropic_fable_mythos() -> None:
         card for card in cards
         if card.get("provider") == "anthropic" and (card.get("source") or {}).get("name") == "anthropic-official"
     ]
-    by_model = {card.get("model"): card for card in official_cards}
+    by_model_and_tier = {
+        (card.get("model"), card.get("service_tier") or "standard"): card
+        for card in official_cards
+    }
     for model in ("claude-fable-5", "claude-mythos-5"):
-        assert_true(model in by_model, f"Anthropic official catalog must include {model}")
+        assert_true((model, "standard") in by_model_and_tier, f"Anthropic official catalog must include standard {model}")
+        assert_true((model, "batch") in by_model_and_tier, f"Anthropic official catalog must include batch {model}")
         components = {
             component.get("usage_component"): component
-            for component in by_model[model].get("components", [])
+            for component in by_model_and_tier[(model, "standard")].get("components", [])
             if isinstance(component, dict)
         }
         expected_components = {
@@ -414,6 +391,24 @@ def check_anthropic_fable_mythos() -> None:
             assert_true(component is not None, f"{model} official catalog must include {component_name}")
             assert_true((component.get("price") or {}).get("amount") == amount, f"{model} {component_name} amount mismatch")
             assert_true((component.get("price") or {}).get("per") == "1000000", f"{model} {component_name} must be priced per MTok")
+
+        batch_components = {
+            component.get("usage_component"): component
+            for component in by_model_and_tier[(model, "batch")].get("components", [])
+            if isinstance(component, dict)
+        }
+        expected_batch_components = {
+            "input_uncached_tokens": "5",
+            "input_cache_write_tokens": "6.25",
+            "input_cache_write_1h_tokens": "10",
+            "input_cache_read_tokens": "0.5",
+            "output_text_tokens": "25",
+        }
+        for component_name, amount in expected_batch_components.items():
+            component = batch_components.get(component_name)
+            assert_true(component is not None, f"{model} batch catalog must include {component_name}")
+            assert_true((component.get("price") or {}).get("amount") == amount, f"{model} batch {component_name} amount mismatch")
+            assert_true((component.get("price") or {}).get("per") == "1000000", f"{model} batch {component_name} must be priced per MTok")
 
         usage_ledger = {
             "schema_version": "0.1",
@@ -437,6 +432,19 @@ def check_anthropic_fable_mythos() -> None:
         assert_true("component_unpriced" not in warning_codes, f"{model} standard token/cache components must price")
         selected_sources = {source.get("name") for source in ledger.get("price_sources", [])}
         assert_true(selected_sources == {"anthropic-official"}, f"{model} must use anthropic official source")
+
+        batch_ledger = calculate_cost(
+            usage_ledger={**usage_ledger, "context": {"service_tier": "batch"}},
+            price_cards=cards,
+            price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+        )
+        batch_warning_codes = [warning["code"] for warning in batch_ledger.get("warnings", [])]
+        assert_true("component_unpriced" not in batch_warning_codes, f"{model} batch token/cache components must price")
+        assert_true(batch_ledger["total"] == "0.0125", f"{model} batch total must be half the standard total")
+        assert_true(
+            all(component.get("price_card_id") == f"anthropic:{model}:batch:official-snapshot" for component in batch_ledger.get("components", [])),
+            f"{model} batch usage must select the batch official card",
+        )
 
 
 def check_google_live_translate() -> None:
@@ -722,15 +730,13 @@ def check_google_service_tiers() -> None:
 
 
 def main() -> int:
-    catalog = check_files_match()
-    check_catalog_shape(catalog)
-    check_language_loaders()
+    card_count = check_fixture_shape()
     check_openai_gpt56()
     check_xai_aliases()
     check_anthropic_fable_mythos()
     check_google_service_tiers()
     check_google_live_translate()
-    print(f"Default price catalog checks passed for {catalog['metadata']['price_card_count']} price cards.")
+    print(f"Official price snapshot conformance checks passed for {card_count} explicit fixture cards.")
     return 0
 
 
@@ -738,5 +744,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except AssertionError as exc:
-        print(f"Default price catalog check failed: {exc}", file=sys.stderr)
+        print(f"Official price snapshot check failed: {exc}", file=sys.stderr)
         raise SystemExit(1)

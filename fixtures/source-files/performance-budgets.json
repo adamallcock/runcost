@@ -1,0 +1,23 @@
+{
+  "schema_version": "0.1",
+  "updated_on": "2026-07-18",
+  "update_policy": "Raise a budget only with a dated before/after report, an explanation of the regression, and review of package payload changes.",
+  "budgets": {
+    "python_import_ms": 1000,
+    "python_compile_10000_cards_ms": 1500,
+    "python_warm_500_quotes_ms": 3000,
+    "python_warm_100_auto_quotes_ms": 1500,
+    "python_rss_mb": 384,
+    "javascript_import_ms": 1000,
+    "javascript_compile_10000_cards_ms": 1500,
+    "javascript_warm_500_quotes_ms": 3000,
+    "javascript_warm_100_auto_quotes_ms": 1500,
+    "javascript_rss_mb": 384,
+    "python_bundled_price_data_mb": 0,
+    "javascript_bundled_price_data_mb": 0,
+    "go_bundled_price_data_mb": 0,
+    "browser_entrypoint_mb": 1,
+    "npm_pack_mb": 1,
+    "npm_unpacked_mb": 3
+  }
+}

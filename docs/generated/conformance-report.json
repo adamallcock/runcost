@@ -1,0 +1,2979 @@
+{
+  "cases": [
+    {
+      "fixture": "fixtures/ag2-usage-summary-actual.json",
+      "id": "ag2-usage-summary-actual",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.chat_completions",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/ag2-usage-summary-total.json",
+      "id": "ag2-usage-summary-total",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.chat_completions",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-client-fallback-credit-non-opus-ignored.json",
+      "id": "anthropic-messages-client-fallback-credit-non-opus-ignored",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-fable-client-fallback-credit-token.json",
+      "id": "anthropic-messages-fable-client-fallback-credit-token",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-fable-client-fallback-credit.json",
+      "id": "anthropic-messages-fable-client-fallback-credit",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-fable-direct-classifier-block.json",
+      "id": "anthropic-messages-fable-direct-classifier-block",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-fable-server-fallback-midstream.json",
+      "id": "anthropic-messages-fable-server-fallback-midstream",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-fable-server-fallback-unavailable.json",
+      "id": "anthropic-messages-fable-server-fallback-unavailable",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-fable-server-fallback.json",
+      "id": "anthropic-messages-fable-server-fallback",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-fable-sticky-fallback-inferred.json",
+      "id": "anthropic-messages-fable-sticky-fallback-inferred",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-fable-sticky-fallback-served.json",
+      "id": "anthropic-messages-fable-sticky-fallback-served",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-missing-usage-warning.json",
+      "id": "anthropic-messages-missing-usage-warning",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": [
+        "usage_missing"
+      ]
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-raw-cache-1h.json",
+      "id": "anthropic-messages-raw-cache-1h",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-raw-cache.json",
+      "id": "anthropic-messages-raw-cache",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-stream-events.json",
+      "id": "anthropic-messages-stream-events",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/azure-openai-chat-raw-reasoning.json",
+      "id": "azure-openai-chat-raw-reasoning",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "azure",
+      "scenario": "raw_provider_response",
+      "surface": "azure.openai.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/bedrock-converse-raw-cache.json",
+      "id": "bedrock-converse-raw-cache",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "bedrock",
+      "scenario": "raw_provider_response",
+      "surface": "aws.bedrock.converse",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/bedrock-invoke-model-anthropic-messages.json",
+      "id": "bedrock-invoke-model-anthropic-messages",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "bedrock",
+      "scenario": "raw_provider_response",
+      "surface": "aws.bedrock.invoke_model",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/byte-stable-component-ordering.json",
+      "id": "byte-stable-component-ordering",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "normalized_usage",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/byte-stable-price-card-tie-break.json",
+      "id": "byte-stable-price-card-tie-break",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "normalized_usage",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/cohere-chat-raw-meta-billed-units.json",
+      "id": "cohere-chat-raw-meta-billed-units",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cohere",
+      "scenario": "raw_provider_response",
+      "surface": "cohere.chat",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/cohere-chat-raw-usage-billed-units.json",
+      "id": "cohere-chat-raw-usage-billed-units",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cohere",
+      "scenario": "raw_provider_response",
+      "surface": "cohere.chat",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/cohere-rerank-raw-billed-units.json",
+      "id": "cohere-rerank-raw-billed-units",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cohere",
+      "scenario": "raw_provider_response",
+      "surface": "cohere.rerank",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/component-metadata-billing-model-passive.json",
+      "id": "component-metadata-billing-model-passive",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "normalized_usage",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/cost-ledger-aggregation-basic.json",
+      "id": "cost-ledger-aggregation-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "aggregate",
+      "scenario": "aggregation",
+      "surface": "aggregate.cost_ledgers",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/date-only-priced-at-effective-date-selection.json",
+      "id": "date-only-priced-at-effective-date-selection",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "normalized_usage",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/debug-trace-explain-decisions.json",
+      "id": "debug-trace-explain-decisions",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "debug_trace",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/decimal-arithmetic-adversarial.json",
+      "id": "decimal-arithmetic-adversarial",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "normalized_usage",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-chat-created-out-of-range-ignored.json",
+      "id": "deepseek-chat-created-out-of-range-ignored",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "raw_provider_response",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-chat-created-priced-at.json",
+      "id": "deepseek-chat-created-priced-at",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "raw_provider_response",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-chat-raw-cache-reasoning.json",
+      "id": "deepseek-chat-raw-cache-reasoning",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "raw_provider_response",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-official-snapshot-period-adapter.json",
+      "id": "deepseek-official-snapshot-period-adapter",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "source_adapter",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-peak-pricing-boundary-before-second-window.json",
+      "id": "deepseek-peak-pricing-boundary-before-second-window",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-peak-pricing-boundary-first-start.json",
+      "id": "deepseek-peak-pricing-boundary-first-start",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-peak-pricing-boundary-regular.json",
+      "id": "deepseek-peak-pricing-boundary-regular",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-peak-pricing-boundary-second-end.json",
+      "id": "deepseek-peak-pricing-boundary-second-end",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-peak-pricing-boundary-second-start.json",
+      "id": "deepseek-peak-pricing-boundary-second-start",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-peak-pricing-debug-trace-period.json",
+      "id": "deepseek-peak-pricing-debug-trace-period",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "debug_trace",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-peak-pricing-explicit-period.json",
+      "id": "deepseek-peak-pricing-explicit-period",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-peak-pricing-first-window.json",
+      "id": "deepseek-peak-pricing-first-window",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-peak-pricing-missing-time-warning.json",
+      "id": "deepseek-peak-pricing-missing-time-warning",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "deepseek",
+      "scenario": "warning",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": [
+        "pricing_period_required"
+      ]
+    },
+    {
+      "fixture": "fixtures/deepseek-peak-pricing-regular-window.json",
+      "id": "deepseek-peak-pricing-regular-window",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-peak-pricing-second-window.json",
+      "id": "deepseek-peak-pricing-second-window",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-peak-pricing-unsupported-period-warning.json",
+      "id": "deepseek-peak-pricing-unsupported-period-warning",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "deepseek",
+      "scenario": "warning",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": [
+        "pricing_period_unsupported"
+      ]
+    },
+    {
+      "fixture": "fixtures/deepseek-peak-pricing-unsupported-timezone-warning.json",
+      "id": "deepseek-peak-pricing-unsupported-timezone-warning",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "deepseek",
+      "scenario": "warning",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": [
+        "billing_schedule_unsupported"
+      ]
+    },
+    {
+      "fixture": "fixtures/deepseek-user-pricing-camelcase-period-adapter.json",
+      "id": "deepseek-user-pricing-camelcase-period-adapter",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "source_adapter",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/discount-not-applied-warning.json",
+      "id": "discount-not-applied-warning",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "discount",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "discount_not_applied"
+      ]
+    },
+    {
+      "fixture": "fixtures/discount-policy-openai-basic.json",
+      "id": "discount-policy-openai-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "discount",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/effective-date-selection.json",
+      "id": "effective-date-selection",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "normalized_usage",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/feature-component-unpriced-warning.json",
+      "id": "feature-component-unpriced-warning",
+      "languages": {
+        "go": "unsupported",
+        "javascript": "unsupported",
+        "python": "unsupported"
+      },
+      "outcome": "unsupported",
+      "provider": "multi",
+      "scenario": "warning",
+      "surface": "normalized.feature_pricing",
+      "warning_codes": [
+        "tool_component_unpriced"
+      ]
+    },
+    {
+      "fixture": "fixtures/feature-pricing-generated-media-rerank-transcription.json",
+      "id": "feature-pricing-generated-media-rerank-transcription",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "multi",
+      "scenario": "normalized_usage",
+      "surface": "normalized.feature_pricing",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/gemini-3-1-flash-lite-raw-separate-thinking-output-pricing.json",
+      "id": "gemini-3-1-flash-lite-raw-separate-thinking-output-pricing",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.generate_content",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/gemini-3-1-flash-lite-reasoning-output-pricing.json",
+      "id": "gemini-3-1-flash-lite-reasoning-output-pricing",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "google",
+      "scenario": "normalized_usage",
+      "surface": "google.gemini.generate_content",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/gemini-3-5-flash-raw-separate-thinking-output-pricing.json",
+      "id": "gemini-3-5-flash-raw-separate-thinking-output-pricing",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.generate_content",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/gemini-3-5-flash-reasoning-output-pricing.json",
+      "id": "gemini-3-5-flash-reasoning-output-pricing",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "google",
+      "scenario": "normalized_usage",
+      "surface": "google.gemini.generate_content",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/gemini-generate-content-raw-multimodal.json",
+      "id": "gemini-generate-content-raw-multimodal",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.generate_content",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/gemini-generate-content-raw-reasoning-cache.json",
+      "id": "gemini-generate-content-raw-reasoning-cache",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.generate_content",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/gemini-generate-content-service-tier-enum-name.json",
+      "id": "gemini-generate-content-service-tier-enum-name",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.generate_content",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/gemini-generate-content-service-tier-header-downgrade.json",
+      "id": "gemini-generate-content-service-tier-header-downgrade",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.generate_content",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/gemini-generate-content-service-tier-usage-metadata.json",
+      "id": "gemini-generate-content-service-tier-usage-metadata",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.generate_content",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/gemini-generate-content-stream-chunks.json",
+      "id": "gemini-generate-content-stream-chunks",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.generate_content",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/gemini-live-translate-aggregate-audio-thinking.json",
+      "id": "gemini-live-translate-aggregate-audio-thinking",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.live",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/gemini-live-translate-audio-plus-text-output.json",
+      "id": "gemini-live-translate-audio-plus-text-output",
+      "languages": {
+        "go": "unsupported",
+        "javascript": "unsupported",
+        "python": "unsupported"
+      },
+      "outcome": "unsupported",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.live",
+      "warning_codes": [
+        "source_capability_unsupported"
+      ]
+    },
+    {
+      "fixture": "fixtures/gemini-live-translate-audio-thinking-preferred.json",
+      "id": "gemini-live-translate-audio-thinking-preferred",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.live",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/gemini-live-translate-raw-audio-usage.json",
+      "id": "gemini-live-translate-raw-audio-usage",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.live",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/gemini-live-translate-stream-final-usage.json",
+      "id": "gemini-live-translate-stream-final-usage",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.live",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/google-interactions-legacy-usage-metadata.json",
+      "id": "google-interactions-legacy-usage-metadata",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.interactions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/google-interactions-service-tier-header-downgrade.json",
+      "id": "google-interactions-service-tier-header-downgrade",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.interactions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/google-interactions-total-usage-camelcase-event.json",
+      "id": "google-interactions-total-usage-camelcase-event",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.interactions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/google-interactions-total-usage-metadata.json",
+      "id": "google-interactions-total-usage-metadata",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "raw_provider_response",
+      "surface": "google.gemini.interactions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/google-official-pricing-live-translate.json",
+      "id": "google-official-pricing-live-translate",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "source_adapter",
+      "surface": "google.gemini.live",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/groq-chat-raw-cache.json",
+      "id": "groq-chat-raw-cache",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "groq",
+      "scenario": "raw_provider_response",
+      "surface": "groq.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/haystack-openai-chat-generator-meta.json",
+      "id": "haystack-openai-chat-generator-meta",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.chat_completions",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/helicone-adapter-basic.json",
+      "id": "helicone-adapter-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/historical-price-missing-warning.json",
+      "id": "historical-price-missing-warning",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "warning",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "historical_price_missing"
+      ]
+    },
+    {
+      "fixture": "fixtures/huggingface-chat-raw-basic.json",
+      "id": "huggingface-chat-raw-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "huggingface",
+      "scenario": "raw_provider_response",
+      "surface": "huggingface.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/inclusive-usage-ambiguous-warning.json",
+      "id": "inclusive-usage-ambiguous-warning",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "warning",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "inclusive_usage_ambiguous"
+      ]
+    },
+    {
+      "fixture": "fixtures/langchain-callback-context-manager.json",
+      "id": "langchain-callback-context-manager",
+      "languages": {
+        "go": "not_tested",
+        "javascript": "not_tested",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.chat_completions",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/langchain-chat-message-usage-metadata.json",
+      "id": "langchain-chat-message-usage-metadata",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.chat_completions",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/langsmith-export-cost-compare.json",
+      "id": "langsmith-export-cost-compare",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.chat_completions",
+      "warning_codes": [
+        "alias_inferred",
+        "provider_reported_cost_mismatch"
+      ]
+    },
+    {
+      "fixture": "fixtures/langsmith-run-usage-metadata.json",
+      "id": "langsmith-run-usage-metadata",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.chat_completions",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/litellm-adapter-basic.json",
+      "id": "litellm-adapter-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/litellm-proxy-response-cost-metadata.json",
+      "id": "litellm-proxy-response-cost-metadata",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.chat_completions",
+      "warning_codes": [
+        "alias_inferred",
+        "provider_reported_cost_mismatch"
+      ]
+    },
+    {
+      "fixture": "fixtures/llamaindex-token-counter-events.json",
+      "id": "llamaindex-token-counter-events",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.chat_completions",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/llm-prices-adapter-basic.json",
+      "id": "llm-prices-adapter-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/llm-prices-adapter-historical.json",
+      "id": "llm-prices-adapter-historical",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/long-context-rule-missing.json",
+      "id": "long-context-rule-missing",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "long_context",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "long_context_rule_missing"
+      ]
+    },
+    {
+      "fixture": "fixtures/long-context-threshold-selection.json",
+      "id": "long-context-threshold-selection",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "long_context",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/meta-chat-null-usage.json",
+      "id": "meta-chat-null-usage",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "meta",
+      "scenario": "raw_provider_response",
+      "surface": "meta.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/meta-chat-raw-cached-reasoning.json",
+      "id": "meta-chat-raw-cached-reasoning",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "meta",
+      "scenario": "raw_provider_response",
+      "surface": "meta.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/meta-responses-null-usage.json",
+      "id": "meta-responses-null-usage",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "meta",
+      "scenario": "raw_provider_response",
+      "surface": "meta.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/meta-responses-raw-tools-warning.json",
+      "id": "meta-responses-raw-tools-warning",
+      "languages": {
+        "go": "unsupported",
+        "javascript": "unsupported",
+        "python": "unsupported"
+      },
+      "outcome": "unsupported",
+      "provider": "meta",
+      "scenario": "raw_provider_response",
+      "surface": "meta.responses",
+      "warning_codes": [
+        "tool_component_unpriced"
+      ]
+    },
+    {
+      "fixture": "fixtures/meta-reviewed-preview-snapshot-adapter.json",
+      "id": "meta-reviewed-preview-snapshot-adapter",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "meta",
+      "scenario": "source_adapter",
+      "surface": "meta.responses",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/mistral-chat-raw-cache.json",
+      "id": "mistral-chat-raw-cache",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "mistral",
+      "scenario": "raw_provider_response",
+      "surface": "mistral.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/models-dev-adapter-basic.json",
+      "id": "models-dev-adapter-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/official-snapshot-adapter-basic.json",
+      "id": "official-snapshot-adapter-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-agents-sdk-usage.json",
+      "id": "openai-agents-sdk-usage",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/openai-audio-transcription-duration-usage.json",
+      "id": "openai-audio-transcription-duration-usage",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.audio_transcriptions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-audio-transcription-token-usage.json",
+      "id": "openai-audio-transcription-token-usage",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.audio_transcriptions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-chat-raw-cached-reasoning.json",
+      "id": "openai-chat-raw-cached-reasoning",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-chat-stream-final-usage-chunk.json",
+      "id": "openai-chat-stream-final-usage-chunk",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-embeddings-raw-basic.json",
+      "id": "openai-embeddings-raw-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.embeddings",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-images-token-usage.json",
+      "id": "openai-images-token-usage",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.images",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-images-unit-usage.json",
+      "id": "openai-images-unit-usage",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.images",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-responses-basic.json",
+      "id": "openai-responses-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "normalized_usage",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-responses-raw-cached-reasoning.json",
+      "id": "openai-responses-raw-cached-reasoning",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-responses-raw-computer-and-function-tools.json",
+      "id": "openai-responses-raw-computer-and-function-tools",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/openai-responses-raw-dated-alias.json",
+      "id": "openai-responses-raw-dated-alias",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/openai-responses-raw-orchestration-usage.json",
+      "id": "openai-responses-raw-orchestration-usage",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-responses-raw-tool-calls.json",
+      "id": "openai-responses-raw-tool-calls",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-responses-stream-completed-event.json",
+      "id": "openai-responses-stream-completed-event",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-usage-audio-speeches-buckets.json",
+      "id": "openai-usage-audio-speeches-buckets",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.usage.audio_speeches",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-usage-audio-transcriptions-buckets.json",
+      "id": "openai-usage-audio-transcriptions-buckets",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.usage.audio_transcriptions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-usage-code-interpreter-sessions.json",
+      "id": "openai-usage-code-interpreter-sessions",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.usage.code_interpreter_sessions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-usage-completions-buckets.json",
+      "id": "openai-usage-completions-buckets",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.usage.completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-usage-embeddings-buckets.json",
+      "id": "openai-usage-embeddings-buckets",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.usage.embeddings",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-usage-images-buckets.json",
+      "id": "openai-usage-images-buckets",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.usage.images",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-vector-store-storage-gb-days.json",
+      "id": "openai-vector-store-storage-gb-days",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.vector_stores",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openrouter-agent-sdk-response.json",
+      "id": "openrouter-agent-sdk-response",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openrouter",
+      "scenario": "framework_adapter",
+      "surface": "openrouter.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openrouter-chat-raw-basic.json",
+      "id": "openrouter-chat-raw-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openrouter",
+      "scenario": "raw_provider_response",
+      "surface": "openrouter.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openrouter-models-adapter-basic.json",
+      "id": "openrouter-models-adapter-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openrouter",
+      "scenario": "source_adapter",
+      "surface": "openrouter.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openrouter-models-adapter-tiered.json",
+      "id": "openrouter-models-adapter-tiered",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openrouter",
+      "scenario": "source_adapter",
+      "surface": "openrouter.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openrouter-openai-sdk-response.json",
+      "id": "openrouter-openai-sdk-response",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openrouter",
+      "scenario": "framework_adapter",
+      "surface": "openrouter.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openrouter-sdk-stream-provider-cost.json",
+      "id": "openrouter-sdk-stream-provider-cost",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openrouter",
+      "scenario": "provider_reported",
+      "surface": "openrouter.chat_completions",
+      "warning_codes": [
+        "provider_reported_cost_mismatch"
+      ]
+    },
+    {
+      "fixture": "fixtures/portkey-adapter-basic.json",
+      "id": "portkey-adapter-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/price-not-found-context-mismatch.json",
+      "id": "price-not-found-context-mismatch",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "warning",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "price_not_found"
+      ]
+    },
+    {
+      "fixture": "fixtures/price-source-deepseek-period-preferred-over-generic-priority.json",
+      "id": "price-source-deepseek-period-preferred-over-generic-priority",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "source_priority",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/price-source-disagreement-warning.json",
+      "id": "price-source-disagreement-warning",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "source_priority",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "price_source_disagreement"
+      ]
+    },
+    {
+      "fixture": "fixtures/price-source-priority-non-official-conditional-fallback.json",
+      "id": "price-source-priority-non-official-conditional-fallback",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_priority",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/price-source-priority-official-conditional-gap.json",
+      "id": "price-source-priority-official-conditional-gap",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "source_priority",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "long_context_rule_missing"
+      ]
+    },
+    {
+      "fixture": "fixtures/price-source-priority-user-override.json",
+      "id": "price-source-priority-user-override",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_priority",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/provider-reported-cost-mismatch.json",
+      "id": "provider-reported-cost-mismatch",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openrouter",
+      "scenario": "provider_reported",
+      "surface": "openrouter.chat_completions",
+      "warning_codes": [
+        "provider_reported_cost_mismatch"
+      ]
+    },
+    {
+      "fixture": "fixtures/provider-reported-cost-used.json",
+      "id": "provider-reported-cost-used",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openrouter",
+      "scenario": "provider_reported",
+      "surface": "openrouter.chat_completions",
+      "warning_codes": [
+        "provider_reported_cost_used"
+      ]
+    },
+    {
+      "fixture": "fixtures/reasoning-output-default-pricing.json",
+      "id": "reasoning-output-default-pricing",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "normalized_usage",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/semantic-kernel-telemetry-basic.json",
+      "id": "semantic-kernel-telemetry-basic",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.chat_completions",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/service-mode-batch-selection.json",
+      "id": "service-mode-batch-selection",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "service_mode",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/service-mode-priority-selection.json",
+      "id": "service-mode-priority-selection",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "service_mode",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/service-mode-provisioned-selection.json",
+      "id": "service-mode-provisioned-selection",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "bedrock",
+      "scenario": "service_mode",
+      "surface": "aws.bedrock.converse",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/service-tier-deepseek-peak-pricing-warning-precedence.json",
+      "id": "service-tier-deepseek-peak-pricing-warning-precedence",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "deepseek",
+      "scenario": "service_tier",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": [
+        "service_tier_unsupported"
+      ]
+    },
+    {
+      "fixture": "fixtures/service-tier-default-standard-selection.json",
+      "id": "service-tier-default-standard-selection",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "service_tier",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/service-tier-region-selection.json",
+      "id": "service-tier-region-selection",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "service_tier",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/service-tier-unsupported-compatibility.json",
+      "id": "service-tier-unsupported-compatibility",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "service_tier",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "service_tier_unsupported"
+      ]
+    },
+    {
+      "fixture": "fixtures/source-cache-adapter-basic.json",
+      "id": "source-cache-adapter-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/source-capability-warning.json",
+      "id": "source-capability-warning",
+      "languages": {
+        "go": "unsupported",
+        "javascript": "unsupported",
+        "python": "unsupported"
+      },
+      "outcome": "unsupported",
+      "provider": "openai",
+      "scenario": "warning",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "source_capability_unsupported"
+      ]
+    },
+    {
+      "fixture": "fixtures/stale-price-warning.json",
+      "id": "stale-price-warning",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "warning",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "price_stale"
+      ]
+    },
+    {
+      "fixture": "fixtures/storage-gb-day-pricing.json",
+      "id": "storage-gb-day-pricing",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "normalized_usage",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/stream-final-usage-missing-warning.json",
+      "id": "stream-final-usage-missing-warning",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "aggregate",
+      "scenario": "aggregation",
+      "surface": "aggregate.cost_ledgers",
+      "warning_codes": [
+        "stream_usage_missing"
+      ]
+    },
+    {
+      "fixture": "fixtures/strict-unknown-model.json",
+      "id": "strict-unknown-model",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "strict_error",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "unknown_model"
+      ]
+    },
+    {
+      "fixture": "fixtures/tool-call-units-basic.json",
+      "id": "tool-call-units-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "normalized_usage",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/tool-component-unpriced-warning.json",
+      "id": "tool-component-unpriced-warning",
+      "languages": {
+        "go": "unsupported",
+        "javascript": "unsupported",
+        "python": "unsupported"
+      },
+      "outcome": "unsupported",
+      "provider": "openai",
+      "scenario": "warning",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "tool_component_unpriced"
+      ]
+    },
+    {
+      "fixture": "fixtures/unknown-model-compatibility.json",
+      "id": "unknown-model-compatibility",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "warning",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "unknown_model"
+      ]
+    },
+    {
+      "fixture": "fixtures/unknown-provider-compatibility.json",
+      "id": "unknown-provider-compatibility",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "custom-provider",
+      "scenario": "warning",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "unknown_provider"
+      ]
+    },
+    {
+      "fixture": "fixtures/unknown-surface-compatibility.json",
+      "id": "unknown-surface-compatibility",
+      "languages": {
+        "go": "unsupported",
+        "javascript": "unsupported",
+        "python": "unsupported"
+      },
+      "outcome": "unsupported",
+      "provider": "custom",
+      "scenario": "raw_provider_response",
+      "surface": "custom.unknown",
+      "warning_codes": [
+        "unknown_surface"
+      ]
+    },
+    {
+      "fixture": "fixtures/unpriced-component-compatibility.json",
+      "id": "unpriced-component-compatibility",
+      "languages": {
+        "go": "unsupported",
+        "javascript": "unsupported",
+        "python": "unsupported"
+      },
+      "outcome": "unsupported",
+      "provider": "openai",
+      "scenario": "warning",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "component_unpriced"
+      ]
+    },
+    {
+      "fixture": "fixtures/usage-field-ignored-warning.json",
+      "id": "usage-field-ignored-warning",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "warning",
+      "surface": "openai.embeddings",
+      "warning_codes": [
+        "usage_field_ignored"
+      ]
+    },
+    {
+      "fixture": "fixtures/user-pricing-adapter-compact.json",
+      "id": "user-pricing-adapter-compact",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/user-pricing-json-file-loader.json",
+      "id": "user-pricing-json-file-loader",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/user-pricing-yaml-file-loader.json",
+      "id": "user-pricing-yaml-file-loader",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/vercel-ai-sdk-generate-text-total-usage.json",
+      "id": "vercel-ai-sdk-generate-text-total-usage",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/vercel-ai-sdk-middleware-wrap-generate.json",
+      "id": "vercel-ai-sdk-middleware-wrap-generate",
+      "languages": {
+        "go": "not_tested",
+        "javascript": "warned",
+        "python": "not_tested"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/vercel-ai-sdk-openai-responses-orchestration-usage.json",
+      "id": "vercel-ai-sdk-openai-responses-orchestration-usage",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/vercel-ai-sdk-stream-text-finish.json",
+      "id": "vercel-ai-sdk-stream-text-finish",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "framework_adapter",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "alias_inferred"
+      ]
+    },
+    {
+      "fixture": "fixtures/vertex-gemini-generate-content-raw-basic.json",
+      "id": "vertex-gemini-generate-content-raw-basic",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "vertex",
+      "scenario": "raw_provider_response",
+      "surface": "vertex.gemini.generate_content",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/xai-chat-raw-cache-reasoning.json",
+      "id": "xai-chat-raw-cache-reasoning",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "xai",
+      "scenario": "raw_provider_response",
+      "surface": "xai.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/xai-grok-4-3-reasoning-output-pricing.json",
+      "id": "xai-grok-4-3-reasoning-output-pricing",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "xai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/xai-responses-output-x-search-call.json",
+      "id": "xai-responses-output-x-search-call",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "xai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/xai-responses-provider-reported-cost-ticks.json",
+      "id": "xai-responses-provider-reported-cost-ticks",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "xai",
+      "scenario": "provider_reported",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "provider_reported_cost_used"
+      ]
+    },
+    {
+      "fixture": "fixtures/xai-responses-raw-cache-reasoning.json",
+      "id": "xai-responses-raw-cache-reasoning",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "xai",
+      "scenario": "raw_provider_response",
+      "surface": "xai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/xai-responses-server-side-tool-count.json",
+      "id": "xai-responses-server-side-tool-count",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "xai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/xai-responses-server-side-tool-usage-map.json",
+      "id": "xai-responses-server-side-tool-usage-map",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "xai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "openai-chat-batch-partial",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "from_batch_results",
+      "surface": "from_batch_results",
+      "warning_codes": [
+        "batch_items_failed"
+      ]
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "openai-chat-batch-pending",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "from_batch_results",
+      "surface": "from_batch_results",
+      "warning_codes": [
+        "batch_items_pending"
+      ]
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "openai-responses-batch",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "from_batch_results",
+      "surface": "from_batch_results",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "openai-embeddings-batch",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "from_batch_results",
+      "surface": "from_batch_results",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "openai-images-batch",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "from_batch_results",
+      "surface": "openai.images",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "anthropic-message-batch-partial",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "from_batch_results",
+      "surface": "from_batch_results",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "gemini-developer-batch-partial",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "google",
+      "scenario": "from_batch_results",
+      "surface": "from_batch_results",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "vertex-gemini-batch",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "vertex",
+      "scenario": "from_batch_results",
+      "surface": "from_batch_results",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "bedrock-model-invocation-batch",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "bedrock",
+      "scenario": "from_batch_results",
+      "surface": "aws.bedrock.invoke_model",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "kimi-batch",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "kimi",
+      "scenario": "from_batch_results",
+      "surface": "from_batch_results",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "dashscope-batch",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "dashscope",
+      "scenario": "from_batch_results",
+      "surface": "from_batch_results",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "tinker-inkling-route",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "tinker",
+      "scenario": "from_response",
+      "surface": "from_response",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "nvidia-nim-route",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "nvidia",
+      "scenario": "from_response",
+      "surface": "from_response",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "zai-compatible-route",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "zai",
+      "scenario": "from_response",
+      "surface": "from_response",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "ai21-compatible-route",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "ai21",
+      "scenario": "from_response",
+      "surface": "from_response",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "arcee-compatible-route",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "arcee",
+      "scenario": "from_response",
+      "surface": "from_response",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "cohere-compatible-route",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cohere",
+      "scenario": "from_response",
+      "surface": "from_response",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "dashscope-compatible-route",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "dashscope",
+      "scenario": "from_response",
+      "surface": "from_response",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "inception-compatible-route",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "inception",
+      "scenario": "from_response",
+      "surface": "from_response",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "poolside-compatible-route",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "poolside",
+      "scenario": "from_response",
+      "surface": "from_response",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "xiaomi-compatible-route",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "xiaomi",
+      "scenario": "from_response",
+      "surface": "from_response",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "minimax-anthropic-compatible-route",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "minimax",
+      "scenario": "from_response",
+      "surface": "from_response",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "otel-genai-usage-netting",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "usage_ledger_from_otel",
+      "surface": "usage_ledger_from_otel",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "otel-genai-cost",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "from_otel",
+      "surface": "from_otel",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "precall-estimate-attribution",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "estimate_cost",
+      "surface": "openai.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "precall-estimate-attribution-tag-miss",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "estimate_cost",
+      "surface": "openai.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "budget-warning",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "evaluate_budget",
+      "surface": "evaluate_budget",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "budget-zero-unspent",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "evaluate_budget",
+      "surface": "evaluate_budget",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "reconciliation-within-tolerance",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "reconcile_cost",
+      "surface": "reconcile_cost",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "genai-prices-tiered-dated-scheduled",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "price_cards_from_genai_prices",
+      "surface": "price_cards_from_genai_prices",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "price-resolution-unavailable-warning",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "cross-provider",
+      "scenario": "attach_price_resolution",
+      "surface": "attach_price_resolution",
+      "warning_codes": [
+        "price_source_unavailable"
+      ]
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "price-resolution-refresh-failed-warning",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "cross-provider",
+      "scenario": "attach_price_resolution",
+      "surface": "attach_price_resolution",
+      "warning_codes": [
+        "price_source_refresh_failed"
+      ]
+    }
+  ],
+  "generated_on": "2026-07-18",
+  "methodology": {
+    "not_tested": "The case does not request that language implementation.",
+    "preserved": "The expected billing semantics are asserted without warning.",
+    "scope": "RunCost behavior only; this report makes no claim about competing calculators.",
+    "unsupported": "The implementation explicitly reports that a billing semantic is not priced or supported.",
+    "warned": "The implementation preserves a visible caveat or expected error."
+  },
+  "schema_version": "0.1",
+  "summary": {
+    "case_count": 202,
+    "languages": {
+      "go": {
+        "not_tested": 2,
+        "preserved": 148,
+        "unsupported": 7,
+        "warned": 45
+      },
+      "javascript": {
+        "not_tested": 1,
+        "preserved": 148,
+        "unsupported": 7,
+        "warned": 46
+      },
+      "python": {
+        "not_tested": 1,
+        "preserved": 148,
+        "unsupported": 7,
+        "warned": 46
+      }
+    },
+    "outcomes": {
+      "preserved": 148,
+      "unsupported": 7,
+      "warned": 47
+    }
+  }
+}
