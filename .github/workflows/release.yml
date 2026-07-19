@@ -30,6 +30,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          ref: v${{ inputs.version }}
 
       - name: Validate publish approval
         if: ${{ inputs.publish && inputs.publish_approval != 'publish-runcost' }}
@@ -52,6 +54,9 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: "22"
+
+      - name: Install playground dependencies
+        run: npm ci --prefix playground
 
       - name: Verify release readiness
         env:
@@ -168,6 +173,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          ref: v${{ inputs.version }}
 
       - name: Set up Python
         uses: actions/setup-python@v6
