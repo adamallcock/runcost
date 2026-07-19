@@ -32,6 +32,9 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Install playground dependencies
+        run: npm ci --prefix playground
+
       - name: Run conformance tests
         run: npm test
 
