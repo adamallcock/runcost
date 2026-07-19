@@ -23,7 +23,7 @@ export function Footer() {
       <a className="wordmark wordmark-small" href={appPath("/")}>RunCost<span>.</span></a>
       <div className="footer-links">
         <a href={appPath("/playground/")}>Playground</a><a href={appPath("/batch/")}>Batch</a>
-        <a href={appPath("/methodology/")}>Methodology</a><a href="https://github.com/adamallcock/runcost">GitHub</a>
+        <a href={appPath("/methodology/")}>Methodology</a><a href="https://github.com/adamallcock/runcost/issues/57">Cases</a><a href="https://github.com/adamallcock/runcost">GitHub</a>
       </div>
       <p>Open source · MIT License</p>
     </footer>

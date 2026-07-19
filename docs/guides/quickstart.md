@@ -41,8 +41,8 @@ Go:
 go get github.com/adamallcock/runcost/packages/go/ledger
 ```
 
-The package is alpha. Registry packages are the normal install path; repository
-and tarball paths are for development and release verification.
+RunCost `0.2.x` is public beta. Registry packages are the normal install path;
+repository and tarball paths are for development and release verification.
 
 ## Price A Real Response
 
