@@ -7,7 +7,7 @@ status: draft
 
 # RunCost Progress Tracker
 
-Last updated: 2026-05-26
+Last updated: 2026-07-18
 
 Purpose: keep the implementation state explicit across context compaction and long-running work. This file is the handoff ledger for what is done, what is in progress, what is blocked, and what evidence proves it.
 
@@ -26,15 +26,32 @@ The tracker separates roadmap state from active work state:
 
 ## Active Focus
 
-Current active lane: Milestone 8 live smoke and alpha feedback.
+Current active lane: post-beta distribution evidence and V1 stabilization.
 
-Why this lane is active: the current objective is to complete the remaining end-to-end plan after Milestones 0-7. Milestone 8 is the next real gate because it proves RunCost beside live SDK/API calls, starts the findings-to-fixtures loop, and produces the first invoice/dashboard comparison evidence.
+Why this lane is active: Milestone 8, the `0.2.0` release train, and the
+machine-readable public-beta gate are complete. The next decision is whether
+real external integrations, fixture contributions, and reconciliation cases
+justify continued V1 investment.
 
 Doc rename coordination: another agent may rename Markdown files to match repository naming rules. Until that lands, avoid broad documentation churn and re-inspect paths before changing cross-document links.
 
 ## Current Verified Baseline
 
-Evidence collected on 2026-05-26:
+Baseline evidence was first collected on 2026-05-26 and has been updated with
+later verified results:
+
+- Release `0.2.0` is live on GitHub, npm, PyPI, the Go module proxy, and the
+  public documentation/calculator site; evidence is recorded in
+  `docs/internal/reports/2026-07-18-release-0-2-0-evidence.md`.
+- ObviousBench now dogfoods RunCost `0.2.0` external price resolution for
+  generated registries while preserving explicit benchmark policy cards.
+- A matching real OpenAI dashboard cost and activity export was compared with
+  full pricing coverage. The privacy-preserving normalized artifact passes
+  `--require-real`; the material provider-internal-tier residual is classified
+  as a documented limitation in
+  `docs/internal/reports/2026-07-18-openai-dashboard-export-comparison.md`.
+- `python3 scripts/check_project_completion_gates.py --require-milestone8` and
+  `--require-public-beta` pass. V1 remains intentionally incomplete.
 
 - `npm test` passes.
 - Python and JavaScript fixture runner checks 106 shared fixtures, with fixture metadata allowing language-scoped framework ergonomics fixtures.
@@ -80,14 +97,14 @@ Evidence collected on 2026-05-26:
   release workflow run
   `https://github.com/adamallcock/runcost/actions/runs/26467656634`; evidence
   is recorded in `docs/internal/reports/2026-05-26-go-tag-verification-0-1-0.md`.
-- Real-life live SDK/API smoke tests are implemented as optional API-key-gated harnesses, and credentialed provider evidence now exists for Meta Model API, OpenAI Responses, Anthropic, OpenRouter, Vercel AI SDK, and LangChain; invoice/dashboard evidence remains pending.
+- Real-life live SDK/API smoke tests are implemented as optional API-key-gated harnesses, and credentialed provider evidence exists for Meta Model API, OpenAI Responses, Anthropic, OpenRouter, Vercel AI SDK, and LangChain. Real sanitized dashboard-comparison evidence now exists as well.
 - Sanitized direct live smoke evidence exists for Anthropic prompt caching, OpenRouter cost comparison using `nvidia/nemotron-3-super-120b-a12b:free`, and the multi-provider discount case in the same reviewed run; evidence is recorded in `fixtures/source-files/alpha-smoke-live-direct-2026-05-27.json` and `docs/internal/reports/2026-05-27-alpha-smoke-live-direct.md`.
 - After installing optional smoke dependencies, a complete sanitized live smoke bundle passed OpenAI Responses, Anthropic prompt caching, OpenRouter cost comparison, Vercel AI SDK `streamText`, LangChain ChatOpenAI, and multi-provider discounts; evidence is recorded in `fixtures/source-files/alpha-smoke-live-all-2026-05-27.json` and `docs/internal/reports/2026-05-27-live-framework-and-billing-review.md`.
 - Sanitized Meta Model API live smoke passed `/models`, `/chat/completions`,
   and `/responses` for `muse-spark-1.1`; evidence is recorded in
   `fixtures/source-files/meta-model-api-live-smoke-2026-07-09.json`.
-- Billing/export review packet exists at `fixtures/source-files/billing-export-review-packet-2026-05-27.json` for operator dashboard/export checking against the live smoke window; the strict real invoice/dashboard comparison gate remains pending until a sanitized real provider export or dashboard reduction is supplied.
-- Operator-action completion audit exists at `docs/internal/reports/2026-05-27-operator-action-completion-audit.md`; remaining strict Milestone 8 and public beta failures require operator credentials, optional SDK installs, registry-side trusted-publishing setup, provider billing/export evidence, or explicit approval to publish.
+- Billing/export review packet exists at `fixtures/source-files/billing-export-review-packet-2026-05-27.json`; the completed real reduction is `fixtures/source-files/openai-dashboard-export-comparison-2026-07-18.json`.
+- The earlier operator-action audit at `docs/internal/reports/2026-05-27-operator-action-completion-audit.md` records historical blockers. The required credentials, live SDK checks, trusted publishing, registry release, and dashboard-export evidence have since been completed.
 - Project hygiene check passes.
 - JSON files parse through `jq`.
 - ASCII scan reports no non-ASCII text.
@@ -166,11 +183,25 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 | Milestone 5: Tool Call and Feature Pricing | Complete for current scope | No | Generic and raw OpenAI tool-call fixtures exist, including web search, file search, code interpreter, computer-use actions, and function calls; OpenRouter request/image/search source pricing, provider-reported cost modes, Gemini/Vertex multimodal token details, normalized generated media, OpenAI organization usage completions text/cache/audio tokens, OpenAI Images token/image-unit usage, OpenAI organization usage image counts, OpenAI organization usage audio speech character counts, OpenAI audio transcription duration/token usage, OpenAI organization usage audio transcription seconds, OpenAI Vector Stores `usage_bytes` to explicit GB-day storage usage, OpenAI organization usage code-interpreter `num_sessions`, Cohere Rerank, runtime-second, GB-day storage pricing, and custom internal tool components exist. | Broader provider-specific storage/session extraction and live provider validation move to Milestone 8/beta hardening. |
 | Milestone 6: Framework Adapters | Complete for current scope | No | LangChain AIMessage, OpenAI Agents SDK usage objects, Vercel AI SDK generateText and streamText finish objects, LlamaIndex TokenCountingHandler, Haystack metadata, LiteLLM proxy metadata, AutoGen/AG2 usage summaries, LangSmith run/export usage, Semantic Kernel telemetry, OpenRouter SDK responses, Python LangChain callback/context manager, JavaScript Vercel `wrapGenerate` and `onFinish` helpers, and aggregation exist with fixtures. | Live SDK/API-key smoke, real application validation, deeper framework callback variants, and smoke-derived examples move to Milestone 8/beta hardening. |
 | Milestone 7: Packaging and Developer Experience | Complete for current scope | No | Package metadata, types, examples, CI, clean install checks, Python package CLI, migration guide, alpha docs, license metadata, changelog, contributing/security docs, registry README policy, release process, release readiness checks, guarded release workflow, and local no-publish release dry run exist. | First registry publication, external trusted publisher configuration, and real post-tag Go module verification remain release operations outside the repo-side private-alpha gate. |
-| Milestone 8: Alpha Quality and Feedback | Partial, invoice evidence pending | Yes | `scripts/run_alpha_smoke.py`, `scripts/run_vercel_alpha_smoke.mjs`, `scripts/run_langchain_alpha_smoke.py`, `scripts/check_alpha_smoke_contract.py`, `scripts/check_alpha_smoke.py`, `scripts/check_alpha_product_truth.py`, `scripts/create_alpha_product_truth_entry.py`, `scripts/check_alpha_evidence_bundle.py`, `scripts/collect_alpha_evidence_bundle.py`, `scripts/check_alpha_evidence_collector.py`, `schemas/alpha-smoke-report.schema.json`, `fixtures/source-files/alpha-smoke-samples.json`, `fixtures/source-files/alpha-smoke-product-truth-register.json`, and `docs/internal/process/alpha-smoke-runbook.md` exist; sample mode covers OpenAI Responses, Anthropic prompt caching, Vercel stream finish, LangChain metadata, OpenRouter cost comparison, and multi-provider discounts without credentials. Sanitized live evidence now exists for all required smoke scenarios in `fixtures/source-files/alpha-smoke-live-all-2026-05-27.json`; OpenAI/Vercel/LangChain evidence is also split into dedicated files, and the review report is `docs/internal/reports/2026-05-27-live-framework-and-billing-review.md`. Sanitized invoice/dashboard comparison mechanics exist through `scripts/compare_invoice_dashboard.py`, `scripts/create_openai_costs_comparison_input.py`, `scripts/run_openai_costs_invoice_comparison.py`, `scripts/check_invoice_comparison_contract.py`, `scripts/check_invoice_comparison.py`, `schemas/invoice-dashboard-comparison-input.schema.json`, `schemas/invoice-dashboard-comparison.schema.json`, `fixtures/source-files/invoice-dashboard-comparison-sample.json`, `fixtures/source-files/openai-costs-comparison-source.json`, and `docs/internal/reports/2026-05-26-invoice-dashboard-comparison-sample.md`; sample comparison output is explicitly marked as not real Milestone 8 evidence. Billing/export review packet exists at `fixtures/source-files/billing-export-review-packet-2026-05-27.json`. | Strict Milestone 8 now only requires a sanitized real provider dashboard/invoice/usage-export comparison validated with `--require-real`. |
-| Milestone 9: Public Beta | Partial | No | Guarded release workflow, trusted-publishing docs, no-publish artifact review checklist, local release dry run, successful `publish=false` GitHub release rehearsal from `main` for intended beta version `0.1.0`, reviewed rehearsal artifacts, real Go tag verification for `v0.1.0`, source-data update owner/cadence/review process, generated language type artifacts, trusted-publishing verification template/schema/checker, package-name availability report, Python distribution-name decision for `runcost-ai`, historical no-publish dispatch-blocker evidence, project completion gate register/checker, and `0.1.13` release evidence exist. | Registry publish and trusted-publishing evidence are satisfied for `0.1.13`; public beta still waits on the real invoice/dashboard comparison gate, then pass `python3 scripts/check_project_completion_gates.py --require-public-beta`. |
-| Milestone 10: V1 | Partial | No | All 19 stable warning codes now have shared fixture coverage and generated warning coverage reports zero uncovered codes; taxonomy-bearing Python, TypeScript, and Go type artifacts are generated and drift-checked; V1 release-candidate readiness has a schema-backed checklist template and strict checker. | Stable schemas/package APIs, production-ready packages, strong provider/source coverage, historical-pricing path, top framework integrations, live-evidence closure, package publication, and a real release-candidate checklist with no known correctness holes. |
+| Milestone 8: Alpha Quality and Feedback | Complete for current scope | No | All required live smoke scenarios, the product-truth loop, and the real sanitized OpenAI dashboard comparison pass as one strict evidence bundle. | Repeat smoke and reconciliation when upstream contracts or pricing conditions materially change. |
+| Milestone 9: Public Beta | Complete for current scope | No | Release `0.2.0`, trusted npm/PyPI publishing, Go module verification, public-site QA, hardening docs, and the real dashboard comparison satisfy every machine-readable public-beta gate. | Measure whether external integrations and fixture contributions justify continued investment. |
+| Milestone 10: V1 | Partial | Yes | All 19 stable warning codes have shared fixture coverage; taxonomy-bearing Python, TypeScript, and Go artifacts are generated and drift-checked; V1 release-candidate readiness has a schema-backed checklist and strict checker. | Complete a real release-candidate checklist only after the 90-day adoption gate provides enough external evidence to justify V1. |
 
 ## Work Log
+
+### 2026-07-18
+
+- Published and independently verified RunCost `0.2.0` across GitHub Release,
+  npm, PyPI, the Go module proxy, and the public documentation/calculator site.
+- Integrated RunCost `0.2.0` external price resolution into ObviousBench and
+  replayed both Tinker and refreshed OpenAI pricing paths.
+- Added a privacy-preserving OpenAI dashboard export runner, deterministic
+  private-value non-leakage test, sanitized real comparison fixture, and dated
+  evidence report.
+- Classified the normalized public-price residual as a documented limitation
+  rather than hiding it or claiming invoice exactness.
+- Closed the strict Milestone 8 and public-beta project gates. The active lane
+  is now measured distribution and external validation before V1.
 
 ### 2026-05-26
 
@@ -1376,8 +1407,8 @@ Finalization path after the Milestones 0-4 completion pass:
 4. Continue releasing through the guarded workflow: configure and verify
    PyPI/npm trusted publishers externally, tag the intended version, run the
    release workflow with publishing disabled, inspect artifacts, then publish
-   only with explicit approval. Release `0.1.13` completed this path on
-   2026-07-10 local time.
+   only with explicit approval. Release `0.2.0` completed this path on
+   2026-07-18 local time.
 5. After private alpha feedback, choose the beta hardening lane: schema-derived types and generated drift checks, or provider/framework breadth, depending on actual alpha failures.
 
 Naming update:
@@ -1411,7 +1442,7 @@ Audit evidence:
 Supported languages today:
 
 - Python: first-class prototype core, typed with manual `TypedDict` contracts, package metadata exists in `pyproject.toml`, examples run, and clean local install checks pass.
-- JavaScript/TypeScript: first-class prototype ESM core, manual `index.d.ts` declarations, package metadata exists, package tarball install checks pass, publish allowlist exists, and `runcost@0.1.13` is published on npm with provenance.
+- JavaScript/TypeScript: first-class prototype ESM core, manual `index.d.ts` declarations, package metadata exists, package tarball install checks pass, publish allowlist exists, and `runcost@0.2.0` is published on npm with provenance.
 - Go: first-class conformance participant with public functions, docs, example tests, public GitHub module path, clean module import checks, and typed wrappers for the normalized usage/price-card/discount core path. Raw provider/framework/source APIs are still map-backed rather than schema-derived structs.
 - Future languages: no implementation yet. The policy says future languages must consume schemas and fixtures first.
 
@@ -1449,7 +1480,7 @@ Partially implemented:
 - Multimodal: Gemini/Vertex modality token details are covered. Other providers and generated-media billing are not.
 - Framework adapters: complete for the current no-live-smoke scope. Direct metadata/result objects are fixture-backed for LangChain, OpenAI Agents SDK usage, Vercel AI SDK generateText and streamText finish results, LlamaIndex, Haystack, LiteLLM proxy responses, AutoGen/AG2 usage summaries, LangSmith run/export usage, Semantic Kernel telemetry, and OpenRouter-compatible SDK responses. Initial Python LangChain callback/context-manager plus JavaScript Vercel middleware/onFinish helpers exist, and generic multi-step cost-ledger aggregation exists. Live SDK/API-key smoke, real app validation, product-truth register updates for new findings, and deeper callback/stream variants move to Milestone 8/beta hardening.
 - Documentation: public quickstart, installation, API reference, aggregation/streaming, debug trace, custom pricing, discount, warning/strict-mode, source adapter, support-matrix docs, contribution guide, security/privacy note, changelog, registry README policy, and release process now exist. Deeper framework integration guides and automated release notes are still missing.
-- Packaging: clean local install checks now pass for Python, JavaScript/TypeScript, and Go. License metadata, PyPI/npm guarded release workflow, Go tag policy, changelog, provenance guidance, release readiness checks, registry README checks, local no-publish release dry run, and guarded release workflow evidence exist. Release `0.1.13` is published on PyPI and npm, npm provenance is present, the Go module exposes `v0.1.13`, and current evidence is recorded in `docs/internal/reports/2026-07-10-release-0-1-13-evidence.md`.
+- Packaging: clean local install checks pass for Python, JavaScript/TypeScript, and Go. License metadata, the guarded PyPI/npm workflow, Go tag policy, changelog, provenance guidance, release checks, registry README checks, and rehearsal evidence exist. Release `0.2.0` is published on PyPI and npm, npm provenance is present, the Go module exposes `v0.2.0`, and current evidence is recorded in `docs/internal/reports/2026-07-18-release-0-2-0-evidence.md`.
 
 Stubs or placeholders:
 

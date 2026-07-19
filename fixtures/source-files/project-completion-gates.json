@@ -378,13 +378,28 @@
       "id": "milestone8_invoice_dashboard_real_comparison",
       "area": "milestone8",
       "requirement": "Compare at least one real provider dashboard, invoice, or usage export against RunCost output.",
-      "status": "pending_external_evidence",
+      "status": "satisfied",
       "required_for": ["milestone8", "public_beta", "v1"],
       "required_evidence": [
         "Sanitized comparison JSON with evidence_type real_provider_export.",
         "Comparison passes the --require-real check and documents exact, estimated, and unsupported fields."
       ],
       "current_evidence": [
+        {
+          "kind": "fixture",
+          "path": "fixtures/source-files/openai-dashboard-export-comparison-2026-07-18.json",
+          "proves": "A matching real OpenAI dashboard cost and activity export was reduced locally to a sanitized normalized comparison with full pricing coverage, four exact fields, and one classified unsupported cost residual."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-07-18-openai-dashboard-export-comparison.md",
+          "proves": "The reviewed result documents the privacy boundary, normalized residual, provider-internal tier limitation, and the decision not to claim invoice exactness."
+        },
+        {
+          "kind": "script",
+          "path": "scripts/run_openai_dashboard_export_comparison.py",
+          "proves": "The dashboard converter prices matching local CSV exports through runtime external sources, applies explicit public tier policies, omits private values, and emits only sanitized normalized evidence."
+        },
         {
           "kind": "report",
           "path": "docs/internal/reports/2026-05-27-live-framework-and-billing-review.md",
@@ -471,8 +486,7 @@
           "proves": "The sanitized expansion-smoke checker accepted the live artifact in strict --require-passed mode while retaining the separate Costs API permission result."
         }
       ],
-      "completion_check": "python3 scripts/check_alpha_evidence_bundle.py --smoke-report <sanitized-live-report.json> --smoke-report <sanitized-vercel-report.json> --smoke-report <sanitized-langchain-report.json> --invoice-comparison <sanitized-real-comparison.json> --require-real",
-      "remaining_action": "Obtain an administrator-scoped Costs API credential or a sanitized provider billing export, then complete the real comparison without retaining private payloads."
+      "completion_check": "python3 scripts/check_alpha_evidence_bundle.py --smoke-report fixtures/source-files/alpha-smoke-live-all-2026-05-27.json --smoke-report fixtures/source-files/alpha-smoke-live-vercel-openai-2026-05-27.json --smoke-report fixtures/source-files/alpha-smoke-live-langchain-openai-2026-05-27.json --invoice-comparison fixtures/source-files/openai-dashboard-export-comparison-2026-07-18.json --require-real"
     },
     {
       "id": "public_beta_openai_batch_and_costs_live_evidence",
@@ -522,8 +536,8 @@
         },
         {
           "kind": "report",
-          "path": "docs/internal/reports/2026-07-10-release-0-1-13-evidence.md",
-          "proves": "Release 0.1.13 published the PyPI package through the guarded release workflow and verified the live PyPI package."
+          "path": "docs/internal/reports/2026-07-18-release-0-2-0-evidence.md",
+          "proves": "Release 0.2.0 published the PyPI package through the guarded release workflow and verified the live PyPI package."
         },
         {
           "kind": "docs",
@@ -592,8 +606,8 @@
         },
         {
           "kind": "report",
-          "path": "docs/internal/reports/2026-07-10-release-0-1-13-evidence.md",
-          "proves": "Release 0.1.13 published the npm package through the guarded release workflow and verified live npm provenance."
+          "path": "docs/internal/reports/2026-07-18-release-0-2-0-evidence.md",
+          "proves": "Release 0.2.0 published the npm package through the guarded release workflow and verified live npm provenance."
         },
         {
           "kind": "docs",
@@ -657,8 +671,8 @@
         },
         {
           "kind": "report",
-          "path": "docs/internal/reports/2026-07-10-release-0-1-13-evidence.md",
-          "proves": "A publish=false guarded release workflow rehearsal succeeded for release 0.1.13 before the publish run."
+          "path": "docs/internal/reports/2026-07-18-release-0-2-0-evidence.md",
+          "proves": "A publish=false guarded release workflow rehearsal succeeded for release 0.2.0 before the publish run."
         }
       ],
       "completion_check": "gh workflow run release.yml --ref main -f version=<real-version> -f publish=false",
@@ -692,8 +706,8 @@
         },
         {
           "kind": "report",
-          "path": "docs/internal/reports/2026-07-10-release-0-1-13-evidence.md",
-          "proves": "Remote tag v0.1.13 is available through the Go module path and was verified by workflow and post-publish smoke."
+          "path": "docs/internal/reports/2026-07-18-release-0-2-0-evidence.md",
+          "proves": "Remote tag v0.2.0 is available through the Go module path and was verified by workflow and post-publish smoke."
         }
       ],
       "completion_check": "go get github.com/adamallcock/runcost/packages/go/ledger@v<version>",
@@ -714,8 +728,8 @@
       "current_evidence": [
         {
           "kind": "report",
-          "path": "docs/internal/reports/2026-07-10-release-0-1-13-evidence.md",
-          "proves": "Release 0.1.13 was published to PyPI and npm, has a GitHub Release, exposes Go module version v0.1.13, and passed post-publish install smokes."
+          "path": "docs/internal/reports/2026-07-18-release-0-2-0-evidence.md",
+          "proves": "Release 0.2.0 was published to PyPI and npm, has a GitHub Release, exposes Go module version v0.2.0, and passed post-publish install smokes."
         },
         {
           "kind": "workflow",
@@ -1044,10 +1058,20 @@
           "kind": "docs",
           "path": "docs/internal/process/beta-v1-hardening-roadmap.md",
           "proves": "The V1 checklist process and strict command are documented."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-07-15-product-market-and-distribution-assessment.md",
+          "proves": "The 90-day continuation thresholds distinguish real integrations and external evidence from registry-download noise."
+        },
+        {
+          "kind": "docs",
+          "path": "docs/internal/process/2026-07-18-distribution-measurement-runbook.md",
+          "proves": "Monthly adoption measurement and privacy-preserving funnel rules are documented before further V1 expansion."
         }
       ],
       "completion_check": "python3 scripts/check_v1_stabilization_checklist.py --checklist <release-candidate-checklist.json> --require-real",
-      "remaining_action": "Finish Milestone 8 and public beta first, then complete a release-candidate V1 checklist with all readiness fields true and no known correctness holes."
+      "remaining_action": "Review the 90-day adoption gate on 2026-10-16; proceed to a real release-candidate V1 checklist only if at least two continuation thresholds have independent evidence."
     }
   ]
 }

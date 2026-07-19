@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import json
 import argparse
+import csv
+import json
 import re
 import subprocess
 import sys
@@ -15,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 COMMAND = ROOT / "scripts" / "compare_invoice_dashboard.py"
 OPENAI_COSTS_CONVERTER = ROOT / "scripts" / "create_openai_costs_comparison_input.py"
 OPENAI_COSTS_RUNNER = ROOT / "scripts" / "run_openai_costs_invoice_comparison.py"
+OPENAI_DASHBOARD_RUNNER = ROOT / "scripts" / "run_openai_dashboard_export_comparison.py"
 SAMPLE = ROOT / "fixtures" / "source-files" / "invoice-dashboard-comparison-sample.json"
 OPENAI_COSTS_SAMPLE = ROOT / "fixtures" / "source-files" / "openai-costs-comparison-source.json"
 REPORT = ROOT / "docs" / "internal" / "reports" / "2026-05-26-invoice-dashboard-comparison-sample.md"
@@ -326,6 +328,153 @@ def self_check_openai_costs_runner() -> None:
     assert comparison["evidence_type"] == "sanitized_sample"
 
 
+def self_check_openai_dashboard_runner() -> None:
+    assert OPENAI_DASHBOARD_RUNNER.exists(), "missing OpenAI dashboard export comparison runner"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        cost_csv = root / "cost.csv"
+        activity_csv = root / "activity.csv"
+        price_cards = root / "price-cards.json"
+        output = root / "comparison.json"
+
+        with cost_csv.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(
+                handle,
+                fieldnames=[
+                    "start_time_iso",
+                    "end_time_iso",
+                    "amount_value",
+                    "amount_currency",
+                    "project_id",
+                    "organization_id",
+                    "user_email",
+                ],
+            )
+            writer.writeheader()
+            writer.writerow(
+                {
+                    "start_time_iso": "2026-07-18T00:00:00Z",
+                    "end_time_iso": "2026-07-19T00:00:00Z",
+                    "amount_value": "0.00052",
+                    "amount_currency": "usd",
+                    "project_id": "private-project",
+                    "organization_id": "private-organization",
+                    "user_email": "private@example.com",
+                }
+            )
+
+        with activity_csv.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(
+                handle,
+                fieldnames=[
+                    "start_time_iso",
+                    "end_time_iso",
+                    "model",
+                    "batch",
+                    "service_tier",
+                    "num_model_requests",
+                    "input_tokens",
+                    "output_tokens",
+                    "input_cached_tokens",
+                    "input_cache_write_tokens",
+                    "input_uncached_tokens",
+                    "project_id",
+                    "api_key_id",
+                    "user_id",
+                ],
+            )
+            writer.writeheader()
+            writer.writerow(
+                {
+                    "start_time_iso": "2026-07-18T00:00:00Z",
+                    "end_time_iso": "2026-07-19T00:00:00Z",
+                    "model": "gpt-dashboard-fixture",
+                    "batch": "False",
+                    "service_tier": "flex-tier",
+                    "num_model_requests": "1",
+                    "input_tokens": "100",
+                    "output_tokens": "20",
+                    "input_cached_tokens": "40",
+                    "input_cache_write_tokens": "10",
+                    "input_uncached_tokens": "50",
+                    "project_id": "private-project",
+                    "api_key_id": "private-key",
+                    "user_id": "private-user",
+                }
+            )
+
+        price_cards.write_text(
+            json.dumps(
+                [
+                    {
+                        "schema_version": "0.1",
+                        "id": "openai:gpt-dashboard-fixture:test",
+                        "provider": "openai",
+                        "surface": "openai.usage.completions",
+                        "model": "gpt-dashboard-fixture",
+                        "components": [
+                            {
+                                "usage_component": "input_uncached_tokens",
+                                "unit": "token",
+                                "price": {"amount": "10", "currency": "USD", "per": "1000000"},
+                            },
+                            {
+                                "usage_component": "input_cache_read_tokens",
+                                "unit": "token",
+                                "price": {"amount": "1", "currency": "USD", "per": "1000000"},
+                            },
+                            {
+                                "usage_component": "output_text_tokens",
+                                "unit": "token",
+                                "price": {"amount": "20", "currency": "USD", "per": "1000000"},
+                            },
+                        ],
+                        "source": {"name": "deterministic-dashboard-test"},
+                    }
+                ]
+            ),
+            encoding="utf-8",
+        )
+        subprocess.run(
+            [
+                sys.executable,
+                str(OPENAI_DASHBOARD_RUNNER),
+                "--cost-export",
+                str(cost_csv),
+                "--activity-export",
+                str(activity_csv),
+                "--output",
+                str(output),
+                "--price-cards",
+                str(price_cards),
+                "--comparison-id",
+                "openai-dashboard-runner-self-check",
+                "--confirm-private-inputs-stay-local",
+            ],
+            cwd=ROOT,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        comparison = json.loads(output.read_text(encoding="utf-8"))
+
+    validate_common(comparison)
+    assert comparison["evidence_type"] == "real_provider_export"
+    assert comparison["milestone8_real_evidence"] is True
+    assert comparison["summary"]["exact"] >= 4
+    assert comparison["summary"]["estimated"] == 1
+    serialized = json.dumps(comparison)
+    for private_value in [
+        "private-project",
+        "private-organization",
+        "private@example.com",
+        "private-key",
+        "private-user",
+    ]:
+        assert private_value not in serialized, "dashboard runner retained a private export value"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Check invoice/dashboard comparison mechanics or a real comparison artifact.")
     parser.add_argument("--comparison", help="Existing comparison JSON to validate instead of generating the checked-in sample.")
@@ -337,6 +486,7 @@ def main() -> int:
     self_check_input_safety()
     self_check_openai_costs_converter()
     self_check_openai_costs_runner()
+    self_check_openai_dashboard_runner()
     if args.comparison:
         comparison = json.loads(Path(args.comparison).read_text(encoding="utf-8"))
     else:

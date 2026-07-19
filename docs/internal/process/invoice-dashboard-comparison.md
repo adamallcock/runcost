@@ -92,6 +92,38 @@ npm run compare:invoice -- \
 python3 scripts/check_invoice_comparison.py
 ```
 
+### OpenAI dashboard CSV exports
+
+An administrator-scoped API key is not required when an operator can export a
+matching cost CSV and completions-activity CSV from the authenticated OpenAI
+dashboard. Keep both raw files outside the repository and run:
+
+```bash
+npm run compare:invoice:openai-dashboard -- \
+  --cost-export /local/private/cost.csv \
+  --activity-export /local/private/activity.csv \
+  --output /tmp/openai-dashboard-comparison.json \
+  --comparison-id openai-dashboard-export-YYYY-MM-DD \
+  --confirm-private-inputs-stay-local \
+  --refresh
+
+python3 scripts/check_invoice_comparison.py \
+  --comparison /tmp/openai-dashboard-comparison.json \
+  --require-real
+```
+
+Use `--offline` instead of `--refresh` to replay already cached external price
+data. The converter refuses unknown export tiers or incomplete pricing. It
+applies published batch/flex reductions as explicit policies, uses the public
+standard baseline for undocumented internal tier labels, and emits only a
+normalized cost relationship. Absolute costs, token volumes, row counts, tier
+mix, and provider identifiers are not retained.
+
+The checked-in validator builds private-looking temporary CSVs and asserts that
+none of their private values reach the comparison output. The reviewed real
+comparison and its interpretation are recorded in
+`docs/internal/reports/2026-07-18-openai-dashboard-export-comparison.md`.
+
 For OpenAI Costs API exports, first reduce the reviewed, sanitized Costs API
 page into the generic comparison-input contract:
 
@@ -174,7 +206,9 @@ comparison-output contract.
 
 The checked-in sample report is
 `docs/internal/reports/2026-05-26-invoice-dashboard-comparison-sample.md`.
-It proves the comparison workflow and classification shape, but Milestone 8
-still needs at least one real provider dashboard, invoice export, or usage export
-review before invoice/dashboard validation is complete. The sample comparison
-sets `milestone8_real_evidence` to `false` by design.
+It proves the comparison workflow and classification shape, while the real
+OpenAI dashboard comparison in
+`fixtures/source-files/openai-dashboard-export-comparison-2026-07-18.json`
+satisfies the Milestone 8 evidence gate. The sample comparison still sets
+`milestone8_real_evidence` to `false` by design and must never be used as
+completion evidence.

@@ -33,6 +33,7 @@
     "compare:invoice": "python3 scripts/compare_invoice_dashboard.py",
     "compare:invoice:openai-costs-input": "python3 scripts/create_openai_costs_comparison_input.py",
     "compare:invoice:openai-costs": "python3 scripts/run_openai_costs_invoice_comparison.py",
+    "compare:invoice:openai-dashboard": "python3 scripts/run_openai_dashboard_export_comparison.py",
     "check:hygiene": "python3 scripts/check_project_hygiene.py",
     "check:coverage": "python3 scripts/check_fixture_coverage.py && python3 scripts/check_cost_accounting.py",
     "check:cost-accounting": "python3 scripts/check_cost_accounting.py",

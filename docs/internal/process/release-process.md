@@ -141,9 +141,10 @@ small package-local `README.md` that summarizes the JavaScript entrypoint and
 links back to the repository for the full docs. Keep the npm README short; do
 not duplicate the full docs tree there.
 
-Current release evidence for `0.1.13`, including GitHub Release, PyPI, npm, Go,
-npm provenance, and post-publish install smoke checks, is recorded in
-`docs/internal/reports/2026-07-10-release-0-1-13-evidence.md`.
+Current release evidence for `0.2.0`, including GitHub Release, PyPI, npm, Go,
+npm provenance, public-site QA, and post-publish install smoke checks, is
+recorded in
+`docs/internal/reports/2026-07-18-release-0-2-0-evidence.md`.
 
 ## PyPI Publishing
 
