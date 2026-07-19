@@ -14,9 +14,9 @@ limitations.
 
 ## Unreleased
 
-- No changes after the prepared 0.2.0 work below.
+- No changes since 0.2.0.
 
-## 0.2.0 (prepared 2026-07-18; not published)
+## 0.2.0 (2026-07-18)
 
 - Add one-call external pricing resolution in Python, JavaScript/browser, and
   Go using `genai-prices`, models.dev, LiteLLM, and OpenRouter where appropriate;
