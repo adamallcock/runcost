@@ -7,7 +7,9 @@ status: active
 
 # RunCost Supported Surfaces
 
-This support matrix describes the current fixture-backed alpha. A provider or framework is considered supported only when it has shared conformance fixtures.
+This support matrix describes the current fixture-backed `0.2.x` public beta. A
+provider or framework is considered supported only when it has shared
+conformance fixtures.
 
 For the full fixture-derived provider/surface/language matrix, see
 [Generated Fixture Support Matrix](../generated/fixture-support-matrix.md).

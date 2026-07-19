@@ -376,6 +376,7 @@ npx runcost quote response.json --provider openai
 - [Quickstart](docs/guides/quickstart.md)
 - [Product expansion quickstart](docs/guides/2026-07-18-product-expansion-quickstart.md)
 - [External fixture contributions](docs/guides/external-fixture-contributions.md)
+- [Send a billing edge case that calculators get wrong](https://github.com/adamallcock/runcost/issues/57)
 - [Integration case-study template](docs/guides/2026-07-18-integration-case-study-template.md)
 - [Package installation](docs/guides/package-installation.md)
 - [Migration from hand-written formulas](docs/guides/2026-05-26-migration-from-hand-written-formulas.md)
@@ -392,8 +393,9 @@ npx runcost quote response.json --provider openai
 
 ## Status
 
-RunCost is alpha software. The core behavior is fixture-backed across Python,
-JavaScript/TypeScript, and Go; the public conformance report inventories 200
-cases without claiming unsupported behavior. Packages are published to PyPI,
-npm, and Go module tags. Use provider exports or dashboard reconciliation before
-treating any independent calculation as invoice-exact.
+RunCost `0.2.x` is public beta. The strict live-smoke, release, and real
+dashboard-comparison gates pass, and the core behavior is fixture-backed across
+Python, JavaScript/TypeScript, and Go. The public conformance report inventories
+202 cases without claiming unsupported behavior. Packages are published to
+PyPI, npm, and Go module tags. Use provider-reported costs, exports, or dashboard
+reconciliation before treating any independent calculation as invoice-exact.

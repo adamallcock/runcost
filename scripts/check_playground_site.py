@@ -72,7 +72,13 @@ def main() -> int:
     for forbidden in ["fetch(", "XMLHttpRequest", "WebSocket("]:
         if forbidden in source:
             raise AssertionError(f"playground must not send pasted responses over the network: found {forbidden}")
-    for required in ["fromResponseAuto", "playground-offline-example", "External source (live or cached)"]:
+    for required in [
+        "fromResponseAuto",
+        "playground-offline-example",
+        "External source (live or cached)",
+        "https://github.com/adamallcock/runcost/issues/57",
+        "2026-07-18-openai-dashboard-export-comparison.md",
+    ]:
         if required not in source:
             raise AssertionError(f"playground external price resolution is missing {required!r}")
     for forbidden in ["core/data/providers", "Bundled source catalog", "useDefaultCatalog"]:

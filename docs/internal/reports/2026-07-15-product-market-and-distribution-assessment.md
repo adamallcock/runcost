@@ -466,25 +466,41 @@ patterns demonstrate that they do not measure active users reliably.
 
 ### Days 15–35: proof
 
-- Complete one real sanitized reconciliation.
+- [x] Complete one real sanitized reconciliation.
 - [x] Publish the initial conformance suite and methodology.
 - [x] Add the `genai-prices` source adapter.
 - [x] Add an OpenTelemetry GenAI adapter and enricher.
 
 ### Days 36–60: beta and ecosystem insertion
 
-- Resolve the explicit beta gates and release a beta with precise caveats.
+- [x] Resolve the explicit beta gates and release a beta with precise caveats.
 - [x] Prepare Pydantic AI, Vercel AI SDK, OpenTelemetry, and direct-provider
   examples.
-- Invite billing edge-case fixtures from relevant maintainers and users.
+- [x] Invite billing edge-case fixtures from relevant maintainers and users.
 
 ### Days 61–90: distribution test
 
-- Launch the conformance/reconciliation artifact publicly.
+- [x] Launch the conformance/reconciliation artifact publicly.
 - [x] Prepare three exact-problem, search-oriented pages backed by fixtures.
 - Review real human funnel metrics and independent dependencies.
 - Continue only the channels that produce successful integrations, external
   evidence, or repeat visitors.
+
+### Execution receipts on 2026-07-18
+
+- RunCost `0.2.0` is published on npm, PyPI, and the Go module path; the public
+  playground and conformance pages are live.
+- The first real privacy-preserving dashboard comparison is public at
+  `docs/internal/reports/2026-07-18-openai-dashboard-export-comparison.md`.
+- [Issue 57](https://github.com/adamallcock/runcost/issues/57) asks for
+  sanitized billing edge cases rather than stars or generic feature requests.
+- [Issue 58](https://github.com/adamallcock/runcost/issues/58) records the
+  exact 2026-10-16 continue/maintain/stop gate and evidence thresholds.
+- The OpenAI service-tier export finding was added to the existing
+  [`genai-prices` tier-design issue](https://github.com/pydantic/genai-prices/issues/115#issuecomment-5013803342)
+  as a concrete interoperability observation, not a promotional issue.
+- A one-time local Codex automation named
+  `Review RunCost 90-day adoption gate` is scheduled for 2026-10-16.
 
 ## Stop, continue, and expansion gates
 

@@ -7,9 +7,9 @@ status: active
 
 # RunCost Package Installation
 
-RunCost is published as an alpha package for Python, JavaScript/TypeScript, and
-Go. Source checkout install paths remain useful for local development and release
-verification.
+RunCost `0.2.x` is published as a public-beta package for Python,
+JavaScript/TypeScript, and Go. Source checkout install paths remain useful for
+local development and release verification.
 
 ## Current Support Matrix
 

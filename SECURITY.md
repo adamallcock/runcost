@@ -2,7 +2,7 @@
 title: RunCost Security Policy
 date: 2026-05-25
 type: policy
-status: draft
+status: active
 ---
 
 # RunCost Security Policy
@@ -37,5 +37,5 @@ pricing behavior.
 
 ## Supported Versions
 
-RunCost is alpha. Security fixes apply to the default branch and the latest
-published alpha release.
+RunCost `0.2.x` is public beta. Security fixes apply to the default branch and
+the latest published beta release.

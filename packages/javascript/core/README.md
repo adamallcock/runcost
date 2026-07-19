@@ -85,3 +85,10 @@ cat responses.jsonl | npx runcost quote - --jsonl --provider openai
 Full documentation, Python and Go examples, supported surfaces, and caveats:
 
 <https://github.com/adamallcock/runcost>
+
+## Status
+
+RunCost `0.2.x` is public beta. Use provider-reported costs or a matching export
+before treating an independent ledger as invoice-exact. If you have a sanitized
+billing case that ordinary calculators mishandle, add it to the
+[public fixture call](https://github.com/adamallcock/runcost/issues/57).

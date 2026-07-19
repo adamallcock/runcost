@@ -65,6 +65,23 @@ Run one at a time for at least two weeks unless evidence is decisive:
 Define the expected primary outcome before publishing. Stop an experiment that
 only moves downloads or clone noise without producing qualified activation.
 
+## Current experiment
+
+- Start: 2026-07-18.
+- Decision date: 2026-10-16.
+- Intervention: public-beta release, real normalized reconciliation artifact,
+  billing-edge-case fixture call, and one relevant ecosystem design comment.
+- Primary outcome: an independently verified integration, external fixture, or
+  externally maintained ecosystem link. Stars, installs, and clone spikes do
+  not satisfy the outcome on their own.
+- Public entry points:
+  [billing fixture call](https://github.com/adamallcock/runcost/issues/57),
+  [90-day adoption gate](https://github.com/adamallcock/runcost/issues/58), and
+  [OpenAI tier interoperability note](https://github.com/pydantic/genai-prices/issues/115#issuecomment-5013803342).
+- Review mechanism: the one-time local Codex automation
+  `Review RunCost 90-day adoption gate` will run against the evidence issue on
+  2026-10-16.
+
 ## Reporting template
 
 - Period and versions:
