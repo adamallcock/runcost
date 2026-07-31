@@ -74,3 +74,28 @@ source URL.
 
 This decision and its implementation are not released until the branch is
 merged and a versioned GitHub/npm/PyPI/Go release is published and verified.
+
+## July 30, 2026 Price Transition Amendment
+
+OpenAI permanently reduced GPT-5.6 Terra prices by 20% and Luna prices by 80%
+effective July 30, 2026. RunCost retains the original reviewed cards through
+July 29 and uses new dated cards from July 30 onward across Standard, Batch,
+Flex, and Fast processing. Sol pricing is unchanged.
+
+For short-context Standard usage, the current per-million-token rates are:
+
+| Model | Input | Cached input | Cache write | Output |
+|---|---:|---:|---:|---:|
+| `gpt-5.6-terra` | $2.00 | $0.20 | $2.50 | $12.00 |
+| `gpt-5.6-luna` | $0.20 | $0.02 | $0.25 | $1.20 |
+
+The current reviewed snapshot also carries OpenAI's published long-context,
+Batch, Flex, and Fast rates. OpenAI renamed Priority processing to Fast mode on
+July 30 while continuing to accept both API values. RunCost preserves `fast`
+and `priority` as independent tiers so their cards can diverge later. Exact
+Fast cards win; a Fast request uses a Priority card only when no applicable
+Fast card exists, and the fallback is recorded in component and ledger
+metadata. Priority requests never fall forward to Fast. When callers do not
+provide `priced_at`, raw OpenAI Responses
+`created_at` and Chat Completions `created` timestamps select the applicable
+historical card automatically.

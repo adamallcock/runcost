@@ -13,7 +13,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 
 ## Summary
 
-- Fixtures scanned: 170
+- Fixtures scanned: 181
 - Public API capabilities scanned: 21
 - Provider/surface component rows: 36
 - Price-source component rows: 11
@@ -30,10 +30,10 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `long_context` | 2 |
 | `normalized_usage` | 22 |
 | `provider_reported` | 4 |
-| `raw_provider_response` | 75 |
+| `raw_provider_response` | 78 |
 | `service_mode` | 3 |
-| `service_tier` | 4 |
-| `source_adapter` | 17 |
+| `service_tier` | 8 |
+| `source_adapter` | 21 |
 | `source_priority` | 5 |
 | `strict_error` | 1 |
 | `warning` | 14 |
@@ -60,12 +60,12 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `input_cache_write_tokens` | 20 |
 | `input_image_tokens` | 4 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 121 |
+| `input_uncached_tokens` | 132 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 10 |
 | `output_image_tokens` | 3 |
 | `output_reasoning_tokens` | 50 |
-| `output_text_tokens` | 121 |
+| `output_text_tokens` | 125 |
 | `output_video_tokens` | 2 |
 | `request_units` | 3 |
 | `rerank_search_units` | 2 |

@@ -17,12 +17,14 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 from .core import (
+    _normalize_openai_service_tier,
     _normalize_attribution as _normalize_core_attribution,
     aggregate_cost_ledgers,
     calculate_cost,
     compile_price_catalog,
     extract_usage_ledger,
     from_response,
+    _response_mapping,
 )
 
 def normalize_attribution(value: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
@@ -154,7 +156,7 @@ def _bedrock_batch_item(item: Mapping[str, Any], *, surface: Optional[str]) -> T
 
 
 def from_batch_results(
-    items: Iterable[Mapping[str, Any]],
+    items: Iterable[Any],
     *,
     provider: str,
     surface: Optional[str] = None,
@@ -183,7 +185,7 @@ def from_batch_results(
     successful_ledgers: List[Dict[str, Any]] = []
 
     for index, raw_item in enumerate(items):
-        item = dict(raw_item)
+        item = _response_mapping(raw_item)
         item_id = _batch_item_id(item, index)
         if normalized_provider in {"openai", "kimi", "moonshot", "moonshot-ai", "dashscope", "alibaba"}:
             status, response, error, http_status, metadata = _openai_batch_item(item, surface=surface, endpoint=endpoint)
@@ -244,6 +246,13 @@ def from_batch_results(
                 **{key: value for key, value in options.items() if key != "context"},
             )
             output_item["ledger"] = ledger
+            if item_provider == "anthropic":
+                refusal = (ledger.get("metadata") or {}).get("anthropic_refusal")
+                if isinstance(refusal, Mapping) and refusal.get("detected") is True:
+                    output_item["metadata"]["refusal"] = True
+                    output_item["metadata"]["requires_retry"] = bool(refusal.get("requires_retry"))
+                    if refusal.get("recommended_model"):
+                        output_item["metadata"]["recommended_model"] = refusal["recommended_model"]
             successful_ledgers.append(ledger)
         else:
             output_item["error"] = error or _error_object(None, f"Batch item is {status}.")
@@ -574,7 +583,9 @@ def usage_ledger_from_otel_genai_span(
         or attributes.get("openai.request.service_tier")
     )
     if service_tier:
-        context["service_tier"] = str(service_tier)
+        normalized_tier = _normalize_openai_service_tier(service_tier) if provider_name == "openai" else str(service_tier)
+        if normalized_tier:
+            context["service_tier"] = normalized_tier
     request_id = attributes.get("gen_ai.response.id") or attributes.get("openai.response.id")
     if request_id:
         context["request_id"] = str(request_id)

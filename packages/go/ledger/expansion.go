@@ -332,6 +332,17 @@ func FromBatchResults(items []any, options Object) Object {
 			itemOptions["attribution"] = attribution
 			ledger := fromResponseWithCatalog(unwrapped.response, itemOptions, priceCards, discountPolicies, compiledCatalog)
 			output["ledger"] = ledger
+			if strings.ReplaceAll(strings.ToLower(asString(options["provider"])), "_", "-") == "anthropic" {
+				refusal := asObject(asObject(ledger["metadata"])["anthropic_refusal"])
+				if refusal["detected"] == true {
+					metadata["refusal"] = true
+					metadata["requires_retry"] = refusal["requires_retry"] == true
+					if recommendedModel := asString(refusal["recommended_model"]); recommendedModel != "" {
+						metadata["recommended_model"] = recommendedModel
+					}
+					output["metadata"] = metadata
+				}
+			}
 			ledgers = append(ledgers, ledger)
 		} else {
 			output["error"] = unwrapped.err
@@ -757,6 +768,9 @@ func UsageLedgerFromOTelGenAISpan(span, options Object) Object {
 		attributes["gen_ai.request.service_tier"], attributes["gen_ai.response.service_tier"],
 		attributes["openai.response.service_tier"], attributes["openai.request.service_tier"],
 	)); tier != "" {
+		if provider == "openai" {
+			tier = normalizeOpenAIServiceTier(tier)
+		}
 		context["service_tier"] = tier
 	}
 	if requestID := asString(firstNonNil(attributes["gen_ai.response.id"], attributes["openai.response.id"])); requestID != "" {

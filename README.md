@@ -300,6 +300,11 @@ framework objects from LangChain, Vercel AI SDK, OpenAI Agents SDK, LlamaIndex,
 Haystack, LiteLLM, AutoGen/AG2, LangSmith, Semantic Kernel, and OpenRouter SDK
 paths.
 
+Anthropic Messages includes generic per-attempt fallback attribution across raw
+responses, Python SDK objects, and final streaming events. Ledgers expose the
+requested, attempted, serving, and pricing models; Message Batch refusals remain
+visible as successful provider results that require a separate retry.
+
 See [supported surfaces](docs/reference/supported-surfaces.md) for the current
 matrix.
 

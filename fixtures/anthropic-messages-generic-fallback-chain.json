@@ -1,0 +1,194 @@
+{
+  "name": "anthropic-messages-generic-fallback-chain",
+  "description": "Prices a generic three-model Anthropic fallback chain per attempt, including billed input and partial output from a mid-stream refusal.",
+  "metadata": {
+    "requirement_ids": ["RC-FIXTURE-CONFORMANCE", "RC-RAW-EXTRACTOR"],
+    "provider": "anthropic",
+    "surface": "anthropic.messages",
+    "scenario": "raw_provider_response",
+    "tags": [
+      "anthropic_fallback_billing",
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "generic_fallback",
+      "midstream_refusal",
+      "multi_hop_fallback",
+      "raw_provider_response"
+    ],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "extract": {
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": "claude-primary-fixture"
+    },
+    "raw_response": {
+      "id": "msg_generic_fallback_chain_fixture",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-final-fixture",
+      "content": [
+        {
+          "type": "fallback",
+          "from": {"model": "claude-primary-fixture"},
+          "to": {"model": "claude-middle-fixture"}
+        },
+        {
+          "type": "fallback",
+          "from": {"model": "claude-middle-fixture"},
+          "to": {"model": "claude-final-fixture"}
+        },
+        {"type": "text", "text": "Final fallback answer."}
+      ],
+      "stop_reason": "end_turn",
+      "stop_details": null,
+      "usage": {
+        "input_tokens": 120,
+        "output_tokens": 20,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "iterations": [
+          {
+            "type": "message",
+            "model": "claude-primary-fixture",
+            "input_tokens": 100,
+            "output_tokens": 0,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          },
+          {
+            "type": "message",
+            "model": "claude-middle-fixture",
+            "input_tokens": 110,
+            "output_tokens": 5,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          },
+          {
+            "type": "fallback_message",
+            "model": "claude-final-fixture",
+            "input_tokens": 120,
+            "output_tokens": 20,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0
+          }
+        ]
+      }
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "anthropic:claude-primary-fixture:fallback-chain",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "claude-primary-fixture",
+        "components": [
+          {"usage_component": "input_uncached_tokens", "unit": "token", "price": {"amount": "0.000001", "currency": "USD", "per": "1"}},
+          {"usage_component": "output_text_tokens", "unit": "token", "price": {"amount": "0.000002", "currency": "USD", "per": "1"}}
+        ],
+        "source": {"name": "fixture", "retrieved_at": "2026-07-30T00:00:00Z"}
+      },
+      {
+        "schema_version": "0.1",
+        "id": "anthropic:claude-middle-fixture:fallback-chain",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "claude-middle-fixture",
+        "components": [
+          {"usage_component": "input_uncached_tokens", "unit": "token", "price": {"amount": "0.000002", "currency": "USD", "per": "1"}},
+          {"usage_component": "output_text_tokens", "unit": "token", "price": {"amount": "0.000004", "currency": "USD", "per": "1"}}
+        ],
+        "source": {"name": "fixture", "retrieved_at": "2026-07-30T00:00:00Z"}
+      },
+      {
+        "schema_version": "0.1",
+        "id": "anthropic:claude-final-fixture:fallback-chain",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "claude-final-fixture",
+        "components": [
+          {"usage_component": "input_uncached_tokens", "unit": "token", "price": {"amount": "0.000003", "currency": "USD", "per": "1"}},
+          {"usage_component": "output_text_tokens", "unit": "token", "price": {"amount": "0.000006", "currency": "USD", "per": "1"}}
+        ],
+        "source": {"name": "fixture", "retrieved_at": "2026-07-30T00:00:00Z"}
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": {
+        "requested": "claude-primary-fixture",
+        "returned": "claude-final-fixture",
+        "billed": "claude-final-fixture",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "110",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "0.00022",
+          "price_card_id": "anthropic:claude-middle-fixture:fallback-chain",
+          "discount_eligible": true,
+          "metadata": {"billing_model": "claude-middle-fixture", "usage_iteration_index": 1}
+        },
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "120",
+          "unit": "token",
+          "unit_price": "0.000003",
+          "cost": "0.00036",
+          "price_card_id": "anthropic:claude-final-fixture:fallback-chain",
+          "discount_eligible": true,
+          "metadata": {"billing_model": "claude-final-fixture", "usage_iteration_index": 2}
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "5",
+          "unit": "token",
+          "unit_price": "0.000004",
+          "cost": "0.00002",
+          "price_card_id": "anthropic:claude-middle-fixture:fallback-chain",
+          "discount_eligible": true,
+          "metadata": {"billing_model": "claude-middle-fixture", "usage_iteration_index": 1}
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "20",
+          "unit": "token",
+          "unit_price": "0.000006",
+          "cost": "0.00012",
+          "price_card_id": "anthropic:claude-final-fixture:fallback-chain",
+          "discount_eligible": true,
+          "metadata": {"billing_model": "claude-final-fixture", "usage_iteration_index": 2}
+        }
+      ],
+      "total": "0.00072",
+      "price_sources": [
+        {"name": "fixture", "retrieved_at": "2026-07-30T00:00:00Z"}
+      ],
+      "applied_discounts": [],
+      "warnings": [],
+      "metadata": {
+        "anthropic_fallback": {
+          "attempted": true,
+          "utilized": true,
+          "requested_model": "claude-primary-fixture",
+          "attempted_models": ["claude-primary-fixture", "claude-middle-fixture", "claude-final-fixture"],
+          "pricing_models": ["claude-middle-fixture", "claude-final-fixture"],
+          "serving_model": "claude-final-fixture",
+          "hops": [
+            {"from_model": "claude-primary-fixture", "to_model": "claude-middle-fixture"},
+            {"from_model": "claude-middle-fixture", "to_model": "claude-final-fixture"}
+          ]
+        }
+      }
+    }
+  }
+}

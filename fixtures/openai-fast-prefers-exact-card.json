@@ -1,0 +1,70 @@
+{
+  "name": "openai-fast-prefers-exact-card",
+  "description": "Treats Fast as an independent tier and prefers its exact card even when source priority favors a Priority card.",
+  "metadata": {
+    "requirement_ids": ["RC-FIXTURE-CONFORMANCE", "RC-SOURCE-PRIORITY"],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "service_tier",
+    "tags": ["component:input_uncached_tokens", "fast_mode", "source_priority"],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "options": {
+      "price_source_priority": ["generic-source", "priority-source", "fast-source"]
+    },
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {"requested": "gpt-fast-fixture", "billed": "gpt-fast-fixture", "alias_resolution": "none"},
+      "context": {"service_tier": "fast"},
+      "components": [{"name": "input_uncached_tokens", "quantity": "1000", "unit": "token"}]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-fast-fixture:generic",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-fast-fixture",
+        "components": [{"usage_component": "input_uncached_tokens", "unit": "token", "price": {"amount": "0.1", "currency": "USD", "per": "1000000"}}],
+        "source": {"name": "generic-source", "retrieved_at": "2026-07-30T00:00:00Z"}
+      },
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-fast-fixture:priority",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-fast-fixture",
+        "service_tier": "priority",
+        "components": [{"usage_component": "input_uncached_tokens", "unit": "token", "price": {"amount": "0.5", "currency": "USD", "per": "1000000"}}],
+        "source": {"name": "priority-source", "retrieved_at": "2026-07-30T00:00:00Z"}
+      },
+      {
+        "schema_version": "0.1",
+        "id": "openai:gpt-fast-fixture:fast",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "gpt-fast-fixture",
+        "service_tier": "fast",
+        "components": [{"usage_component": "input_uncached_tokens", "unit": "token", "price": {"amount": "2", "currency": "USD", "per": "1000000"}}],
+        "source": {"name": "fast-source", "retrieved_at": "2026-07-30T00:00:00Z"}
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {"requested": "gpt-fast-fixture", "billed": "gpt-fast-fixture", "alias_resolution": "none"},
+      "currency": "USD",
+      "components": [{"name": "input_uncached_tokens", "quantity": "1000", "unit": "token", "unit_price": "0.000002", "cost": "0.002", "price_card_id": "openai:gpt-fast-fixture:fast", "discount_eligible": true}],
+      "total": "0.002",
+      "price_sources": [{"name": "fast-source", "retrieved_at": "2026-07-30T00:00:00Z"}],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

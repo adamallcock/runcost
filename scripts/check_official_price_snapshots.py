@@ -21,6 +21,7 @@ from runcost import (  # noqa: E402
 DEFAULT_PRICE_SOURCE_PRIORITY = ["openai-official", "anthropic-official", "google-official", "xai-official"]
 SNAPSHOTS = {
     "openai-official-gpt-56-pricing-snapshot.json": "openai-official",
+    "openai-official-gpt-56-pricing-history-through-2026-07-29.json": "openai-official",
     "anthropic-official-pricing-snapshot.json": "anthropic-official",
     "google-official-pricing-snapshot.json": "google-official",
     "xai-official-pricing-snapshot.json": "xai-official",
@@ -179,12 +180,18 @@ def check_openai_gpt56() -> None:
     ]
     by_id = {card.get("id"): card for card in official_cards}
     models = ("gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna")
-    tiers = ("standard", "batch", "flex", "priority")
+    current_tiers = ("standard", "batch", "flex", "priority", "fast")
+    historical_tiers = ("standard", "batch", "flex", "priority")
     expected_ids = {
         f"openai:{model}:{tier}:official-snapshot"
         for model in models
-        for tier in tiers
+        for tier in current_tiers
     }
+    expected_ids.update(
+        f"openai:{model}:{tier}:official-snapshot:through-2026-07-29"
+        for model in ("gpt-5.6-terra", "gpt-5.6-luna")
+        for tier in historical_tiers
+    )
     assert_true(set(by_id) == expected_ids, f"OpenAI GPT-5.6 official card ids mismatch: {sorted(set(by_id) ^ expected_ids)}")
 
     component_order = (
@@ -199,14 +206,17 @@ def check_openai_gpt56() -> None:
         ("gpt-5.6-sol", "batch"): (("2.5", "0.25", "3.125", "15", "15"), ("5", "0.5", "6.25", "22.5", "22.5")),
         ("gpt-5.6-sol", "flex"): (("2.5", "0.25", "3.125", "15", "15"), ("5", "0.5", "6.25", "22.5", "22.5")),
         ("gpt-5.6-sol", "priority"): (("10", "1", "12.5", "60", "60"), None),
-        ("gpt-5.6-terra", "standard"): (("2.5", "0.25", "3.125", "15", "15"), ("5", "0.5", "6.25", "22.5", "22.5")),
-        ("gpt-5.6-terra", "batch"): (("1.25", "0.125", "1.5625", "7.5", "7.5"), ("2.5", "0.25", "3.125", "11.25", "11.25")),
-        ("gpt-5.6-terra", "flex"): (("1.25", "0.125", "1.5625", "7.5", "7.5"), ("2.5", "0.25", "3.125", "11.25", "11.25")),
-        ("gpt-5.6-terra", "priority"): (("5", "0.5", "6.25", "30", "30"), None),
-        ("gpt-5.6-luna", "standard"): (("1", "0.1", "1.25", "6", "6"), ("2", "0.2", "2.5", "9", "9")),
-        ("gpt-5.6-luna", "batch"): (("0.5", "0.05", "0.625", "3", "3"), ("1", "0.1", "1.25", "4.5", "4.5")),
-        ("gpt-5.6-luna", "flex"): (("0.5", "0.05", "0.625", "3", "3"), ("1", "0.1", "1.25", "4.5", "4.5")),
-        ("gpt-5.6-luna", "priority"): (("2", "0.2", "2.5", "12", "12"), None),
+        ("gpt-5.6-sol", "fast"): (("10", "1", "12.5", "60", "60"), None),
+        ("gpt-5.6-terra", "standard"): (("2", "0.2", "2.5", "12", "12"), ("4", "0.4", "5", "18", "18")),
+        ("gpt-5.6-terra", "batch"): (("1", "0.1", "1.25", "6", "6"), ("2", "0.2", "2.5", "9", "9")),
+        ("gpt-5.6-terra", "flex"): (("1", "0.1", "1.25", "6", "6"), ("2", "0.2", "2.5", "9", "9")),
+        ("gpt-5.6-terra", "priority"): (("4", "0.4", "5", "24", "24"), None),
+        ("gpt-5.6-terra", "fast"): (("4", "0.4", "5", "24", "24"), None),
+        ("gpt-5.6-luna", "standard"): (("0.2", "0.02", "0.25", "1.2", "1.2"), ("0.4", "0.04", "0.5", "1.8", "1.8")),
+        ("gpt-5.6-luna", "batch"): (("0.1", "0.01", "0.125", "0.6", "0.6"), ("0.2", "0.02", "0.25", "0.9", "0.9")),
+        ("gpt-5.6-luna", "flex"): (("0.1", "0.01", "0.125", "0.6", "0.6"), ("0.2", "0.02", "0.25", "0.9", "0.9")),
+        ("gpt-5.6-luna", "priority"): (("0.4", "0.04", "0.5", "2.4", "2.4"), None),
+        ("gpt-5.6-luna", "fast"): (("0.4", "0.04", "0.5", "2.4", "2.4"), None),
     }
     for (model, tier), (short_rates, long_rates) in expected_rates.items():
         card = by_id[f"openai:{model}:{tier}:official-snapshot"]
@@ -227,6 +237,42 @@ def check_openai_gpt56() -> None:
         else:
             actual_long = tuple(Decimal(long_components[name]["price"]["amount"]) for name in component_order)
             assert_true(actual_long == tuple(Decimal(rate) for rate in long_rates), f"{model} {tier} long-context rate matrix mismatch")
+
+    historical_rates = {
+        ("gpt-5.6-terra", "standard"): (("2.5", "0.25", "3.125", "15", "15"), ("5", "0.5", "6.25", "22.5", "22.5")),
+        ("gpt-5.6-terra", "batch"): (("1.25", "0.125", "1.5625", "7.5", "7.5"), ("2.5", "0.25", "3.125", "11.25", "11.25")),
+        ("gpt-5.6-terra", "flex"): (("1.25", "0.125", "1.5625", "7.5", "7.5"), ("2.5", "0.25", "3.125", "11.25", "11.25")),
+        ("gpt-5.6-terra", "priority"): (("5", "0.5", "6.25", "30", "30"), None),
+        ("gpt-5.6-luna", "standard"): (("1", "0.1", "1.25", "6", "6"), ("2", "0.2", "2.5", "9", "9")),
+        ("gpt-5.6-luna", "batch"): (("0.5", "0.05", "0.625", "3", "3"), ("1", "0.1", "1.25", "4.5", "4.5")),
+        ("gpt-5.6-luna", "flex"): (("0.5", "0.05", "0.625", "3", "3"), ("1", "0.1", "1.25", "4.5", "4.5")),
+        ("gpt-5.6-luna", "priority"): (("2", "0.2", "2.5", "12", "12"), None),
+    }
+    for (model, tier), (short_rates, long_rates) in historical_rates.items():
+        card = by_id[f"openai:{model}:{tier}:official-snapshot:through-2026-07-29"]
+        assert_true(card.get("effective") == {"from": "2026-06-26", "to": "2026-07-29"}, f"{model} {tier} historical effective window mismatch")
+        short_components = {
+            component.get("usage_component"): component
+            for component in card.get("components", [])
+            if (component.get("conditions") or {}).get("max_total_input_tokens") == "272000"
+        }
+        long_components = {
+            component.get("usage_component"): component
+            for component in card.get("components", [])
+            if (component.get("conditions") or {}).get("min_total_input_tokens") == "272001"
+        }
+        actual_short = tuple(Decimal(short_components[name]["price"]["amount"]) for name in component_order)
+        assert_true(actual_short == tuple(Decimal(rate) for rate in short_rates), f"{model} {tier} historical short-context rate matrix mismatch")
+        if long_rates is None:
+            assert_true(not long_components, f"{model} {tier} historical card must not invent long-context rates")
+        else:
+            actual_long = tuple(Decimal(long_components[name]["price"]["amount"]) for name in component_order)
+            assert_true(actual_long == tuple(Decimal(rate) for rate in long_rates), f"{model} {tier} historical long-context rate matrix mismatch")
+
+    for model in ("gpt-5.6-terra", "gpt-5.6-luna"):
+        for tier in current_tiers:
+            current = by_id[f"openai:{model}:{tier}:official-snapshot"]
+            assert_true(current.get("effective") == {"from": "2026-07-30"}, f"{model} {tier} current effective boundary mismatch")
 
     sol_standard = by_id["openai:gpt-5.6-sol:standard:official-snapshot"]
     assert_true(sol_standard.get("aliases") == ["gpt-5.6"], "gpt-5.6 alias must resolve to Sol")
@@ -275,9 +321,9 @@ def check_openai_gpt56() -> None:
         price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
     )
     long_components = {component.get("name"): component for component in long_ledger.get("components", [])}
-    assert_true(long_ledger["total"] == "1.362255", "GPT-5.6 Terra long-context total mismatch")
-    assert_true(long_components["input_uncached_tokens"]["unit_price"] == "0.000005", "Terra long-context input price mismatch")
-    assert_true(long_components["output_text_tokens"]["unit_price"] == "0.0000225", "Terra long-context output price mismatch")
+    assert_true(long_ledger["total"] == "1.089804", "GPT-5.6 Terra long-context total mismatch")
+    assert_true(long_components["input_uncached_tokens"]["unit_price"] == "0.000004", "Terra long-context input price mismatch")
+    assert_true(long_components["output_text_tokens"]["unit_price"] == "0.000018", "Terra long-context output price mismatch")
 
     boundary_ledger = from_response(
         response={
@@ -296,8 +342,8 @@ def check_openai_gpt56() -> None:
         price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
     )
     boundary_components = {component.get("name"): component for component in boundary_ledger.get("components", [])}
-    assert_true(boundary_ledger["total"] == "0.272006", "GPT-5.6 short-context boundary total mismatch")
-    assert_true(boundary_components["input_uncached_tokens"]["unit_price"] == "0.000001", "272,000 input tokens must retain the short-context rate")
+    assert_true(boundary_ledger["total"] == "0.0544012", "GPT-5.6 short-context boundary total mismatch")
+    assert_true(boundary_components["input_uncached_tokens"]["unit_price"] == "0.0000002", "272,000 input tokens must retain the short-context rate")
 
     flex_ledger = from_response(
         response={
@@ -316,10 +362,107 @@ def check_openai_gpt56() -> None:
         price_cards=cards,
         price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
     )
-    assert_true(flex_ledger["total"] == "0.00076125", "GPT-5.6 Luna Flex cache-write total mismatch")
+    assert_true(flex_ledger["total"] == "0.00015225", "GPT-5.6 Luna Flex cache-write total mismatch")
     assert_true(
         all(component["price_card_id"] == "openai:gpt-5.6-luna:flex:official-snapshot" for component in flex_ledger.get("components", [])),
         "GPT-5.6 Luna Flex response must select the Flex official card",
+    )
+
+    transition_response = {
+        "service_tier": "default",
+        "usage": {
+            "input_tokens": 1000,
+            "input_tokens_details": {"cached_tokens": 100, "cache_write_tokens": 50},
+            "output_tokens": 100,
+            "output_tokens_details": {"reasoning_tokens": 20},
+            "total_tokens": 1100,
+        },
+    }
+    transition_expectations = {
+        "gpt-5.6-terra": ("0.00380625", "0.003045"),
+        "gpt-5.6-luna": ("0.0015225", "0.0003045"),
+    }
+    for model, (historical_total, current_total) in transition_expectations.items():
+        response = {**transition_response, "model": model}
+        before = from_response(
+            response=response,
+            provider="openai",
+            surface="openai.responses",
+            priced_at="2026-07-29T23:59:59Z",
+            price_cards=cards,
+            price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+        )
+        after = from_response(
+            response=response,
+            provider="openai",
+            surface="openai.responses",
+            priced_at="2026-07-30T00:00:00Z",
+            price_cards=cards,
+            price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+        )
+        assert_true(before["total"] == historical_total, f"{model} July 29 historical total mismatch")
+        assert_true(after["total"] == current_total, f"{model} July 30 permanent total mismatch")
+        assert_true(
+            all(component["price_card_id"].endswith(":through-2026-07-29") for component in before.get("components", [])),
+            f"{model} July 29 must use historical cards",
+        )
+        assert_true(
+            all(not component["price_card_id"].endswith(":through-2026-07-29") for component in after.get("components", [])),
+            f"{model} July 30 must use current cards",
+        )
+
+    fast_ledger = from_response(
+        response={
+            "model": "gpt-5.6-luna",
+            "service_tier": "fast",
+            "usage": {
+                "input_tokens": 1000,
+                "input_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0},
+                "output_tokens": 100,
+                "output_tokens_details": {"reasoning_tokens": 0},
+                "total_tokens": 1100,
+            },
+        },
+        provider="openai",
+        surface="openai.responses",
+        priced_at="2026-07-30T00:00:00Z",
+        price_cards=cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    assert_true(fast_ledger["total"] == "0.00064", "GPT-5.6 Luna Fast total mismatch")
+    assert_true(
+        all(component["price_card_id"] == "openai:gpt-5.6-luna:fast:official-snapshot" for component in fast_ledger.get("components", [])),
+        "OpenAI fast must prefer the independent current Fast card",
+    )
+    assert_true(not (fast_ledger.get("metadata") or {}).get("service_tier_resolution"), "Exact Fast pricing must not report a tier fallback")
+
+    priority_only_cards = [card for card in cards if card.get("service_tier") != "fast"]
+    fast_fallback_ledger = from_response(
+        response={
+            "model": "gpt-5.6-luna",
+            "service_tier": "fast",
+            "usage": {
+                "input_tokens": 1000,
+                "input_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0},
+                "output_tokens": 100,
+                "output_tokens_details": {"reasoning_tokens": 0},
+                "total_tokens": 1100,
+            },
+        },
+        provider="openai",
+        surface="openai.responses",
+        priced_at="2026-07-30T00:00:00Z",
+        price_cards=priority_only_cards,
+        price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+    )
+    assert_true(fast_fallback_ledger["total"] == "0.00064", "Fast-to-Priority compatibility fallback total mismatch")
+    assert_true(
+        all(component["price_card_id"] == "openai:gpt-5.6-luna:priority:official-snapshot" for component in fast_fallback_ledger.get("components", [])),
+        "Fast must fall back to Priority only when no applicable Fast card exists",
+    )
+    assert_true(
+        (fast_fallback_ledger.get("metadata") or {}).get("service_tier_resolution", {}).get("priced_as") == "priority",
+        "Fast-to-Priority compatibility fallback must be recorded in ledger metadata",
     )
 
     fallback_card = {
@@ -371,7 +514,12 @@ def check_anthropic_fable_mythos() -> None:
         (card.get("model"), card.get("service_tier") or "standard"): card
         for card in official_cards
     }
-    for model in ("claude-fable-5", "claude-mythos-5"):
+    expected_by_model = {
+        "claude-fable-5": (("10", "12.50", "20", "1", "50"), "0.0125"),
+        "claude-mythos-5": (("10", "12.50", "20", "1", "50"), "0.0125"),
+        "claude-opus-5": (("5", "6.25", "10", "0.50", "25"), "0.00625"),
+    }
+    for model, (expected_rates, expected_batch_total) in expected_by_model.items():
         assert_true((model, "standard") in by_model_and_tier, f"Anthropic official catalog must include standard {model}")
         assert_true((model, "batch") in by_model_and_tier, f"Anthropic official catalog must include batch {model}")
         components = {
@@ -380,11 +528,11 @@ def check_anthropic_fable_mythos() -> None:
             if isinstance(component, dict)
         }
         expected_components = {
-            "input_uncached_tokens": "10",
-            "input_cache_write_tokens": "12.50",
-            "input_cache_write_1h_tokens": "20",
-            "input_cache_read_tokens": "1",
-            "output_text_tokens": "50",
+            "input_uncached_tokens": expected_rates[0],
+            "input_cache_write_tokens": expected_rates[1],
+            "input_cache_write_1h_tokens": expected_rates[2],
+            "input_cache_read_tokens": expected_rates[3],
+            "output_text_tokens": expected_rates[4],
         }
         for component_name, amount in expected_components.items():
             component = components.get(component_name)
@@ -398,11 +546,11 @@ def check_anthropic_fable_mythos() -> None:
             if isinstance(component, dict)
         }
         expected_batch_components = {
-            "input_uncached_tokens": "5",
-            "input_cache_write_tokens": "6.25",
-            "input_cache_write_1h_tokens": "10",
-            "input_cache_read_tokens": "0.5",
-            "output_text_tokens": "25",
+            "input_uncached_tokens": _half(expected_rates[0]),
+            "input_cache_write_tokens": _half(expected_rates[1]),
+            "input_cache_write_1h_tokens": _half(expected_rates[2]),
+            "input_cache_read_tokens": _half(expected_rates[3]),
+            "output_text_tokens": _half(expected_rates[4]),
         }
         for component_name, amount in expected_batch_components.items():
             component = batch_components.get(component_name)
@@ -440,7 +588,7 @@ def check_anthropic_fable_mythos() -> None:
         )
         batch_warning_codes = [warning["code"] for warning in batch_ledger.get("warnings", [])]
         assert_true("component_unpriced" not in batch_warning_codes, f"{model} batch token/cache components must price")
-        assert_true(batch_ledger["total"] == "0.0125", f"{model} batch total must be half the standard total")
+        assert_true(batch_ledger["total"] == expected_batch_total, f"{model} batch total must be half the standard total")
         assert_true(
             all(component.get("price_card_id") == f"anthropic:{model}:batch:official-snapshot" for component in batch_ledger.get("components", [])),
             f"{model} batch usage must select the batch official card",

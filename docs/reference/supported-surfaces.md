@@ -122,9 +122,21 @@ For the full fixture-derived provider/surface/language matrix, see
 - Support means extraction and pricing behavior has at least one shared fixture across Python and JavaScript, with Go coverage through the conformance suite where applicable.
 - Support does not mean every model, region, service tier, tool, or historical price is present.
 - OpenAI Conversations are documented as state resources, not standalone usage-bearing model responses. Price Responses calls that attach to Conversations through the fixture-backed OpenAI Responses extractor.
-- Anthropic Messages extraction is fixture-backed for standard prompt caching, streaming final usage, and Fable 5 fallback billing variants: direct zero-bill classifier blocks, server-side fallback, mid-stream fallback with per-model output attribution, sticky-served fallback turns, and client-side fallback-credit retries.
+- Anthropic Messages extraction is fixture-backed for raw JSON and Python SDK response objects, prompt caching, streaming final usage, and generic fallback chains. `usage.iterations` is priced per attempt/model; pre-output refusals are zero billable, mid-stream refusals retain input/cache and partial output, and structured `anthropic_fallback` metadata names the requested, attempted, serving, and pricing models. Detection follows `stop_reason: "refusal"` even when `stop_details.category` is null or unknown.
+- Anthropic Message Batch refusals remain provider-status `succeeded` but are marked `metadata.refusal: true` and `metadata.requires_retry: true`; a separately submitted retry result is priced from its returned model at the batch tier. Anthropic does not support server-side fallback or fallback-credit redemption inside Message Batches.
 - OpenAI Responses hosted tool extraction is fixture-backed for web search, file search, code interpreter calls, computer-use action counts, and function-call counts. Responses usage detail fields for cache writes, orchestration input, cached orchestration input, and orchestration output are mapped onto the existing cache-write, input, cache-read, and output token components when present. Chat Completions and OpenAI Agents SDK usage also map the documented `cache_write_tokens` detail field.
-- Targeted OpenAI GPT-5.6 fixtures cover Standard, Batch, Flex, and Priority pricing. Standard, Batch, and Flex include the published 272,000-token long-context split; Priority remains short-context only because OpenAI does not currently publish Priority long-context rates. These snapshots are conformance evidence, not package defaults.
+- Targeted OpenAI GPT-5.6 fixtures cover Standard, Batch, Flex, and Fast
+  (formerly Priority) pricing. Standard, Batch, and Flex include the published
+  272,000-token long-context split; Fast remains short-context only because
+  OpenAI does not currently publish Fast long-context rates. Terra and Luna
+  retain their original reviewed prices through July 29, 2026 and select the
+  permanent lower cards from July 30 onward. `fast` and `priority` remain
+  independent request and price-card tiers. Exact Fast cards take precedence;
+  when none apply, Fast may fall back one-way to Priority with explicit
+  resolution metadata. Priority never falls forward to Fast. Raw Responses
+  `created_at` or Chat Completions `created` timestamps provide `priced_at`
+  automatically when no caller override is present. These snapshots are
+  conformance evidence, not package defaults.
 - Pricing-period selection is fixture-backed for DeepSeek-style UTC peak and
   regular windows. When a provider response does not contain a usable timestamp,
   callers can set `context.priced_at` on normalized usage or pass an explicit

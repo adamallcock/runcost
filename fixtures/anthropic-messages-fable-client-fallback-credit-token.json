@@ -1,6 +1,6 @@
 {
   "name": "anthropic-messages-fable-client-fallback-credit-token",
-  "description": "Auto-detects an Anthropic client-side fallback credit token on the request metadata and bills the Opus retry input/cache prefix as cache read.",
+  "description": "Treats Anthropic's retry usage fields as authoritative when a fallback-credit token was sent; the token alone does not prove redemption.",
   "metadata": {
     "requirement_ids": [
       "RC-FIXTURE-CONFORMANCE",
@@ -14,6 +14,8 @@
       "cache",
       "client_fallback_credit",
       "component:input_cache_read_tokens",
+      "component:input_cache_write_tokens",
+      "component:input_uncached_tokens",
       "component:output_text_tokens",
       "fallback_credit_token",
       "fable_fallback",
@@ -120,17 +122,31 @@
       "currency": "USD",
       "components": [
         {
+          "name": "input_uncached_tokens",
+          "quantity": "500",
+          "unit": "token",
+          "unit_price": "0.000005",
+          "cost": "0.0025",
+          "price_card_id": "anthropic:claude-opus-4-8:client-credit-token-fixture",
+          "discount_eligible": true
+        },
+        {
           "name": "input_cache_read_tokens",
-          "quantity": "620",
+          "quantity": "20",
           "unit": "token",
           "unit_price": "0.0000005",
-          "cost": "0.00031",
+          "cost": "0.00001",
           "price_card_id": "anthropic:claude-opus-4-8:client-credit-token-fixture",
-          "discount_eligible": true,
-          "metadata": {
-            "billing_model": "claude-opus-4-8",
-            "anthropic_fallback_billing": "client_fallback_credit_cache_read"
-          }
+          "discount_eligible": true
+        },
+        {
+          "name": "input_cache_write_tokens",
+          "quantity": "100",
+          "unit": "token",
+          "unit_price": "0.00000625",
+          "cost": "0.000625",
+          "price_card_id": "anthropic:claude-opus-4-8:client-credit-token-fixture",
+          "discount_eligible": true
         },
         {
           "name": "output_text_tokens",
@@ -142,7 +158,7 @@
           "discount_eligible": true
         }
       ],
-      "total": "0.00131",
+      "total": "0.004135",
       "price_sources": [
         {
           "name": "fixture",
@@ -150,7 +166,13 @@
         }
       ],
       "applied_discounts": [],
-      "warnings": []
+      "warnings": [],
+      "metadata": {
+        "anthropic_fallback_credit": {
+          "signaled": true,
+          "pricing_source": "reported_usage"
+        }
+      }
     }
   }
 }

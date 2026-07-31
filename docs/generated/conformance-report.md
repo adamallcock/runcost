@@ -18,12 +18,12 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 
 ## Summary
 
-202 cases are inventoried.
+216 cases are inventoried.
 
 | Outcome | Cases |
 | --- | ---: |
-| Preserved | 148 |
-| Warned | 47 |
+| Preserved | 161 |
+| Warned | 48 |
 | Unsupported | 7 |
 | Not Tested | 0 |
 
@@ -42,10 +42,12 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `anthropic-messages-fable-server-fallback` | anthropic | `anthropic.messages` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `anthropic-messages-fable-sticky-fallback-inferred` | anthropic | `anthropic.messages` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `anthropic-messages-fable-sticky-fallback-served` | anthropic | `anthropic.messages` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `anthropic-messages-generic-fallback-chain` | anthropic | `anthropic.messages` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `anthropic-messages-missing-usage-warning` | anthropic | `anthropic.messages` | warned | python: warned, javascript: warned, go: warned |
 | `anthropic-messages-raw-cache-1h` | anthropic | `anthropic.messages` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `anthropic-messages-raw-cache` | anthropic | `anthropic.messages` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `anthropic-messages-stream-events` | anthropic | `anthropic.messages` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `anthropic-messages-stream-fallback-events` | anthropic | `anthropic.messages` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `azure-openai-chat-raw-reasoning` | azure | `azure.openai.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `bedrock-converse-raw-cache` | bedrock | `aws.bedrock.converse` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `bedrock-invoke-model-anthropic-messages` | bedrock | `aws.bedrock.invoke_model` | preserved | python: preserved, javascript: preserved, go: preserved |
@@ -130,12 +132,21 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `openai-agents-sdk-usage` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `openai-audio-transcription-duration-usage` | openai | `openai.audio_transcriptions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-audio-transcription-token-usage` | openai | `openai.audio_transcriptions` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `openai-chat-fast-exact-card` | openai | `openai.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `openai-chat-gpt-56-terra-created-historical-price` | openai | `openai.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-chat-raw-cached-reasoning` | openai | `openai.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-chat-stream-final-usage-chunk` | openai | `openai.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-embeddings-raw-basic` | openai | `openai.embeddings` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `openai-fast-prefers-exact-card` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `openai-gpt-56-luna-price-before-july-30` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `openai-gpt-56-luna-price-from-july-30` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `openai-gpt-56-terra-price-before-july-30` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `openai-gpt-56-terra-price-from-july-30` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-images-token-usage` | openai | `openai.images` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-images-unit-usage` | openai | `openai.images` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `openai-priority-does-not-fallback-to-fast` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `openai-responses-basic` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `openai-responses-gpt-56-luna-fast-tier` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-responses-raw-cached-reasoning` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-responses-raw-computer-and-function-tools` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `openai-responses-raw-dated-alias` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
@@ -207,6 +218,7 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `openai-embeddings-batch` | openai | `from_batch_results` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-images-batch` | openai | `openai.images` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `anthropic-message-batch-partial` | anthropic | `from_batch_results` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `anthropic-message-batch-refusal-retry` | anthropic | `from_batch_results` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `gemini-developer-batch-partial` | google | `from_batch_results` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `vertex-gemini-batch` | vertex | `from_batch_results` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `bedrock-model-invocation-batch` | bedrock | `aws.bedrock.invoke_model` | preserved | python: preserved, javascript: preserved, go: preserved |
@@ -225,6 +237,8 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `minimax-anthropic-compatible-route` | minimax | `from_response` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `otel-genai-usage-netting` | cross-provider | `usage_ledger_from_otel` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `otel-genai-cost` | cross-provider | `from_otel` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `otel-genai-fast-tier` | cross-provider | `from_otel` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `otel-genai-fast-request-context` | cross-provider | `usage_ledger_from_otel` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `precall-estimate-attribution` | openai | `openai.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `precall-estimate-attribution-tag-miss` | openai | `openai.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `budget-warning` | cross-provider | `evaluate_budget` | preserved | python: preserved, javascript: preserved, go: preserved |

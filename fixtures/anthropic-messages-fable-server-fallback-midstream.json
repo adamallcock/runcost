@@ -11,12 +11,11 @@
     "scenario": "raw_provider_response",
     "tags": [
       "anthropic_fallback_billing",
-      "cache",
-      "component:input_cache_read_tokens",
+      "component:input_uncached_tokens",
       "component:output_text_tokens",
       "fable_fallback",
       "raw_provider_response",
-      "streaming"
+      "midstream_refusal"
     ],
     "expected_languages": [
       "python",
@@ -169,18 +168,31 @@
       "currency": "USD",
       "components": [
         {
-          "name": "input_cache_read_tokens",
+          "name": "input_uncached_tokens",
           "quantity": "420",
           "unit": "token",
-          "unit_price": "0.0000005",
-          "cost": "0.00021",
+          "unit_price": "0.000005",
+          "cost": "0.0021",
           "price_card_id": "anthropic:claude-opus-4-8:midstream-fixture",
           "discount_eligible": true,
           "metadata": {
             "billing_model": "claude-opus-4-8",
             "usage_iteration_index": 1,
-            "usage_iteration_type": "fallback_message",
-            "anthropic_fallback_billing": "fable_to_opus_cache_read"
+            "usage_iteration_type": "fallback_message"
+          }
+        },
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "408",
+          "unit": "token",
+          "unit_price": "0.00001",
+          "cost": "0.00408",
+          "price_card_id": "anthropic:claude-fable-5:midstream-fixture",
+          "discount_eligible": true,
+          "metadata": {
+            "billing_model": "claude-fable-5",
+            "usage_iteration_index": 0,
+            "usage_iteration_type": "message"
           }
         },
         {
@@ -212,7 +224,7 @@
           }
         }
       ],
-      "total": "0.00681",
+      "total": "0.01278",
       "price_sources": [
         {
           "name": "fixture-fable",
@@ -224,7 +236,30 @@
         }
       ],
       "applied_discounts": [],
-      "warnings": []
+      "warnings": [],
+      "metadata": {
+        "anthropic_fallback": {
+          "attempted": true,
+          "utilized": true,
+          "requested_model": "claude-fable-5",
+          "attempted_models": [
+            "claude-fable-5",
+            "claude-opus-4-8"
+          ],
+          "pricing_models": [
+            "claude-fable-5",
+            "claude-opus-4-8"
+          ],
+          "source": "usage.iterations",
+          "serving_model": "claude-opus-4-8",
+          "hops": [
+            {
+              "from_model": "claude-fable-5",
+              "to_model": "claude-opus-4-8"
+            }
+          ]
+        }
+      }
     }
   }
 }

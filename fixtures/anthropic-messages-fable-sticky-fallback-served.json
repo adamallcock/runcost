@@ -11,8 +11,7 @@
     "scenario": "raw_provider_response",
     "tags": [
       "anthropic_fallback_billing",
-      "cache",
-      "component:input_cache_read_tokens",
+      "component:input_uncached_tokens",
       "component:output_text_tokens",
       "fable_fallback",
       "raw_provider_response",
@@ -117,18 +116,17 @@
       "currency": "USD",
       "components": [
         {
-          "name": "input_cache_read_tokens",
+          "name": "input_uncached_tokens",
           "quantity": "300",
           "unit": "token",
-          "unit_price": "0.0000005",
-          "cost": "0.00015",
+          "unit_price": "0.000005",
+          "cost": "0.0015",
           "price_card_id": "anthropic:claude-opus-4-8:sticky-fixture",
           "discount_eligible": true,
           "metadata": {
             "billing_model": "claude-opus-4-8",
             "usage_iteration_index": 0,
-            "usage_iteration_type": "fallback_message",
-            "anthropic_fallback_billing": "fable_to_opus_cache_read"
+            "usage_iteration_type": "fallback_message"
           }
         },
         {
@@ -146,7 +144,7 @@
           }
         }
       ],
-      "total": "0.00215",
+      "total": "0.0035",
       "price_sources": [
         {
           "name": "fixture",
@@ -154,7 +152,22 @@
         }
       ],
       "applied_discounts": [],
-      "warnings": []
+      "warnings": [],
+      "metadata": {
+        "anthropic_fallback": {
+          "attempted": true,
+          "utilized": true,
+          "requested_model": "claude-fable-5",
+          "attempted_models": [
+            "claude-opus-4-8"
+          ],
+          "pricing_models": [
+            "claude-opus-4-8"
+          ],
+          "source": "usage.iterations",
+          "serving_model": "claude-opus-4-8"
+        }
+      }
     }
   }
 }

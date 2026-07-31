@@ -42,7 +42,7 @@ the release mechanism. Do not use subdirectory tags for the current layout.
 ```bash
 npm test
 npm run check:coverage
-npm run check:default-prices
+npm run check:prices
 npm run check:gates
 npm run check:packages
 npm run check:release

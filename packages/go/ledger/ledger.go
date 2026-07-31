@@ -1142,7 +1142,7 @@ func sourcePriority(options Object) []any {
 	return priority
 }
 
-func matchingCards(usageLedger Object, priceCards []any, options Object) []Object {
+func matchingCardsExact(usageLedger Object, priceCards []any, options Object) []Object {
 	type scoredCard struct {
 		card       Object
 		index      int
@@ -1201,6 +1201,42 @@ func matchingCards(usageLedger Object, priceCards []any, options Object) []Objec
 		cards = append(cards, item.card)
 	}
 	return cards
+}
+
+func matchingCards(usageLedger Object, priceCards []any, options Object) []Object {
+	exact := matchingCardsExact(usageLedger, priceCards, options)
+	context := usageContext(usageLedger)
+	if asString(usageLedger["provider"]) != "openai" || asString(context["service_tier"]) != "fast" {
+		return exact
+	}
+	exactFast := []Object{}
+	for _, card := range exact {
+		if asString(card["service_tier"]) == "fast" {
+			exactFast = append(exactFast, card)
+		}
+	}
+	if len(exactFast) > 0 {
+		return exactFast
+	}
+	fallbackUsageLedger := cloneObject(usageLedger)
+	fallbackContext := cloneObject(context)
+	fallbackContext["service_tier"] = "priority"
+	fallbackUsageLedger["context"] = fallbackContext
+	priorityFallback := []Object{}
+	for _, card := range matchingCardsExact(fallbackUsageLedger, priceCards, options) {
+		if asString(card["service_tier"]) == "priority" {
+			priorityFallback = append(priorityFallback, card)
+		}
+	}
+	return priorityFallback
+}
+
+func serviceTierFallbackMetadata(usageLedger, card Object) Object {
+	context := usageContext(usageLedger)
+	if asString(usageLedger["provider"]) == "openai" && asString(context["service_tier"]) == "fast" && asString(card["service_tier"]) == "priority" {
+		return Object{"requested": "fast", "priced_as": "priority", "fallback": true}
+	}
+	return Object{}
 }
 
 func priceLookupCacheKey(usageLedger Object, options Object) string {
@@ -2276,6 +2312,7 @@ func calculateCostWithCompiledOptions(usageLedger Object, catalog *CompiledPrice
 	warnedNoMatchingCard := map[string]bool{}
 	warnedAliasInferred := false
 	warnedStaleCards := map[string]bool{}
+	serviceTierFallbackCardIDs := map[string]bool{}
 	type priceLookupResult struct {
 		hasModelCard           bool
 		modelSurfaceCardExists bool
@@ -2373,7 +2410,12 @@ func calculateCostWithCompiledOptions(usageLedger Object, catalog *CompiledPrice
 		}
 		card := asObject(matches[0]["card"])
 		priceComponent := asObject(matches[0]["price_component"])
-		componentMetadata := asObject(matches[0]["component_metadata"])
+		componentMetadata := cloneObject(asObject(matches[0]["component_metadata"]))
+		serviceTierResolution := serviceTierFallbackMetadata(componentUsageLedger, card)
+		if len(serviceTierResolution) > 0 {
+			componentMetadata["service_tier_resolution"] = serviceTierResolution
+			serviceTierFallbackCardIDs[asString(card["id"])] = true
+		}
 		periodSelection := pricingPeriodSelection(componentUsageLedger, card)
 		periodMetadata := Object{}
 		if asString(periodSelection["pricing_period"]) == cardPricingPeriod(card) {
@@ -2392,6 +2434,9 @@ func calculateCostWithCompiledOptions(usageLedger Object, catalog *CompiledPrice
 		}
 		for key, value := range periodMetadata {
 			traceDecision[key] = value
+		}
+		if len(serviceTierResolution) > 0 {
+			traceDecision["service_tier_resolution"] = serviceTierResolution
 		}
 		appendTraceDecision(trace, traceDecision)
 		if asString(card["model"]) != componentBilledModel && containsString(asSlice(card["aliases"]), componentBilledModel) {
@@ -2519,6 +2564,25 @@ func calculateCostWithCompiledOptions(usageLedger Object, catalog *CompiledPrice
 		result["debug_trace"] = trace
 	}
 	if metadata, ok := objectValue(usageLedger["metadata"]); ok && len(metadata) > 0 {
+		result["metadata"] = cloneObject(metadata)
+	}
+	if len(serviceTierFallbackCardIDs) > 0 {
+		cardIDs := []string{}
+		for cardID := range serviceTierFallbackCardIDs {
+			cardIDs = append(cardIDs, cardID)
+		}
+		sort.Strings(cardIDs)
+		cardIDValues := []any{}
+		for _, cardID := range cardIDs {
+			cardIDValues = append(cardIDValues, cardID)
+		}
+		metadata := cloneObject(asObject(result["metadata"]))
+		metadata["service_tier_resolution"] = Object{
+			"requested":      "fast",
+			"priced_as":      "priority",
+			"fallback":       true,
+			"price_card_ids": cardIDValues,
+		}
 		result["metadata"] = metadata
 	}
 	if attribution := NormalizeAttribution(asObject(usageLedger["attribution"])); len(attribution) > 0 {
@@ -2997,8 +3061,12 @@ func usageContextFromOptions(response Object, provider string, options Object) O
 		context["priced_at"] = pricedAt
 	} else if pricedAt := asString(options["pricedAt"]); pricedAt != "" {
 		context["priced_at"] = pricedAt
-	} else if provider == "deepseek" && asString(context["priced_at"]) == "" && asString(context["pricedAt"]) == "" {
-		if createdPricedAt := unixSecondsPricedAt(response["created"]); createdPricedAt != "" {
+	} else if (provider == "deepseek" || provider == "openai") && asString(context["priced_at"]) == "" && asString(context["pricedAt"]) == "" {
+		timestamp := response["created"]
+		if provider == "openai" && response["created_at"] != nil {
+			timestamp = response["created_at"]
+		}
+		if createdPricedAt := unixSecondsPricedAt(timestamp); createdPricedAt != "" {
 			context["priced_at"] = createdPricedAt
 		}
 	}
@@ -3105,6 +3173,16 @@ func openAICompatibleChatPayload(response Object) Object {
 	if len(chunks) == 0 {
 		return response
 	}
+	fallbackServiceTier := asString(firstNonNil(response["service_tier"], response["serviceTier"]))
+	if fallbackServiceTier == "" {
+		for _, rawChunk := range chunks {
+			chunk := asObject(rawChunk)
+			fallbackServiceTier = asString(firstNonNil(chunk["service_tier"], chunk["serviceTier"]))
+			if fallbackServiceTier != "" {
+				break
+			}
+		}
+	}
 	for index := len(chunks) - 1; index >= 0; index-- {
 		chunk := asObject(chunks[index])
 		if _, ok := chunk["usage"]; ok {
@@ -3118,6 +3196,9 @@ func openAICompatibleChatPayload(response Object) Object {
 			}
 			if asString(payload["model"]) == "" && asString(response["model"]) != "" {
 				payload["model"] = response["model"]
+			}
+			if asString(firstNonNil(payload["service_tier"], payload["serviceTier"])) == "" && fallbackServiceTier != "" {
+				payload["service_tier"] = fallbackServiceTier
 			}
 			return payload
 		}
@@ -3940,6 +4021,7 @@ func anthropicMessagesPayload(response Object) Object {
 	}
 	message := Object{}
 	usage := Object{}
+	content := []any{}
 	for _, rawEvent := range events {
 		event, ok := objectValue(rawEvent)
 		if !ok {
@@ -3956,6 +4038,16 @@ func anthropicMessagesPayload(response Object) Object {
 					for key, value := range startUsage {
 						usage[key] = value
 					}
+				}
+				content = append(content, asSlice(startMessage["content"])...)
+			}
+		case "content_block_start":
+			if block, ok := objectValue(event["content_block"]); ok {
+				if index, valid := optionalInt(event["index"]); valid && index >= 0 {
+					for len(content) <= index {
+						content = append(content, nil)
+					}
+					content[index] = block
 				}
 			}
 		case "message_delta":
@@ -3975,16 +4067,19 @@ func anthropicMessagesPayload(response Object) Object {
 		return response
 	}
 	message["usage"] = usage
+	if len(content) > 0 {
+		compacted := []any{}
+		for _, block := range content {
+			if block != nil {
+				compacted = append(compacted, block)
+			}
+		}
+		message["content"] = compacted
+	}
+	if servingModel := anthropicServingModel(message, usage); servingModel != "" {
+		message["model"] = servingModel
+	}
 	return message
-}
-
-const anthropicFable5Model = "claude-fable-5"
-const anthropicOpus48Model = "claude-opus-4-8"
-
-var anthropicFallbackClassifierCategories = map[string]bool{
-	"cyber":                true,
-	"bio":                  true,
-	"reasoning_extraction": true,
 }
 
 func anthropicFallbackPairs(response Object) [][2]string {
@@ -4008,42 +4103,46 @@ func anthropicFallbackPairs(response Object) [][2]string {
 	return pairs
 }
 
-func anthropicClassifierBlocked(response Object) bool {
-	if asString(response["stop_reason"]) != "refusal" {
-		return false
-	}
-	details, ok := objectValue(response["stop_details"])
-	if !ok || len(details) == 0 {
-		return false
-	}
-	_, hasFallbackCreditToken := details["fallback_credit_token"]
-	return anthropicFallbackClassifierCategories[asString(details["category"])] ||
-		asString(details["recommended_model"]) == anthropicOpus48Model ||
-		hasFallbackCreditToken ||
-		details["fallback_has_prefill_claim"] == true
+func anthropicRefused(response Object) bool {
+	return asString(response["stop_reason"]) == "refusal"
 }
 
-func anthropicIsFableToOpusFallbackIteration(iteration Object, previousModels []string, requestedModel string, fallbackPairs [][2]string) bool {
-	if asString(iteration["type"]) != "fallback_message" {
-		return false
-	}
-	if asString(iteration["model"]) != anthropicOpus48Model {
-		return false
-	}
-	if requestedModel == anthropicFable5Model {
-		return true
-	}
-	for _, model := range previousModels {
-		if model == anthropicFable5Model {
-			return true
+func anthropicIterations(usage Object) []Object {
+	iterations := []Object{}
+	for _, rawIteration := range asSlice(usage["iterations"]) {
+		if iteration, ok := objectValue(rawIteration); ok {
+			iterations = append(iterations, iteration)
 		}
 	}
-	for _, pair := range fallbackPairs {
-		if pair[0] == anthropicFable5Model && pair[1] == anthropicOpus48Model {
-			return true
+	return iterations
+}
+
+func anthropicServingModel(response Object, usage Object) string {
+	iterations := anthropicIterations(usage)
+	for index := len(iterations) - 1; index >= 0; index-- {
+		iteration := iterations[index]
+		if asString(iteration["type"]) == "fallback_message" && asString(iteration["model"]) != "" {
+			return asString(iteration["model"])
 		}
 	}
-	return false
+	return asString(response["model"])
+}
+
+func anthropicRequestedModel(response Object, usage Object, requestedModel string) string {
+	if requestedModel != "" {
+		return requestedModel
+	}
+	if pairs := anthropicFallbackPairs(response); len(pairs) > 0 {
+		return pairs[0][0]
+	}
+	iterations := anthropicIterations(usage)
+	if len(iterations) > 1 && asString(iterations[0]["model"]) != "" {
+		return asString(iterations[0]["model"])
+	}
+	if model := asString(response["model"]); model != "" {
+		return model
+	}
+	return "unknown"
 }
 
 func anthropicIterationMetadata(iteration Object, index int, billingModel string) Object {
@@ -4057,32 +4156,30 @@ func anthropicIterationMetadata(iteration Object, index int, billingModel string
 	return metadata
 }
 
-func anthropicFallbackCacheReadQuantity(iteration Object) string {
-	return add(add(getNumber(iteration, "input_tokens"), getNumber(iteration, "cache_creation_input_tokens")), getNumber(iteration, "cache_read_input_tokens"))
+func anthropicAttemptRefusedBeforeOutput(response, iteration Object, index, iterationCount int, hasFallbackIteration bool) bool {
+	if rat(getNumber(iteration, "output_tokens")).Sign() > 0 {
+		return false
+	}
+	if hasFallbackIteration && index < iterationCount-1 {
+		return true
+	}
+	return index == iterationCount-1 && anthropicRefused(response)
 }
 
 func anthropicMessagesIterationComponents(response Object, usage Object, requestedModel string) []any {
-	iterations := asSlice(usage["iterations"])
+	iterations := anthropicIterations(usage)
 	if len(iterations) == 0 {
 		return []any{}
 	}
 	components := []any{}
-	previousModels := []string{}
-	fallbackPairs := anthropicFallbackPairs(response)
-	classifierBlocked := anthropicClassifierBlocked(response)
 	hasFallbackIteration := false
-	for _, rawIteration := range iterations {
-		iteration, ok := objectValue(rawIteration)
-		if ok && asString(iteration["type"]) == "fallback_message" {
+	for _, iteration := range iterations {
+		if asString(iteration["type"]) == "fallback_message" {
 			hasFallbackIteration = true
 			break
 		}
 	}
-	for index, rawIteration := range iterations {
-		iteration, ok := objectValue(rawIteration)
-		if !ok {
-			continue
-		}
+	for index, iteration := range iterations {
 		iterationModel := asString(iteration["model"])
 		if iterationModel == "" {
 			iterationModel = asString(response["model"])
@@ -4092,19 +4189,8 @@ func anthropicMessagesIterationComponents(response Object, usage Object, request
 		}
 		sourceRoot := fmt.Sprintf("$.usage.iterations[%d]", index)
 		metadata := anthropicIterationMetadata(iteration, index, iterationModel)
-		isFableToOpus := anthropicIsFableToOpusFallbackIteration(iteration, previousModels, requestedModel, fallbackPairs)
-		suppressClassifierInput := false
-		if isFableToOpus {
-			fallbackMetadata := Object{}
-			for key, value := range metadata {
-				fallbackMetadata[key] = value
-			}
-			fallbackMetadata["anthropic_fallback_billing"] = "fable_to_opus_cache_read"
-			components = append(components, positiveComponentWithMetadata("input_cache_read_tokens", anthropicFallbackCacheReadQuantity(iteration), "token", sourceRoot+".input_tokens", fallbackMetadata))
-		} else {
-			suppressClassifierInput = classifierBlocked && !hasFallbackIteration && rat(getNumber(iteration, "output_tokens")).Sign() <= 0
-		}
-		if !isFableToOpus && !suppressClassifierInput && (!hasFallbackIteration || asString(iteration["type"]) == "fallback_message") {
+		refusedBeforeOutput := anthropicAttemptRefusedBeforeOutput(response, iteration, index, len(iterations), hasFallbackIteration)
+		if !refusedBeforeOutput {
 			cacheWrite := getNumber(iteration, "cache_creation_input_tokens")
 			cacheWrite1h := getNumber(iteration, "cache_creation_input_tokens_1h")
 			components = append(components,
@@ -4113,10 +4199,7 @@ func anthropicMessagesIterationComponents(response Object, usage Object, request
 				positiveComponentWithMetadata("input_cache_write_1h_tokens", cacheWrite1h, "token", sourceRoot+".cache_creation_input_tokens_1h", metadata),
 				positiveComponentWithMetadata("input_cache_read_tokens", getNumber(iteration, "cache_read_input_tokens"), "token", sourceRoot+".cache_read_input_tokens", metadata),
 			)
-		}
-		components = append(components, positiveComponentWithMetadata("output_text_tokens", getNumber(iteration, "output_tokens"), "token", sourceRoot+".output_tokens", metadata))
-		if iterationModel != "" {
-			previousModels = append(previousModels, iterationModel)
+			components = append(components, positiveComponentWithMetadata("output_text_tokens", getNumber(iteration, "output_tokens"), "token", sourceRoot+".output_tokens", metadata))
 		}
 	}
 	return compactComponents(components)
@@ -4135,11 +4218,78 @@ func anthropicClientFallbackCreditEnabled(response Object, options Object) bool 
 		response["fallback_credit_token"] != nil
 }
 
-func anthropicClientFallbackCreditModel(response Object, requestedModel string) string {
-	if model := asString(response["model"]); model != "" {
-		return model
+func anthropicResponseMetadata(response, usage Object, requestedModel string, components []any, fallbackCreditSignaled bool) Object {
+	metadata := Object{}
+	iterations := anthropicIterations(usage)
+	fallbackIterations := []Object{}
+	for _, iteration := range iterations {
+		if asString(iteration["type"]) == "fallback_message" {
+			fallbackIterations = append(fallbackIterations, iteration)
+		}
 	}
-	return requestedModel
+	fallbackPairs := anthropicFallbackPairs(response)
+	if len(fallbackIterations) > 0 || len(fallbackPairs) > 0 {
+		attemptedModels := []any{}
+		for _, iteration := range iterations {
+			if model := asString(iteration["model"]); model != "" {
+				attemptedModels = append(attemptedModels, model)
+			}
+		}
+		pricingModels := []any{}
+		pricingModelSeen := map[string]bool{}
+		for _, rawComponent := range components {
+			model := componentBillingModel(asObject(rawComponent))
+			if model != "" && !pricingModelSeen[model] {
+				pricingModels = append(pricingModels, model)
+				pricingModelSeen[model] = true
+			}
+		}
+		servingModel := anthropicServingModel(response, usage)
+		if len(pricingModels) == 0 && len(components) > 0 && servingModel != "" {
+			pricingModels = append(pricingModels, servingModel)
+		}
+		fallback := Object{
+			"attempted":        true,
+			"utilized":         !anthropicRefused(response),
+			"requested_model":  requestedModel,
+			"attempted_models": attemptedModels,
+			"pricing_models":   pricingModels,
+			"source":           "content.fallback",
+		}
+		if len(fallbackIterations) > 0 {
+			fallback["source"] = "usage.iterations"
+		}
+		if servingModel != "" {
+			fallback["serving_model"] = servingModel
+		}
+		if len(fallbackPairs) > 0 {
+			hops := []any{}
+			for _, pair := range fallbackPairs {
+				hops = append(hops, Object{"from_model": pair[0], "to_model": pair[1]})
+			}
+			fallback["hops"] = hops
+		}
+		metadata["anthropic_fallback"] = fallback
+	}
+	if anthropicRefused(response) {
+		details := asObject(response["stop_details"])
+		refusal := Object{
+			"detected":                  true,
+			"pre_output":                rat(getNumber(usage, "output_tokens")).Sign() <= 0,
+			"requires_retry":            true,
+			"fallback_credit_available": asString(details["fallback_credit_token"]) != "",
+		}
+		for _, key := range []string{"category", "recommended_model"} {
+			if details[key] != nil {
+				refusal[key] = details[key]
+			}
+		}
+		metadata["anthropic_refusal"] = refusal
+	}
+	if fallbackCreditSignaled {
+		metadata["anthropic_fallback_credit"] = Object{"signaled": true, "pricing_source": "reported_usage"}
+	}
+	return metadata
 }
 
 func extractAnthropicMessagesUsage(response Object, options Object) Object {
@@ -4152,26 +4302,14 @@ func extractAnthropicMessagesUsage(response Object, options Object) Object {
 		provider = "anthropic"
 	}
 	requestedModel := asString(options["model"])
-	if requestedModel == "" {
-		requestedModel = asString(response["model"])
-	}
+	requestedModel = anthropicRequestedModel(response, usage, requestedModel)
+	servingModel := anthropicServingModel(response, usage)
 	components := anthropicMessagesIterationComponents(response, usage, requestedModel)
 	metadata := Object{}
-	classifierZeroBillable := anthropicClassifierBlocked(response) && rat(getNumber(usage, "output_tokens")).Sign() <= 0
+	refusalZeroBillable := anthropicRefused(response) && rat(getNumber(usage, "output_tokens")).Sign() <= 0
+	fallbackCreditSignaled := anthropicClientFallbackCreditEnabled(response, options)
 	if len(components) == 0 {
-		if anthropicClientFallbackCreditEnabled(response, options) && anthropicClientFallbackCreditModel(response, requestedModel) == anthropicOpus48Model {
-			billingModel := asString(response["model"])
-			if billingModel == "" {
-				billingModel = requestedModel
-			}
-			components = compactComponents([]any{
-				positiveComponentWithMetadata("input_cache_read_tokens", add(add(getNumber(usage, "input_tokens"), cacheWrite), getNumber(usage, "cache_read_input_tokens")), "token", "$.usage.input_tokens", Object{
-					"billing_model":              billingModel,
-					"anthropic_fallback_billing": "client_fallback_credit_cache_read",
-				}),
-				positiveComponent("output_text_tokens", getNumber(usage, "output_tokens"), "token", "$.usage.output_tokens"),
-			})
-		} else if anthropicClassifierBlocked(response) && rat(getNumber(usage, "output_tokens")).Sign() <= 0 {
+		if refusalZeroBillable {
 			components = []any{}
 			metadata["zero_billable_reason"] = "anthropic_classifier_block"
 		} else {
@@ -4187,13 +4325,16 @@ func extractAnthropicMessagesUsage(response Object, options Object) Object {
 			}
 		}
 	}
+	for key, value := range anthropicResponseMetadata(response, usage, requestedModel, components, fallbackCreditSignaled) {
+		metadata[key] = value
+	}
 
 	surface := asString(options["surface"])
 	if surface == "" {
 		surface = "anthropic.messages"
 	}
-	ledger := baseUsageLedger(provider, surface, requestedModel, asString(response["model"]), components, usage)
-	if len(components) == 0 && classifierZeroBillable {
+	ledger := baseUsageLedger(provider, surface, requestedModel, servingModel, components, usage)
+	if len(components) == 0 && refusalZeroBillable {
 		metadata["zero_billable_reason"] = "anthropic_classifier_block"
 	}
 	if len(metadata) > 0 {
@@ -6657,6 +6798,34 @@ func PriceCardsFromOfficialSnapshot(data Object) []any {
 			card["effective"] = effective
 		}
 		cards = append(cards, card)
+		capabilities := asObject(row["capabilities"])
+		for _, rawAlias := range asSlice(capabilities["service_tier_aliases"]) {
+			alias := strings.ToLower(strings.TrimSpace(asString(rawAlias)))
+			serviceTier := asString(card["service_tier"])
+			if alias == "" || alias == serviceTier {
+				continue
+			}
+			aliasCard := cloneObject(card)
+			marker := ""
+			if serviceTier != "" {
+				marker = fmt.Sprintf(":%s:", serviceTier)
+			}
+			aliasID := asString(card["id"])
+			if marker != "" && strings.Contains(aliasID, marker) {
+				aliasID = strings.Replace(aliasID, marker, fmt.Sprintf(":%s:", alias), 1)
+			} else {
+				aliasID = fmt.Sprintf("%s:%s", aliasID, alias)
+			}
+			aliasCard["id"] = aliasID
+			aliasCard["service_tier"] = alias
+			metadata := cloneObject(asObject(card["metadata"]))
+			metadata["service_tier_resolution"] = Object{
+				"independent_card":        true,
+				"currently_equivalent_to": serviceTier,
+			}
+			aliasCard["metadata"] = metadata
+			cards = append(cards, aliasCard)
+		}
 	}
 	return cards
 }
