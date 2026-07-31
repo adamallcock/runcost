@@ -17,6 +17,7 @@
       "component:output_text_tokens",
       "raw_provider_response",
       "reasoning",
+      "fast_mode",
       "streaming"
     ],
     "expected_languages": [
@@ -39,6 +40,7 @@
           "id": "chatcmpl-stream-fixture",
           "object": "chat.completion.chunk",
           "model": "gpt-5-nano",
+          "service_tier": "fast",
           "choices": [
             {
               "index": 0,
@@ -76,6 +78,7 @@
         "provider": "openai",
         "surface": "openai.chat_completions",
         "model": "gpt-5-nano",
+        "service_tier": "fast",
         "components": [
           {
             "usage_component": "input_uncached_tokens",

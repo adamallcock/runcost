@@ -14,7 +14,28 @@ limitations.
 
 ## Unreleased
 
-- No changes since 0.2.0.
+## 0.2.1 (2026-07-30)
+
+- Preserve original GPT-5.6 Terra and Luna pricing through July 29, 2026 and
+  apply OpenAI's permanent 20% and 80% reductions respectively from July 30
+  across Standard, Batch, Flex, and Fast processing.
+- Preserve OpenAI `service_tier: "fast"` and `"priority"` as independent request
+  and price-card tiers. Prefer exact Fast cards and use an auditable, one-way
+  Fast-to-Priority compatibility fallback only when no applicable Fast card
+  exists; Priority never falls forward to Fast.
+- Derive historical pricing time from raw Responses `created_at` and Chat
+  Completions `created` timestamps when a caller does not supply an override.
+- Price Anthropic `usage.iterations` per attempt and per actual model across
+  Python, JavaScript/TypeScript, and Go, including arbitrary multi-hop fallback
+  chains, pre-output zero billing, and billed mid-stream refusal usage.
+- Expose requested, attempted, serving, and pricing model attribution for direct
+  Messages and streaming events; accept Anthropic Python SDK/Pydantic response
+  objects without caller serialization.
+- Mark Message Batch refusal results as retry-required while preserving their
+  provider `succeeded` status, price separately submitted retry results at the
+  batch tier, and add Claude Opus 5 to the reviewed official pricing snapshot.
+- Keep fallback-credit option aliases as provenance only and price the retry
+  from Anthropic's reported cache usage instead of assuming token redemption.
 
 ## 0.2.0 (2026-07-18)
 

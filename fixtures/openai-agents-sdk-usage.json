@@ -18,6 +18,7 @@
       "component:output_text_tokens",
       "framework:openai_agents",
       "framework_adapter",
+      "fast_mode",
       "helper:from_openai_agents_usage",
       "warning:alias_inferred",
       "alias"
@@ -58,7 +59,7 @@
       "surface": "openai.responses",
       "model": "gpt-5-nano",
       "context": {
-        "service_tier": "default"
+        "service_tier": "fast"
       }
     },
     "price_cards": [
@@ -68,7 +69,7 @@
         "provider": "openai",
         "surface": "openai.responses",
         "model": "gpt-5-nano",
-        "service_tier": "standard",
+        "service_tier": "fast",
         "aliases": [
           "gpt-5-nano-2026-05-24"
         ],

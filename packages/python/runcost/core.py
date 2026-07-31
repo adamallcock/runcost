@@ -119,6 +119,15 @@ def _plain_value(value: Any) -> Any:
     return value
 
 
+def _response_mapping(value: Any) -> Dict[str, Any]:
+    """Normalize SDK response models to the same mapping shape as raw JSON."""
+
+    payload = _plain_value(value)
+    if not isinstance(payload, dict):
+        raise TypeError("response must be a mapping or an SDK object with model_dump()/dict()")
+    return payload
+
+
 def _decimal(value: Any) -> Decimal:
     return Decimal(str(value))
 
@@ -464,7 +473,7 @@ def _source_priority_score(card: Dict[str, Any], price_source_priority: Optional
     return (len(priority) - priority.index(source_name)) * 100
 
 
-def _matching_cards(
+def _matching_cards_exact(
     usage_ledger: Dict[str, Any],
     price_cards: Iterable[Dict[str, Any]],
     price_source_priority: Optional[Iterable[str]] = None,
@@ -493,6 +502,45 @@ def _matching_cards(
         if unsupported_reason or requested_period:
             return []
     return [item[-1] for item in sorted(scored_cards, key=lambda item: item[:-1])]
+
+
+def _matching_cards(
+    usage_ledger: Dict[str, Any],
+    price_cards: Iterable[Dict[str, Any]],
+    price_source_priority: Optional[Iterable[str]] = None,
+) -> List[Dict[str, Any]]:
+    cards = list(price_cards)
+    exact = _matching_cards_exact(usage_ledger, cards, price_source_priority)
+    context = _usage_context(usage_ledger)
+    if usage_ledger.get("provider") != "openai" or context.get("service_tier") != "fast":
+        return exact
+    exact_fast = [card for card in exact if card.get("service_tier") == "fast"]
+    if exact_fast:
+        return exact_fast
+    fallback_usage_ledger = {
+        **usage_ledger,
+        "context": {**context, "service_tier": "priority"},
+    }
+    return [
+        card
+        for card in _matching_cards_exact(fallback_usage_ledger, cards, price_source_priority)
+        if card.get("service_tier") == "priority"
+    ]
+
+
+def _service_tier_fallback_metadata(usage_ledger: Dict[str, Any], card: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    context = _usage_context(usage_ledger)
+    if (
+        usage_ledger.get("provider") == "openai"
+        and context.get("service_tier") == "fast"
+        and card.get("service_tier") == "priority"
+    ):
+        return {
+            "requested": "fast",
+            "priced_as": "priority",
+            "fallback": True,
+        }
+    return None
 
 
 def _price_lookup_cache_key(
@@ -1319,6 +1367,7 @@ def calculate_cost(
     warned_no_matching_card = set()
     warned_alias_inferred = False
     warned_stale_cards = set()
+    service_tier_fallback_card_ids = set()
     price_lookup_cache: Dict[tuple[Any, ...], Dict[str, Any]] = {}
 
     for component in usage_ledger["components"]:
@@ -1406,7 +1455,11 @@ def calculate_cost(
         match = matches[0]
         card = match["card"]
         price_component = match["price_component"]
-        component_metadata = match.get("component_metadata")
+        component_metadata = dict(match.get("component_metadata") or {})
+        service_tier_resolution = _service_tier_fallback_metadata(component_usage_ledger, card)
+        if service_tier_resolution:
+            component_metadata["service_tier_resolution"] = service_tier_resolution
+            service_tier_fallback_card_ids.add(card["id"])
         period_selection = _pricing_period_selection(component_usage_ledger, card)
         period_metadata = {
             key: value
@@ -1423,6 +1476,8 @@ def calculate_cost(
                 "selected_source": card["source"]["name"],
             }
             decision.update(period_metadata)
+            if service_tier_resolution:
+                decision["service_tier_resolution"] = service_tier_resolution
             trace["decisions"].append(decision)
         if card["model"] != component_billed_model and component_billed_model in card.get("aliases", []):
             previous_billed_model = component_billed_model
@@ -1548,6 +1603,13 @@ def calculate_cost(
         result["debug_trace"] = trace
     if isinstance(usage_ledger.get("metadata"), dict) and usage_ledger["metadata"]:
         result["metadata"] = dict(usage_ledger["metadata"])
+    if service_tier_fallback_card_ids:
+        result.setdefault("metadata", {})["service_tier_resolution"] = {
+            "requested": "fast",
+            "priced_as": "priority",
+            "fallback": True,
+            "price_card_ids": sorted(service_tier_fallback_card_ids),
+        }
     normalized_attribution = _normalize_attribution(usage_ledger.get("attribution"))
     if normalized_attribution:
         result["attribution"] = normalized_attribution
@@ -1871,8 +1933,11 @@ def _usage_context_from_options(response: Dict[str, Any], provider: str, options
     priced_at = options.get("priced_at") or options.get("pricedAt")
     if priced_at is not None:
         context["priced_at"] = str(priced_at)
-    elif provider == "deepseek" and "priced_at" not in context and "pricedAt" not in context:
-        created_priced_at = _unix_seconds_priced_at(response.get("created"))
+    elif provider in {"deepseek", "openai"} and "priced_at" not in context and "pricedAt" not in context:
+        timestamp = response.get("created_at") if provider == "openai" else None
+        if timestamp is None:
+            timestamp = response.get("created")
+        created_priced_at = _unix_seconds_priced_at(timestamp)
         if created_priced_at:
             context["priced_at"] = created_priced_at
     pricing_period = options.get("pricing_period") or options.get("pricingPeriod")
@@ -2428,6 +2493,10 @@ def _openai_compatible_chat_payload(response: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(chunks, list):
         return response
     fallback_model = response.get("model")
+    fallback_service_tier = response.get("service_tier", response.get("serviceTier"))
+    for chunk in chunks:
+        if isinstance(chunk, dict) and fallback_service_tier is None:
+            fallback_service_tier = chunk.get("service_tier", chunk.get("serviceTier"))
     for chunk in reversed(chunks):
         if not isinstance(chunk, dict):
             continue
@@ -2435,6 +2504,8 @@ def _openai_compatible_chat_payload(response: Dict[str, Any]) -> Dict[str, Any]:
             payload = dict(chunk)
             if payload.get("model") is None and fallback_model is not None:
                 payload["model"] = fallback_model
+            if payload.get("service_tier", payload.get("serviceTier")) is None and fallback_service_tier is not None:
+                payload["service_tier"] = fallback_service_tier
             return payload
     return response
 
@@ -2504,12 +2575,21 @@ def _anthropic_messages_payload(response: Dict[str, Any]) -> Dict[str, Any]:
 
     message: Dict[str, Any] = {}
     usage: Dict[str, Any] = {}
+    content: List[Any] = []
     for event in events:
         if not isinstance(event, dict):
             continue
         if event.get("type") == "message_start" and isinstance(event.get("message"), dict):
             message = dict(event["message"])
             usage.update(message.get("usage") or {})
+            if isinstance(message.get("content"), list):
+                content = list(message["content"])
+        elif event.get("type") == "content_block_start" and isinstance(event.get("content_block"), dict):
+            index = event.get("index")
+            if isinstance(index, int) and index >= 0:
+                while len(content) <= index:
+                    content.append(None)
+                content[index] = dict(event["content_block"])
         elif event.get("type") == "message_delta":
             usage.update(event.get("usage") or {})
             if isinstance(event.get("delta"), dict):
@@ -2518,12 +2598,12 @@ def _anthropic_messages_payload(response: Dict[str, Any]) -> Dict[str, Any]:
     if not message:
         return response
     message["usage"] = usage
+    if content:
+        message["content"] = [block for block in content if block is not None]
+    serving_model = _anthropic_serving_model(message, usage)
+    if serving_model:
+        message["model"] = serving_model
     return message
-
-
-ANTHROPIC_FABLE_5_MODEL = "claude-fable-5"
-ANTHROPIC_OPUS_4_8_MODEL = "claude-opus-4-8"
-ANTHROPIC_FALLBACK_CLASSIFIER_CATEGORIES = {"cyber", "bio", "reasoning_extraction"}
 
 
 def _anthropic_fallback_pairs(response: Dict[str, Any]) -> List[tuple[str, str]]:
@@ -2541,36 +2621,39 @@ def _anthropic_fallback_pairs(response: Dict[str, Any]) -> List[tuple[str, str]]
     return pairs
 
 
-def _anthropic_classifier_blocked(response: Dict[str, Any]) -> bool:
-    if response.get("stop_reason") != "refusal":
-        return False
-    details = response.get("stop_details")
-    if not isinstance(details, dict):
-        return False
-    return (
-        details.get("category") in ANTHROPIC_FALLBACK_CLASSIFIER_CATEGORIES
-        or details.get("recommended_model") == ANTHROPIC_OPUS_4_8_MODEL
-        or "fallback_credit_token" in details
-        or details.get("fallback_has_prefill_claim") is True
-    )
+def _anthropic_refused(response: Dict[str, Any]) -> bool:
+    return response.get("stop_reason") == "refusal"
 
 
-def _anthropic_is_fable_to_opus_fallback_iteration(
-    *,
-    iteration: Dict[str, Any],
-    previous_models: Iterable[str],
-    requested_model: Optional[str],
-    fallback_pairs: Iterable[tuple[str, str]],
-) -> bool:
-    if iteration.get("type") != "fallback_message":
-        return False
-    if iteration.get("model") != ANTHROPIC_OPUS_4_8_MODEL:
-        return False
-    if requested_model == ANTHROPIC_FABLE_5_MODEL:
-        return True
-    if ANTHROPIC_FABLE_5_MODEL in set(previous_models):
-        return True
-    return (ANTHROPIC_FABLE_5_MODEL, ANTHROPIC_OPUS_4_8_MODEL) in set(fallback_pairs)
+def _anthropic_iterations(usage: Dict[str, Any]) -> List[Dict[str, Any]]:
+    iterations = usage.get("iterations")
+    if not isinstance(iterations, list):
+        return []
+    return [iteration for iteration in iterations if isinstance(iteration, dict)]
+
+
+def _anthropic_serving_model(response: Dict[str, Any], usage: Dict[str, Any]) -> Optional[str]:
+    fallback_iterations = [
+        iteration
+        for iteration in _anthropic_iterations(usage)
+        if iteration.get("type") == "fallback_message" and iteration.get("model")
+    ]
+    if fallback_iterations:
+        return str(fallback_iterations[-1]["model"])
+    returned_model = response.get("model")
+    return str(returned_model) if returned_model else None
+
+
+def _anthropic_requested_model(response: Dict[str, Any], usage: Dict[str, Any], requested_model: Optional[str]) -> str:
+    if requested_model:
+        return str(requested_model)
+    pairs = _anthropic_fallback_pairs(response)
+    if pairs:
+        return pairs[0][0]
+    iterations = _anthropic_iterations(usage)
+    if len(iterations) > 1 and iterations[0].get("model"):
+        return str(iterations[0]["model"])
+    return str(response.get("model") or "unknown")
 
 
 def _anthropic_iteration_metadata(iteration: Dict[str, Any], index: int, billing_model: str) -> Dict[str, Any]:
@@ -2583,12 +2666,18 @@ def _anthropic_iteration_metadata(iteration: Dict[str, Any], index: int, billing
     return metadata
 
 
-def _anthropic_fallback_cache_read_quantity(iteration: Dict[str, Any]) -> Decimal:
-    return (
-        _decimal(iteration.get("input_tokens") or 0)
-        + _decimal(iteration.get("cache_creation_input_tokens") or 0)
-        + _decimal(iteration.get("cache_read_input_tokens") or 0)
-    )
+def _anthropic_attempt_refused_before_output(
+    response: Dict[str, Any],
+    iteration: Dict[str, Any],
+    index: int,
+    iteration_count: int,
+    has_fallback_iteration: bool,
+) -> bool:
+    if _decimal(iteration.get("output_tokens") or 0) > 0:
+        return False
+    if has_fallback_iteration and index < iteration_count - 1:
+        return True
+    return index == iteration_count - 1 and _anthropic_refused(response)
 
 
 def _anthropic_messages_iteration_components(
@@ -2596,54 +2685,27 @@ def _anthropic_messages_iteration_components(
     usage: Dict[str, Any],
     requested_model: Optional[str],
 ) -> List[Dict[str, Any]]:
-    iterations = usage.get("iterations")
-    if not isinstance(iterations, list):
+    iterations = _anthropic_iterations(usage)
+    if not iterations:
         return []
 
     components: List[Optional[Dict[str, Any]]] = []
-    previous_models: List[str] = []
-    fallback_pairs = _anthropic_fallback_pairs(response)
-    classifier_blocked = _anthropic_classifier_blocked(response)
     has_fallback_iteration = any(
-        isinstance(iteration, dict) and iteration.get("type") == "fallback_message"
+        iteration.get("type") == "fallback_message"
         for iteration in iterations
     )
     for index, raw_iteration in enumerate(iterations):
-        if not isinstance(raw_iteration, dict):
-            continue
         iteration_model = str(raw_iteration.get("model") or response.get("model") or requested_model or "")
         source_root = f"$.usage.iterations[{index}]"
         metadata = _anthropic_iteration_metadata(raw_iteration, index, iteration_model)
-        is_fable_to_opus = _anthropic_is_fable_to_opus_fallback_iteration(
-            iteration=raw_iteration,
-            previous_models=previous_models,
-            requested_model=requested_model,
-            fallback_pairs=fallback_pairs,
+        refused_before_output = _anthropic_attempt_refused_before_output(
+            response,
+            raw_iteration,
+            index,
+            len(iterations),
+            has_fallback_iteration,
         )
-        if is_fable_to_opus:
-            fallback_input = _anthropic_fallback_cache_read_quantity(raw_iteration)
-            fallback_metadata = dict(metadata)
-            fallback_metadata["anthropic_fallback_billing"] = "fable_to_opus_cache_read"
-            components.append(
-                _positive_component_with_metadata(
-                    "input_cache_read_tokens",
-                    fallback_input,
-                    "token",
-                    f"{source_root}.input_tokens",
-                    fallback_metadata,
-                )
-            )
-        else:
-            suppress_classifier_input = (
-                classifier_blocked
-                and not has_fallback_iteration
-                and _decimal(raw_iteration.get("output_tokens") or 0) <= 0
-            )
-        if (
-            not is_fable_to_opus
-            and not suppress_classifier_input
-            and (not has_fallback_iteration or raw_iteration.get("type") == "fallback_message")
-        ):
+        if not refused_before_output:
             cache_write = raw_iteration.get("cache_creation_input_tokens", 0)
             cache_write_1h = raw_iteration.get("cache_creation_input_tokens_1h", 0)
             components.extend(
@@ -2654,18 +2716,15 @@ def _anthropic_messages_iteration_components(
                     _positive_component_with_metadata("input_cache_read_tokens", raw_iteration.get("cache_read_input_tokens", 0), "token", f"{source_root}.cache_read_input_tokens", metadata),
                 ]
             )
-
-        components.append(
-            _positive_component_with_metadata(
-                "output_text_tokens",
-                raw_iteration.get("output_tokens", 0),
-                "token",
-                f"{source_root}.output_tokens",
-                metadata,
+            components.append(
+                _positive_component_with_metadata(
+                    "output_text_tokens",
+                    raw_iteration.get("output_tokens", 0),
+                    "token",
+                    f"{source_root}.output_tokens",
+                    metadata,
+                )
             )
-        )
-        if iteration_model:
-            previous_models.append(iteration_model)
 
     return _compact_components(components)
 
@@ -2683,15 +2742,73 @@ def _anthropic_client_fallback_credit_enabled(response: Dict[str, Any], options:
     )
 
 
-def _anthropic_client_fallback_credit_model(response: Dict[str, Any], requested_model: Optional[str]) -> str:
-    return str(response.get("model") or requested_model or "")
+def _anthropic_response_metadata(
+    response: Dict[str, Any],
+    usage: Dict[str, Any],
+    requested_model: str,
+    components: Iterable[Dict[str, Any]],
+    fallback_credit_signaled: bool,
+) -> Dict[str, Any]:
+    metadata: Dict[str, Any] = {}
+    iterations = _anthropic_iterations(usage)
+    fallback_iterations = [iteration for iteration in iterations if iteration.get("type") == "fallback_message"]
+    fallback_pairs = _anthropic_fallback_pairs(response)
+    fallback_attempted = bool(fallback_iterations or fallback_pairs)
+    if fallback_attempted:
+        serving_model = _anthropic_serving_model(response, usage)
+        attempted_models = [str(iteration["model"]) for iteration in iterations if iteration.get("model")]
+        pricing_models = []
+        for component in components:
+            billing_model = _component_billing_model(component)
+            if billing_model and billing_model not in pricing_models:
+                pricing_models.append(billing_model)
+        if not pricing_models and serving_model and list(components):
+            pricing_models.append(serving_model)
+        fallback_metadata: Dict[str, Any] = {
+            "attempted": True,
+            "utilized": not _anthropic_refused(response),
+            "requested_model": requested_model,
+            "attempted_models": attempted_models,
+            "pricing_models": pricing_models,
+            "source": "usage.iterations" if fallback_iterations else "content.fallback",
+        }
+        if serving_model:
+            fallback_metadata["serving_model"] = serving_model
+        if fallback_pairs:
+            fallback_metadata["hops"] = [
+                {"from_model": from_model, "to_model": to_model}
+                for from_model, to_model in fallback_pairs
+            ]
+        metadata["anthropic_fallback"] = fallback_metadata
+
+    if _anthropic_refused(response):
+        details = response.get("stop_details") if isinstance(response.get("stop_details"), dict) else {}
+        refusal_metadata: Dict[str, Any] = {
+            "detected": True,
+            "pre_output": _decimal(usage.get("output_tokens") or 0) <= 0,
+            "requires_retry": True,
+        }
+        for key in ("category", "recommended_model"):
+            if details.get(key) is not None:
+                refusal_metadata[key] = details[key]
+        refusal_metadata["fallback_credit_available"] = bool(details.get("fallback_credit_token"))
+        metadata["anthropic_refusal"] = refusal_metadata
+
+    if fallback_credit_signaled:
+        metadata["anthropic_fallback_credit"] = {
+            "signaled": True,
+            "pricing_source": "reported_usage",
+        }
+    return metadata
 
 
-def extract_anthropic_messages_usage(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+def extract_anthropic_messages_usage(response: Any, **options: Any) -> Dict[str, Any]:
+    response = _response_mapping(response)
     response = _anthropic_messages_payload(response)
     usage_present = isinstance(response.get("usage"), dict)
     usage = response.get("usage") if usage_present else {}
-    requested_model = options.get("model", response.get("model"))
+    requested_model = _anthropic_requested_model(response, usage, options.get("model"))
+    serving_model = _anthropic_serving_model(response, usage)
     input_tokens = usage.get("input_tokens", 0)
     cache_write = usage.get("cache_creation_input_tokens", 0)
     cache_write_1h = usage.get("cache_creation_input_tokens_1h", 0)
@@ -2699,25 +2816,11 @@ def extract_anthropic_messages_usage(response: Dict[str, Any], **options: Any) -
     output_tokens = usage.get("output_tokens", 0)
     iteration_components = _anthropic_messages_iteration_components(response, usage, requested_model)
     metadata: Dict[str, Any] = {}
-    classifier_zero_billable = _anthropic_classifier_blocked(response) and _decimal(output_tokens) <= 0
+    refusal_zero_billable = _anthropic_refused(response) and _decimal(output_tokens) <= 0
+    fallback_credit_signaled = _anthropic_client_fallback_credit_enabled(response, options)
     if iteration_components:
         components = iteration_components
-    elif (
-        _anthropic_client_fallback_credit_enabled(response, options)
-        and _anthropic_client_fallback_credit_model(response, requested_model) == ANTHROPIC_OPUS_4_8_MODEL
-    ):
-        fallback_input = _decimal(input_tokens) + _decimal(cache_write) + _decimal(cache_read)
-        metadata = {
-            "billing_model": response.get("model") or requested_model,
-            "anthropic_fallback_billing": "client_fallback_credit_cache_read",
-        }
-        components = _compact_components(
-            [
-                _positive_component_with_metadata("input_cache_read_tokens", fallback_input, "token", "$.usage.input_tokens", metadata),
-                _positive_component("output_text_tokens", output_tokens, "token", "$.usage.output_tokens"),
-            ]
-        )
-    elif _anthropic_classifier_blocked(response) and _decimal(output_tokens) <= 0:
+    elif refusal_zero_billable:
         components = []
         metadata["zero_billable_reason"] = "anthropic_classifier_block"
     else:
@@ -2733,15 +2836,25 @@ def extract_anthropic_messages_usage(response: Dict[str, Any], **options: Any) -
         if not usage_present:
             metadata["missing_usage_fields"] = ["$.usage"]
 
+    metadata.update(
+        _anthropic_response_metadata(
+            response,
+            usage,
+            requested_model,
+            components,
+            fallback_credit_signaled,
+        )
+    )
+
     ledger = _base_usage_ledger(
         provider=options.get("provider", "anthropic"),
         surface=options.get("surface", "anthropic.messages"),
         requested_model=requested_model,
-        returned_model=response.get("model"),
+        returned_model=serving_model,
         raw_usage=usage,
         components=components,
     )
-    if not components and classifier_zero_billable:
+    if not components and refusal_zero_billable:
         metadata.setdefault("zero_billable_reason", "anthropic_classifier_block")
     if metadata:
         ledger["metadata"] = metadata
@@ -3865,7 +3978,8 @@ def extract_openrouter_sdk_response_usage(response: Dict[str, Any], **options: A
     return extract_openai_compatible_chat_completions_usage(payload, **merged_options)
 
 
-def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+def extract_usage_ledger(response: Any, **options: Any) -> Dict[str, Any]:
+    response = _response_mapping(response)
     adapter = options.get("adapter") or options.get("framework")
     if adapter == "langchain.chat_message":
         return extract_langchain_chat_usage(response, **options)
@@ -3936,10 +4050,10 @@ def extract_usage_ledger(response: Dict[str, Any], **options: Any) -> Dict[str, 
     raise ValueError(f"Unsupported surface: {surface}")
 
 
-def infer_surface(response: Dict[str, Any], *, provider: Optional[str] = None) -> Optional[str]:
+def infer_surface(response: Any, *, provider: Optional[str] = None) -> Optional[str]:
     """Infer only response shapes that identify an endpoint unambiguously."""
 
-    payload = _plain_value(response)
+    payload = _response_mapping(response)
     provider_name = str(provider or "").lower()
     object_type = str(payload.get("object") or payload.get("type") or "").lower()
     usage = payload.get("usage") if isinstance(payload.get("usage"), dict) else {}
@@ -4753,6 +4867,27 @@ def price_cards_from_official_snapshot(data: Any, **options: Any) -> List[Dict[s
         }
         card["metadata"] = metadata
         cards.append(card)
+        service_tier = card.get("service_tier")
+        service_tier_aliases = (row.get("capabilities") or {}).get("service_tier_aliases", [])
+        for raw_alias in service_tier_aliases if isinstance(service_tier_aliases, list) else []:
+            alias = str(raw_alias or "").strip().lower()
+            if not alias or alias == service_tier:
+                continue
+            marker = f":{service_tier}:" if service_tier else ""
+            alias_id = str(card["id"]).replace(marker, f":{alias}:", 1) if marker and marker in str(card["id"]) else f"{card['id']}:{alias}"
+            alias_card = {
+                **card,
+                "id": alias_id,
+                "service_tier": alias,
+                "metadata": {
+                    **metadata,
+                    "service_tier_resolution": {
+                        "independent_card": True,
+                        "currently_equivalent_to": service_tier,
+                    },
+                },
+            }
+            cards.append(alias_card)
     return cards
 
 
@@ -4923,7 +5058,7 @@ def price_cards_from_helicone(data: Dict[str, Any], **options: Any) -> List[Dict
 
 
 def from_response(
-    response: Dict[str, Any],
+    response: Any,
     *,
     adapter: Optional[str] = None,
     framework: Optional[str] = None,
@@ -4950,6 +5085,7 @@ def from_response(
     price_source_priority: Optional[Iterable[str]] = None,
     debug_trace: bool = False,
 ) -> Dict[str, Any]:
+    response = _response_mapping(response)
     resolved_surface = surface or infer_surface(response, provider=provider)
     options: Dict[str, Any] = {"surface": resolved_surface or "unknown"}
     if adapter:

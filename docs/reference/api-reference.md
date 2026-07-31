@@ -99,6 +99,32 @@ Common one-call helper:
 | JavaScript/TypeScript | `fromResponse(response, options)` |
 | Go | `FromResponse(response, options, priceCards, discountPolicies)` |
 
+Python `from_response` and `from_batch_results` also accept Anthropic SDK/Pydantic
+objects exposing `model_dump()` or `dict()`; callers do not need to serialize
+them to JSON first.
+
+For an Anthropic fallback, render attribution from
+`ledger.metadata.anthropic_fallback`. `utilized` says whether a fallback served
+the response; `requested_model`, `attempted_models`, and `serving_model` describe
+the route; and `pricing_models` lists the models whose reported usage produced
+billable components. A UI can therefore state, for example, “Fallback utilized;
+`claude-opus-5` was used for pricing.” Individual components retain
+`metadata.billing_model` and `metadata.usage_iteration_index` for audit detail.
+
+For Message Batches, inspect each item even when provider status is `succeeded`.
+RunCost marks refusal results with `metadata.refusal` and
+`metadata.requires_retry`; server-side fallback is not available in Anthropic
+Message Batches, so a later retry result is a separate priced item/batch.
+
+For OpenAI, preserve caller request intent by supplying `service_tier: "fast"`
+in extraction context when Fast was requested. Fast and Priority are independent
+canonical request and price-card tiers. The calculator selects an applicable
+Fast card first; only when none exists may it use a Priority card. That one-way
+compatibility fallback records `metadata.service_tier_resolution` with
+`requested: "fast"`, `priced_as: "priority"`, `fallback: true`, and the selected
+price-card IDs. Priority never falls back to Fast. This distinction matters for
+GPT-5.6 and earlier responses that may report `priority` after a Fast request.
+
 Auto-resolving convenience helper (may read or refresh the public price cache):
 
 | Language | Function |
@@ -134,7 +160,7 @@ The framework helpers route through the same cost calculator after extracting ca
 Streaming final usage:
 
 - OpenAI Responses accepts the final `response.completed` event envelope.
-- Anthropic Messages accepts an object with `events` containing `message_start`, `message_delta`, and `message_stop` SSE payloads, and accumulates the final usage.
+- Anthropic Messages accepts an object with `events` containing `message_start`, `content_block_start`, `message_delta`, and `message_stop` SSE payloads. It accumulates final usage and follows a final fallback block/iteration when `message_start` still names the primary model.
 - Gemini / Vertex generateContent accepts an object with `chunks` or `stream` and uses the last chunk carrying `usageMetadata`.
 - Gemini Live API accepts top-level `usageMetadata`, or a `chunks` / `stream` collection where the final server message carries `usageMetadata`.
 - Google Gemini Interactions accepts top-level/event `metadata.total_usage`, camelCase `metadata.totalUsage`, legacy `metadata.usage`, or `chunks` / `stream` / `events` collections and uses the last event carrying usage metadata.

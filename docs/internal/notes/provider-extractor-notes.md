@@ -34,8 +34,20 @@ Mapping:
 - `usage.output_tokens` minus reasoning tokens -> `output_text_tokens`.
 - `usage.output_tokens_details.reasoning_tokens` -> `output_reasoning_tokens`.
 - OpenAI top-level `service_tier` values `default` and `auto` normalize to
-  `standard`; `batch`, `flex`, and `priority` are preserved for price-card
-  selection.
+  `standard`; `batch` and `flex` are preserved. OpenAI renamed Priority to Fast
+  on July 30, 2026 while keeping both API values valid. RunCost preserves
+  `fast` and `priority` independently. Fast requests prefer Fast cards and may
+  fall back to Priority cards with explicit resolution metadata; the reverse
+  fallback is not allowed.
+- GPT-5.6 and earlier responses may report `priority` after a `fast` request.
+  Pass the requested tier through extractor options or request telemetry when
+  request intent must be retained; response-only data preserves the observed
+  `priority` value.
+- When callers omit an explicit `priced_at`, OpenAI Responses `created_at` is
+  converted from Unix seconds and used for effective-date card selection.
+- OpenAI Chat Completions uses the equivalent top-level `created` timestamp;
+  OpenAI Agents SDK usage wrappers use `created_at` or `created` when either is
+  present on the selected usage root.
 
 ## OpenAI Conversations Decision
 
@@ -101,22 +113,25 @@ Source references:
 
 - Anthropic streaming docs state that `message_delta` usage token counts are cumulative and show `message_start`, `message_delta`, and `message_stop` event sequences: https://platform.claude.com/docs/en/build-with-claude/streaming
 - Anthropic streaming docs also describe SDK helpers that accumulate a stream into the final Message object: https://platform.claude.com/docs/en/build-with-claude/streaming
-- Anthropic's Fable 5 fallback billing cookbook says `usage.iterations` is the reliable source for fallback-served turns, including sticky-served turns without a `fallback` content block; Fable 5 -> Opus 4.8 fallback input is billed at cache-read pricing; direct classifier blocks before output tokens have no input-token cost; client-side fallback-credit retries require the `fallback-credit-2026-06-01` beta and `fallback_credit_token`: https://platform.claude.com/cookbook/fable-5-fallback-billing-guide
+- Anthropic's current refusals and fallback contract says `usage.iterations` is the per-attempt billing record, each billable attempt is priced at its own model's rates, pre-output refusals are not billed, and mid-stream refusals retain billed input plus partial output: https://platform.claude.com/docs/en/build-with-claude/refusals-and-fallback
+- Anthropic's fallback-credit contract says the retry response's reported usage is authoritative: a redeemed credit appears in cache-creation/cache-read usage, while merely sending a token does not prove redemption. Message Batches neither mint nor redeem fallback credits: https://platform.claude.com/docs/en/build-with-claude/fallback-credit
+- Anthropic Message Batches return refusals as `succeeded` result envelopes with `stop_reason: "refusal"`, use the batch price tier, and do not support server-side fallback: https://platform.claude.com/docs/en/build-with-claude/batch-processing
 
 Mapping:
 
 - Non-streaming responses read usage from the top-level `usage` object.
-- Streaming event collections read initial model and usage from `message_start.message`, then merge cumulative `message_delta.usage`.
+- Streaming event collections read initial model and usage from `message_start.message`, merge cumulative `message_delta.usage`, preserve `content_block_start` fallback blocks, and replace the initial model with the final serving model.
 - `usage.input_tokens` -> `input_uncached_tokens`.
 - `usage.cache_creation_input_tokens` minus 1-hour creation tokens -> `input_cache_write_tokens`.
 - `usage.cache_creation_input_tokens_1h` -> `input_cache_write_1h_tokens`.
 - `usage.cache_read_input_tokens` -> `input_cache_read_tokens`.
 - `usage.output_tokens` -> `output_text_tokens`.
-- When `usage.iterations` is present, RunCost prices per iteration instead of pricing the aggregate top-level usage. Fable 5 blocked-attempt input/cache components are not billed again when a fallback iteration served the turn; any partial Fable output remains `output_text_tokens` with `metadata.billing_model: "claude-fable-5"`.
-- `fallback_message` iterations for Fable 5 -> Opus 4.8 convert the fallback attempt's `input_tokens`, `cache_creation_input_tokens`, and `cache_read_input_tokens` into `input_cache_read_tokens` with `metadata.billing_model: "claude-opus-4-8"`.
-- Sticky-served fallback turns are detected from `usage.iterations` even when `content` has no `fallback` block; when the response object only exposes returned Opus metadata, RunCost applies the currently supported Fable 5 -> Opus 4.8 cache-read billing rule.
-- Direct Fable 5 classifier blocks with `stop_reason: "refusal"` and no output tokens produce zero billable components.
-- Client-side Opus retries that redeemed an Anthropic fallback credit token can be marked with `anthropic_fallback_credit` / `anthropicFallbackCredit` / `fallback_credit` / `fallbackCredit`; RunCost then prices the retry input/cache prefix as `input_cache_read_tokens`.
+- When `usage.iterations` is present, RunCost prices every billable iteration instead of the aggregate top-level usage. Each component carries `metadata.billing_model` and the iteration index/type so arbitrary model chains are supported without a Fable/Opus allowlist.
+- Any attempt with no output before a later fallback attempt is treated as a pre-output refusal and contributes no billable components. An attempt with partial output retains its reported input, cache, and output components at that attempt's model rates.
+- `fallback_message` iterations and `fallback` content blocks populate `metadata.anthropic_fallback`, including requested, attempted, serving, and pricing model identifiers plus explicit hops when present. Sticky-served turns are detected from `usage.iterations` even without a content block.
+- Any direct response with `stop_reason: "refusal"` and no output tokens produces zero billable components. Detection deliberately does not depend on `stop_details.category`, which may be new or null.
+- The fallback-credit option aliases remain accepted as caller provenance, but never rewrite usage. `metadata.anthropic_fallback_credit.pricing_source` remains `reported_usage`; the response's cache fields decide pricing.
+- Python accepts both raw dictionaries and Anthropic SDK/Pydantic response objects exposing `model_dump()` or `dict()`; JavaScript/TypeScript and Go accept the equivalent decoded response object.
 
 ## OpenAI-Compatible Chat
 

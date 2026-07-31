@@ -159,6 +159,20 @@
       "warning_codes": []
     },
     {
+      "fixture": "fixtures/anthropic-messages-generic-fallback-chain.json",
+      "id": "anthropic-messages-generic-fallback-chain",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
       "fixture": "fixtures/anthropic-messages-missing-usage-warning.json",
       "id": "anthropic-messages-missing-usage-warning",
       "languages": {
@@ -205,6 +219,20 @@
     {
       "fixture": "fixtures/anthropic-messages-stream-events.json",
       "id": "anthropic-messages-stream-events",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "raw_provider_response",
+      "surface": "anthropic.messages",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-stream-fallback-events.json",
+      "id": "anthropic-messages-stream-fallback-events",
       "languages": {
         "go": "preserved",
         "javascript": "preserved",
@@ -1439,6 +1467,34 @@
       "warning_codes": []
     },
     {
+      "fixture": "fixtures/openai-chat-fast-exact-card.json",
+      "id": "openai-chat-fast-exact-card",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "service_tier",
+      "surface": "openai.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-chat-gpt-56-terra-created-historical-price.json",
+      "id": "openai-chat-gpt-56-terra-created-historical-price",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "raw_provider_response",
+      "surface": "openai.chat_completions",
+      "warning_codes": []
+    },
+    {
       "fixture": "fixtures/openai-chat-raw-cached-reasoning.json",
       "id": "openai-chat-raw-cached-reasoning",
       "languages": {
@@ -1481,6 +1537,76 @@
       "warning_codes": []
     },
     {
+      "fixture": "fixtures/openai-fast-prefers-exact-card.json",
+      "id": "openai-fast-prefers-exact-card",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "service_tier",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-gpt-56-luna-price-before-july-30.json",
+      "id": "openai-gpt-56-luna-price-before-july-30",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-gpt-56-luna-price-from-july-30.json",
+      "id": "openai-gpt-56-luna-price-from-july-30",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-gpt-56-terra-price-before-july-30.json",
+      "id": "openai-gpt-56-terra-price-before-july-30",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-gpt-56-terra-price-from-july-30.json",
+      "id": "openai-gpt-56-terra-price-from-july-30",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "source_adapter",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
       "fixture": "fixtures/openai-images-token-usage.json",
       "id": "openai-images-token-usage",
       "languages": {
@@ -1509,6 +1635,22 @@
       "warning_codes": []
     },
     {
+      "fixture": "fixtures/openai-priority-does-not-fallback-to-fast.json",
+      "id": "openai-priority-does-not-fallback-to-fast",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "service_tier",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "service_tier_unsupported"
+      ]
+    },
+    {
       "fixture": "fixtures/openai-responses-basic.json",
       "id": "openai-responses-basic",
       "languages": {
@@ -1519,6 +1661,20 @@
       "outcome": "preserved",
       "provider": "openai",
       "scenario": "normalized_usage",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-responses-gpt-56-luna-fast-tier.json",
+      "id": "openai-responses-gpt-56-luna-fast-tier",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "service_tier",
       "surface": "openai.responses",
       "warning_codes": []
     },
@@ -2572,6 +2728,20 @@
     },
     {
       "fixture": "fixtures/expansion/cases.json",
+      "id": "anthropic-message-batch-refusal-retry",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "anthropic",
+      "scenario": "from_batch_results",
+      "surface": "from_batch_results",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
       "id": "gemini-developer-batch-partial",
       "languages": {
         "go": "preserved",
@@ -2824,6 +2994,34 @@
     },
     {
       "fixture": "fixtures/expansion/cases.json",
+      "id": "otel-genai-fast-tier",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "from_otel",
+      "surface": "from_otel",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "otel-genai-fast-request-context",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "usage_ledger_from_otel",
+      "surface": "usage_ledger_from_otel",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
       "id": "precall-estimate-attribution",
       "languages": {
         "go": "preserved",
@@ -2949,31 +3147,31 @@
   },
   "schema_version": "0.1",
   "summary": {
-    "case_count": 202,
+    "case_count": 216,
     "languages": {
       "go": {
         "not_tested": 2,
-        "preserved": 148,
+        "preserved": 161,
         "unsupported": 7,
-        "warned": 45
+        "warned": 46
       },
       "javascript": {
         "not_tested": 1,
-        "preserved": 148,
+        "preserved": 161,
         "unsupported": 7,
-        "warned": 46
+        "warned": 47
       },
       "python": {
         "not_tested": 1,
-        "preserved": 148,
+        "preserved": 161,
         "unsupported": 7,
-        "warned": 46
+        "warned": 47
       }
     },
     "outcomes": {
-      "preserved": 148,
+      "preserved": 161,
       "unsupported": 7,
-      "warned": 47
+      "warned": 48
     }
   }
 }

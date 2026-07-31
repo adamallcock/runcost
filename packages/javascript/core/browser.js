@@ -564,7 +564,7 @@ function sourcePriorityScore(card, priceSourcePriority) {
   return (priceSourcePriority.length - index) * 100;
 }
 
-function matchingCards(usageLedger, priceCards, priceSourcePriority = []) {
+function matchingCardsExact(usageLedger, priceCards, priceSourcePriority = []) {
   const periodContextCards = priceCards.filter((card) => (
     cardIdentityMatches(usageLedger, card) &&
     cardPricingPeriod(card) &&
@@ -595,6 +595,28 @@ function matchingCards(usageLedger, priceCards, priceSourcePriority = []) {
       a.index - b.index
     ))
     .map(({ card }) => card);
+}
+
+function matchingCards(usageLedger, priceCards, priceSourcePriority = []) {
+  const exact = matchingCardsExact(usageLedger, priceCards, priceSourcePriority);
+  const context = usageContext(usageLedger);
+  if (usageLedger.provider !== "openai" || context.service_tier !== "fast") return exact;
+  const exactFast = exact.filter((card) => card.service_tier === "fast");
+  if (exactFast.length > 0) return exactFast;
+  const fallbackUsageLedger = {
+    ...usageLedger,
+    context: { ...context, service_tier: "priority" }
+  };
+  return matchingCardsExact(fallbackUsageLedger, priceCards, priceSourcePriority)
+    .filter((card) => card.service_tier === "priority");
+}
+
+function serviceTierFallbackMetadata(usageLedger, card) {
+  const context = usageContext(usageLedger);
+  if (usageLedger.provider === "openai" && context.service_tier === "fast" && card.service_tier === "priority") {
+    return { requested: "fast", priced_as: "priority", fallback: true };
+  }
+  return undefined;
 }
 
 function priceLookupCacheKey(usageLedger, sourcePriority = []) {
@@ -1413,6 +1435,7 @@ export function calculateCost({
   const warnedNoMatchingCard = new Set();
   let warnedAliasInferred = false;
   const warnedStaleCards = new Set();
+  const serviceTierFallbackCardIds = new Set();
   const staleThreshold = staleAfterDays ?? stale_after_days;
   const reportedCost = providerReportedCost ?? provider_reported_cost;
   const reportedCostMode = providerReportedCostMode ?? provider_reported_cost_mode ?? "compare";
@@ -1510,6 +1533,12 @@ export function calculateCost({
     }
     const match = matches[0];
     const { card, priceComponent, componentMetadata } = match;
+    const resolvedComponentMetadata = { ...(componentMetadata || {}) };
+    const serviceTierResolution = serviceTierFallbackMetadata(componentUsageLedger, card);
+    if (serviceTierResolution) {
+      resolvedComponentMetadata.service_tier_resolution = serviceTierResolution;
+      serviceTierFallbackCardIds.add(card.id);
+    }
     const periodSelection = pricingPeriodSelection(componentUsageLedger, card);
     const periodMetadata = {};
     if (periodSelection.pricing_period === cardPricingPeriod(card)) {
@@ -1520,14 +1549,16 @@ export function calculateCost({
       }
     }
     if (trace) {
-      trace.decisions.push({
+      const decision = {
         type: "price_component_match",
         component: component.name,
         candidate_price_card_ids: matches.map(({ card: matchedCard }) => matchedCard.id),
         selected_price_card_id: card.id,
         selected_source: card.source.name,
         ...periodMetadata
-      });
+      };
+      if (serviceTierResolution) decision.service_tier_resolution = serviceTierResolution;
+      trace.decisions.push(decision);
     }
     if (card.model !== componentBilledModel && (card.aliases || []).includes(componentBilledModel)) {
       const previousBilledModel = componentBilledModel;
@@ -1600,7 +1631,7 @@ export function calculateCost({
       ...(component.metadata && typeof component.metadata === "object" ? component.metadata : {})
     };
     Object.assign(outputMetadata, periodMetadata);
-    Object.assign(outputMetadata, componentMetadata || {});
+    Object.assign(outputMetadata, resolvedComponentMetadata);
     if (Object.keys(outputMetadata).length > 0) {
       costComponent.metadata = outputMetadata;
     }
@@ -1654,6 +1685,17 @@ export function calculateCost({
   }
   if (usageLedger.metadata && typeof usageLedger.metadata === "object" && Object.keys(usageLedger.metadata).length > 0) {
     result.metadata = { ...usageLedger.metadata };
+  }
+  if (serviceTierFallbackCardIds.size > 0) {
+    result.metadata = {
+      ...(result.metadata || {}),
+      service_tier_resolution: {
+        requested: "fast",
+        priced_as: "priority",
+        fallback: true,
+        price_card_ids: [...serviceTierFallbackCardIds].sort()
+      }
+    };
   }
   const normalizedAttribution = normalizeAttribution(usageLedger.attribution);
   if (Object.keys(normalizedAttribution).length > 0) {
@@ -1945,8 +1987,9 @@ function usageContextFromOptions(response, provider, options = {}) {
   const pricedAt = options.priced_at ?? options.pricedAt;
   if (pricedAt !== undefined && pricedAt !== null) {
     context.priced_at = String(pricedAt);
-  } else if (provider === "deepseek" && context.priced_at === undefined && context.pricedAt === undefined) {
-    const createdPricedAt = unixSecondsPricedAt(response.created);
+  } else if (["deepseek", "openai"].includes(provider) && context.priced_at === undefined && context.pricedAt === undefined) {
+    const timestamp = provider === "openai" ? (response.created_at ?? response.created) : response.created;
+    const createdPricedAt = unixSecondsPricedAt(timestamp);
     if (createdPricedAt) {
       context.priced_at = createdPricedAt;
     }
@@ -2594,12 +2637,16 @@ function openAICompatibleChatPayload(response) {
   if (!Array.isArray(chunks)) {
     return response;
   }
+  const fallbackServiceTier = response.service_tier ?? response.serviceTier ??
+    chunks.find((chunk) => chunk && typeof chunk === "object" && (chunk.service_tier ?? chunk.serviceTier) != null)?.service_tier ??
+    chunks.find((chunk) => chunk && typeof chunk === "object" && chunk.serviceTier != null)?.serviceTier;
   for (let index = chunks.length - 1; index >= 0; index -= 1) {
     const chunk = chunks[index];
     if (chunk && typeof chunk === "object" && chunk.usage && typeof chunk.usage === "object") {
       return {
         ...chunk,
-        model: chunk.model ?? response.model
+        model: chunk.model ?? response.model,
+        service_tier: chunk.service_tier ?? chunk.serviceTier ?? fallbackServiceTier
       };
     }
   }
@@ -2673,6 +2720,7 @@ function anthropicMessagesPayload(response) {
   }
   const message = {};
   const usage = {};
+  const content = [];
   for (const event of response.events) {
     if (!event || typeof event !== "object") {
       continue;
@@ -2680,6 +2728,11 @@ function anthropicMessagesPayload(response) {
     if (event.type === "message_start" && event.message) {
       Object.assign(message, event.message);
       Object.assign(usage, event.message.usage || {});
+      if (Array.isArray(event.message.content)) {
+        content.push(...event.message.content);
+      }
+    } else if (event.type === "content_block_start" && event.content_block && Number.isInteger(event.index) && event.index >= 0) {
+      content[event.index] = { ...event.content_block };
     } else if (event.type === "message_delta") {
       Object.assign(usage, event.usage || {});
       if (event.delta) {
@@ -2691,12 +2744,15 @@ function anthropicMessagesPayload(response) {
     return response;
   }
   message.usage = usage;
+  if (content.length > 0) {
+    message.content = content.filter((block) => block !== undefined && block !== null);
+  }
+  const servingModel = anthropicServingModel(message, usage);
+  if (servingModel) {
+    message.model = servingModel;
+  }
   return message;
 }
-
-const ANTHROPIC_FABLE_5_MODEL = "claude-fable-5";
-const ANTHROPIC_OPUS_4_8_MODEL = "claude-opus-4-8";
-const ANTHROPIC_FALLBACK_CLASSIFIER_CATEGORIES = new Set(["cyber", "bio", "reasoning_extraction"]);
 
 function anthropicFallbackPairs(response) {
   if (!Array.isArray(response.content)) {
@@ -2716,43 +2772,33 @@ function anthropicFallbackPairs(response) {
   return pairs;
 }
 
-function anthropicClassifierBlocked(response) {
-  if (response.stop_reason !== "refusal") {
-    return false;
-  }
-  const details = response.stop_details;
-  if (!details || typeof details !== "object") {
-    return false;
-  }
-  return (
-    ANTHROPIC_FALLBACK_CLASSIFIER_CATEGORIES.has(details.category) ||
-    details.recommended_model === ANTHROPIC_OPUS_4_8_MODEL ||
-    Object.prototype.hasOwnProperty.call(details, "fallback_credit_token") ||
-    details.fallback_has_prefill_claim === true
-  );
+function anthropicRefused(response) {
+  return response.stop_reason === "refusal";
 }
 
-function anthropicIsFableToOpusFallbackIteration({
-  iteration,
-  previousModels,
-  requestedModel,
-  fallbackPairs
-}) {
-  if (iteration.type !== "fallback_message") {
-    return false;
-  }
-  if (iteration.model !== ANTHROPIC_OPUS_4_8_MODEL) {
-    return false;
-  }
-  if (requestedModel === ANTHROPIC_FABLE_5_MODEL) {
-    return true;
-  }
-  if (previousModels.includes(ANTHROPIC_FABLE_5_MODEL)) {
-    return true;
-  }
-  return fallbackPairs.some(([fromModel, toModel]) => (
-    fromModel === ANTHROPIC_FABLE_5_MODEL && toModel === ANTHROPIC_OPUS_4_8_MODEL
+function anthropicIterations(usage) {
+  return Array.isArray(usage.iterations)
+    ? usage.iterations.filter((iteration) => iteration && typeof iteration === "object")
+    : [];
+}
+
+function anthropicServingModel(response, usage) {
+  const fallbackIterations = anthropicIterations(usage).filter((iteration) => (
+    iteration.type === "fallback_message" && iteration.model
   ));
+  if (fallbackIterations.length > 0) {
+    return String(fallbackIterations[fallbackIterations.length - 1].model);
+  }
+  return response.model ? String(response.model) : undefined;
+}
+
+function anthropicRequestedModel(response, usage, requestedModel) {
+  if (requestedModel) return String(requestedModel);
+  const pairs = anthropicFallbackPairs(response);
+  if (pairs.length > 0) return pairs[0][0];
+  const iterations = anthropicIterations(usage);
+  if (iterations.length > 1 && iterations[0].model) return String(iterations[0].model);
+  return String(response.model || "unknown");
 }
 
 function anthropicIterationMetadata(iteration, index, billingModel) {
@@ -2766,57 +2812,33 @@ function anthropicIterationMetadata(iteration, index, billingModel) {
   return metadata;
 }
 
-function anthropicFallbackCacheReadQuantity(iteration) {
-  return addDecimal(
-    addDecimal(iteration.input_tokens || 0, iteration.cache_creation_input_tokens || 0),
-    iteration.cache_read_input_tokens || 0
-  );
+function anthropicAttemptRefusedBeforeOutput(response, iteration, index, iterationCount, hasFallbackIteration) {
+  if (parseDecimal(iteration.output_tokens || 0).value > 0n) return false;
+  if (hasFallbackIteration && index < iterationCount - 1) return true;
+  return index === iterationCount - 1 && anthropicRefused(response);
 }
 
 function anthropicMessagesIterationComponents(response, usage, requestedModel) {
-  if (!Array.isArray(usage.iterations)) {
+  const iterations = anthropicIterations(usage);
+  if (iterations.length === 0) {
     return [];
   }
   const components = [];
-  const previousModels = [];
-  const fallbackPairs = anthropicFallbackPairs(response);
-  const classifierBlocked = anthropicClassifierBlocked(response);
-  const hasFallbackIteration = usage.iterations.some((iteration) => (
-    iteration && typeof iteration === "object" && iteration.type === "fallback_message"
+  const hasFallbackIteration = iterations.some((iteration) => (
+    iteration.type === "fallback_message"
   ));
-  usage.iterations.forEach((iteration, index) => {
-    if (!iteration || typeof iteration !== "object") {
-      return;
-    }
+  iterations.forEach((iteration, index) => {
     const iterationModel = String(iteration.model || response.model || requestedModel || "");
     const sourceRoot = `$.usage.iterations[${index}]`;
     const metadata = anthropicIterationMetadata(iteration, index, iterationModel);
-    const isFableToOpus = anthropicIsFableToOpusFallbackIteration({
+    const refusedBeforeOutput = anthropicAttemptRefusedBeforeOutput(
+      response,
       iteration,
-      previousModels,
-      requestedModel,
-      fallbackPairs
-    });
-    let suppressClassifierInput = false;
-    if (isFableToOpus) {
-      components.push(positiveComponentWithMetadata(
-        "input_cache_read_tokens",
-        anthropicFallbackCacheReadQuantity(iteration),
-        "token",
-        `${sourceRoot}.input_tokens`,
-        {
-          ...metadata,
-          anthropic_fallback_billing: "fable_to_opus_cache_read"
-        }
-      ));
-    } else {
-      suppressClassifierInput = (
-        classifierBlocked &&
-        !hasFallbackIteration &&
-        parseDecimal(iteration.output_tokens || 0).value <= 0n
-      );
-    }
-    if (!isFableToOpus && !suppressClassifierInput && (!hasFallbackIteration || iteration.type === "fallback_message")) {
+      index,
+      iterations.length,
+      hasFallbackIteration
+    );
+    if (!refusedBeforeOutput) {
       const cacheWrite = iteration.cache_creation_input_tokens || 0;
       const cacheWrite1h = iteration.cache_creation_input_tokens_1h || 0;
       components.push(
@@ -2825,16 +2847,13 @@ function anthropicMessagesIterationComponents(response, usage, requestedModel) {
         positiveComponentWithMetadata("input_cache_write_1h_tokens", cacheWrite1h, "token", `${sourceRoot}.cache_creation_input_tokens_1h`, metadata),
         positiveComponentWithMetadata("input_cache_read_tokens", iteration.cache_read_input_tokens || 0, "token", `${sourceRoot}.cache_read_input_tokens`, metadata)
       );
-    }
-    components.push(positiveComponentWithMetadata(
-      "output_text_tokens",
-      iteration.output_tokens || 0,
-      "token",
-      `${sourceRoot}.output_tokens`,
-      metadata
-    ));
-    if (iterationModel) {
-      previousModels.push(iterationModel);
+      components.push(positiveComponentWithMetadata(
+        "output_text_tokens",
+        iteration.output_tokens || 0,
+        "token",
+        `${sourceRoot}.output_tokens`,
+        metadata
+      ));
     }
   });
   return compactComponents(components);
@@ -2855,43 +2874,69 @@ function anthropicClientFallbackCreditEnabled(response, options) {
   );
 }
 
-function anthropicClientFallbackCreditModel(response, requestedModel) {
-  return String(response.model || requestedModel || "");
+function anthropicResponseMetadata(response, usage, requestedModel, components, fallbackCreditSignaled) {
+  const metadata = {};
+  const iterations = anthropicIterations(usage);
+  const fallbackIterations = iterations.filter((iteration) => iteration.type === "fallback_message");
+  const fallbackPairs = anthropicFallbackPairs(response);
+  if (fallbackIterations.length > 0 || fallbackPairs.length > 0) {
+    const servingModel = anthropicServingModel(response, usage);
+    const pricingModels = [];
+    for (const component of components) {
+      const billingModel = componentBillingModel(component);
+      if (billingModel && !pricingModels.includes(billingModel)) pricingModels.push(billingModel);
+    }
+    if (pricingModels.length === 0 && components.length > 0 && servingModel) pricingModels.push(servingModel);
+    const fallback = {
+      attempted: true,
+      utilized: !anthropicRefused(response),
+      requested_model: requestedModel,
+      attempted_models: iterations.filter((iteration) => iteration.model).map((iteration) => String(iteration.model)),
+      pricing_models: pricingModels,
+      source: fallbackIterations.length > 0 ? "usage.iterations" : "content.fallback"
+    };
+    if (servingModel) fallback.serving_model = servingModel;
+    if (fallbackPairs.length > 0) {
+      fallback.hops = fallbackPairs.map(([fromModel, toModel]) => ({ from_model: fromModel, to_model: toModel }));
+    }
+    metadata.anthropic_fallback = fallback;
+  }
+  if (anthropicRefused(response)) {
+    const details = response.stop_details && typeof response.stop_details === "object" ? response.stop_details : {};
+    const refusal = {
+      detected: true,
+      pre_output: parseDecimal(usage.output_tokens || 0).value <= 0n,
+      requires_retry: true,
+      fallback_credit_available: Boolean(details.fallback_credit_token)
+    };
+    for (const key of ["category", "recommended_model"]) {
+      if (details[key] !== undefined && details[key] !== null) refusal[key] = details[key];
+    }
+    metadata.anthropic_refusal = refusal;
+  }
+  if (fallbackCreditSignaled) {
+    metadata.anthropic_fallback_credit = { signaled: true, pricing_source: "reported_usage" };
+  }
+  return metadata;
 }
 
 export function extractAnthropicMessagesUsage(response, options = {}) {
   response = anthropicMessagesPayload(response);
   const usagePresent = response.usage && typeof response.usage === "object";
   const usage = usagePresent ? response.usage : {};
-  const requestedModel = options.model || response.model;
+  const requestedModel = anthropicRequestedModel(response, usage, options.model);
+  const servingModel = anthropicServingModel(response, usage);
   const input = usage.input_tokens || 0;
   const cacheWrite = usage.cache_creation_input_tokens || 0;
   const cacheWrite1h = usage.cache_creation_input_tokens_1h || 0;
   const cacheRead = usage.cache_read_input_tokens || 0;
   const output = usage.output_tokens || 0;
   const metadata = {};
-  const classifierZeroBillable = anthropicClassifierBlocked(response) && parseDecimal(output).value <= 0n;
+  const refusalZeroBillable = anthropicRefused(response) && parseDecimal(output).value <= 0n;
+  const fallbackCreditSignaled = anthropicClientFallbackCreditEnabled(response, options);
   let components = anthropicMessagesIterationComponents(response, usage, requestedModel);
   if (components.length === 0) {
-    if (
-      anthropicClientFallbackCreditEnabled(response, options) &&
-      anthropicClientFallbackCreditModel(response, requestedModel) === ANTHROPIC_OPUS_4_8_MODEL
-    ) {
-      const billingModel = response.model || requestedModel;
-      components = compactComponents([
-        positiveComponentWithMetadata(
-          "input_cache_read_tokens",
-          addDecimal(addDecimal(input, cacheWrite), cacheRead),
-          "token",
-          "$.usage.input_tokens",
-          {
-            billing_model: billingModel,
-            anthropic_fallback_billing: "client_fallback_credit_cache_read"
-          }
-        ),
-        positiveComponent("output_text_tokens", output, "token", "$.usage.output_tokens")
-      ]);
-    } else if (anthropicClassifierBlocked(response) && parseDecimal(output).value <= 0n) {
+    if (refusalZeroBillable) {
       components = [];
       metadata.zero_billable_reason = "anthropic_classifier_block";
     } else {
@@ -2907,16 +2952,23 @@ export function extractAnthropicMessagesUsage(response, options = {}) {
       }
     }
   }
+  Object.assign(metadata, anthropicResponseMetadata(
+    response,
+    usage,
+    requestedModel,
+    components,
+    fallbackCreditSignaled
+  ));
 
   const ledger = baseUsageLedger({
     provider: options.provider || "anthropic",
     surface: options.surface || "anthropic.messages",
     requestedModel,
-    returnedModel: response.model,
+    returnedModel: servingModel,
     rawUsage: usage,
     components
   });
-  if (components.length === 0 && classifierZeroBillable) {
+  if (components.length === 0 && refusalZeroBillable) {
     metadata.zero_billable_reason = metadata.zero_billable_reason || "anthropic_classifier_block";
   }
   if (Object.keys(metadata).length > 0) {
@@ -4868,7 +4920,31 @@ export function priceCardsFromOfficialSnapshot(data, options = {}) {
     const schedule = normalizeBillingSchedule(row.billing_schedule || row.billingSchedule) || scheduleDefault;
     if (schedule) card.billing_schedule = schedule;
     if (row.effective && typeof row.effective === "object") card.effective = row.effective;
-    return [card];
+    const cards = [card];
+    const serviceTierAliases = row.capabilities && Array.isArray(row.capabilities.service_tier_aliases)
+      ? row.capabilities.service_tier_aliases
+      : [];
+    for (const rawAlias of serviceTierAliases) {
+      const alias = String(rawAlias || "").trim().toLowerCase();
+      if (!alias || alias === card.service_tier) continue;
+      const marker = card.service_tier ? `:${card.service_tier}:` : "";
+      const aliasId = marker && card.id.includes(marker)
+        ? card.id.replace(marker, `:${alias}:`)
+        : `${card.id}:${alias}`;
+      cards.push({
+        ...card,
+        id: aliasId,
+        service_tier: alias,
+        metadata: {
+          ...card.metadata,
+          service_tier_resolution: {
+            independent_card: true,
+            currently_equivalent_to: card.service_tier
+          }
+        }
+      });
+    }
+    return cards;
   });
 }
 
@@ -5484,6 +5560,14 @@ export function fromBatchResults(items, options = {}) {
         priceCards: cards
       });
       output.ledger = ledger;
+      if (normalizedProvider === "anthropic") {
+        const refusal = ledger.metadata && ledger.metadata.anthropic_refusal;
+        if (refusal && typeof refusal === "object" && refusal.detected === true) {
+          output.metadata.refusal = true;
+          output.metadata.requires_retry = Boolean(refusal.requires_retry);
+          if (refusal.recommended_model) output.metadata.recommended_model = refusal.recommended_model;
+        }
+      }
       ledgers.push(ledger);
     } else {
       output.error = unwrapped.error || batchError(null, `Batch item is ${unwrapped.status}.`);
@@ -5739,7 +5823,10 @@ export function usageLedgerFromOTelGenAISpan(span, options = {}) {
   const context = {};
   const serviceTier = attributes["gen_ai.request.service_tier"] || attributes["gen_ai.response.service_tier"] ||
     attributes["openai.response.service_tier"] || attributes["openai.request.service_tier"];
-  if (serviceTier) context.service_tier = String(serviceTier);
+  if (serviceTier) {
+    const normalizedTier = provider === "openai" ? normalizeOpenAIServiceTier(serviceTier) : String(serviceTier);
+    if (normalizedTier) context.service_tier = normalizedTier;
+  }
   const requestId = attributes["gen_ai.response.id"] || attributes["openai.response.id"];
   if (requestId) context.request_id = String(requestId);
   const traceId = span && (span.trace_id ?? span.traceId);

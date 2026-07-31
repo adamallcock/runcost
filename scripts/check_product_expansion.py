@@ -118,6 +118,40 @@ def validate_result(case: dict[str, Any], result: Any, language: str) -> None:
 
 
 def check_python_edges() -> None:
+    class SDKModel:
+        def __init__(self, payload: dict[str, Any]) -> None:
+            self.payload = payload
+
+        def model_dump(self) -> dict[str, Any]:
+            return self.payload
+
+    sdk_message = SDKModel(
+        {
+            "id": "msg_sdk_refusal_fixture",
+            "type": "message",
+            "model": "claude-fable-5",
+            "content": [],
+            "stop_reason": "refusal",
+            "stop_details": {"type": "refusal", "category": None},
+            "usage": {"input_tokens": 100, "output_tokens": 0},
+        }
+    )
+    sdk_ledger = from_response(sdk_message, provider="anthropic")
+    if sdk_ledger["model"]["billed"] != "claude-fable-5" or sdk_ledger["total"] != "0":
+        raise AssertionError(f"Anthropic SDK response model was not normalized: {sdk_ledger}")
+    if not sdk_ledger.get("metadata", {}).get("anthropic_refusal", {}).get("detected"):
+        raise AssertionError(f"Anthropic SDK refusal metadata was not preserved: {sdk_ledger}")
+
+    sdk_batch_item = SDKModel(
+        {
+            "custom_id": "sdk-refusal",
+            "result": {"type": "succeeded", "message": sdk_message.model_dump()},
+        }
+    )
+    sdk_batch = from_batch_results([sdk_batch_item], provider="anthropic")
+    if sdk_batch["items"][0]["metadata"].get("requires_retry") is not True:
+        raise AssertionError(f"Anthropic SDK batch refusal was not marked for retry: {sdk_batch}")
+
     empty = from_batch_results([], provider="openai")
     if empty["summary"] != {"total": 0, "succeeded": 0, "failed": 0, "pending": 0, "total_cost": "0"}:
         raise AssertionError(f"empty batch summary is unstable: {empty['summary']}")

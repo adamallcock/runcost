@@ -1,6 +1,6 @@
 {
   "name": "anthropic-messages-fable-direct-classifier-block",
-  "description": "Treats a direct Fable 5 classifier block before any output tokens as zero billable usage.",
+  "description": "Treats a direct Fable 5 refusal with a null category before any output tokens as zero billable usage, keyed by stop_reason rather than category.",
   "metadata": {
     "requirement_ids": [
       "RC-FIXTURE-CONFORMANCE",
@@ -37,7 +37,7 @@
       "stop_reason": "refusal",
       "stop_details": {
         "type": "refusal",
-        "category": "cyber",
+        "category": null,
         "fallback_credit_token": null
       },
       "usage": {

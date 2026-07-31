@@ -607,7 +607,7 @@ def _split_resolver_options(options: Mapping[str, Any]) -> Tuple[Dict[str, Any],
     return calculation, resolver
 
 
-def from_response_auto(response: Dict[str, Any], **options: Any) -> Dict[str, Any]:
+def from_response_auto(response: Any, **options: Any) -> Dict[str, Any]:
     """Price a response using external sources and the persistent cache."""
 
     calculation, resolver_options = _split_resolver_options(options)
@@ -640,7 +640,7 @@ def from_response_auto(response: Dict[str, Any], **options: Any) -> Dict[str, An
     return attach_price_resolution(result, resolution)
 
 
-def from_batch_results_auto(items: Iterable[Mapping[str, Any]], *, provider: str, **options: Any) -> Dict[str, Any]:
+def from_batch_results_auto(items: Iterable[Any], *, provider: str, **options: Any) -> Dict[str, Any]:
     """Price provider batch output with one externally resolved catalog."""
 
     from .expansion import from_batch_results

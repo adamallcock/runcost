@@ -13,7 +13,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 170
+- Fixtures: 181
 - Providers: 18
 - Provider surfaces: 36
 - Usage components covered: 34
@@ -24,9 +24,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 168 |
-| `javascript` | 169 |
-| `python` | 169 |
+| `go` | 179 |
+| `javascript` | 180 |
+| `python` | 180 |
 
 ## Scenarios
 
@@ -39,10 +39,10 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `long_context` | 2 |
 | `normalized_usage` | 22 |
 | `provider_reported` | 4 |
-| `raw_provider_response` | 75 |
+| `raw_provider_response` | 78 |
 | `service_mode` | 3 |
-| `service_tier` | 4 |
-| `source_adapter` | 17 |
+| `service_tier` | 8 |
+| `source_adapter` | 21 |
 | `source_priority` | 5 |
 | `strict_error` | 1 |
 | `warning` | 14 |
@@ -52,7 +52,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | Provider | Surface | Fixtures |
 |---|---|---:|
 | `aggregate` | `aggregate.cost_ledgers` | 2 |
-| `anthropic` | `anthropic.messages` | 14 |
+| `anthropic` | `anthropic.messages` | 16 |
 | `azure` | `azure.openai.chat_completions` | 1 |
 | `bedrock` | `aws.bedrock.converse` | 2 |
 | `bedrock` | `aws.bedrock.invoke_model` | 1 |
@@ -71,10 +71,10 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `mistral` | `mistral.chat_completions` | 1 |
 | `multi` | `normalized.feature_pricing` | 2 |
 | `openai` | `openai.audio_transcriptions` | 2 |
-| `openai` | `openai.chat_completions` | 12 |
+| `openai` | `openai.chat_completions` | 14 |
 | `openai` | `openai.embeddings` | 2 |
 | `openai` | `openai.images` | 2 |
-| `openai` | `openai.responses` | 54 |
+| `openai` | `openai.responses` | 61 |
 | `openai` | `openai.usage.audio_speeches` | 1 |
 | `openai` | `openai.usage.audio_transcriptions` | 1 |
 | `openai` | `openai.usage.code_interpreter_sessions` | 1 |
@@ -110,12 +110,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `input_cache_write_tokens` | 20 |
 | `input_image_tokens` | 4 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 121 |
+| `input_uncached_tokens` | 132 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 10 |
 | `output_image_tokens` | 3 |
 | `output_reasoning_tokens` | 50 |
-| `output_text_tokens` | 120 |
+| `output_text_tokens` | 124 |
 | `output_video_tokens` | 2 |
 | `request_units` | 3 |
 | `rerank_search_units` | 2 |
@@ -145,7 +145,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `pricing_period_unsupported` | 1 |
 | `provider_reported_cost_mismatch` | 4 |
 | `provider_reported_cost_used` | 2 |
-| `service_tier_unsupported` | 2 |
+| `service_tier_unsupported` | 3 |
 | `source_capability_unsupported` | 2 |
 | `stream_usage_missing` | 1 |
 | `tool_component_unpriced` | 3 |
@@ -164,7 +164,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `litellm` | 1 |
 | `llm-prices` | 2 |
 | `models-dev` | 1 |
-| `official-snapshot` | 5 |
+| `official-snapshot` | 11 |
 | `openrouter-models` | 2 |
 | `portkey` | 1 |
 | `source-cache` | 1 |
@@ -199,7 +199,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-DEBUG-TRACE` | 2 |
 | `RC-DISCOUNT-POLICY` | 2 |
 | `RC-FEATURE-PRICING` | 15 |
-| `RC-FIXTURE-CONFORMANCE` | 170 |
+| `RC-FIXTURE-CONFORMANCE` | 181 |
 | `RC-FRAMEWORK-ADAPTER` | 15 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
 | `RC-GEMINI-LIVE` | 6 |
@@ -208,12 +208,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-PRICING-PERIOD` | 18 |
 | `RC-PROVIDER-EXTRACTOR` | 11 |
 | `RC-PROVIDER-REPORTED-COST` | 10 |
-| `RC-RAW-EXTRACTOR` | 65 |
+| `RC-RAW-EXTRACTOR` | 70 |
 | `RC-REASONING-OUTPUT-DEFAULT` | 1 |
 | `RC-SERVICE-MODE` | 3 |
 | `RC-SERVICE-TIER` | 10 |
-| `RC-SOURCE-ADAPTER` | 18 |
-| `RC-SOURCE-PRIORITY` | 5 |
+| `RC-SOURCE-ADAPTER` | 24 |
+| `RC-SOURCE-PRIORITY` | 6 |
 | `RC-STRICT-MODE` | 1 |
 | `RC-TOOL-PRICING` | 4 |
 | `RC-WARNING-MODE` | 17 |
@@ -236,11 +236,11 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `aggregation` | 2 |
 | `alias` | 17 |
 | `ambiguous_fallback` | 1 |
-| `anthropic_fallback_billing` | 7 |
+| `anthropic_fallback_billing` | 9 |
 | `audio_generation` | 1 |
 | `audio_transcription` | 1 |
 | `byte_stable_ordering` | 2 |
-| `cache` | 21 |
+| `cache` | 18 |
 | `classifier_block` | 2 |
 | `client_fallback_credit` | 3 |
 | `code_interpreter` | 1 |
@@ -257,17 +257,17 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:file_search_units` | 2 |
 | `component:image_generation_units` | 3 |
 | `component:input_audio_tokens` | 10 |
-| `component:input_cache_read_tokens` | 57 |
+| `component:input_cache_read_tokens` | 54 |
 | `component:input_cache_write_1h_tokens` | 2 |
-| `component:input_cache_write_tokens` | 18 |
+| `component:input_cache_write_tokens` | 20 |
 | `component:input_image_tokens` | 4 |
 | `component:input_image_units` | 1 |
-| `component:input_uncached_tokens` | 111 |
+| `component:input_uncached_tokens` | 127 |
 | `component:input_video_tokens` | 1 |
 | `component:output_audio_tokens` | 10 |
 | `component:output_image_tokens` | 3 |
 | `component:output_reasoning_tokens` | 50 |
-| `component:output_text_tokens` | 118 |
+| `component:output_text_tokens` | 122 |
 | `component:output_video_tokens` | 2 |
 | `component:request_units` | 3 |
 | `component:rerank_search_units` | 2 |
@@ -283,11 +283,12 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `decimal_precision` | 1 |
 | `discount` | 2 |
 | `duration_usage` | 1 |
-| `effective_date` | 4 |
+| `effective_date` | 10 |
 | `embeddings` | 2 |
-| `fable_fallback` | 7 |
+| `fable_fallback` | 8 |
 | `fallback_credit_token` | 1 |
 | `fallback_unavailable` | 1 |
+| `fast_mode` | 6 |
 | `feature_pricing` | 4 |
 | `framework:ag2` | 2 |
 | `framework:haystack` | 1 |
@@ -301,7 +302,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `gb_day` | 1 |
 | `gemini` | 13 |
 | `generated_media` | 5 |
+| `generic_fallback` | 1 |
 | `google` | 4 |
+| `gpt_5_6_price_transition` | 6 |
 | `helper:from_ag2_usage_summary` | 2 |
 | `helper:from_haystack_generator_result` | 1 |
 | `helper:from_langchain_message` | 1 |
@@ -324,15 +327,17 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `long_context` | 3 |
 | `meta` | 5 |
 | `metadata_billing_model_passive` | 1 |
+| `midstream_refusal` | 2 |
 | `missing_usage` | 1 |
 | `mode:total` | 1 |
+| `multi_hop_fallback` | 1 |
 | `multimodal` | 1 |
 | `normalized_usage` | 13 |
 | `null_usage` | 2 |
 | `openai_responses_orchestration_usage` | 2 |
 | `pricing_period` | 18 |
 | `provider_reported` | 9 |
-| `raw_provider_response` | 66 |
+| `raw_provider_response` | 71 |
 | `reasoning` | 20 |
 | `recommended_model` | 1 |
 | `rerank` | 2 |
@@ -345,15 +350,15 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `source:litellm` | 1 |
 | `source:llm-prices` | 2 |
 | `source:models-dev` | 1 |
-| `source:official-snapshot` | 4 |
+| `source:official-snapshot` | 10 |
 | `source:openrouter-models` | 2 |
 | `source:portkey` | 1 |
 | `source:reviewed-preview` | 1 |
 | `source:source-cache` | 1 |
 | `source:user-pricing` | 4 |
 | `source:yaml-file` | 1 |
-| `source_adapter` | 17 |
-| `source_priority` | 6 |
+| `source_adapter` | 21 |
+| `source_priority` | 7 |
 | `stale_price` | 1 |
 | `sticky_fallback` | 2 |
 | `storage_pricing` | 2 |
@@ -380,7 +385,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `warning:pricing_period_unsupported` | 1 |
 | `warning:provider_reported_cost_mismatch` | 4 |
 | `warning:provider_reported_cost_used` | 2 |
-| `warning:service_tier_unsupported` | 2 |
+| `warning:service_tier_unsupported` | 3 |
 | `warning:source_capability_unsupported` | 2 |
 | `warning:stream_usage_missing` | 1 |
 | `warning:tool_component_unpriced` | 3 |

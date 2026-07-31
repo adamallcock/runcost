@@ -83,6 +83,34 @@
         "source": { "name": "fixture" }
       }
     ],
+    "anthropic-refusal-retry-batch": [
+      {
+        "schema_version": "0.1",
+        "id": "fixture:anthropic:fable-5:batch",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "claude-fable-5",
+        "service_tier": "batch",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "5", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "25", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      },
+      {
+        "schema_version": "0.1",
+        "id": "fixture:anthropic:opus-5:batch",
+        "provider": "anthropic",
+        "surface": "anthropic.messages",
+        "model": "claude-opus-5",
+        "service_tier": "batch",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "2.5", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "12.5", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      }
+    ],
     "google-batch": [
       {
         "schema_version": "0.1",
@@ -175,6 +203,21 @@
           { "usage_component": "input_cache_write_tokens", "unit": "token", "price": { "amount": "1.25", "currency": "USD", "per": "1000000" } },
           { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } },
           { "usage_component": "output_reasoning_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
+        ],
+        "source": { "name": "fixture" }
+      }
+    ],
+    "otel-fast": [
+      {
+        "schema_version": "0.1",
+        "id": "fixture:otel:openai:fast",
+        "provider": "openai",
+        "surface": "openai.chat_completions",
+        "model": "otel-fast-model",
+        "service_tier": "fast",
+        "components": [
+          { "usage_component": "input_uncached_tokens", "unit": "token", "price": { "amount": "1", "currency": "USD", "per": "1000000" } },
+          { "usage_component": "output_text_tokens", "unit": "token", "price": { "amount": "2", "currency": "USD", "per": "1000000" } }
         ],
         "source": { "name": "fixture" }
       }
@@ -434,6 +477,63 @@
       "expected": { "summary": { "total": 2, "succeeded": 1, "failed": 1 }, "items": [{ "id": "claude-ok", "status": "succeeded" }, { "id": "claude-expired", "status": "expired" }] }
     },
     {
+      "id": "anthropic-message-batch-refusal-retry",
+      "operation": "from_batch_results",
+      "input": {
+        "provider": "anthropic",
+        "price_cards_ref": "anthropic-refusal-retry-batch",
+        "items": [
+          {
+            "custom_id": "fable-refusal",
+            "result": {
+              "type": "succeeded",
+              "message": {
+                "id": "msg_batch_refusal_fixture",
+                "type": "message",
+                "model": "claude-fable-5",
+                "content": [],
+                "stop_reason": "refusal",
+                "stop_details": {"type": "refusal", "category": null, "recommended_model": "claude-opus-5"},
+                "usage": {"input_tokens": 100, "output_tokens": 0}
+              }
+            }
+          },
+          {
+            "custom_id": "opus-retry",
+            "result": {
+              "type": "succeeded",
+              "message": {
+                "id": "msg_batch_retry_fixture",
+                "type": "message",
+                "model": "claude-opus-5",
+                "content": [{"type": "text", "text": "Retry answer."}],
+                "stop_reason": "end_turn",
+                "stop_details": null,
+                "usage": {"input_tokens": 120, "output_tokens": 20}
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "summary": {"total": 2, "succeeded": 2, "failed": 0, "total_cost": "0.00055"},
+        "items": [
+          {
+            "id": "fable-refusal",
+            "status": "succeeded",
+            "metadata": {"service_tier": "batch", "refusal": true, "requires_retry": true, "recommended_model": "claude-opus-5"},
+            "ledger": {"model": {"billed": "claude-fable-5"}, "total": "0"}
+          },
+          {
+            "id": "opus-retry",
+            "status": "succeeded",
+            "metadata": {"service_tier": "batch"},
+            "ledger": {"model": {"billed": "claude-opus-5"}, "total": "0.00055"}
+          }
+        ]
+      }
+    },
+    {
       "id": "gemini-developer-batch-partial",
       "operation": "from_batch_results",
       "input": {
@@ -644,6 +744,23 @@
         "span": { "attributes": { "gen_ai.provider.name": "openai", "gen_ai.operation.name": "chat", "gen_ai.request.model": "otel-model", "gen_ai.usage.input_tokens": 100, "gen_ai.usage.cache_read.input_tokens": 20, "gen_ai.usage.output_tokens": 50, "gen_ai.usage.reasoning.output_tokens": 10 } }
       },
       "expected": { "total": "0.000182", "provider": "openai" }
+    },
+    {
+      "id": "otel-genai-fast-tier",
+      "operation": "from_otel",
+      "input": {
+        "price_cards_ref": "otel-fast",
+        "span": { "attributes": { "gen_ai.provider.name": "openai", "gen_ai.operation.name": "chat", "gen_ai.request.model": "otel-fast-model", "gen_ai.request.service_tier": "fast", "gen_ai.response.service_tier": "priority", "gen_ai.usage.input_tokens": 100, "gen_ai.usage.output_tokens": 50 } }
+      },
+      "expected": { "total": "0.0002", "provider": "openai" }
+    },
+    {
+      "id": "otel-genai-fast-request-context",
+      "operation": "usage_ledger_from_otel",
+      "input": {
+        "span": { "attributes": { "gen_ai.provider.name": "openai", "gen_ai.operation.name": "chat", "gen_ai.request.model": "otel-fast-model", "gen_ai.request.service_tier": "fast", "gen_ai.response.service_tier": "priority", "gen_ai.usage.input_tokens": 100, "gen_ai.usage.output_tokens": 50 } }
+      },
+      "expected": { "provider": "openai", "surface": "openai.chat_completions", "context": { "service_tier": "fast" } }
     },
     {
       "id": "precall-estimate-attribution",

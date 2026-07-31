@@ -1,6 +1,6 @@
 {
   "name": "anthropic-messages-fable-server-fallback",
-  "description": "Prices Anthropic server-side Fable 5 to Opus 4.8 fallback from usage.iterations, billing the fallback input as cache read.",
+  "description": "Prices a current Anthropic Fable 5 to Opus 5 fallback from usage.iterations against the model that actually served the request.",
   "metadata": {
     "requirement_ids": [
       "RC-FIXTURE-CONFORMANCE",
@@ -11,8 +11,7 @@
     "scenario": "raw_provider_response",
     "tags": [
       "anthropic_fallback_billing",
-      "cache",
-      "component:input_cache_read_tokens",
+      "component:input_uncached_tokens",
       "component:output_text_tokens",
       "fable_fallback",
       "raw_provider_response"
@@ -33,7 +32,7 @@
       "id": "msg_fable_fallback_fixture",
       "type": "message",
       "role": "assistant",
-      "model": "claude-opus-4-8",
+      "model": "claude-opus-5",
       "content": [
         {
           "type": "fallback",
@@ -41,7 +40,7 @@
             "model": "claude-fable-5"
           },
           "to": {
-            "model": "claude-opus-4-8"
+            "model": "claude-opus-5"
           }
         },
         {
@@ -67,7 +66,7 @@
           },
           {
             "type": "fallback_message",
-            "model": "claude-opus-4-8",
+            "model": "claude-opus-5",
             "input_tokens": 412,
             "output_tokens": 264,
             "cache_read_input_tokens": 0,
@@ -110,10 +109,10 @@
       },
       {
         "schema_version": "0.1",
-        "id": "anthropic:claude-opus-4-8:fallback-fixture",
+        "id": "anthropic:claude-opus-5:fallback-fixture",
         "provider": "anthropic",
         "surface": "anthropic.messages",
-        "model": "claude-opus-4-8",
+        "model": "claude-opus-5",
         "components": [
           {
             "usage_component": "input_uncached_tokens",
@@ -145,7 +144,7 @@
         ],
         "source": {
           "name": "fixture",
-          "retrieved_at": "2026-06-19T00:00:00Z"
+        "retrieved_at": "2026-07-30T00:00:00Z"
         }
       }
     ]
@@ -157,25 +156,24 @@
       "surface": "anthropic.messages",
       "model": {
         "requested": "claude-fable-5",
-        "returned": "claude-opus-4-8",
-        "billed": "claude-opus-4-8",
+        "returned": "claude-opus-5",
+        "billed": "claude-opus-5",
         "alias_resolution": "none"
       },
       "currency": "USD",
       "components": [
         {
-          "name": "input_cache_read_tokens",
+          "name": "input_uncached_tokens",
           "quantity": "412",
           "unit": "token",
-          "unit_price": "0.0000005",
-          "cost": "0.000206",
-          "price_card_id": "anthropic:claude-opus-4-8:fallback-fixture",
+          "unit_price": "0.000005",
+          "cost": "0.00206",
+          "price_card_id": "anthropic:claude-opus-5:fallback-fixture",
           "discount_eligible": true,
           "metadata": {
-            "billing_model": "claude-opus-4-8",
+            "billing_model": "claude-opus-5",
             "usage_iteration_index": 1,
-            "usage_iteration_type": "fallback_message",
-            "anthropic_fallback_billing": "fable_to_opus_cache_read"
+            "usage_iteration_type": "fallback_message"
           }
         },
         {
@@ -184,24 +182,46 @@
           "unit": "token",
           "unit_price": "0.000025",
           "cost": "0.0066",
-          "price_card_id": "anthropic:claude-opus-4-8:fallback-fixture",
+          "price_card_id": "anthropic:claude-opus-5:fallback-fixture",
           "discount_eligible": true,
           "metadata": {
-            "billing_model": "claude-opus-4-8",
+            "billing_model": "claude-opus-5",
             "usage_iteration_index": 1,
             "usage_iteration_type": "fallback_message"
           }
         }
       ],
-      "total": "0.006806",
+      "total": "0.00866",
       "price_sources": [
         {
           "name": "fixture",
-          "retrieved_at": "2026-06-19T00:00:00Z"
+          "retrieved_at": "2026-07-30T00:00:00Z"
         }
       ],
       "applied_discounts": [],
-      "warnings": []
+      "warnings": [],
+      "metadata": {
+        "anthropic_fallback": {
+          "attempted": true,
+          "utilized": true,
+          "requested_model": "claude-fable-5",
+          "attempted_models": [
+            "claude-fable-5",
+            "claude-opus-5"
+          ],
+          "pricing_models": [
+            "claude-opus-5"
+          ],
+          "source": "usage.iterations",
+          "serving_model": "claude-opus-5",
+          "hops": [
+            {
+              "from_model": "claude-fable-5",
+              "to_model": "claude-opus-5"
+            }
+          ]
+        }
+      }
     }
   }
 }

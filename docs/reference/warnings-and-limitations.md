@@ -162,7 +162,10 @@ treating the aggregate as complete.
 - Official price-page monitoring and pull-request automation are not implemented.
 - Tool-call pricing coverage exists only for selected fixtures and provider shapes.
 - Historical point-in-time pricing exists in the model but is not comprehensive.
-- OpenAI publishes GPT-5.6 Priority pricing only for short context. Priority
+- OpenAI publishes GPT-5.6 Fast (formerly Priority) pricing only for short
+  context. Fast and Priority are independent canonical tiers; Fast falls back
+  to Priority only when no applicable Fast card exists, while Priority never
+  falls forward to Fast. Fast
   requests above 272,000 input tokens return `long_context_rule_missing` rather
   than falling back to the cheaper short-context rate.
 - Framework adapters cover selected usage metadata objects plus initial LangChain callback/context-manager and Vercel `wrapGenerate` / `onFinish` helpers, not every framework callback or streaming pattern.

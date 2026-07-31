@@ -1,0 +1,50 @@
+{
+  "name": "openai-priority-does-not-fallback-to-fast",
+  "description": "Keeps the Fast-to-Priority compatibility fallback asymmetric: Priority requests do not use Fast cards.",
+  "metadata": {
+    "requirement_ids": ["RC-FIXTURE-CONFORMANCE"],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "service_tier",
+    "tags": ["component:input_uncached_tokens", "fast_mode", "warning:service_tier_unsupported"],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {"requested": "gpt-fast-only", "billed": "gpt-fast-only", "alias_resolution": "none"},
+      "context": {"service_tier": "priority"},
+      "components": [{"name": "input_uncached_tokens", "quantity": "1000", "unit": "token"}]
+    },
+    "price_cards": [{
+      "schema_version": "0.1",
+      "id": "openai:gpt-fast-only:fast",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": "gpt-fast-only",
+      "service_tier": "fast",
+      "components": [{"usage_component": "input_uncached_tokens", "unit": "token", "price": {"amount": "2", "currency": "USD", "per": "1000000"}}],
+      "source": {"name": "fast-source", "retrieved_at": "2026-07-30T00:00:00Z"}
+    }]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {"requested": "gpt-fast-only", "billed": "gpt-fast-only", "alias_resolution": "none"},
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": [{
+        "code": "service_tier_unsupported",
+        "message": "No price card found for service tier priority.",
+        "metadata": {"model": "gpt-fast-only", "service_tier": "priority"}
+      }]
+    }
+  }
+}

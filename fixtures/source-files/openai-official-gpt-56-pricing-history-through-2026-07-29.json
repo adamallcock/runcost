@@ -2,463 +2,88 @@
   "schema_version": "0.1",
   "provider": "openai",
   "source": {
-    "name": "OpenAI GPT-5.6 pricing snapshot",
+    "name": "OpenAI GPT-5.6 pre-reduction pricing snapshot",
     "url": "https://developers.openai.com/api/docs/pricing",
-    "retrieved_at": "2026-07-31T00:40:00Z",
-    "version": "2026-07-30",
+    "retrieved_at": "2026-07-10T19:29:43Z",
+    "version": "2026-07-10-historical",
     "license": "reviewed"
   },
   "rows": [
     {
-      "model": "gpt-5.6-sol",
-      "aliases": [
-        "gpt-5.6"
-      ],
-      "service_tier": "standard",
-      "price_card_id": "openai:gpt-5.6-sol:standard:official-snapshot",
-      "effective": {
-        "from": "2026-06-26"
-      },
-      "components": [
-        {
-          "usage_component": "input_uncached_tokens",
-          "amount": "5",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_cache_read_tokens",
-          "amount": "0.50",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_cache_write_tokens",
-          "amount": "6.25",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "output_text_tokens",
-          "amount": "30",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "output_reasoning_tokens",
-          "amount": "30",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_uncached_tokens",
-          "amount": "10",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "input_cache_read_tokens",
-          "amount": "1",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "input_cache_write_tokens",
-          "amount": "12.50",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "output_text_tokens",
-          "amount": "45",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "output_reasoning_tokens",
-          "amount": "45",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        }
-      ],
-      "source_label": "OpenAI API pricing and GPT-5.6 Sol model pages",
-      "capabilities": {
-        "pricing_dimensions": [
-          "token",
-          "cache_read",
-          "cache_write",
-          "long_context",
-          "service_tier"
-        ],
-        "availability": "general",
-        "explicit_cache_breakpoints": true,
-        "cache_min_life_minutes": 30,
-        "cache_write_multiplier": "1.25",
-        "cache_read_discount_percent": 90,
-        "long_context_threshold_tokens": 272000,
-        "long_context_applies_to_full_request": true,
-        "reasoning_priced_as_output": true
-      },
-      "notes": "The gpt-5.6 alias routes to gpt-5.6-sol. Prompts above 272,000 input tokens use the published long-context rates for the full request."
-    },
-    {
-      "model": "gpt-5.6-sol",
-      "aliases": [
-        "gpt-5.6"
-      ],
-      "service_tier": "batch",
-      "price_card_id": "openai:gpt-5.6-sol:batch:official-snapshot",
-      "effective": {
-        "from": "2026-06-26"
-      },
-      "components": [
-        {
-          "usage_component": "input_uncached_tokens",
-          "amount": "2.50",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_cache_read_tokens",
-          "amount": "0.25",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_cache_write_tokens",
-          "amount": "3.125",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "output_text_tokens",
-          "amount": "15",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "output_reasoning_tokens",
-          "amount": "15",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_uncached_tokens",
-          "amount": "5",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "input_cache_read_tokens",
-          "amount": "0.50",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "input_cache_write_tokens",
-          "amount": "6.25",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "output_text_tokens",
-          "amount": "22.50",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "output_reasoning_tokens",
-          "amount": "22.50",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        }
-      ],
-      "source_label": "OpenAI API Batch pricing table",
-      "capabilities": {
-        "pricing_dimensions": [
-          "token",
-          "cache_read",
-          "cache_write",
-          "long_context",
-          "service_tier"
-        ],
-        "availability": "general",
-        "explicit_cache_breakpoints": true,
-        "cache_min_life_minutes": 30,
-        "cache_write_multiplier": "1.25",
-        "cache_read_discount_percent": 90,
-        "long_context_threshold_tokens": 272000,
-        "long_context_applies_to_full_request": true,
-        "reasoning_priced_as_output": true
-      },
-      "notes": "Batch prices are published for both short and long context."
-    },
-    {
-      "model": "gpt-5.6-sol",
-      "aliases": [
-        "gpt-5.6"
-      ],
-      "service_tier": "flex",
-      "price_card_id": "openai:gpt-5.6-sol:flex:official-snapshot",
-      "effective": {
-        "from": "2026-06-26"
-      },
-      "components": [
-        {
-          "usage_component": "input_uncached_tokens",
-          "amount": "2.50",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_cache_read_tokens",
-          "amount": "0.25",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_cache_write_tokens",
-          "amount": "3.125",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "output_text_tokens",
-          "amount": "15",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "output_reasoning_tokens",
-          "amount": "15",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_uncached_tokens",
-          "amount": "5",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "input_cache_read_tokens",
-          "amount": "0.50",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "input_cache_write_tokens",
-          "amount": "6.25",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "output_text_tokens",
-          "amount": "22.50",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "output_reasoning_tokens",
-          "amount": "22.50",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        }
-      ],
-      "source_label": "OpenAI API Flex pricing table",
-      "capabilities": {
-        "pricing_dimensions": [
-          "token",
-          "cache_read",
-          "cache_write",
-          "long_context",
-          "service_tier"
-        ],
-        "availability": "general",
-        "explicit_cache_breakpoints": true,
-        "cache_min_life_minutes": 30,
-        "cache_write_multiplier": "1.25",
-        "cache_read_discount_percent": 90,
-        "long_context_threshold_tokens": 272000,
-        "long_context_applies_to_full_request": true,
-        "reasoning_priced_as_output": true
-      },
-      "notes": "Flex prices are published for both short and long context."
-    },
-    {
-      "model": "gpt-5.6-sol",
-      "aliases": [
-        "gpt-5.6"
-      ],
-      "service_tier": "priority",
-      "price_card_id": "openai:gpt-5.6-sol:priority:official-snapshot",
-      "effective": {
-        "from": "2026-06-26"
-      },
-      "components": [
-        {
-          "usage_component": "input_uncached_tokens",
-          "amount": "10",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_cache_read_tokens",
-          "amount": "1",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_cache_write_tokens",
-          "amount": "12.50",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "output_text_tokens",
-          "amount": "60",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "output_reasoning_tokens",
-          "amount": "60",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        }
-      ],
-      "source_label": "OpenAI API Fast pricing table with Priority compatibility",
-      "capabilities": {
-        "pricing_dimensions": [
-          "token",
-          "cache_read",
-          "cache_write",
-          "service_tier"
-        ],
-        "availability": "general",
-        "explicit_cache_breakpoints": true,
-        "cache_min_life_minutes": 30,
-        "cache_write_multiplier": "1.25",
-        "cache_read_discount_percent": 90,
-        "long_context_threshold_tokens": 272000,
-        "priority_long_context_pricing_published": false,
-        "reasoning_priced_as_output": true,
-        "service_tier_aliases": [
-          "priority",
-          "fast"
-        ]
-      },
-      "notes": "OpenAI currently publishes Fast rates only for short context and accepts Priority as a compatible request value. Fast and Priority expand to independent cards at today's equal rates."
-    },
-    {
       "model": "gpt-5.6-terra",
       "service_tier": "standard",
-      "price_card_id": "openai:gpt-5.6-terra:standard:official-snapshot",
+      "price_card_id": "openai:gpt-5.6-terra:standard:official-snapshot:through-2026-07-29",
       "effective": {
-        "from": "2026-07-30"
+        "from": "2026-06-26",
+        "to": "2026-07-29"
       },
       "components": [
         {
           "usage_component": "input_uncached_tokens",
-          "amount": "2",
+          "amount": "2.50",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "input_cache_read_tokens",
-          "amount": "0.2",
+          "amount": "0.25",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "input_cache_write_tokens",
-          "amount": "2.5",
+          "amount": "3.125",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "output_text_tokens",
-          "amount": "12",
+          "amount": "15",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "output_reasoning_tokens",
-          "amount": "12",
+          "amount": "15",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "input_uncached_tokens",
-          "amount": "4",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "input_cache_read_tokens",
-          "amount": "0.4",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "input_cache_write_tokens",
           "amount": "5",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
+          "usage_component": "input_cache_read_tokens",
+          "amount": "0.50",
+          "conditions": {
+            "min_total_input_tokens": "272001"
+          }
+        },
+        {
+          "usage_component": "input_cache_write_tokens",
+          "amount": "6.25",
+          "conditions": {
+            "min_total_input_tokens": "272001"
+          }
+        },
+        {
           "usage_component": "output_text_tokens",
-          "amount": "18",
+          "amount": "22.50",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
           "usage_component": "output_reasoning_tokens",
-          "amount": "18",
+          "amount": "22.50",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
@@ -482,82 +107,83 @@
         "long_context_applies_to_full_request": true,
         "reasoning_priced_as_output": true
       },
-      "notes": "Prompts above 272,000 input tokens use the published long-context rates for the full request. Lower permanent rates effective July 30, 2026; earlier rates are retained in the paired historical snapshot."
+      "notes": "Prompts above 272,000 input tokens use the published long-context rates for the full request. These rates ended after July 29, 2026 and are retained for historical pricing."
     },
     {
       "model": "gpt-5.6-terra",
       "service_tier": "batch",
-      "price_card_id": "openai:gpt-5.6-terra:batch:official-snapshot",
+      "price_card_id": "openai:gpt-5.6-terra:batch:official-snapshot:through-2026-07-29",
       "effective": {
-        "from": "2026-07-30"
+        "from": "2026-06-26",
+        "to": "2026-07-29"
       },
       "components": [
         {
           "usage_component": "input_uncached_tokens",
-          "amount": "1",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_cache_read_tokens",
-          "amount": "0.1",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_cache_write_tokens",
           "amount": "1.25",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
+          "usage_component": "input_cache_read_tokens",
+          "amount": "0.125",
+          "conditions": {
+            "max_total_input_tokens": "272000"
+          }
+        },
+        {
+          "usage_component": "input_cache_write_tokens",
+          "amount": "1.5625",
+          "conditions": {
+            "max_total_input_tokens": "272000"
+          }
+        },
+        {
           "usage_component": "output_text_tokens",
-          "amount": "6",
+          "amount": "7.50",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "output_reasoning_tokens",
-          "amount": "6",
+          "amount": "7.50",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "input_uncached_tokens",
-          "amount": "2",
+          "amount": "2.50",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
           "usage_component": "input_cache_read_tokens",
-          "amount": "0.2",
+          "amount": "0.25",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
           "usage_component": "input_cache_write_tokens",
-          "amount": "2.5",
+          "amount": "3.125",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
           "usage_component": "output_text_tokens",
-          "amount": "9",
+          "amount": "11.25",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
           "usage_component": "output_reasoning_tokens",
-          "amount": "9",
+          "amount": "11.25",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
@@ -581,14 +207,179 @@
         "long_context_applies_to_full_request": true,
         "reasoning_priced_as_output": true
       },
-      "notes": "Batch prices are published for both short and long context. Lower permanent rates effective July 30, 2026; earlier rates are retained in the paired historical snapshot."
+      "notes": "Batch prices are published for both short and long context. These rates ended after July 29, 2026 and are retained for historical pricing."
     },
     {
       "model": "gpt-5.6-terra",
       "service_tier": "flex",
-      "price_card_id": "openai:gpt-5.6-terra:flex:official-snapshot",
+      "price_card_id": "openai:gpt-5.6-terra:flex:official-snapshot:through-2026-07-29",
       "effective": {
-        "from": "2026-07-30"
+        "from": "2026-06-26",
+        "to": "2026-07-29"
+      },
+      "components": [
+        {
+          "usage_component": "input_uncached_tokens",
+          "amount": "1.25",
+          "conditions": {
+            "max_total_input_tokens": "272000"
+          }
+        },
+        {
+          "usage_component": "input_cache_read_tokens",
+          "amount": "0.125",
+          "conditions": {
+            "max_total_input_tokens": "272000"
+          }
+        },
+        {
+          "usage_component": "input_cache_write_tokens",
+          "amount": "1.5625",
+          "conditions": {
+            "max_total_input_tokens": "272000"
+          }
+        },
+        {
+          "usage_component": "output_text_tokens",
+          "amount": "7.50",
+          "conditions": {
+            "max_total_input_tokens": "272000"
+          }
+        },
+        {
+          "usage_component": "output_reasoning_tokens",
+          "amount": "7.50",
+          "conditions": {
+            "max_total_input_tokens": "272000"
+          }
+        },
+        {
+          "usage_component": "input_uncached_tokens",
+          "amount": "2.50",
+          "conditions": {
+            "min_total_input_tokens": "272001"
+          }
+        },
+        {
+          "usage_component": "input_cache_read_tokens",
+          "amount": "0.25",
+          "conditions": {
+            "min_total_input_tokens": "272001"
+          }
+        },
+        {
+          "usage_component": "input_cache_write_tokens",
+          "amount": "3.125",
+          "conditions": {
+            "min_total_input_tokens": "272001"
+          }
+        },
+        {
+          "usage_component": "output_text_tokens",
+          "amount": "11.25",
+          "conditions": {
+            "min_total_input_tokens": "272001"
+          }
+        },
+        {
+          "usage_component": "output_reasoning_tokens",
+          "amount": "11.25",
+          "conditions": {
+            "min_total_input_tokens": "272001"
+          }
+        }
+      ],
+      "source_label": "OpenAI API Flex pricing table",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cache_read",
+          "cache_write",
+          "long_context",
+          "service_tier"
+        ],
+        "availability": "general",
+        "explicit_cache_breakpoints": true,
+        "cache_min_life_minutes": 30,
+        "cache_write_multiplier": "1.25",
+        "cache_read_discount_percent": 90,
+        "long_context_threshold_tokens": 272000,
+        "long_context_applies_to_full_request": true,
+        "reasoning_priced_as_output": true
+      },
+      "notes": "Flex prices are published for both short and long context. These rates ended after July 29, 2026 and are retained for historical pricing."
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "service_tier": "priority",
+      "price_card_id": "openai:gpt-5.6-terra:priority:official-snapshot:through-2026-07-29",
+      "effective": {
+        "from": "2026-06-26",
+        "to": "2026-07-29"
+      },
+      "components": [
+        {
+          "usage_component": "input_uncached_tokens",
+          "amount": "5",
+          "conditions": {
+            "max_total_input_tokens": "272000"
+          }
+        },
+        {
+          "usage_component": "input_cache_read_tokens",
+          "amount": "0.50",
+          "conditions": {
+            "max_total_input_tokens": "272000"
+          }
+        },
+        {
+          "usage_component": "input_cache_write_tokens",
+          "amount": "6.25",
+          "conditions": {
+            "max_total_input_tokens": "272000"
+          }
+        },
+        {
+          "usage_component": "output_text_tokens",
+          "amount": "30",
+          "conditions": {
+            "max_total_input_tokens": "272000"
+          }
+        },
+        {
+          "usage_component": "output_reasoning_tokens",
+          "amount": "30",
+          "conditions": {
+            "max_total_input_tokens": "272000"
+          }
+        }
+      ],
+      "source_label": "OpenAI API Priority pricing table",
+      "capabilities": {
+        "pricing_dimensions": [
+          "token",
+          "cache_read",
+          "cache_write",
+          "service_tier"
+        ],
+        "availability": "general",
+        "explicit_cache_breakpoints": true,
+        "cache_min_life_minutes": 30,
+        "cache_write_multiplier": "1.25",
+        "cache_read_discount_percent": 90,
+        "long_context_threshold_tokens": 272000,
+        "priority_long_context_pricing_published": false,
+        "reasoning_priced_as_output": true
+      },
+      "notes": "OpenAI currently publishes Priority rates only for short context; long-context Priority usage must remain unpriced. These rates ended after July 29, 2026 and are retained for historical pricing."
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "service_tier": "standard",
+      "price_card_id": "openai:gpt-5.6-luna:standard:official-snapshot:through-2026-07-29",
+      "effective": {
+        "from": "2026-06-26",
+        "to": "2026-07-29"
       },
       "components": [
         {
@@ -600,7 +391,7 @@
         },
         {
           "usage_component": "input_cache_read_tokens",
-          "amount": "0.1",
+          "amount": "0.10",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
@@ -635,14 +426,14 @@
         },
         {
           "usage_component": "input_cache_read_tokens",
-          "amount": "0.2",
+          "amount": "0.20",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
           "usage_component": "input_cache_write_tokens",
-          "amount": "2.5",
+          "amount": "2.50",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
@@ -657,172 +448,6 @@
         {
           "usage_component": "output_reasoning_tokens",
           "amount": "9",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        }
-      ],
-      "source_label": "OpenAI API Flex pricing table",
-      "capabilities": {
-        "pricing_dimensions": [
-          "token",
-          "cache_read",
-          "cache_write",
-          "long_context",
-          "service_tier"
-        ],
-        "availability": "general",
-        "explicit_cache_breakpoints": true,
-        "cache_min_life_minutes": 30,
-        "cache_write_multiplier": "1.25",
-        "cache_read_discount_percent": 90,
-        "long_context_threshold_tokens": 272000,
-        "long_context_applies_to_full_request": true,
-        "reasoning_priced_as_output": true
-      },
-      "notes": "Flex prices are published for both short and long context. Lower permanent rates effective July 30, 2026; earlier rates are retained in the paired historical snapshot."
-    },
-    {
-      "model": "gpt-5.6-terra",
-      "service_tier": "priority",
-      "price_card_id": "openai:gpt-5.6-terra:priority:official-snapshot",
-      "effective": {
-        "from": "2026-07-30"
-      },
-      "components": [
-        {
-          "usage_component": "input_uncached_tokens",
-          "amount": "4",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_cache_read_tokens",
-          "amount": "0.4",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_cache_write_tokens",
-          "amount": "5",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "output_text_tokens",
-          "amount": "24",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "output_reasoning_tokens",
-          "amount": "24",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        }
-      ],
-      "source_label": "OpenAI API Priority pricing table",
-      "capabilities": {
-        "pricing_dimensions": [
-          "token",
-          "cache_read",
-          "cache_write",
-          "service_tier"
-        ],
-        "availability": "general",
-        "explicit_cache_breakpoints": true,
-        "cache_min_life_minutes": 30,
-        "cache_write_multiplier": "1.25",
-        "cache_read_discount_percent": 90,
-        "long_context_threshold_tokens": 272000,
-        "priority_long_context_pricing_published": false,
-        "reasoning_priced_as_output": true,
-        "service_tier_aliases": [
-          "priority",
-          "fast"
-        ]
-      },
-      "notes": "OpenAI currently publishes Priority rates only for short context; long-context Priority usage must remain unpriced. Lower permanent rates effective July 30, 2026; earlier rates are retained in the paired historical snapshot. OpenAI renamed Priority processing to Fast mode on July 30, 2026 and accepts either service-tier value."
-    },
-    {
-      "model": "gpt-5.6-luna",
-      "service_tier": "standard",
-      "price_card_id": "openai:gpt-5.6-luna:standard:official-snapshot",
-      "effective": {
-        "from": "2026-07-30"
-      },
-      "components": [
-        {
-          "usage_component": "input_uncached_tokens",
-          "amount": "0.2",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_cache_read_tokens",
-          "amount": "0.02",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_cache_write_tokens",
-          "amount": "0.25",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "output_text_tokens",
-          "amount": "1.2",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "output_reasoning_tokens",
-          "amount": "1.2",
-          "conditions": {
-            "max_total_input_tokens": "272000"
-          }
-        },
-        {
-          "usage_component": "input_uncached_tokens",
-          "amount": "0.4",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "input_cache_read_tokens",
-          "amount": "0.04",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "input_cache_write_tokens",
-          "amount": "0.5",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "output_text_tokens",
-          "amount": "1.8",
-          "conditions": {
-            "min_total_input_tokens": "272001"
-          }
-        },
-        {
-          "usage_component": "output_reasoning_tokens",
-          "amount": "1.8",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
@@ -846,82 +471,83 @@
         "long_context_applies_to_full_request": true,
         "reasoning_priced_as_output": true
       },
-      "notes": "Prompts above 272,000 input tokens use the published long-context rates for the full request. Lower permanent rates effective July 30, 2026; earlier rates are retained in the paired historical snapshot."
+      "notes": "Prompts above 272,000 input tokens use the published long-context rates for the full request. These rates ended after July 29, 2026 and are retained for historical pricing."
     },
     {
       "model": "gpt-5.6-luna",
       "service_tier": "batch",
-      "price_card_id": "openai:gpt-5.6-luna:batch:official-snapshot",
+      "price_card_id": "openai:gpt-5.6-luna:batch:official-snapshot:through-2026-07-29",
       "effective": {
-        "from": "2026-07-30"
+        "from": "2026-06-26",
+        "to": "2026-07-29"
       },
       "components": [
         {
           "usage_component": "input_uncached_tokens",
-          "amount": "0.1",
+          "amount": "0.50",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "input_cache_read_tokens",
-          "amount": "0.01",
+          "amount": "0.05",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "input_cache_write_tokens",
-          "amount": "0.125",
+          "amount": "0.625",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "output_text_tokens",
-          "amount": "0.6",
+          "amount": "3",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "output_reasoning_tokens",
-          "amount": "0.6",
+          "amount": "3",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "input_uncached_tokens",
-          "amount": "0.2",
+          "amount": "1",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
           "usage_component": "input_cache_read_tokens",
-          "amount": "0.02",
+          "amount": "0.10",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
           "usage_component": "input_cache_write_tokens",
-          "amount": "0.25",
+          "amount": "1.25",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
           "usage_component": "output_text_tokens",
-          "amount": "0.9",
+          "amount": "4.50",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
           "usage_component": "output_reasoning_tokens",
-          "amount": "0.9",
+          "amount": "4.50",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
@@ -945,82 +571,83 @@
         "long_context_applies_to_full_request": true,
         "reasoning_priced_as_output": true
       },
-      "notes": "Batch prices are published for both short and long context. Lower permanent rates effective July 30, 2026; earlier rates are retained in the paired historical snapshot."
+      "notes": "Batch prices are published for both short and long context. These rates ended after July 29, 2026 and are retained for historical pricing."
     },
     {
       "model": "gpt-5.6-luna",
       "service_tier": "flex",
-      "price_card_id": "openai:gpt-5.6-luna:flex:official-snapshot",
+      "price_card_id": "openai:gpt-5.6-luna:flex:official-snapshot:through-2026-07-29",
       "effective": {
-        "from": "2026-07-30"
+        "from": "2026-06-26",
+        "to": "2026-07-29"
       },
       "components": [
         {
           "usage_component": "input_uncached_tokens",
-          "amount": "0.1",
+          "amount": "0.50",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "input_cache_read_tokens",
-          "amount": "0.01",
+          "amount": "0.05",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "input_cache_write_tokens",
-          "amount": "0.125",
+          "amount": "0.625",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "output_text_tokens",
-          "amount": "0.6",
+          "amount": "3",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "output_reasoning_tokens",
-          "amount": "0.6",
+          "amount": "3",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "input_uncached_tokens",
-          "amount": "0.2",
+          "amount": "1",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
           "usage_component": "input_cache_read_tokens",
-          "amount": "0.02",
+          "amount": "0.10",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
           "usage_component": "input_cache_write_tokens",
-          "amount": "0.25",
+          "amount": "1.25",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
           "usage_component": "output_text_tokens",
-          "amount": "0.9",
+          "amount": "4.50",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
         },
         {
           "usage_component": "output_reasoning_tokens",
-          "amount": "0.9",
+          "amount": "4.50",
           "conditions": {
             "min_total_input_tokens": "272001"
           }
@@ -1044,47 +671,48 @@
         "long_context_applies_to_full_request": true,
         "reasoning_priced_as_output": true
       },
-      "notes": "Flex prices are published for both short and long context. Lower permanent rates effective July 30, 2026; earlier rates are retained in the paired historical snapshot."
+      "notes": "Flex prices are published for both short and long context. These rates ended after July 29, 2026 and are retained for historical pricing."
     },
     {
       "model": "gpt-5.6-luna",
       "service_tier": "priority",
-      "price_card_id": "openai:gpt-5.6-luna:priority:official-snapshot",
+      "price_card_id": "openai:gpt-5.6-luna:priority:official-snapshot:through-2026-07-29",
       "effective": {
-        "from": "2026-07-30"
+        "from": "2026-06-26",
+        "to": "2026-07-29"
       },
       "components": [
         {
           "usage_component": "input_uncached_tokens",
-          "amount": "0.4",
+          "amount": "2",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "input_cache_read_tokens",
-          "amount": "0.04",
+          "amount": "0.20",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "input_cache_write_tokens",
-          "amount": "0.5",
+          "amount": "2.50",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "output_text_tokens",
-          "amount": "2.4",
+          "amount": "12",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
         },
         {
           "usage_component": "output_reasoning_tokens",
-          "amount": "2.4",
+          "amount": "12",
           "conditions": {
             "max_total_input_tokens": "272000"
           }
@@ -1105,13 +733,9 @@
         "cache_read_discount_percent": 90,
         "long_context_threshold_tokens": 272000,
         "priority_long_context_pricing_published": false,
-        "reasoning_priced_as_output": true,
-        "service_tier_aliases": [
-          "priority",
-          "fast"
-        ]
+        "reasoning_priced_as_output": true
       },
-      "notes": "OpenAI currently publishes Priority rates only for short context; long-context Priority usage must remain unpriced. Lower permanent rates effective July 30, 2026; earlier rates are retained in the paired historical snapshot. OpenAI renamed Priority processing to Fast mode on July 30, 2026 and accepts either service-tier value."
+      "notes": "OpenAI currently publishes Priority rates only for short context; long-context Priority usage must remain unpriced. These rates ended after July 29, 2026 and are retained for historical pricing."
     }
   ]
 }

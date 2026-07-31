@@ -35,8 +35,8 @@ def main() -> int:
     batch_javascript = run_json(["node", "examples/javascript_batch_endpoints.mjs"])
     if batch_python != batch_javascript:
         raise AssertionError("batch Python and JavaScript examples differ")
-    if len(batch_python) != 11:
-        raise AssertionError(f"expected eleven batch examples, got {len(batch_python)}")
+    if len(batch_python) != 12:
+        raise AssertionError(f"expected twelve batch examples, got {len(batch_python)}")
     for case_id, summary in batch_python.items():
         if summary["total"] < 1:
             raise AssertionError(f"{case_id}: expected at least one item")
@@ -59,7 +59,7 @@ def main() -> int:
 
     print(
         "expansion examples passed "
-        "(11 direct providers, 11 batch cases, genai-prices/OTel, and framework adapters)"
+        "(11 direct providers, 12 batch cases, genai-prices/OTel, and framework adapters)"
     )
     return 0
 

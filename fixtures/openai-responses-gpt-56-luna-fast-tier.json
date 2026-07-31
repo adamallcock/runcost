@@ -1,0 +1,168 @@
+{
+  "name": "openai-responses-gpt-56-luna-fast-tier",
+  "description": "Preserves OpenAI Fast as an independent request tier and records a one-way compatibility fallback when only Priority cards are available.",
+  "metadata": {
+    "requirement_ids": [
+      "RC-FIXTURE-CONFORMANCE",
+      "RC-RAW-EXTRACTOR",
+      "RC-SOURCE-ADAPTER"
+    ],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "service_tier",
+    "tags": [
+      "component:input_uncached_tokens",
+      "component:output_text_tokens",
+      "effective_date",
+      "fast_mode",
+      "gpt_5_6_price_transition",
+      "raw_provider_response",
+      "source:official-snapshot"
+    ],
+    "expected_languages": [
+      "python",
+      "javascript",
+      "go"
+    ]
+  },
+  "input": {
+    "extract": {
+      "provider": "openai",
+      "surface": "openai.responses"
+    },
+    "raw_response": {
+      "id": "resp_luna_fast_transition_fixture",
+      "object": "response",
+      "created_at": 1785369600,
+      "model": "gpt-5.6-luna",
+      "service_tier": "fast",
+      "usage": {
+        "input_tokens": 1000000,
+        "input_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0
+        },
+        "output_tokens": 1000000,
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "total_tokens": 2000000
+      }
+    },
+    "price_source": {
+      "type": "official-snapshot",
+      "data": {
+        "provider": "openai",
+        "surface": "openai.responses",
+        "per": "1000000",
+        "source": {
+          "name": "OpenAI GPT-5.6 July 30 transition fixture",
+          "url": "https://developers.openai.com/api/docs/pricing",
+          "retrieved_at": "2026-07-31T00:40:00Z",
+          "license": "reviewed"
+        },
+        "rows": [
+          {
+            "model": "gpt-5.6-luna",
+            "price_card_id": "openai:gpt-5.6-luna:generic:fast-transition-fixture",
+            "effective": {
+              "from": "2026-07-30"
+            },
+            "input": "99",
+            "output": "99"
+          },
+          {
+            "model": "gpt-5.6-luna",
+            "service_tier": "priority",
+            "price_card_id": "openai:gpt-5.6-luna:priority:fast-transition-fixture:through-2026-07-29",
+            "effective": {
+              "from": "2026-06-26",
+              "to": "2026-07-29"
+            },
+            "input": "2",
+            "output": "12"
+          },
+          {
+            "model": "gpt-5.6-luna",
+            "service_tier": "priority",
+            "price_card_id": "openai:gpt-5.6-luna:priority:fast-transition-fixture",
+            "effective": {
+              "from": "2026-07-30"
+            },
+            "input": "0.4",
+            "output": "2.4"
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-5.6-luna",
+        "returned": "gpt-5.6-luna",
+        "billed": "gpt-5.6-luna",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "input_uncached_tokens",
+          "quantity": "1000000",
+          "unit": "token",
+          "unit_price": "0.0000004",
+          "cost": "0.4",
+          "price_card_id": "openai:gpt-5.6-luna:priority:fast-transition-fixture",
+          "discount_eligible": true,
+          "metadata": {
+            "service_tier_resolution": {
+              "requested": "fast",
+              "priced_as": "priority",
+              "fallback": true
+            }
+          }
+        },
+        {
+          "name": "output_text_tokens",
+          "quantity": "1000000",
+          "unit": "token",
+          "unit_price": "0.0000024",
+          "cost": "2.4",
+          "price_card_id": "openai:gpt-5.6-luna:priority:fast-transition-fixture",
+          "discount_eligible": true,
+          "metadata": {
+            "service_tier_resolution": {
+              "requested": "fast",
+              "priced_as": "priority",
+              "fallback": true
+            }
+          }
+        }
+      ],
+      "total": "2.8",
+      "price_sources": [
+        {
+          "name": "OpenAI GPT-5.6 July 30 transition fixture",
+          "url": "https://developers.openai.com/api/docs/pricing",
+          "retrieved_at": "2026-07-31T00:40:00Z",
+          "license": "reviewed"
+        }
+      ],
+      "applied_discounts": [],
+      "warnings": [],
+      "metadata": {
+        "service_tier_resolution": {
+          "requested": "fast",
+          "priced_as": "priority",
+          "fallback": true,
+          "price_card_ids": [
+            "openai:gpt-5.6-luna:priority:fast-transition-fixture"
+          ]
+        }
+      }
+    }
+  }
+}
