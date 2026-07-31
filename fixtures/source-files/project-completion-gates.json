@@ -536,8 +536,8 @@
         },
         {
           "kind": "report",
-          "path": "docs/internal/reports/2026-07-18-release-0-2-0-evidence.md",
-          "proves": "Release 0.2.0 published the PyPI package through the guarded release workflow and verified the live PyPI package."
+          "path": "docs/internal/reports/2026-07-30-release-0-2-1-evidence.md",
+          "proves": "Release 0.2.1 published the PyPI package through the guarded release workflow and verified the live PyPI package."
         },
         {
           "kind": "docs",
@@ -606,8 +606,8 @@
         },
         {
           "kind": "report",
-          "path": "docs/internal/reports/2026-07-18-release-0-2-0-evidence.md",
-          "proves": "Release 0.2.0 published the npm package through the guarded release workflow and verified live npm provenance."
+          "path": "docs/internal/reports/2026-07-30-release-0-2-1-evidence.md",
+          "proves": "Release 0.2.1 published the npm package through the guarded release workflow and verified live npm provenance."
         },
         {
           "kind": "docs",
@@ -671,8 +671,8 @@
         },
         {
           "kind": "report",
-          "path": "docs/internal/reports/2026-07-18-release-0-2-0-evidence.md",
-          "proves": "A publish=false guarded release workflow rehearsal succeeded for release 0.2.0 before the publish run."
+          "path": "docs/internal/reports/2026-07-30-release-0-2-1-evidence.md",
+          "proves": "A publish=false guarded release workflow rehearsal succeeded for release 0.2.1 before the publish run, and its artifacts were inspected."
         }
       ],
       "completion_check": "gh workflow run release.yml --ref main -f version=<real-version> -f publish=false",
@@ -706,8 +706,8 @@
         },
         {
           "kind": "report",
-          "path": "docs/internal/reports/2026-07-18-release-0-2-0-evidence.md",
-          "proves": "Remote tag v0.2.0 is available through the Go module path and was verified by workflow and post-publish smoke."
+          "path": "docs/internal/reports/2026-07-30-release-0-2-1-evidence.md",
+          "proves": "Remote tag v0.2.1 is available through the Go module path and was verified by workflow and post-publish smoke."
         }
       ],
       "completion_check": "go get github.com/adamallcock/runcost/packages/go/ledger@v<version>",
@@ -728,8 +728,8 @@
       "current_evidence": [
         {
           "kind": "report",
-          "path": "docs/internal/reports/2026-07-18-release-0-2-0-evidence.md",
-          "proves": "Release 0.2.0 was published to PyPI and npm, has a GitHub Release, exposes Go module version v0.2.0, and passed post-publish install smokes."
+          "path": "docs/internal/reports/2026-07-30-release-0-2-1-evidence.md",
+          "proves": "Release 0.2.1 was published to PyPI and npm, has a GitHub Release, exposes Go module version v0.2.1, and passed post-publish install smokes."
         },
         {
           "kind": "workflow",
