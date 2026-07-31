@@ -13,7 +13,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 
 ## Summary
 
-- Fixtures scanned: 181
+- Fixtures scanned: 182
 - Public API capabilities scanned: 21
 - Provider/surface component rows: 36
 - Price-source component rows: 11
@@ -26,7 +26,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `aggregation` | 2 |
 | `debug_trace` | 2 |
 | `discount` | 2 |
-| `framework_adapter` | 17 |
+| `framework_adapter` | 18 |
 | `long_context` | 2 |
 | `normalized_usage` | 22 |
 | `provider_reported` | 4 |
@@ -72,7 +72,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `storage_gb_days` | 2 |
 | `tool_call_units` | 5 |
 | `tool_execution_seconds` | 1 |
-| `transcription_seconds` | 3 |
+| `transcription_seconds` | 4 |
 | `video_generation_units` | 1 |
 | `web_search_units` | 12 |
 | `x_search_units` | 3 |

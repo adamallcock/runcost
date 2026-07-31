@@ -14,6 +14,10 @@ limitations.
 
 ## Unreleased
 
+- Add Vercel AI SDK `experimental_streamTranscribe` final-result handling for
+  duration-priced OpenAI transcription, including `gpt-realtime-whisper`
+  fixture coverage across Python, JavaScript/TypeScript, and Go.
+
 ## 0.2.1 (2026-07-30)
 
 - Preserve original GPT-5.6 Terra and Luna pricing through July 29, 2026 and

@@ -27,6 +27,7 @@ For the full fixture-derived provider/surface/language matrix, see
 | OpenAI | Organization usage embeddings buckets | Fixture-backed |
 | OpenAI | Audio Transcriptions duration and token usage | Fixture-backed |
 | OpenAI | Organization usage audio transcription buckets | Fixture-backed |
+| OpenAI | Realtime transcription duration for `gpt-realtime-whisper` through Vercel AI SDK `experimental_streamTranscribe` final results | Fixture-backed |
 | OpenAI | Images token usage and image-unit responses | Fixture-backed |
 | OpenAI | Organization usage image buckets | Fixture-backed |
 | OpenAI | Organization usage audio speech character buckets | Fixture-backed |
@@ -74,6 +75,7 @@ For the full fixture-derived provider/surface/language matrix, see
 | OpenAI Agents SDK | Usage objects and aggregated request usage entries | Fixture-backed |
 | Vercel AI SDK | `generateText` result | Fixture-backed |
 | Vercel AI SDK | `streamText` finish/onFinish result | Fixture-backed |
+| Vercel AI SDK | `experimental_streamTranscribe` final result | Fixture-backed |
 | Vercel AI SDK | `wrapGenerate` middleware helper | Fixture-backed for JavaScript |
 | Vercel AI SDK | `onFinish` helper | Fixture-backed for JavaScript |
 | LlamaIndex | TokenCountingHandler output | Fixture-backed |

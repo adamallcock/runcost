@@ -18,11 +18,11 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 
 ## Summary
 
-216 cases are inventoried.
+217 cases are inventoried.
 
 | Outcome | Cases |
 | --- | ---: |
-| Preserved | 161 |
+| Preserved | 162 |
 | Warned | 48 |
 | Unsupported | 7 |
 | Not Tested | 0 |
@@ -204,6 +204,7 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `vercel-ai-sdk-middleware-wrap-generate` | openai | `openai.responses` | warned | python: not_tested, javascript: warned, go: not_tested |
 | `vercel-ai-sdk-openai-responses-orchestration-usage` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `vercel-ai-sdk-stream-text-finish` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
+| `vercel-ai-sdk-stream-transcribe-finish` | openai | `openai.audio_transcriptions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `vertex-gemini-generate-content-raw-basic` | vertex | `vertex.gemini.generate_content` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `xai-chat-raw-cache-reasoning` | xai | `xai.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `xai-grok-4-3-reasoning-output-pricing` | xai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |

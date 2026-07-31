@@ -278,7 +278,7 @@ ledger = calculate_cost(
 | Resolve and cache external prices | `resolve_price_catalog(...)` | `resolvePriceCatalog(options)` | `ResolvePriceCatalog(ctx, options)` |
 | Price with automatic resolution | `from_response_auto(...)` | `fromResponseAuto(response, options)` | `FromResponseAuto(...)` |
 | Aggregate call ledgers | `aggregate_cost_ledgers(...)` | `aggregateCostLedgers(options)` | `AggregateCostLedgers(...)` |
-| Use framework outputs | `from_langsmith_run(...)`, `track_langchain_costs(...)`, and more | `fromVercelAISDKStreamFinish(...)`, `createRunCostVercelOnFinish(...)`, and more | `FromLangSmithRun(...)`, `FromSemanticKernelTelemetry(...)`, and more |
+| Use framework outputs | `from_vercel_ai_sdk_stream_transcribe_finish(...)`, `from_langsmith_run(...)`, and more | `fromVercelAISDKStreamTranscribeFinish(...)`, `createRunCostVercelOnFinish(...)`, and more | `FromVercelAISDKStreamTranscribeFinish(...)`, `FromLangSmithRun(...)`, and more |
 | Load price sources | `price_cards_from_json_file(...)`, `price_cards_from_openrouter_models(...)` | `priceCardsFromJSONFile(...)`, `priceCardsFromOpenRouterModels(...)` | `PriceCardsFromJSONFile(...)`, `PriceCardsFromOpenRouterModels(...)` |
 | Add custom prices | Pass `price_cards` | Pass `priceCards` | Pass `price_cards` in options |
 | Apply discounts | Pass `discount_policies` | Pass `discountPolicies` | Pass `discount_policies` in options |

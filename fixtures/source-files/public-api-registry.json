@@ -143,11 +143,11 @@
       "id": "framework_adapters_common",
       "category": "framework_adapter",
       "status": "polyglot",
-      "evidence": ["fixtures/langchain-chat-message-usage-metadata.json", "fixtures/vercel-ai-sdk-stream-text-finish.json", "fixtures/openai-agents-sdk-usage.json", "fixtures/openrouter-openai-sdk-response.json"],
+      "evidence": ["fixtures/langchain-chat-message-usage-metadata.json", "fixtures/vercel-ai-sdk-stream-text-finish.json", "fixtures/vercel-ai-sdk-stream-transcribe-finish.json", "fixtures/openai-agents-sdk-usage.json", "fixtures/openrouter-openai-sdk-response.json"],
       "languages": {
-        "python": { "runtime": ["from_langchain_message", "from_vercel_ai_sdk_result", "from_vercel_ai_sdk_stream_finish", "from_llamaindex_token_counter", "from_haystack_generator_result", "from_litellm_response", "from_ag2_usage_summary", "from_openai_agents_usage", "from_langsmith_run", "from_semantic_kernel_telemetry", "from_openrouter_sdk_response"], "types": [] },
-        "javascript": { "runtime": ["fromLangChainMessage", "fromVercelAISDKResult", "fromVercelAISDKStreamFinish", "fromLlamaIndexTokenCounter", "fromHaystackGeneratorResult", "fromLiteLLMResponse", "fromAG2UsageSummary", "fromOpenAIAgentsUsage", "fromLangSmithRun", "fromSemanticKernelTelemetry", "fromOpenRouterSDKResponse"], "types": [] },
-        "go": { "runtime": ["FromLangChainMessage", "FromVercelAISDKResult", "FromVercelAISDKStreamFinish", "FromLlamaIndexTokenCounter", "FromHaystackGeneratorResult", "FromLiteLLMResponse", "FromAG2UsageSummary", "FromOpenAIAgentsUsage", "FromLangSmithRun", "FromSemanticKernelTelemetry", "FromOpenRouterSDKResponse"], "types": [] }
+        "python": { "runtime": ["from_langchain_message", "from_vercel_ai_sdk_result", "from_vercel_ai_sdk_stream_finish", "from_vercel_ai_sdk_stream_transcribe_finish", "from_llamaindex_token_counter", "from_haystack_generator_result", "from_litellm_response", "from_ag2_usage_summary", "from_openai_agents_usage", "from_langsmith_run", "from_semantic_kernel_telemetry", "from_openrouter_sdk_response"], "types": [] },
+        "javascript": { "runtime": ["fromLangChainMessage", "fromVercelAISDKResult", "fromVercelAISDKStreamFinish", "fromVercelAISDKStreamTranscribeFinish", "fromLlamaIndexTokenCounter", "fromHaystackGeneratorResult", "fromLiteLLMResponse", "fromAG2UsageSummary", "fromOpenAIAgentsUsage", "fromLangSmithRun", "fromSemanticKernelTelemetry", "fromOpenRouterSDKResponse"], "types": [] },
+        "go": { "runtime": ["FromLangChainMessage", "FromVercelAISDKResult", "FromVercelAISDKStreamFinish", "FromVercelAISDKStreamTranscribeFinish", "FromLlamaIndexTokenCounter", "FromHaystackGeneratorResult", "FromLiteLLMResponse", "FromAG2UsageSummary", "FromOpenAIAgentsUsage", "FromLangSmithRun", "FromSemanticKernelTelemetry", "FromOpenRouterSDKResponse"], "types": [] }
       }
     },
     {

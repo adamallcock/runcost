@@ -13,7 +13,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 ## Summary
 
-- Fixtures: 181
+- Fixtures: 182
 - Providers: 18
 - Provider surfaces: 36
 - Usage components covered: 34
@@ -24,9 +24,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 
 | Language | Fixtures |
 |---|---:|
-| `go` | 179 |
-| `javascript` | 180 |
-| `python` | 180 |
+| `go` | 180 |
+| `javascript` | 181 |
+| `python` | 181 |
 
 ## Scenarios
 
@@ -35,7 +35,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `aggregation` | 2 |
 | `debug_trace` | 2 |
 | `discount` | 2 |
-| `framework_adapter` | 17 |
+| `framework_adapter` | 18 |
 | `long_context` | 2 |
 | `normalized_usage` | 22 |
 | `provider_reported` | 4 |
@@ -70,7 +70,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `meta` | `meta.responses` | 3 |
 | `mistral` | `mistral.chat_completions` | 1 |
 | `multi` | `normalized.feature_pricing` | 2 |
-| `openai` | `openai.audio_transcriptions` | 2 |
+| `openai` | `openai.audio_transcriptions` | 3 |
 | `openai` | `openai.chat_completions` | 14 |
 | `openai` | `openai.embeddings` | 2 |
 | `openai` | `openai.images` | 2 |
@@ -122,7 +122,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `storage_gb_days` | 2 |
 | `tool_call_units` | 4 |
 | `tool_execution_seconds` | 1 |
-| `transcription_seconds` | 3 |
+| `transcription_seconds` | 4 |
 | `video_generation_units` | 1 |
 | `web_search_units` | 12 |
 | `x_search_units` | 3 |
@@ -186,6 +186,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `from_semantic_kernel_telemetry` | 1 |
 | `from_vercel_ai_sdk_result` | 2 |
 | `from_vercel_ai_sdk_stream_finish` | 1 |
+| `from_vercel_ai_sdk_stream_transcribe_finish` | 1 |
 | `langchain_callback` | 1 |
 | `vercel_ai_sdk_middleware` | 1 |
 
@@ -198,9 +199,9 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `RC-CUSTOM-PRICING` | 1 |
 | `RC-DEBUG-TRACE` | 2 |
 | `RC-DISCOUNT-POLICY` | 2 |
-| `RC-FEATURE-PRICING` | 15 |
-| `RC-FIXTURE-CONFORMANCE` | 181 |
-| `RC-FRAMEWORK-ADAPTER` | 15 |
+| `RC-FEATURE-PRICING` | 16 |
+| `RC-FIXTURE-CONFORMANCE` | 182 |
+| `RC-FRAMEWORK-ADAPTER` | 16 |
 | `RC-FRAMEWORK-ERGONOMICS` | 2 |
 | `RC-GEMINI-LIVE` | 6 |
 | `RC-GEMINI-THINKING-PRICING` | 6 |
@@ -233,6 +234,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `adapter:semantic_kernel.telemetry` | 1 |
 | `adapter:vercel_ai_sdk.generate_text` | 3 |
 | `adapter:vercel_ai_sdk.stream_text` | 1 |
+| `adapter:vercel_ai_sdk.stream_transcribe` | 1 |
 | `aggregation` | 2 |
 | `alias` | 17 |
 | `ambiguous_fallback` | 1 |
@@ -274,7 +276,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `component:storage_gb_days` | 2 |
 | `component:tool_call_units` | 5 |
 | `component:tool_execution_seconds` | 1 |
-| `component:transcription_seconds` | 3 |
+| `component:transcription_seconds` | 4 |
 | `component:video_generation_units` | 1 |
 | `component:web_search_units` | 12 |
 | `component:x_search_units` | 3 |
@@ -297,8 +299,8 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `framework:openai_agents` | 1 |
 | `framework:openrouter` | 2 |
 | `framework:semantic_kernel` | 1 |
-| `framework:vercel_ai_sdk` | 1 |
-| `framework_adapter` | 17 |
+| `framework:vercel_ai_sdk` | 2 |
+| `framework_adapter` | 18 |
 | `gb_day` | 1 |
 | `gemini` | 13 |
 | `generated_media` | 5 |
@@ -316,6 +318,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `helper:from_semantic_kernel_telemetry` | 1 |
 | `helper:from_vercel_ai_sdk_result` | 2 |
 | `helper:from_vercel_ai_sdk_stream_finish` | 1 |
+| `helper:from_vercel_ai_sdk_stream_transcribe_finish` | 1 |
 | `helper:langchain_callback` | 1 |
 | `helper:vercel_ai_sdk_middleware` | 1 |
 | `historical_pricing` | 2 |
@@ -330,6 +333,7 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `midstream_refusal` | 2 |
 | `missing_usage` | 1 |
 | `mode:total` | 1 |
+| `model:gpt-realtime-whisper` | 1 |
 | `multi_hop_fallback` | 1 |
 | `multimodal` | 1 |
 | `normalized_usage` | 13 |
@@ -362,11 +366,11 @@ This report reflects fixture-backed coverage only. Missing entries are not suppo
 | `stale_price` | 1 |
 | `sticky_fallback` | 2 |
 | `storage_pricing` | 2 |
-| `streaming` | 8 |
+| `streaming` | 9 |
 | `strict_error` | 1 |
 | `token_usage` | 2 |
 | `tool_pricing` | 10 |
-| `transcription` | 4 |
+| `transcription` | 5 |
 | `unit_usage` | 1 |
 | `usage_api` | 6 |
 | `vector_store` | 1 |
