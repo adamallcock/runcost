@@ -139,10 +139,14 @@ For the full fixture-derived provider/surface/language matrix, see
   `created_at` or Chat Completions `created` timestamps provide `priced_at`
   automatically when no caller override is present. These snapshots are
   conformance evidence, not package defaults.
-- Pricing-period selection is fixture-backed for DeepSeek-style UTC peak and
-  regular windows. When a provider response does not contain a usable timestamp,
-  callers can set `context.priced_at` on normalized usage or pass an explicit
-  `pricing_period` through their own usage ledger.
+- Pricing-period selection is fixture-backed for DeepSeek-style peak and
+  off-peak windows in an IANA timezone, including weekday-scoped windows and
+  exact effective-time boundaries. A reviewed
+  `fixtures/source-files/deepseek-official-pricing-snapshot.json` captures the
+  currently published weekday-only UTC schedule for explicit source-adapter
+  use; it is not a package-default catalog. When a provider response does not
+  contain a usable timestamp, callers can set `context.priced_at` on normalized
+  usage or pass an explicit `pricing_period` through their own usage ledger.
 - Tool/feature pricing is complete for the current exit gate: OpenAI-style hosted tools, OpenRouter/provider-reported costs, custom internal tools, OpenAI organization usage completions text/cache/audio tokens, OpenAI Embeddings per-response and organization usage bucket tokens, OpenAI Images token/image-unit usage, OpenAI organization usage image buckets, OpenAI organization usage audio speech character buckets, normalized generated media, Cohere Rerank search units, OpenAI audio transcription duration/token usage, OpenAI organization usage audio transcription seconds, OpenAI Vector Stores `usage_bytes` to GB-day conversion with an explicit storage-day window, OpenAI organization usage code-interpreter `num_sessions`, runtime-second, and GB-day storage pricing. Broader provider-specific storage/session extraction and live validation remain beta hardening.
 - Gemini Live API extraction uses `google.gemini.live`, reads `usageMetadata.promptTokensDetails` and `usageMetadata.responseTokensDetails`, maps `AUDIO` entries to `input_audio_tokens` and `output_audio_tokens`, and preserves `usageMetadata.totalTokenCount` as raw usage rather than pricing it directly. A reviewed `google-official` test snapshot covers `gemini-3.5-live-translate-preview`.
 - Google Gemini Interactions extraction uses `google.gemini.interactions`, reads v2.9.0 `metadata.total_usage`, camelCase `metadata.totalUsage`, or legacy `metadata.usage`, maps lower-case modality token arrays into the canonical token components, and treats `google_search` grounding counts as `web_search_units`; broader grounding/tool pricing still depends on caller-supplied price cards.

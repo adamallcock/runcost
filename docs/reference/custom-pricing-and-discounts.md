@@ -117,9 +117,10 @@ Supported conditions today:
 
 ## Pricing Periods
 
-Use `pricing_period` plus a UTC `billing_schedule` when a provider publishes
-different base prices for repeating billing windows, such as peak and regular
-hours. The usage ledger can provide either an explicit
+Use `pricing_period` plus an IANA-timezone `billing_schedule` when a provider
+publishes different base prices for repeating billing windows, such as peak and
+off-peak hours. A window can optionally be limited to local calendar days with
+`days_of_week`. The usage ledger can provide either an explicit
 `context.pricing_period` or a full timestamp in `context.priced_at`.
 
 The following example is synthetic DeepSeek-like user pricing. Replace the
@@ -135,12 +136,16 @@ contract-specific prices before using it for billing.
   "model": "deepseek-v4-pro",
   "pricing_period": "peak",
   "billing_schedule": {
-    "timezone": "UTC",
-    "default_period": "regular",
+    "timezone": "Asia/Shanghai",
+    "default_period": "off_peak",
     "boundary_policy": "start_inclusive_end_exclusive",
     "windows": [
-      {"period": "peak", "start": "01:00", "end": "04:00"},
-      {"period": "peak", "start": "06:00", "end": "10:00"}
+      {
+        "period": "peak",
+        "days_of_week": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        "start": "09:00",
+        "end": "12:00"
+      }
     ]
   },
   "components": [
@@ -161,9 +166,14 @@ Rules:
 - Do not encode peak usage as new usage components.
 - Do not overload `service_tier`; service tier remains reserved for requested
   or served capacity modes such as standard, priority, batch, or provisioned.
-- Schedules are evaluated in UTC today. Normalize provider-local windows into
-  UTC in a reviewed snapshot.
+- Schedules are evaluated in their declared IANA timezone. `UTC` remains valid;
+  use the provider's billing timezone when it publishes one.
+- Omit `days_of_week` for a daily window. When present, it names the local day
+  on which the window starts; an overnight window retains that start day.
 - Windows are start-inclusive and end-exclusive.
+- `effective.from` and `effective.to` accept a date or RFC 3339 timestamp.
+  Date ranges preserve inclusive whole-day behavior in UTC; timestamp `from` is
+  inclusive and timestamp `to` is exclusive.
 - If only period-specific price cards match and usage has no full timestamp or
   explicit period, RunCost emits `pricing_period_required` instead of silently
   choosing a regular price.

@@ -15,6 +15,12 @@ JavaScript/TypeScript, and Go. The package versions should move together.
 - Release only from a clean commit on `main`.
 - Run the same conformance fixtures across all supported languages.
 - Keep schemas, docs, changelog, and package versions in sync.
+- Build the registry artifact set reproducibly, checksum it, and publish that
+  exact verified wheel, source distribution, or tarball without rebuilding in
+  the publish job.
+- Derive `SOURCE_DATE_EPOCH` from the verified tag commit and use it for both
+  Python and npm packaging. Release verification must build twice from separate
+  `git archive` source trees and require byte-identical artifacts.
 - Prefer trusted publishing and short-lived OIDC identity over stored registry
   tokens.
 - Publish no price-source updates without the owner/cadence/review process in
@@ -99,13 +105,41 @@ The verification must identify PyPI package `runcost-ai` and npm package
 `npm run check:release-dry-run` is local and does not publish. It builds the
 Python wheel and source distribution, packs the npm package, and verifies the
 Go module path through a clean temporary module with a local replace directive.
+It uses the same pinned Python build toolchain as the guarded release workflow
+and checks that the npm archive contains a byte-identical copy of the repository
+MIT license. It also builds the Python and npm artifacts twice, normalizes sdist
+archive ownership and timestamps with `scripts/normalize_python_sdist.py`, and
+fails when either build produces different bytes.
 
 The manual GitHub `release` workflow is the guarded release rehearsal. Run it
-with publishing disabled first. In no-publish mode it builds uploadable Python
-and npm artifacts, writes a no-publish artifact review checklist to the workflow
-summary, and verifies the real Go tag when `v<version>` already exists on the
-remote. If the tag is absent, the workflow explicitly records that real Go tag
-verification was skipped for that rehearsal.
+with publishing disabled first. In no-publish mode it produces uploadable
+Python and npm artifacts through the double-build comparison, records their
+SHA-256 checksums, uploads the complete verified artifact set, writes a
+no-publish artifact review checklist to the workflow summary, and verifies the
+real Go tag. A missing tag, authentication failure, or network failure is a
+release failure rather than a reason to skip verification.
+
+The workflow pins the runner, Python, Node, npm, and Python packaging tools. It
+derives `SOURCE_DATE_EPOCH` from the commit referenced by `v<version>`, builds in
+two separately extracted `git archive` trees, normalizes both Python source
+distributions, and compares every Python and npm artifact byte-for-byte. Only
+the first verified-identical set is copied to `dist/` and uploaded. This makes a
+retry against an immutable PyPI or npm version a real hash comparison instead
+of a timestamp-dependent false conflict.
+
+When publishing is approved, the publish job downloads that uploaded artifact
+set and verifies its checksums and versioned filenames. It does not check out
+the source tree, run `python -m build`, or run `npm pack` again. If the version
+already exists on PyPI or npm, its published hashes must match the verified
+artifacts exactly; a mismatch fails closed instead of silently skipping or
+overwriting the version.
+
+The workflow also checks that the semantic version tag still points at the
+commit tested by the verification job. It then creates the corresponding stable
+GitHub Release if needed, after verifying the live npm and PyPI artifact hashes.
+Existing GitHub Release assets are downloaded and compared byte-for-byte;
+missing assets are uploaded, while conflicting assets are never replaced
+automatically.
 
 Publishing is double-gated. Setting `publish=true` is not enough; the workflow
 also requires `publish_approval=publish-runcost`. A `publish=true` dispatch
@@ -119,13 +153,13 @@ workflow to the default branch first, then rerun the no-publish rehearsal.
 
 No-publish artifact review checklist:
 
-- Confirm Python wheel and source distribution are present in workflow artifacts.
-- Confirm npm tarball is present in workflow artifacts and includes package
-  README.
+- Confirm the checksum-locked Python wheel and source distribution are present
+  in workflow artifacts.
+- Confirm the npm tarball is present and includes both the package README and a
+  full MIT `LICENSE` identical to the repository license.
 - Confirm release readiness, dry-run, examples, package checks, and conformance
   tests passed.
-- Confirm Go tag verification ran when the real Go tag existed, or was
-  explicitly skipped because the tag was absent.
+- Confirm Go tag verification passed against the real release tag.
 - Confirm the workflow dispatch ran from a workflow file GitHub recognizes on
   the default branch.
 - Keep publishing disabled until PyPI/npm trusted publishers are configured,
@@ -160,7 +194,9 @@ Configure PyPI trusted publishing for:
 - Environment: `release`
 
 The release workflow uses PyPI OIDC trusted publishing and should not need a
-stored PyPI API token.
+stored PyPI API token. The trusted-publishing action receives the verified
+`dist/python` artifacts downloaded from the verification job; it must not build
+replacement artifacts.
 
 Name availability check: `docs/internal/reports/2026-05-26-package-name-availability-check.md`
 records that `runcost` is already occupied on PyPI, `runcost-ai` had no
@@ -173,8 +209,9 @@ the occupied `runcost` project.
 Configure npm trusted publishing for the `runcost` package and the GitHub
 Actions workflow. npm provenance should be published with releases.
 
-The JavaScript package is in `packages/javascript/core`, so the workflow runs
-publish commands from that directory.
+The JavaScript package is assembled from `packages/javascript/core`. The
+verification job creates `dist/npm/runcost-<version>.tgz`; the publish job sends
+that exact downloaded tarball to npm with provenance.
 
 Trusted publisher settings to configure on npm:
 
@@ -207,6 +244,16 @@ For a private repository, the guarded workflow configures Git to fetch
 `github.com/adamallcock/runcost` with the workflow's read token and sets
 `GOPRIVATE=github.com/adamallcock/runcost`. That keeps the verification on the
 real semantic version tag while avoiding a local `replace`.
+
+## GitHub Release Parity
+
+The GitHub Release, npm version, PyPI version, and Go module tag are one release
+train. A successful publish workflow must leave a non-draft, non-prerelease
+GitHub Release for `v<version>` whose wheel, source distribution, npm tarball,
+and `SHA256SUMS` assets match the artifacts verified earlier in that workflow.
+Rerunning the workflow is safe only when existing PyPI, npm, and GitHub Release
+artifacts have matching hashes; any mismatch requires investigation and a new
+patch version, not replacement of immutable release evidence.
 
 ## Rollback
 

@@ -471,6 +471,34 @@
       "warning_codes": []
     },
     {
+      "fixture": "fixtures/deepseek-effective-date-offset-boundary.json",
+      "id": "deepseek-effective-date-offset-boundary",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-effective-timestamp-required.json",
+      "id": "deepseek-effective-timestamp-required",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
       "fixture": "fixtures/deepseek-official-snapshot-period-adapter.json",
       "id": "deepseek-official-snapshot-period-adapter",
       "languages": {
@@ -597,6 +625,22 @@
       "warning_codes": []
     },
     {
+      "fixture": "fixtures/deepseek-peak-pricing-invalid-timezone-warning.json",
+      "id": "deepseek-peak-pricing-invalid-timezone-warning",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "deepseek",
+      "scenario": "warning",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": [
+        "billing_schedule_unsupported"
+      ]
+    },
+    {
       "fixture": "fixtures/deepseek-peak-pricing-missing-time-warning.json",
       "id": "deepseek-peak-pricing-missing-time-warning",
       "languages": {
@@ -657,8 +701,64 @@
       ]
     },
     {
-      "fixture": "fixtures/deepseek-peak-pricing-unsupported-timezone-warning.json",
-      "id": "deepseek-peak-pricing-unsupported-timezone-warning",
+      "fixture": "fixtures/deepseek-user-pricing-camelcase-period-adapter.json",
+      "id": "deepseek-user-pricing-camelcase-period-adapter",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "source_adapter",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-weekly-pricing-asia-shanghai-weekday-peak.json",
+      "id": "deepseek-weekly-pricing-asia-shanghai-weekday-peak",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-weekly-pricing-effective-before-start.json",
+      "id": "deepseek-weekly-pricing-effective-before-start",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-weekly-pricing-effective-start.json",
+      "id": "deepseek-weekly-pricing-effective-start",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-weekly-pricing-malformed-weekday-list.json",
+      "id": "deepseek-weekly-pricing-malformed-weekday-list",
       "languages": {
         "go": "warned",
         "javascript": "warned",
@@ -673,8 +773,8 @@
       ]
     },
     {
-      "fixture": "fixtures/deepseek-user-pricing-camelcase-period-adapter.json",
-      "id": "deepseek-user-pricing-camelcase-period-adapter",
+      "fixture": "fixtures/deepseek-weekly-pricing-sunday-monday-boundary.json",
+      "id": "deepseek-weekly-pricing-sunday-monday-boundary",
       "languages": {
         "go": "preserved",
         "javascript": "preserved",
@@ -682,7 +782,21 @@
       },
       "outcome": "preserved",
       "provider": "deepseek",
-      "scenario": "source_adapter",
+      "scenario": "normalized_usage",
+      "surface": "deepseek.chat_completions",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/deepseek-weekly-pricing-weekend-offpeak.json",
+      "id": "deepseek-weekly-pricing-weekend-offpeak",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "deepseek",
+      "scenario": "normalized_usage",
       "surface": "deepseek.chat_completions",
       "warning_codes": []
     },
@@ -2311,6 +2425,34 @@
       ]
     },
     {
+      "fixture": "fixtures/timezone-dst-america-new-york-fall-back.json",
+      "id": "timezone-dst-america-new-york-fall-back",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "synthetic",
+      "scenario": "normalized_usage",
+      "surface": "synthetic.scheduled_usage",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/timezone-dst-america-new-york-spring-forward.json",
+      "id": "timezone-dst-america-new-york-spring-forward",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "synthetic",
+      "scenario": "normalized_usage",
+      "surface": "synthetic.scheduled_usage",
+      "warning_codes": []
+    },
+    {
       "fixture": "fixtures/tool-call-units-basic.json",
       "id": "tool-call-units-basic",
       "languages": {
@@ -3120,6 +3262,34 @@
     },
     {
       "fixture": "fixtures/expansion/cases.json",
+      "id": "genai-prices-weekly-timezone-constraint",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "price_cards_from_genai_prices",
+      "surface": "price_cards_from_genai_prices",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "genai-prices-unrepresentable-constraint-omitted",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "price_cards_from_genai_prices",
+      "surface": "price_cards_from_genai_prices",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
       "id": "price-resolution-unavailable-warning",
       "languages": {
         "go": "warned",
@@ -3161,31 +3331,31 @@
   },
   "schema_version": "0.1",
   "summary": {
-    "case_count": 217,
+    "case_count": 229,
     "languages": {
       "go": {
         "not_tested": 2,
-        "preserved": 162,
+        "preserved": 173,
         "unsupported": 7,
-        "warned": 46
+        "warned": 47
       },
       "javascript": {
         "not_tested": 1,
-        "preserved": 162,
+        "preserved": 173,
         "unsupported": 7,
-        "warned": 47
+        "warned": 48
       },
       "python": {
         "not_tested": 1,
-        "preserved": 162,
+        "preserved": 173,
         "unsupported": 7,
-        "warned": 47
+        "warned": 48
       }
     },
     "outcomes": {
-      "preserved": 162,
+      "preserved": 173,
       "unsupported": 7,
-      "warned": 48
+      "warned": 49
     }
   }
 }

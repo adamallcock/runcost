@@ -1,0 +1,137 @@
+{
+  "schema_version": "0.1",
+  "provider": "deepseek",
+  "surface": "deepseek.chat_completions",
+  "source": {
+    "name": "deepseek-official",
+    "url": "https://api-docs.deepseek.com/quick_start/pricing",
+    "retrieved_at": "2026-08-23T06:34:12Z",
+    "version": "2026-08-23",
+    "license": "reviewed"
+  },
+  "billing_schedule": {
+    "timezone": "UTC",
+    "default_period": "offpeak",
+    "boundary_policy": "start_inclusive_end_exclusive",
+    "windows": [
+      {
+        "period": "peak",
+        "start": "01:00",
+        "end": "04:00",
+        "days_of_week": ["monday", "tuesday", "wednesday", "thursday", "friday"]
+      },
+      {
+        "period": "peak",
+        "start": "06:00",
+        "end": "10:00",
+        "days_of_week": ["monday", "tuesday", "wednesday", "thursday", "friday"]
+      }
+    ]
+  },
+  "rows": [
+    {
+      "model": "deepseek-v4-flash",
+      "pricing_period": "offpeak",
+      "price_card_id": "deepseek:deepseek-v4-flash:offpeak:official-snapshot",
+      "effective": {"from": "2026-08-22T16:00:00Z"},
+      "input": "0.22",
+      "cached_input": "0.007",
+      "output": "0.66",
+      "reasoning": "0.66",
+      "source_label": "DeepSeek Models & Pricing",
+      "capabilities": {
+        "pricing_dimensions": ["token", "cached_input", "pricing_period"],
+        "reasoning_priced_as_output": true,
+        "weekday_peak_only": true
+      },
+      "notes": "The public pricing page lists off-peak and peak token prices and defines peak windows as 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday. The reviewed transition instant is 2026-08-23 00:00 Asia/Shanghai."
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "pricing_period": "peak",
+      "price_card_id": "deepseek:deepseek-v4-flash:peak:official-snapshot",
+      "effective": {"from": "2026-08-22T16:00:00Z"},
+      "input": "0.44",
+      "cached_input": "0.014",
+      "output": "1.32",
+      "reasoning": "1.32",
+      "source_label": "DeepSeek Models & Pricing",
+      "capabilities": {
+        "pricing_dimensions": ["token", "cached_input", "pricing_period"],
+        "reasoning_priced_as_output": true,
+        "weekday_peak_only": true
+      },
+      "notes": "The public pricing page lists off-peak and peak token prices and defines peak windows as 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday. The reviewed transition instant is 2026-08-23 00:00 Asia/Shanghai."
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "pricing_period": "offpeak",
+      "price_card_id": "deepseek:deepseek-v4-pro:offpeak:official-snapshot",
+      "effective": {"from": "2026-08-22T16:00:00Z"},
+      "input": "0.66",
+      "cached_input": "0.022",
+      "output": "1.98",
+      "reasoning": "1.98",
+      "source_label": "DeepSeek Models & Pricing",
+      "capabilities": {
+        "pricing_dimensions": ["token", "cached_input", "pricing_period"],
+        "reasoning_priced_as_output": true,
+        "weekday_peak_only": true
+      },
+      "notes": "The public pricing page lists off-peak and peak token prices and defines peak windows as 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday. The reviewed transition instant is 2026-08-23 00:00 Asia/Shanghai."
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "pricing_period": "peak",
+      "price_card_id": "deepseek:deepseek-v4-pro:peak:official-snapshot",
+      "effective": {"from": "2026-08-22T16:00:00Z"},
+      "input": "1.32",
+      "cached_input": "0.044",
+      "output": "3.96",
+      "reasoning": "3.96",
+      "source_label": "DeepSeek Models & Pricing",
+      "capabilities": {
+        "pricing_dimensions": ["token", "cached_input", "pricing_period"],
+        "reasoning_priced_as_output": true,
+        "weekday_peak_only": true
+      },
+      "notes": "The public pricing page lists off-peak and peak token prices and defines peak windows as 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday. The reviewed transition instant is 2026-08-23 00:00 Asia/Shanghai."
+    },
+    {
+      "model": "deepseek-v4-flash-vision-exp",
+      "pricing_period": "offpeak",
+      "price_card_id": "deepseek:deepseek-v4-flash-vision-exp:offpeak:official-snapshot",
+      "effective": {"from": "2026-08-22T16:00:00Z"},
+      "input": "0.22",
+      "cached_input": "0.007",
+      "output": "0.66",
+      "reasoning": "0.66",
+      "source_label": "DeepSeek Models & Pricing",
+      "capabilities": {
+        "pricing_dimensions": ["token", "cached_input", "pricing_period"],
+        "reasoning_priced_as_output": true,
+        "weekday_peak_only": true,
+        "vision_input_priced_as_text_input": true
+      },
+      "notes": "DeepSeek states that images sent to this model are converted to tokens and billed as input tokens. The public pricing page lists off-peak and peak token prices and defines peak windows as 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday."
+    },
+    {
+      "model": "deepseek-v4-flash-vision-exp",
+      "pricing_period": "peak",
+      "price_card_id": "deepseek:deepseek-v4-flash-vision-exp:peak:official-snapshot",
+      "effective": {"from": "2026-08-22T16:00:00Z"},
+      "input": "0.44",
+      "cached_input": "0.014",
+      "output": "1.32",
+      "reasoning": "1.32",
+      "source_label": "DeepSeek Models & Pricing",
+      "capabilities": {
+        "pricing_dimensions": ["token", "cached_input", "pricing_period"],
+        "reasoning_priced_as_output": true,
+        "weekday_peak_only": true,
+        "vision_input_priced_as_text_input": true
+      },
+      "notes": "DeepSeek states that images sent to this model are converted to tokens and billed as input tokens. The public pricing page lists off-peak and peak token prices and defines peak windows as 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday."
+    }
+  ]
+}

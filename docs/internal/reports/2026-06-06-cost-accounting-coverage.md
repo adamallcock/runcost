@@ -13,9 +13,9 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 
 ## Summary
 
-- Fixtures scanned: 182
+- Fixtures scanned: 192
 - Public API capabilities scanned: 21
-- Provider/surface component rows: 36
+- Provider/surface component rows: 37
 - Price-source component rows: 11
 - Gemini separate output/thinking fixtures: 6
 
@@ -28,7 +28,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `discount` | 2 |
 | `framework_adapter` | 18 |
 | `long_context` | 2 |
-| `normalized_usage` | 22 |
+| `normalized_usage` | 31 |
 | `provider_reported` | 4 |
 | `raw_provider_response` | 78 |
 | `service_mode` | 3 |
@@ -36,7 +36,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `source_adapter` | 21 |
 | `source_priority` | 5 |
 | `strict_error` | 1 |
-| `warning` | 14 |
+| `warning` | 15 |
 
 ## Components
 
@@ -65,7 +65,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `output_audio_tokens` | 10 |
 | `output_image_tokens` | 3 |
 | `output_reasoning_tokens` | 50 |
-| `output_text_tokens` | 125 |
+| `output_text_tokens` | 135 |
 | `output_video_tokens` | 2 |
 | `request_units` | 3 |
 | `rerank_search_units` | 2 |
@@ -129,6 +129,7 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `openai` | `openai.usage.images` | `image_generation_units` |
 | `openai` | `openai.vector_stores` | `storage_gb_days` |
 | `openrouter` | `openrouter.chat_completions` | `custom_units`, `input_cache_read_tokens`, `input_image_units`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `request_units`, `web_search_units` |
+| `synthetic` | `synthetic.scheduled_usage` | `output_text_tokens` |
 | `vertex` | `vertex.gemini.generate_content` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens` |
 | `xai` | `openai.responses` | `attachment_search_units`, `code_interpreter_call_units`, `custom_units`, `file_search_units`, `input_cache_read_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens`, `tool_call_units`, `web_search_units`, `x_search_units` |
 | `xai` | `xai.chat_completions` | `input_cache_read_tokens`, `input_uncached_tokens`, `output_reasoning_tokens`, `output_text_tokens` |

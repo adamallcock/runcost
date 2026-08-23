@@ -47,8 +47,20 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "from": { "type": ["string", "null"], "format": "date" },
-        "to": { "type": ["string", "null"], "format": "date" }
+        "from": {
+          "oneOf": [
+            { "type": "string", "format": "date" },
+            { "type": "string", "format": "date-time" },
+            { "type": "null" }
+          ]
+        },
+        "to": {
+          "oneOf": [
+            { "type": "string", "format": "date" },
+            { "type": "string", "format": "date-time" },
+            { "type": "null" }
+          ]
+        }
       }
     },
     "components": {
@@ -159,7 +171,11 @@
       "additionalProperties": false,
       "required": ["timezone", "default_period", "windows"],
       "properties": {
-        "timezone": { "type": "string", "minLength": 1 },
+        "timezone": {
+          "type": "string",
+          "minLength": 1,
+          "description": "IANA timezone name; UTC is valid."
+        },
         "default_period": { "type": "string", "minLength": 1 },
         "boundary_policy": {
           "type": "string",
@@ -184,6 +200,16 @@
         "end": {
           "type": "string",
           "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]{1}(:[0-5][0-9]{1})?$"
+        },
+        "days_of_week": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Lowercase weekday name: monday through sunday."
+          },
+          "description": "Optional local start-day filter; unrecognized values must fail closed at runtime."
         }
       }
     },

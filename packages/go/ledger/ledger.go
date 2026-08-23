@@ -312,18 +312,23 @@ func (effective EffectiveRange) Object() Object {
 
 // BillingWindow describes one recurring time window in a canonical billing schedule.
 type BillingWindow struct {
-	Period string
-	Start  string
-	End    string
+	Period     string
+	Start      string
+	End        string
+	DaysOfWeek []string
 }
 
 // Object converts the billing window to the canonical schema-shaped object.
 func (window BillingWindow) Object() Object {
-	return Object{
+	result := Object{
 		"period": window.Period,
 		"start":  window.Start,
 		"end":    window.End,
 	}
+	if window.DaysOfWeek != nil {
+		result["days_of_week"] = stringsToAny(window.DaysOfWeek)
+	}
+	return result
 }
 
 func billingWindowsToAny(windows []BillingWindow) []any {
@@ -334,7 +339,7 @@ func billingWindowsToAny(windows []BillingWindow) []any {
 	return result
 }
 
-// BillingSchedule describes recurring provider billing periods in UTC.
+// BillingSchedule describes recurring provider billing periods in an IANA timezone.
 type BillingSchedule struct {
 	Timezone       string
 	DefaultPeriod  string
@@ -738,10 +743,10 @@ func dateValue(value any) (time.Time, bool) {
 }
 
 func dateTimeValue(value any) (time.Time, bool) {
-	if value == nil {
+	text, ok := value.(string)
+	if !ok || text == "" {
 		return time.Time{}, false
 	}
-	text := asString(value)
 	if !strings.Contains(text, "T") {
 		return time.Time{}, false
 	}
@@ -750,6 +755,45 @@ func dateTimeValue(value any) (time.Time, bool) {
 		return time.Time{}, false
 	}
 	return parsed.UTC(), true
+}
+
+func dateOrDateTimeValue(value any) (time.Time, bool, bool) {
+	text, ok := value.(string)
+	if !ok || text == "" {
+		return time.Time{}, false, false
+	}
+	if len(text) == len("2006-01-02") {
+		parsed, err := time.Parse("2006-01-02", text)
+		if err != nil {
+			return time.Time{}, false, false
+		}
+		return parsed, true, false
+	}
+	parsed, ok := dateTimeValue(text)
+	if !ok {
+		return time.Time{}, false, false
+	}
+	return parsed, true, true
+}
+
+type effectiveBoundary struct {
+	value   time.Time
+	precise bool
+}
+
+func effectiveBoundaryValue(effective Object, key string) (effectiveBoundary, bool, bool) {
+	raw, exists := effective[key]
+	if !exists || raw == nil {
+		return effectiveBoundary{}, false, true
+	}
+	if text, ok := raw.(string); ok && text == "" {
+		return effectiveBoundary{}, false, true
+	}
+	value, ok, precise := dateOrDateTimeValue(raw)
+	if !ok {
+		return effectiveBoundary{}, true, false
+	}
+	return effectiveBoundary{value: value, precise: precise}, true, true
 }
 
 func unixSecondsPricedAt(value any) string {
@@ -768,6 +812,15 @@ func unixSecondsPricedAt(value any) string {
 
 func usageContext(usageLedger Object) Object {
 	return asObject(usageLedger["context"])
+}
+
+func pricedAtContextValue(context Object) any {
+	if value, exists := context["priced_at"]; exists {
+		if text, ok := value.(string); !ok || text != "" {
+			return value
+		}
+	}
+	return context["pricedAt"]
 }
 
 func cardPricingPeriod(card Object) string {
@@ -792,40 +845,51 @@ func normalizeBillingSchedule(schedule Object) Object {
 		return Object{}
 	}
 	normalized := Object{}
-	if value := asString(schedule["timezone"]); value != "" {
+	if value, exists := schedule["timezone"]; exists {
 		normalized["timezone"] = value
 	}
-	defaultPeriod := asString(schedule["default_period"])
-	if defaultPeriod == "" {
-		defaultPeriod = asString(schedule["defaultPeriod"])
+	if value, exists := schedule["default_period"]; exists {
+		normalized["default_period"] = value
+	} else if value, exists := schedule["defaultPeriod"]; exists {
+		normalized["default_period"] = value
 	}
-	if defaultPeriod != "" {
-		normalized["default_period"] = defaultPeriod
-	}
-	boundaryPolicy := asString(schedule["boundary_policy"])
-	if boundaryPolicy == "" {
-		boundaryPolicy = asString(schedule["boundaryPolicy"])
-	}
-	if boundaryPolicy != "" {
-		normalized["boundary_policy"] = boundaryPolicy
+	if value, exists := schedule["boundary_policy"]; exists {
+		normalized["boundary_policy"] = value
+	} else if value, exists := schedule["boundaryPolicy"]; exists {
+		normalized["boundary_policy"] = value
 	}
 	if _, exists := schedule["windows"]; exists {
-		windows := []any{}
-		for _, rawWindow := range asSlice(schedule["windows"]) {
-			window := asObject(rawWindow)
-			if len(window) == 0 {
+		rawWindows, ok := billingScheduleSlice(schedule["windows"])
+		if !ok {
+			normalized["windows"] = schedule["windows"]
+			return normalized
+		}
+		windows := make([]any, 0, len(rawWindows))
+		for _, rawWindow := range rawWindows {
+			window, ok := objectValue(rawWindow)
+			if !ok {
 				windows = append(windows, rawWindow)
 				continue
 			}
 			normalizedWindow := Object{}
-			if period := asString(window["period"]); period != "" {
+			if period, exists := window["period"]; exists {
 				normalizedWindow["period"] = period
 			}
-			if start := asString(window["start"]); start != "" {
+			if start, exists := window["start"]; exists {
 				normalizedWindow["start"] = start
 			}
-			if end := asString(window["end"]); end != "" {
+			if end, exists := window["end"]; exists {
 				normalizedWindow["end"] = end
+			}
+			_, hasDaysOfWeek := window["days_of_week"]
+			_, hasDaysOfWeekAlias := window["daysOfWeek"]
+			if hasDaysOfWeek && hasDaysOfWeekAlias {
+				// Preserve the ambiguity so schedule evaluation fails closed.
+				normalizedWindow["days_of_week"] = []any{}
+			} else if days, exists := window["days_of_week"]; exists {
+				normalizedWindow["days_of_week"] = days
+			} else if days, exists := window["daysOfWeek"]; exists {
+				normalizedWindow["days_of_week"] = days
 			}
 			windows = append(windows, normalizedWindow)
 		}
@@ -835,7 +899,11 @@ func normalizeBillingSchedule(schedule Object) Object {
 }
 
 func timeSeconds(value any) (int, bool) {
-	parts := strings.Split(asString(value), ":")
+	text, ok := value.(string)
+	if !ok {
+		return 0, false
+	}
+	parts := strings.Split(text, ":")
 	if len(parts) != 2 && len(parts) != 3 {
 		return 0, false
 	}
@@ -867,59 +935,218 @@ func timeInWindow(current int, start int, end int) bool {
 	return current >= start || current < end
 }
 
-func pricingPeriodFromSchedule(schedule Object, pricedAt time.Time) Object {
-	timezoneName := asString(schedule["timezone"])
-	if timezoneName == "" {
-		timezoneName = "UTC"
+func billingScheduleSlice(value any) ([]any, bool) {
+	switch typed := value.(type) {
+	case []any:
+		return typed, true
+	case []string:
+		result := make([]any, len(typed))
+		for index, item := range typed {
+			result[index] = item
+		}
+		return result, true
+	case []Object:
+		result := make([]any, len(typed))
+		for index, item := range typed {
+			result[index] = item
+		}
+		return result, true
+	default:
+		return nil, false
 	}
-	if timezoneName != "UTC" {
-		return Object{"unsupported_timezone": timezoneName}
+}
+
+var billingWeekdayNames = map[string]time.Weekday{
+	"sunday":    time.Sunday,
+	"monday":    time.Monday,
+	"tuesday":   time.Tuesday,
+	"wednesday": time.Wednesday,
+	"thursday":  time.Thursday,
+	"friday":    time.Friday,
+	"saturday":  time.Saturday,
+}
+
+func canonicalBillingDays(value any) ([]string, bool) {
+	values, ok := billingScheduleSlice(value)
+	if !ok || len(values) == 0 {
+		return nil, false
 	}
-	boundaryPolicy := asString(schedule["boundary_policy"])
-	if boundaryPolicy == "" {
-		boundaryPolicy = asString(schedule["boundaryPolicy"])
+	result := make([]string, 0, len(values))
+	seen := map[string]bool{}
+	for _, rawDay := range values {
+		day, ok := rawDay.(string)
+		if !ok {
+			return nil, false
+		}
+		if _, exists := billingWeekdayNames[day]; !exists || seen[day] {
+			return nil, false
+		}
+		seen[day] = true
+		result = append(result, day)
 	}
-	if boundaryPolicy == "" {
-		boundaryPolicy = "start_inclusive_end_exclusive"
+	return result, true
+}
+
+type parsedBillingWindow struct {
+	period   string
+	start    int
+	end      int
+	startRaw string
+	endRaw   string
+	days     map[time.Weekday]bool
+	allDays  bool
+}
+
+type parsedBillingSchedule struct {
+	timezoneName  string
+	location      *time.Location
+	defaultPeriod string
+	windows       []parsedBillingWindow
+}
+
+func parseBillingSchedule(schedule Object) (parsedBillingSchedule, Object) {
+	timezoneName := "UTC"
+	if rawTimezone, exists := schedule["timezone"]; exists {
+		name, ok := rawTimezone.(string)
+		if !ok || name == "" {
+			return parsedBillingSchedule{}, Object{"unsupported_schedule": "timezone"}
+		}
+		timezoneName = name
+	}
+	location, err := time.LoadLocation(timezoneName)
+	if err != nil {
+		return parsedBillingSchedule{}, Object{"unsupported_timezone": timezoneName}
+	}
+
+	boundaryPolicy := "start_inclusive_end_exclusive"
+	if rawBoundary, exists := schedule["boundary_policy"]; exists {
+		value, ok := rawBoundary.(string)
+		if !ok {
+			return parsedBillingSchedule{}, Object{"unsupported_schedule": "boundary_policy"}
+		}
+		boundaryPolicy = value
+	} else if rawBoundary, exists := schedule["boundaryPolicy"]; exists {
+		value, ok := rawBoundary.(string)
+		if !ok {
+			return parsedBillingSchedule{}, Object{"unsupported_schedule": "boundary_policy"}
+		}
+		boundaryPolicy = value
 	}
 	if boundaryPolicy != "start_inclusive_end_exclusive" {
-		return Object{"unsupported_schedule": "boundary_policy"}
+		return parsedBillingSchedule{}, Object{"unsupported_schedule": "boundary_policy"}
 	}
-	rawWindows, ok := schedule["windows"].([]any)
+
+	rawWindows, ok := billingScheduleSlice(schedule["windows"])
 	if !ok {
-		return Object{"unsupported_schedule": "windows"}
+		return parsedBillingSchedule{}, Object{"unsupported_schedule": "windows"}
 	}
-	current := pricedAt.Hour()*3600 + pricedAt.Minute()*60 + pricedAt.Second()
+	windows := make([]parsedBillingWindow, 0, len(rawWindows))
 	for _, rawWindow := range rawWindows {
 		window, ok := objectValue(rawWindow)
 		if !ok {
-			return Object{"unsupported_schedule": "window"}
+			return parsedBillingSchedule{}, Object{"unsupported_schedule": "window"}
 		}
-		start, okStart := timeSeconds(window["start"])
-		end, okEnd := timeSeconds(window["end"])
-		period := asString(window["period"])
-		if !okStart || !okEnd || period == "" {
-			return Object{"unsupported_schedule": "window"}
+		startRaw, okStartRaw := window["start"].(string)
+		endRaw, okEndRaw := window["end"].(string)
+		period, okPeriod := window["period"].(string)
+		start, okStart := timeSeconds(startRaw)
+		end, okEnd := timeSeconds(endRaw)
+		if !okStartRaw || !okEndRaw || !okPeriod || period == "" || !okStart || !okEnd {
+			return parsedBillingSchedule{}, Object{"unsupported_schedule": "window"}
 		}
-		if timeInWindow(current, start, end) {
-			return Object{
-				"pricing_period":   period,
-				"period_selection": "derived_from_priced_at",
-				"pricing_window":   asString(window["start"]) + "-" + asString(window["end"]),
-				"pricing_timezone": timezoneName,
+		parsedWindow := parsedBillingWindow{
+			period:   period,
+			start:    start,
+			end:      end,
+			startRaw: startRaw,
+			endRaw:   endRaw,
+			allDays:  true,
+		}
+		_, hasDaysOfWeek := window["days_of_week"]
+		_, hasDaysOfWeekAlias := window["daysOfWeek"]
+		if hasDaysOfWeek && hasDaysOfWeekAlias {
+			return parsedBillingSchedule{}, Object{"unsupported_schedule": "days_of_week"}
+		}
+		if rawDays, exists := window["days_of_week"]; exists {
+			days, ok := canonicalBillingDays(rawDays)
+			if !ok {
+				return parsedBillingSchedule{}, Object{"unsupported_schedule": "days_of_week"}
+			}
+			parsedWindow.allDays = false
+			parsedWindow.days = map[time.Weekday]bool{}
+			for _, day := range days {
+				parsedWindow.days[billingWeekdayNames[day]] = true
+			}
+		} else if rawDays, exists := window["daysOfWeek"]; exists {
+			days, ok := canonicalBillingDays(rawDays)
+			if !ok {
+				return parsedBillingSchedule{}, Object{"unsupported_schedule": "days_of_week"}
+			}
+			parsedWindow.allDays = false
+			parsedWindow.days = map[time.Weekday]bool{}
+			for _, day := range days {
+				parsedWindow.days[billingWeekdayNames[day]] = true
 			}
 		}
+		windows = append(windows, parsedWindow)
 	}
-	defaultPeriod := asString(schedule["default_period"])
-	if defaultPeriod == "" {
-		defaultPeriod = asString(schedule["defaultPeriod"])
+
+	defaultPeriod := ""
+	if rawDefault, exists := schedule["default_period"]; exists {
+		value, ok := rawDefault.(string)
+		if !ok {
+			return parsedBillingSchedule{}, Object{"unsupported_schedule": "default_period"}
+		}
+		defaultPeriod = value
+	} else if rawDefault, exists := schedule["defaultPeriod"]; exists {
+		value, ok := rawDefault.(string)
+		if !ok {
+			return parsedBillingSchedule{}, Object{"unsupported_schedule": "default_period"}
+		}
+		defaultPeriod = value
 	}
-	if defaultPeriod != "" {
+	if defaultPeriod == "" && len(windows) == 0 {
+		return parsedBillingSchedule{}, Object{"unsupported_schedule": "default_period"}
+	}
+	return parsedBillingSchedule{
+		timezoneName:  timezoneName,
+		location:      location,
+		defaultPeriod: defaultPeriod,
+		windows:       windows,
+	}, Object{}
+}
+
+func pricingPeriodFromSchedule(schedule Object, pricedAt time.Time) Object {
+	parsed, unsupported := parseBillingSchedule(schedule)
+	if len(unsupported) > 0 {
+		return unsupported
+	}
+	localPricedAt := pricedAt.In(parsed.location)
+	current := localPricedAt.Hour()*3600 + localPricedAt.Minute()*60 + localPricedAt.Second()
+	for _, window := range parsed.windows {
+		if !timeInWindow(current, window.start, window.end) {
+			continue
+		}
+		localStartDay := localPricedAt.Weekday()
+		if window.start > window.end && current < window.end {
+			localStartDay = localPricedAt.AddDate(0, 0, -1).Weekday()
+		}
+		if !window.allDays && !window.days[localStartDay] {
+			continue
+		}
 		return Object{
-			"pricing_period":   defaultPeriod,
+			"pricing_period":   window.period,
+			"period_selection": "derived_from_priced_at",
+			"pricing_window":   window.startRaw + "-" + window.endRaw,
+			"pricing_timezone": parsed.timezoneName,
+		}
+	}
+	if parsed.defaultPeriod != "" {
+		return Object{
+			"pricing_period":   parsed.defaultPeriod,
 			"period_selection": "derived_from_priced_at",
 			"pricing_window":   "default",
-			"pricing_timezone": timezoneName,
+			"pricing_timezone": parsed.timezoneName,
 		}
 	}
 	return Object{}
@@ -937,10 +1164,7 @@ func pricingPeriodSelection(usageLedger Object, card Object) Object {
 	if len(schedule) == 0 {
 		return Object{}
 	}
-	pricedAt, ok := dateTimeValue(context["priced_at"])
-	if !ok {
-		pricedAt, ok = dateTimeValue(context["pricedAt"])
-	}
+	pricedAt, ok := dateTimeValue(pricedAtContextValue(context))
 	if !ok {
 		return Object{}
 	}
@@ -1004,12 +1228,22 @@ func requestedPricingPeriodForCards(usageLedger Object, cards []Object) string {
 
 func unsupportedBillingScheduleReason(usageLedger Object, cards []Object) string {
 	context := usageContext(usageLedger)
-	if _, ok := dateTimeValue(context["priced_at"]); !ok {
-		if _, ok := dateTimeValue(context["pricedAt"]); !ok {
-			return ""
-		}
+	if asString(context["pricing_period"]) != "" || asString(context["pricingPeriod"]) != "" {
+		return ""
 	}
 	for _, card := range cards {
+		schedule := cardBillingSchedule(card)
+		if len(schedule) == 0 {
+			continue
+		}
+		if _, unsupported := parseBillingSchedule(schedule); len(unsupported) > 0 {
+			if timezoneName := asString(unsupported["unsupported_timezone"]); timezoneName != "" {
+				return timezoneName
+			}
+			if reason := asString(unsupported["unsupported_schedule"]); reason != "" {
+				return reason
+			}
+		}
 		selection := pricingPeriodSelection(usageLedger, card)
 		if timezoneName := asString(selection["unsupported_timezone"]); timezoneName != "" {
 			return timezoneName
@@ -1047,18 +1281,44 @@ func cardModelSurfaceMatches(usageLedger Object, card Object) bool {
 	return modelMatches && surfaceMatches
 }
 
-func effectiveMatches(card Object, pricedAt string) bool {
-	if pricedAt == "" {
+func effectiveMatches(card Object, pricedAt any) bool {
+	rawEffective, exists := card["effective"]
+	if !exists || rawEffective == nil {
 		return true
 	}
-	effective := asObject(card["effective"])
-	fromDate := asString(effective["from"])
-	toDate := asString(effective["to"])
-	if fromDate != "" && pricedAt < fromDate {
+	effective, ok := objectValue(rawEffective)
+	if !ok {
 		return false
 	}
-	if toDate != "" && pricedAt > toDate {
+	from, hasFrom, validFrom := effectiveBoundaryValue(effective, "from")
+	to, hasTo, validTo := effectiveBoundaryValue(effective, "to")
+	if !validFrom || !validTo || (!hasFrom && !hasTo) {
+		return validFrom && validTo
+	}
+	if pricedAt == nil {
+		return !(hasFrom && from.precise) && !(hasTo && to.precise)
+	}
+	if text, ok := pricedAt.(string); ok && text == "" {
+		return !(hasFrom && from.precise) && !(hasTo && to.precise)
+	}
+	instant, validPricedAt, precisePricedAt := dateOrDateTimeValue(pricedAt)
+	if !validPricedAt {
 		return false
+	}
+	if (hasFrom && from.precise || hasTo && to.precise) && !precisePricedAt {
+		return false
+	}
+	if hasFrom && instant.Before(from.value) {
+		return false
+	}
+	if hasTo {
+		if to.precise {
+			if !instant.Before(to.value) {
+				return false
+			}
+		} else if !instant.Before(to.value.AddDate(0, 0, 1)) {
+			return false
+		}
 	}
 	return true
 }
@@ -1081,11 +1341,7 @@ func cardContextExceptPeriodMatches(usageLedger Object, card Object) bool {
 	if region != "" && asString(card["region"]) != "" && asString(card["region"]) != region {
 		return false
 	}
-	pricedAt := datePart(context["priced_at"])
-	if pricedAt == "" {
-		pricedAt = datePart(context["pricedAt"])
-	}
-	return effectiveMatches(card, pricedAt)
+	return effectiveMatches(card, pricedAtContextValue(context))
 }
 
 func cardScore(usageLedger Object, card Object) int {
@@ -1846,14 +2102,12 @@ func noMatchingCardWarning(usageLedger Object, priceCards []any) Object {
 			"metadata": metadata,
 		}
 	}
-	pricedAt := datePart(context["priced_at"])
-	if pricedAt == "" {
-		pricedAt = datePart(context["pricedAt"])
-	}
+	pricedAtValue := pricedAtContextValue(context)
+	pricedAt := datePart(pricedAtValue)
 	if pricedAt != "" && len(identityCards) > 0 {
 		anyEffective := false
 		for _, card := range identityCards {
-			if effectiveMatches(card, pricedAt) {
+			if effectiveMatches(card, pricedAtValue) {
 				anyEffective = true
 				break
 			}

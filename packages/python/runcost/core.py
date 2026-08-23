@@ -1,12 +1,24 @@
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, getcontext
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 getcontext().prec = 50
+
+_WEEKDAYS = (
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+)
+_WEEKDAY_SET = set(_WEEKDAYS)
 
 _COMPONENT_ORDER_NAMES = [
     "input_uncached_tokens",
@@ -250,6 +262,26 @@ def _card_billing_schedule(card: Dict[str, Any]) -> Dict[str, Any]:
     return schedule if isinstance(schedule, dict) else {}
 
 
+def _billing_window_days(window: Dict[str, Any]) -> Tuple[bool, Optional[set[str]]]:
+    """Validate and return a window's optional schedule-local start days."""
+
+    has_snake = "days_of_week" in window
+    has_camel = "daysOfWeek" in window
+    if has_snake and has_camel:
+        return False, None
+    if not has_snake and not has_camel:
+        return True, None
+    raw_days = window.get("days_of_week") if has_snake else window.get("daysOfWeek")
+    if not isinstance(raw_days, list) or not raw_days:
+        return False, None
+    if (
+        any(not isinstance(day, str) or day not in _WEEKDAY_SET for day in raw_days)
+        or len(set(raw_days)) != len(raw_days)
+    ):
+        return False, None
+    return True, set(raw_days)
+
+
 def _normalize_billing_schedule(schedule: Any) -> Optional[Dict[str, Any]]:
     if not isinstance(schedule, dict):
         return None
@@ -274,6 +306,13 @@ def _normalize_billing_schedule(schedule: Any) -> Optional[Dict[str, Any]]:
                 "start": window.get("start"),
                 "end": window.get("end"),
             }
+            if "days_of_week" in window and "daysOfWeek" in window:
+                # Preserve the invalid/ambiguous shape so evaluation fails closed.
+                normalized_window["days_of_week"] = []
+            elif "days_of_week" in window:
+                normalized_window["days_of_week"] = window["days_of_week"]
+            elif "daysOfWeek" in window:
+                normalized_window["days_of_week"] = window["daysOfWeek"]
             windows.append({key: value for key, value in normalized_window.items() if value is not None})
         normalized["windows"] = windows
     elif "windows" in schedule:
@@ -306,15 +345,17 @@ def _time_in_window(current: int, start: int, end: int) -> bool:
 
 def _pricing_period_from_schedule(schedule: Dict[str, Any], priced_at: datetime) -> Dict[str, Any]:
     timezone_name = schedule.get("timezone", "UTC")
-    if timezone_name != "UTC":
-        return {"unsupported_timezone": timezone_name}
+    try:
+        schedule_timezone = ZoneInfo(timezone_name)
+    except (TypeError, ValueError, ZoneInfoNotFoundError):
+        return {"unsupported_timezone": str(timezone_name)}
     boundary_policy = schedule.get("boundary_policy") or schedule.get("boundaryPolicy") or "start_inclusive_end_exclusive"
     if boundary_policy != "start_inclusive_end_exclusive":
         return {"unsupported_schedule": "boundary_policy"}
     windows = schedule.get("windows")
     if not isinstance(windows, list):
         return {"unsupported_schedule": "windows"}
-    current = priced_at.hour * 3600 + priced_at.minute * 60 + priced_at.second
+    validated_windows: List[Tuple[Dict[str, Any], int, int, Optional[set[str]]]] = []
     for window in windows:
         if not isinstance(window, dict):
             return {"unsupported_schedule": "window"}
@@ -323,7 +364,21 @@ def _pricing_period_from_schedule(schedule: Dict[str, Any], priced_at: datetime)
         period = window.get("period")
         if start is None or end is None or not period:
             return {"unsupported_schedule": "window"}
+        days_valid, days = _billing_window_days(window)
+        if not days_valid:
+            return {"unsupported_schedule": "days_of_week"}
+        validated_windows.append((window, start, end, days))
+
+    local_priced_at = priced_at.astimezone(schedule_timezone)
+    current = local_priced_at.hour * 3600 + local_priced_at.minute * 60 + local_priced_at.second
+    for window, start, end, days in validated_windows:
         if _time_in_window(current, start, end):
+            if days is not None:
+                start_date = local_priced_at.date()
+                if start > end and current < end:
+                    start_date -= timedelta(days=1)
+                if _WEEKDAYS[start_date.weekday()] not in days:
+                    continue
             return {
                 "pricing_period": str(period),
                 "period_selection": "derived_from_priced_at",
@@ -415,16 +470,70 @@ def _card_model_surface_matches(usage_ledger: Dict[str, Any], card: Dict[str, An
     return model_matches and surface_matches
 
 
+def _effective_bound(value: Any) -> Tuple[str, Any]:
+    if value is None or value == "":
+        return "missing", None
+    text = str(value)
+    if len(text) == 10:
+        try:
+            parsed_date = date.fromisoformat(text)
+        except ValueError:
+            parsed_date = None
+        if parsed_date is not None and parsed_date.isoformat() == text:
+            return "date", parsed_date
+    parsed_timestamp = _datetime_value(value)
+    if parsed_timestamp is not None:
+        return "timestamp", parsed_timestamp
+    return "invalid", None
+
+
 def _effective_matches(card: Dict[str, Any], priced_at: Optional[str]) -> bool:
-    if not priced_at:
+    effective = card.get("effective")
+    if effective is None:
         return True
-    effective = card.get("effective") or {}
-    from_date = effective.get("from")
-    to_date = effective.get("to")
-    if from_date and priced_at < from_date:
+    if not isinstance(effective, dict):
         return False
-    if to_date and priced_at > to_date:
+
+    raw_from = effective.get("from") if "from" in effective else effective.get("from_")
+    raw_to = effective.get("to")
+    if "from" in effective and "from_" in effective:
         return False
+    bounds = []
+    for raw_value, is_lower_bound in ((raw_from, True), (raw_to, False)):
+        precision, bound = _effective_bound(raw_value)
+        if precision == "invalid":
+            return False
+        if precision != "missing":
+            bounds.append((precision, bound, is_lower_bound))
+
+    # Preserve date-only card compatibility when a provider does not supply a
+    # timestamp, but never guess whether an instant-bounded card applies.
+    if not priced_at:
+        return all(precision != "timestamp" for precision, _, _ in bounds)
+
+    usage_timestamp = _datetime_value(priced_at)
+    if usage_timestamp is not None:
+        usage_date = usage_timestamp.date()
+    elif "T" in str(priced_at):
+        # A malformed timestamp is not a safe temporal match.
+        return False
+    else:
+        usage_date = _date_value(priced_at)
+    if usage_date is None:
+        return False
+
+    for precision, bound, is_lower_bound in bounds:
+        if precision == "timestamp" and usage_timestamp is None:
+            return False
+        if precision == "date":
+            if is_lower_bound and usage_date < bound:
+                return False
+            if not is_lower_bound and usage_date > bound:
+                return False
+        elif is_lower_bound and usage_timestamp < bound:
+            return False
+        elif not is_lower_bound and usage_timestamp >= bound:
+            return False
     return True
 
 
@@ -437,7 +546,7 @@ def _card_context_except_period_matches(usage_ledger: Dict[str, Any], card: Dict
     service_tier = context.get("service_tier")
     requested_service_tier = service_tier or "standard"
     region = context.get("region")
-    priced_at = _date_part(context.get("priced_at") or context.get("pricedAt"))
+    priced_at = context.get("priced_at") or context.get("pricedAt")
 
     if card.get("service_tier") and card["service_tier"] != requested_service_tier:
         return False

@@ -23,14 +23,14 @@ after validating its persistent cache.
 | LiteLLM model prices JSON | `price_cards_from_litellm` / `priceCardsFromLiteLLM` / `PriceCardsFromLiteLLM` | Handles token, cached token, and reasoning token fields that map cleanly to RunCost components. |
 | OpenRouter models API | `price_cards_from_openrouter_models` / `priceCardsFromOpenRouterModels` / `PriceCardsFromOpenRouterModels` | Handles prompt, completion, cache, reasoning, request, image, web search, and tiered context fields covered by fixtures. |
 | models.dev API catalog | `price_cards_from_models_dev` / `priceCardsFromModelsDev` / `PriceCardsFromModelsDev` | Handles per-million token prices, cache read/write, reasoning, audio token fields, context tiers, capabilities, limits, and MIT source metadata covered by fixtures. |
-| Reviewed official/public-preview pricing snapshots | `price_cards_from_official_snapshot` / `priceCardsFromOfficialSnapshot` / `PriceCardsFromOfficialSnapshot` | Handles reviewed provider pricing page rows with source URL, retrieval time, version/license metadata, effective dates, aliases, pricing periods, UTC billing schedules, token prices, and tool/search unit prices. |
+| Reviewed official/public-preview pricing snapshots | `price_cards_from_official_snapshot` / `priceCardsFromOfficialSnapshot` / `PriceCardsFromOfficialSnapshot` | Handles reviewed provider pricing page rows with source URL, retrieval time, version/license metadata, date or exact-time effective ranges, aliases, pricing periods, IANA-timezone billing schedules, token prices, and tool/search unit prices. |
 | Portkey pricing data | `price_cards_from_portkey` / `priceCardsFromPortkey` / `PriceCardsFromPortkey` | Handles token, cache, reasoning, and web-search price fields covered by fixtures. |
 | RunCost source-cache envelope | `price_cards_from_source_cache` / `priceCardsFromSourceCache` / `PriceCardsFromSourceCache` | Handles offline refresh/cache bundles that carry source URL, retrieval time, checksum, generated time, and canonical price cards. |
 | Local JSON price-source file | `price_cards_from_json_file` / `priceCardsFromJSONFile` / `PriceCardsFromJSONFile` | Reads a local JSON file and maps it through one of the supported source adapters, defaulting to user compact pricing data. |
 | Local YAML price-source file | `price_cards_from_yaml_file` / `priceCardsFromYAMLFile` / `PriceCardsFromYAMLFile` | Reads a strict YAML mapping/list/scalar price-source file and maps it through one of the supported source adapters, defaulting to user compact pricing data. |
 | User compact pricing data | `price_cards_from_user_pricing` / `priceCardsFromUserPricing` / `PriceCardsFromUserPricing` | Handles compact JSON/YAML-shaped model records after callers parse them into objects. |
 | Helicone model-registry endpoint data | `price_cards_from_helicone` / `priceCardsFromHelicone` / `PriceCardsFromHelicone` | Handles endpoint pricing arrays, cache multipliers, reasoning, request, web-search, and image/audio/video token modality prices covered by fixtures. |
-| Pydantic `genai-prices` catalog | `price_cards_from_genai_prices` / `priceCardsFromGenAIPrices` / `PriceCardsFromGenAIPrices` | Preserves provider/model identity, cache rates, effective dates, constraints, aliases, tiers, and unsupported capabilities in metadata without adding an upstream package dependency. |
+| Pydantic `genai-prices` catalog | `price_cards_from_genai_prices` / `priceCardsFromGenAIPrices` / `PriceCardsFromGenAIPrices` | Preserves provider/model identity, cache rates, effective dates, aliases, tiers, and representable time, IANA-timezone, and weekday constraints. It omits source rows with other semantic constraints rather than pricing them as unconstrained cards. |
 
 ## Explicit Refresh Command
 
@@ -59,6 +59,10 @@ The command records the source URL, retrieval time, SHA-256 checksum, generated 
 Supported refresh presets are `llm-prices-current`, `llm-prices-historical`,
 `openrouter-models`, `models-dev`, and `litellm`. Reviewed official snapshots
 are refreshed with `--source-type official-snapshot --input path/to/snapshot.json`.
+For example, the reviewed DeepSeek schedule snapshot is maintained at
+`fixtures/source-files/deepseek-official-pricing-snapshot.json`; applications
+that need pinned DeepSeek prices should copy/review that source into their own
+source cache rather than expecting a package-default catalog.
 
 ## Adapter Contract
 
@@ -67,8 +71,9 @@ Every source adapter should:
 - Return canonical `PriceCard` objects.
 - Preserve source name, URL, and retrieval time when available.
 - Preserve `pricing_period` and `billing_schedule` fields when the source can
-  prove repeating time-window pricing.
-- Drop records that cannot be safely converted.
+  prove repeating local-time or weekday-scoped pricing.
+- Drop records with semantic constraints the adapter cannot represent; retaining
+  such a constraint as metadata is not sufficient to price it safely.
 - Avoid guessing units when a source field is ambiguous.
 - Prefer warnings and fixture expansion over silent behavior changes.
 

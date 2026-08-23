@@ -1,6 +1,6 @@
 {
   "name": "deepseek-official-snapshot-period-adapter",
-  "description": "Maps synthetic official-snapshot-shaped pricing_period and billing_schedule fields onto canonical DeepSeek price cards.",
+  "description": "Maps the reviewed DeepSeek official weekday peak/off-peak schedule and rates onto canonical price cards.",
   "metadata": {
     "requirement_ids": ["RC-FIXTURE-CONFORMANCE", "RC-PRICING-PERIOD", "RC-SOURCE-ADAPTER"],
     "provider": "deepseek",
@@ -20,7 +20,7 @@
         "alias_resolution": "none"
       },
       "context": {
-        "priced_at": "2026-07-15T06:30:00Z"
+        "priced_at": "2026-08-24T01:00:00Z"
       },
       "components": [
         {
@@ -37,32 +37,35 @@
         "surface": "deepseek.chat_completions",
         "per": "1000000",
         "source": {
-          "name": "synthetic-deepseek-period-fixture",
-          "url": "file://synthetic-deepseek-period-fixture",
-          "retrieved_at": "2026-07-15T00:00:00Z",
-          "license": "synthetic-fixture"
+          "name": "deepseek-official",
+          "url": "https://api-docs.deepseek.com/quick_start/pricing",
+          "retrieved_at": "2026-08-23T06:34:12Z",
+          "version": "2026-08-23",
+          "license": "reviewed"
         },
         "billing_schedule": {
           "timezone": "UTC",
-          "default_period": "regular",
+          "default_period": "offpeak",
           "boundary_policy": "start_inclusive_end_exclusive",
           "windows": [
-            {"period": "peak", "start": "01:00", "end": "04:00"},
-            {"period": "peak", "start": "06:00", "end": "10:00"}
+            {"period": "peak", "start": "01:00", "end": "04:00", "days_of_week": ["monday", "tuesday", "wednesday", "thursday", "friday"]},
+            {"period": "peak", "start": "06:00", "end": "10:00", "days_of_week": ["monday", "tuesday", "wednesday", "thursday", "friday"]}
           ]
         },
         "rows": [
           {
             "model": "deepseek-v4-pro",
-            "pricing_period": "regular",
-            "effective": {"from": "2026-07-15"},
-            "output": "0.87"
+            "pricing_period": "offpeak",
+            "price_card_id": "deepseek:deepseek-v4-pro:offpeak:official-snapshot",
+            "effective": {"from": "2026-08-22T16:00:00Z"},
+            "output": "1.98"
           },
           {
             "model": "deepseek-v4-pro",
             "pricing_period": "peak",
-            "effective": {"from": "2026-07-15"},
-            "output": "1.74"
+            "price_card_id": "deepseek:deepseek-v4-pro:peak:official-snapshot",
+            "effective": {"from": "2026-08-22T16:00:00Z"},
+            "output": "3.96"
           }
         ]
       }
@@ -84,8 +87,8 @@
           "name": "output_text_tokens",
           "quantity": "1000000",
           "unit": "token",
-          "unit_price": "0.00000174",
-          "cost": "1.74",
+          "unit_price": "0.00000396",
+          "cost": "3.96",
           "price_card_id": "deepseek:deepseek-v4-pro:peak:official-snapshot",
           "discount_eligible": true,
           "metadata": {
@@ -94,13 +97,14 @@
           }
         }
       ],
-      "total": "1.74",
+      "total": "3.96",
       "price_sources": [
         {
-          "name": "synthetic-deepseek-period-fixture",
-          "url": "file://synthetic-deepseek-period-fixture",
-          "retrieved_at": "2026-07-15T00:00:00Z",
-          "license": "synthetic-fixture"
+          "name": "deepseek-official",
+          "url": "https://api-docs.deepseek.com/quick_start/pricing",
+          "retrieved_at": "2026-08-23T06:34:12Z",
+          "version": "2026-08-23",
+          "license": "reviewed"
         }
       ],
       "applied_discounts": [],

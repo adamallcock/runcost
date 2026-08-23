@@ -14,9 +14,21 @@ limitations.
 
 ## Unreleased
 
+## 0.2.2 (2026-08-23)
+
 - Add Vercel AI SDK `experimental_streamTranscribe` final-result handling for
   duration-priced OpenAI transcription, including `gpt-realtime-whisper`
   fixture coverage across Python, JavaScript/TypeScript, and Go.
+- Support timezone-aware weekly billing schedules across Python,
+  JavaScript/browser, and Go: IANA timezone names, local weekday windows,
+  weekend defaults, overnight start-day matching, and precise RFC3339
+  effective-time boundaries.
+- Preserve DeepSeek's response billing timestamp through the pricing path and
+  add official-source, adapter, DST, malformed-schedule, and Windows timezone
+  regression coverage for weekday peak and weekend off-peak pricing.
+- Harden release publication around the exact reviewed artifacts, including
+  checksum verification, registry and GitHub Release asset parity, and
+  fail-closed Go tag verification.
 
 ## 0.2.1 (2026-07-30)
 

@@ -4,15 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "runcost-ai"
-version = "0.2.1"
-description = "Auditable LLM API cost calculator and batch ledger for provider responses."
+version = "0.2.2"
+description = "Local, auditable and itemized USD cost ledger for LLM provider responses, with price sources and warnings."
 requires-python = ">=3.9"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-keywords = ["llm", "ai", "pricing", "calculator", "tokens", "cost", "ledger", "batch", "agents", "openai", "anthropic", "gemini", "bedrock", "opentelemetry", "usage"]
+dependencies = [
+  "tzdata; sys_platform == 'win32'",
+]
+keywords = ["llm", "ai", "pricing", "calculator", "tokens", "cost", "ledger", "audit", "local", "provenance", "reconciliation", "cost-accounting", "llm-cost", "api-cost", "cost-tracking", "cached-tokens", "reasoning-tokens", "batch", "agents", "openai", "anthropic", "gemini", "bedrock", "opentelemetry", "usage"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",

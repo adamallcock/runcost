@@ -18,12 +18,12 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 
 ## Summary
 
-217 cases are inventoried.
+229 cases are inventoried.
 
 | Outcome | Cases |
 | --- | ---: |
-| Preserved | 162 |
-| Warned | 48 |
+| Preserved | 173 |
+| Warned | 49 |
 | Unsupported | 7 |
 | Not Tested | 0 |
 
@@ -64,6 +64,8 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `deepseek-chat-created-out-of-range-ignored` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `deepseek-chat-created-priced-at` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `deepseek-chat-raw-cache-reasoning` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `deepseek-effective-date-offset-boundary` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `deepseek-effective-timestamp-required` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `deepseek-official-snapshot-period-adapter` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `deepseek-peak-pricing-boundary-before-second-window` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `deepseek-peak-pricing-boundary-first-start` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
@@ -73,12 +75,18 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `deepseek-peak-pricing-debug-trace-period` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `deepseek-peak-pricing-explicit-period` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `deepseek-peak-pricing-first-window` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `deepseek-peak-pricing-invalid-timezone-warning` | deepseek | `deepseek.chat_completions` | warned | python: warned, javascript: warned, go: warned |
 | `deepseek-peak-pricing-missing-time-warning` | deepseek | `deepseek.chat_completions` | warned | python: warned, javascript: warned, go: warned |
 | `deepseek-peak-pricing-regular-window` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `deepseek-peak-pricing-second-window` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `deepseek-peak-pricing-unsupported-period-warning` | deepseek | `deepseek.chat_completions` | warned | python: warned, javascript: warned, go: warned |
-| `deepseek-peak-pricing-unsupported-timezone-warning` | deepseek | `deepseek.chat_completions` | warned | python: warned, javascript: warned, go: warned |
 | `deepseek-user-pricing-camelcase-period-adapter` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `deepseek-weekly-pricing-asia-shanghai-weekday-peak` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `deepseek-weekly-pricing-effective-before-start` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `deepseek-weekly-pricing-effective-start` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `deepseek-weekly-pricing-malformed-weekday-list` | deepseek | `deepseek.chat_completions` | warned | python: warned, javascript: warned, go: warned |
+| `deepseek-weekly-pricing-sunday-monday-boundary` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `deepseek-weekly-pricing-weekend-offpeak` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `discount-not-applied-warning` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `discount-policy-openai-basic` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `effective-date-selection` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
@@ -190,6 +198,8 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `storage-gb-day-pricing` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `stream-final-usage-missing-warning` | aggregate | `aggregate.cost_ledgers` | warned | python: warned, javascript: warned, go: warned |
 | `strict-unknown-model` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
+| `timezone-dst-america-new-york-fall-back` | synthetic | `synthetic.scheduled_usage` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `timezone-dst-america-new-york-spring-forward` | synthetic | `synthetic.scheduled_usage` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `tool-call-units-basic` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `tool-component-unpriced-warning` | openai | `openai.responses` | unsupported | python: unsupported, javascript: unsupported, go: unsupported |
 | `unknown-model-compatibility` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
@@ -246,6 +256,8 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `budget-zero-unspent` | cross-provider | `evaluate_budget` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `reconciliation-within-tolerance` | cross-provider | `reconcile_cost` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `genai-prices-tiered-dated-scheduled` | cross-provider | `price_cards_from_genai_prices` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `genai-prices-weekly-timezone-constraint` | cross-provider | `price_cards_from_genai_prices` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `genai-prices-unrepresentable-constraint-omitted` | cross-provider | `price_cards_from_genai_prices` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `price-resolution-unavailable-warning` | cross-provider | `attach_price_resolution` | warned | python: warned, javascript: warned, go: warned |
 | `price-resolution-refresh-failed-warning` | cross-provider | `attach_price_resolution` | warned | python: warned, javascript: warned, go: warned |
 

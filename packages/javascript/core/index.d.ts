@@ -19,6 +19,15 @@ export type DecimalString = string;
 export type SchemaVersion = "0.1";
 export type CalculationMode = "compatibility" | "strict";
 
+export type BillingDayOfWeek =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
+
 export interface UsageModel {
   requested: string;
   returned?: string;
@@ -114,6 +123,7 @@ export interface BillingWindow {
   period: string;
   start: string;
   end: string;
+  days_of_week?: BillingDayOfWeek[];
 }
 
 export interface BillingSchedule {
