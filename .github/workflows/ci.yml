@@ -157,3 +157,23 @@ jobs:
           python3 scripts/check_cli_activation.py
           python3 scripts/check_browser_entrypoint.py
           python3 scripts/check_expansion_examples.py
+
+  windows-timezone:
+    name: Windows Python timezone fallback
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install package in a clean virtual environment
+        shell: pwsh
+        run: |
+          $venv = Join-Path $env:RUNNER_TEMP "runcost-timezone-venv"
+          python -m venv $venv
+          & "$venv\Scripts\python.exe" -m pip install --disable-pip-version-check --no-cache-dir .
+          & "$venv\Scripts\python.exe" -c "from zoneinfo import ZoneInfo; assert ZoneInfo('Asia/Shanghai').key == 'Asia/Shanghai'; print('Asia/Shanghai timezone data passed')"

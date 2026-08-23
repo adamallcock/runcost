@@ -15,10 +15,12 @@ from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .core import (
     _normalize_openai_service_tier,
     _normalize_attribution as _normalize_core_attribution,
+    _time_seconds,
     aggregate_cost_ledgers,
     calculate_cost,
     compile_price_catalog,
@@ -388,6 +390,112 @@ def _time_without_zone(value: Any) -> str:
     return str(value or "00:00:00").removesuffix("Z")
 
 
+_GENAI_WEEKDAYS = {
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+}
+_GENAI_CONSTRAINT_ALIASES = {
+    "start_date": ("start_date", "startDate"),
+    "start_time": ("start_time", "startTime"),
+    "end_time": ("end_time", "endTime"),
+    "timezone": ("timezone", "timeZone"),
+    "days_of_week": ("days_of_week", "daysOfWeek"),
+}
+_UNSUPPORTED_GENAI_CONSTRAINT = object()
+
+
+def _genai_constraint_fields(value: Any) -> Union[Dict[str, Any], object]:
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        return _UNSUPPORTED_GENAI_CONSTRAINT
+    aliases = {alias: canonical for canonical, names in _GENAI_CONSTRAINT_ALIASES.items() for alias in names}
+    if any(key not in aliases for key in value):
+        return _UNSUPPORTED_GENAI_CONSTRAINT
+    normalized: Dict[str, Any] = {}
+    for canonical, names in _GENAI_CONSTRAINT_ALIASES.items():
+        present = [name for name in names if name in value]
+        if len(present) > 1:
+            return _UNSUPPORTED_GENAI_CONSTRAINT
+        if present:
+            normalized[canonical] = value[present[0]]
+    return normalized
+
+
+def _genai_constraint_details(value: Any) -> Union[Dict[str, Any], object]:
+    fields = _genai_constraint_fields(value)
+    if fields is _UNSUPPORTED_GENAI_CONSTRAINT:
+        return _UNSUPPORTED_GENAI_CONSTRAINT
+    assert isinstance(fields, dict)
+
+    if "start_date" in fields:
+        start_date = fields["start_date"]
+        if not isinstance(start_date, str):
+            return _UNSUPPORTED_GENAI_CONSTRAINT
+        try:
+            parsed_start_date = date.fromisoformat(start_date)
+        except ValueError:
+            return _UNSUPPORTED_GENAI_CONSTRAINT
+        if parsed_start_date.isoformat() != start_date:
+            return _UNSUPPORTED_GENAI_CONSTRAINT
+
+    has_start_time = "start_time" in fields
+    has_end_time = "end_time" in fields
+    has_time = has_start_time or has_end_time
+    if not has_time:
+        if "timezone" in fields or "days_of_week" in fields:
+            return _UNSUPPORTED_GENAI_CONSTRAINT
+        return {
+            "has_time": False,
+            "days_of_week": None,
+            "timezone": None,
+            "start_date": fields.get("start_date"),
+        }
+    if not has_start_time or not has_end_time:
+        return _UNSUPPORTED_GENAI_CONSTRAINT
+
+    start = fields["start_time"]
+    end = fields["end_time"]
+    if not isinstance(start, str) or not isinstance(end, str):
+        return _UNSUPPORTED_GENAI_CONSTRAINT
+    start_without_zone = _time_without_zone(start)
+    end_without_zone = _time_without_zone(end)
+    if _time_seconds(start_without_zone) is None or _time_seconds(end_without_zone) is None:
+        return _UNSUPPORTED_GENAI_CONSTRAINT
+
+    timezone_name = fields.get("timezone", "UTC")
+    if not isinstance(timezone_name, str) or not timezone_name:
+        return _UNSUPPORTED_GENAI_CONSTRAINT
+    try:
+        ZoneInfo(timezone_name)
+    except (ValueError, ZoneInfoNotFoundError):
+        return _UNSUPPORTED_GENAI_CONSTRAINT
+
+    days = fields.get("days_of_week")
+    if days is not None:
+        if (
+            not isinstance(days, list)
+            or not days
+            or any(not isinstance(day, str) or day not in _GENAI_WEEKDAYS for day in days)
+            or len(set(days)) != len(days)
+        ):
+            return _UNSUPPORTED_GENAI_CONSTRAINT
+        days = list(days)
+    return {
+        "has_time": True,
+        "start": start_without_zone,
+        "end": end_without_zone,
+        "timezone": timezone_name,
+        "days_of_week": days,
+        "start_date": fields.get("start_date"),
+    }
+
+
 def price_cards_from_genai_prices(data: Any, **options: Any) -> List[Dict[str, Any]]:
     """Map Pydantic ``genai-prices`` JSON into canonical price cards."""
 
@@ -415,33 +523,51 @@ def price_cards_from_genai_prices(data: Any, **options: Any) -> List[Dict[str, A
             aliases = [alias for alias in aliases if alias != model]
             raw_prices = raw_model.get("prices")
             conditional = raw_prices if isinstance(raw_prices, list) else [{"prices": raw_prices or {}}]
-            dated_starts = sorted(
-                str(entry.get("constraint", {}).get("start_date"))
-                for entry in conditional
-                if isinstance(entry, Mapping) and isinstance(entry.get("constraint"), Mapping) and entry["constraint"].get("start_date")
-            )
+            constraint_values: Dict[int, Dict[str, Any]] = {}
+            constraint_details: Dict[int, Dict[str, Any]] = {}
+            dated_starts: List[str] = []
+            for index, entry in enumerate(conditional):
+                if not isinstance(entry, Mapping):
+                    continue
+                raw_constraint = entry.get("constraint")
+                constraint = dict(raw_constraint) if isinstance(raw_constraint, Mapping) else {} if raw_constraint is None else raw_constraint
+                details = _genai_constraint_details(constraint)
+                if details is _UNSUPPORTED_GENAI_CONSTRAINT:
+                    continue
+                assert isinstance(details, dict)
+                constraint_values[index] = constraint if isinstance(constraint, dict) else {}
+                constraint_details[index] = details
+                start_date = details.get("start_date")
+                if start_date:
+                    dated_starts.append(start_date)
+            dated_starts = sorted(set(dated_starts))
             time_entry_indices = [
-                index for index, entry in enumerate(conditional)
-                if isinstance(entry, Mapping)
-                and isinstance(entry.get("constraint"), Mapping)
-                and (entry["constraint"].get("start_time") or entry["constraint"].get("end_time"))
+                index for index, details in constraint_details.items() if details.get("has_time")
             ]
-            time_entry_periods = {entry_index: period for period, entry_index in enumerate(time_entry_indices, start=1)}
+            timezones = {constraint_details[index]["timezone"] for index in time_entry_indices}
+            if len(timezones) == 1:
+                time_entry_periods = {entry_index: period for period, entry_index in enumerate(time_entry_indices, start=1)}
+            else:
+                # A single canonical schedule cannot safely represent windows in
+                # different timezones. Drop all such rows rather than applying
+                # them against an arbitrary zone.
+                time_entry_indices = []
+                time_entry_periods = {}
             schedule = None
             if time_entry_indices:
                 windows = []
                 for period, entry_index in enumerate(time_entry_indices, start=1):
-                    entry = conditional[entry_index]
-                    constraint = entry["constraint"]
-                    windows.append(
-                        {
-                            "period": f"scheduled-{period}",
-                            "start": _time_without_zone(constraint.get("start_time")),
-                            "end": _time_without_zone(constraint.get("end_time")),
-                        }
-                    )
+                    details = constraint_details[entry_index]
+                    window = {
+                        "period": f"scheduled-{period}",
+                        "start": details["start"],
+                        "end": details["end"],
+                    }
+                    if details["days_of_week"] is not None:
+                        window["days_of_week"] = details["days_of_week"]
+                    windows.append(window)
                 schedule = {
-                    "timezone": "UTC",
+                    "timezone": constraint_details[time_entry_indices[0]]["timezone"],
                     "default_period": "default",
                     "boundary_policy": "start_inclusive_end_exclusive",
                     "windows": windows,
@@ -451,7 +577,12 @@ def price_cards_from_genai_prices(data: Any, **options: Any) -> List[Dict[str, A
             for index, entry in enumerate(conditional):
                 if not isinstance(entry, Mapping) or not isinstance(entry.get("prices"), Mapping):
                     continue
-                constraint = entry.get("constraint") if isinstance(entry.get("constraint"), Mapping) else {}
+                if index not in constraint_details:
+                    # The row contains a semantic constraint this adapter cannot
+                    # represent exactly; never turn it into an unconstrained card.
+                    continue
+                constraint = constraint_values[index]
+                details = constraint_details[index]
                 components, adapter_warnings = _genai_price_components(entry["prices"])
                 if not components:
                     continue
@@ -477,7 +608,7 @@ def price_cards_from_genai_prices(data: Any, **options: Any) -> List[Dict[str, A
                 }
                 if unsupported_match:
                     adapter_warnings.append("non-enumerable model match clause retained in metadata")
-                start_date = constraint.get("start_date")
+                start_date = details.get("start_date")
                 if start_date:
                     start_text = str(start_date)
                     suffix = start_text
@@ -489,7 +620,9 @@ def price_cards_from_genai_prices(data: Any, **options: Any) -> List[Dict[str, A
                 elif dated_starts and not constraint:
                     card["effective"] = {"to": _previous_day(dated_starts[0])}
                     suffix = "historical"
-                if constraint.get("start_time") or constraint.get("end_time"):
+                if details.get("has_time"):
+                    if index not in time_entry_periods or schedule is None:
+                        continue
                     time_index = time_entry_periods[index]
                     card["pricing_period"] = f"scheduled-{time_index}"
                     card["billing_schedule"] = schedule
@@ -498,11 +631,6 @@ def price_cards_from_genai_prices(data: Any, **options: Any) -> List[Dict[str, A
                     card["pricing_period"] = "default"
                     card["billing_schedule"] = schedule
                     suffix = "default" if suffix == "current" else f"{suffix}-default"
-                unsupported_constraints = sorted(set(constraint) - {"start_date", "start_time", "end_time"})
-                if unsupported_constraints:
-                    adapter_warnings.append(
-                        "unsupported constraints retained in metadata: " + ", ".join(unsupported_constraints)
-                    )
                 if adapter_warnings:
                     card["metadata"]["adapter_warnings"] = sorted(set(adapter_warnings))
                 card_id = f"{provider}:{model}:genai-prices:{suffix}"

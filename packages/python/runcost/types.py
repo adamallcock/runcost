@@ -14,6 +14,15 @@ SchemaVersion = Literal["0.1"]
 DecimalString = str
 MoneyString = str
 CalculationMode = Literal["compatibility", "strict"]
+DayOfWeek = Literal[
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+]
 
 
 class UsageModel(TypedDict, total=False):
@@ -105,10 +114,14 @@ class SourceInfo(TypedDict, total=False):
     license: str
 
 
-class BillingWindow(TypedDict):
+class _BillingWindowRequired(TypedDict):
     period: str
     start: str
     end: str
+
+
+class BillingWindow(_BillingWindowRequired, total=False):
+    days_of_week: List[DayOfWeek]
 
 
 class _BillingScheduleRequired(TypedDict):

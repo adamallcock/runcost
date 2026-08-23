@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Semantic version to verify, for example 0.1.0"
+        description: "Semantic version to verify, for example 0.2.1"
         required: true
         type: string
       publish:
-        description: "Publish to PyPI and npm after verification"
+        description: "Publish the verified artifacts to PyPI, npm, and GitHub Releases"
         required: true
         default: false
         type: boolean
@@ -23,15 +23,29 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  NPM_CLI_VERSION: "12.0.2"
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
+      source_date_epoch: ${{ steps.source.outputs.source_date_epoch }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
         with:
           ref: v${{ inputs.version }}
+          fetch-depth: 0
+
+      - name: Record verified source commit
+        id: source
+        run: |
+          source_sha="$(git rev-parse HEAD)"
+          source_date_epoch="$(git show -s --format=%ct "$source_sha")"
+          echo "sha=$source_sha" >> "$GITHUB_OUTPUT"
+          echo "source_date_epoch=$source_date_epoch" >> "$GITHUB_OUTPUT"
+          echo "SOURCE_DATE_EPOCH=$source_date_epoch" >> "$GITHUB_ENV"
 
       - name: Validate publish approval
         if: ${{ inputs.publish && inputs.publish_approval != 'publish-runcost' }}
@@ -42,7 +56,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.12.11"
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -53,10 +67,17 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "24.15.0"
 
-      - name: Install playground dependencies
-        run: npm ci --prefix playground
+      - name: Pin npm packaging toolchain
+        run: |
+          npm install --global "npm@${NPM_CLI_VERSION}"
+          npm --version
+
+      - name: Install root and playground dependencies
+        run: |
+          npm ci
+          npm ci --prefix playground
 
       - name: Verify release readiness
         env:
@@ -72,15 +93,43 @@ jobs:
           npm run example:framework:js
           npm run example:framework:py
 
-      - name: Build Python package
+      - name: Install the pinned Python build toolchain
         run: |
-          python3 -m pip install --upgrade build
-          python3 -m build
+          python3 -m pip install --disable-pip-version-check \
+            "build==1.5.0" \
+            "setuptools==84.0.0" \
+            "wheel==0.47.0" \
+            "twine==7.0.0"
 
-      - name: Pack npm package
+      - name: Build Python and npm artifacts twice reproducibly
         run: |
-          mkdir -p dist/npm
-          npm pack ./packages/javascript/core --pack-destination dist/npm
+          set -euo pipefail
+          for build_id in 1 2; do
+            source_dir="${RUNNER_TEMP}/runcost-source-${build_id}"
+            artifact_dir="${RUNNER_TEMP}/runcost-artifacts-${build_id}"
+            mkdir -p "$source_dir" "$artifact_dir/python" "$artifact_dir/npm"
+            git archive --format=tar HEAD | tar -xf - -C "$source_dir"
+            python3 -m build --no-isolation --outdir "$artifact_dir/python" "$source_dir"
+            python3 scripts/normalize_python_sdist.py "$artifact_dir/python/"*.tar.gz
+            npm pack "$source_dir/packages/javascript/core" --pack-destination "$artifact_dir/npm"
+          done
+
+          first="${RUNNER_TEMP}/runcost-artifacts-1"
+          second="${RUNNER_TEMP}/runcost-artifacts-2"
+          diff \
+            <(find "$first" -type f -printf '%P\n' | sort) \
+            <(find "$second" -type f -printf '%P\n' | sort)
+          while IFS= read -r relative; do
+            cmp "$first/$relative" "$second/$relative"
+          done < <(find "$first" -type f -printf '%P\n' | sort)
+
+          mkdir -p dist
+          cp -R "$first/python" dist/python
+          cp -R "$first/npm" dist/npm
+          python3 -m twine check dist/python/*
+
+      - name: Record artifact checksums
+        run: sha256sum dist/python/* dist/npm/* > dist/SHA256SUMS
 
       - name: Verify Go module from published tag
         env:
@@ -88,14 +137,14 @@ jobs:
           GOPRIVATE: github.com/adamallcock/runcost
         run: |
           set -euo pipefail
-          if git ls-remote --exit-code --tags origin "refs/tags/v${{ inputs.version }}" >/dev/null 2>&1; then
-            git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
-            tmpdir="$(mktemp -d)"
-            cd "$tmpdir"
-            go mod init runcost-release-tag-check
-            go list -m -versions github.com/adamallcock/runcost
-            go get github.com/adamallcock/runcost/packages/go/ledger@v${{ inputs.version }}
-            cat > ledger_test.go <<'EOF'
+          git ls-remote --exit-code --tags origin "refs/tags/v${{ inputs.version }}" >/dev/null
+          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+          tmpdir="$(mktemp -d)"
+          cd "$tmpdir"
+          go mod init runcost-release-tag-check
+          go list -m -versions github.com/adamallcock/runcost
+          go get github.com/adamallcock/runcost/packages/go/ledger@v${{ inputs.version }}
+          cat > ledger_test.go <<'EOF'
           package releasecheck
 
           import (
@@ -135,10 +184,7 @@ jobs:
               }
           }
           EOF
-            go test ./...
-          else
-            echo "No published tag v${{ inputs.version }} found; skipping real Go tag verification for this no-publish rehearsal."
-          fi
+          go test ./...
 
       - name: No-publish artifact review checklist
         if: ${{ !inputs.publish }}
@@ -146,64 +192,221 @@ jobs:
           {
             echo "## No-publish artifact review checklist"
             echo
-            echo "- Confirm Python wheel and source distribution are present in workflow artifacts."
-            echo "- Confirm npm tarball is present in workflow artifacts and includes package README."
+            echo "- Confirm the checksum-locked Python wheel, source distribution, and npm tarball are present."
+            echo "- Confirm the npm tarball includes the package README and the full repository-matching MIT LICENSE."
             echo "- Confirm release readiness, dry-run, examples, package checks, and conformance tests passed."
-            echo "- Confirm Go tag verification ran when tag v${{ inputs.version }} existed, or was explicitly skipped because the tag was absent."
+            echo "- Confirm Go tag verification passed against tag v${{ inputs.version }}."
             echo "- Keep publishing disabled until PyPI/npm trusted publishers are configured and artifacts are reviewed."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload release artifacts
+      - name: Upload verified release artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: runcost-release-artifacts
-          path: |
-            dist/*.tar.gz
-            dist/*.whl
-            dist/npm/*.tgz
+          name: runcost-release-artifacts-${{ inputs.version }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 14
 
   publish:
     if: ${{ inputs.publish }}
     needs: verify
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: release
+    env:
+      SOURCE_DATE_EPOCH: ${{ needs.verify.outputs.source_date_epoch }}
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
+      - name: Download the verified artifacts
+        uses: actions/download-artifact@v7
         with:
-          ref: v${{ inputs.version }}
+          name: runcost-release-artifacts-${{ inputs.version }}
+          path: dist
 
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.12.11"
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "24"
+          node-version: "24.15.0"
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
-      - name: Ensure npm supports trusted publishing
+      - name: Pin npm publishing toolchain
         run: |
-          npm install --global npm@latest
+          npm install --global "npm@${NPM_CLI_VERSION}"
           npm --version
 
-      - name: Build Python package
+      - name: Verify artifact checksums and versioned filenames
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          python3 -m pip install --upgrade build
-          python3 -m build
+          set -euo pipefail
+          sha256sum --check dist/SHA256SUMS
+          test -f "dist/python/runcost_ai-${VERSION}.tar.gz"
+          test "$(find dist/python -maxdepth 1 -name "runcost_ai-${VERSION}-*.whl" -type f | wc -l)" -eq 1
+          test -f "dist/npm/runcost-${VERSION}.tgz"
 
-      - name: Publish Python package
+      - name: Verify the release tag still matches the tested commit
+        env:
+          EXPECTED_SHA: ${{ needs.verify.outputs.source_sha }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          ref_json="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}")"
+          object_type="$(jq -r '.object.type' <<< "$ref_json")"
+          object_sha="$(jq -r '.object.sha' <<< "$ref_json")"
+          if [ "$object_type" = "tag" ]; then
+            object_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${object_sha}" --jq '.object.sha')"
+          fi
+          if [ "$object_sha" != "$EXPECTED_SHA" ]; then
+            echo "Release tag ${TAG} moved after verification: expected ${EXPECTED_SHA}, found ${object_sha}." >&2
+            exit 1
+          fi
+
+      - name: Check for existing registry artifacts
+        id: registry
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          python3 - <<'PY'
+          from __future__ import annotations
+
+          import hashlib
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          version = os.environ["VERSION"]
+          output = Path(os.environ["GITHUB_OUTPUT"])
+
+          def fetch_json(url: str):
+              try:
+                  with urllib.request.urlopen(url, timeout=30) as response:
+                      return json.load(response)
+              except urllib.error.HTTPError as exc:
+                  if exc.code == 404:
+                      return None
+                  raise
+
+          python_artifacts = sorted(Path("dist/python").iterdir())
+          pypi = fetch_json(f"https://pypi.org/pypi/runcost-ai/{version}/json")
+          if pypi is None:
+              pypi_exists = False
+          else:
+              remote_hashes = {item["filename"]: item["digests"]["sha256"] for item in pypi["urls"]}
+              local_hashes = {
+                  path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                  for path in python_artifacts
+              }
+              if remote_hashes != local_hashes:
+                  raise SystemExit(
+                      f"PyPI {version} already exists but does not match the verified artifacts: "
+                      f"remote={sorted(remote_hashes)} local={sorted(local_hashes)}"
+                  )
+              pypi_exists = True
+
+          npm_artifact = Path(f"dist/npm/runcost-{version}.tgz")
+          npm = fetch_json(f"https://registry.npmjs.org/runcost/{version}")
+          if npm is None:
+              npm_exists = False
+          else:
+              local_sha1 = hashlib.sha1(npm_artifact.read_bytes()).hexdigest()
+              remote_sha1 = npm.get("dist", {}).get("shasum")
+              if remote_sha1 != local_sha1:
+                  raise SystemExit(
+                      f"npm runcost@{version} already exists but its tarball hash differs from the verified artifact"
+                  )
+              npm_exists = True
+
+          with output.open("a", encoding="utf-8") as handle:
+              handle.write(f"pypi_exists={str(pypi_exists).lower()}\n")
+              handle.write(f"npm_exists={str(npm_exists).lower()}\n")
+          PY
+
+      - name: Publish the verified Python artifacts
+        if: ${{ steps.registry.outputs.pypi_exists != 'true' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: dist
-          skip-existing: true
+          packages-dir: dist/python
 
-      - name: Publish npm package
-        working-directory: packages/javascript/core
-        run: npm publish --provenance --access public
+      - name: Publish the verified npm artifact
+        if: ${{ steps.registry.outputs.npm_exists != 'true' }}
+        run: npm publish "dist/npm/runcost-${{ inputs.version }}.tgz" --provenance --access public
+
+      - name: Verify live npm and PyPI artifact parity
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          version = os.environ["VERSION"]
+          local_python = {
+              path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+              for path in Path("dist/python").iterdir()
+          }
+          local_npm = hashlib.sha1(Path(f"dist/npm/runcost-{version}.tgz").read_bytes()).hexdigest()
+
+          for attempt in range(10):
+              try:
+                  with urllib.request.urlopen(f"https://pypi.org/pypi/runcost-ai/{version}/json", timeout=30) as response:
+                      pypi = json.load(response)
+                  with urllib.request.urlopen(f"https://registry.npmjs.org/runcost/{version}", timeout=30) as response:
+                      npm = json.load(response)
+              except urllib.error.HTTPError as exc:
+                  if exc.code != 404 or attempt == 9:
+                      raise
+              else:
+                  remote_python = {item["filename"]: item["digests"]["sha256"] for item in pypi["urls"]}
+                  if remote_python == local_python and npm.get("dist", {}).get("shasum") == local_npm:
+                      print(f"Verified live npm and PyPI artifacts for {version}")
+                      break
+                  if attempt == 9:
+                      raise SystemExit("live npm/PyPI artifacts do not match the verified release artifacts")
+              time.sleep(6)
+          PY
+
+      - name: Create or verify the GitHub Release and exact assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: v${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            release_json="$(gh release view "$TAG" --json tagName,isDraft,isPrerelease)"
+            test "$(jq -r '.tagName' <<< "$release_json")" = "$TAG"
+            test "$(jq -r '.isDraft' <<< "$release_json")" = "false"
+            test "$(jq -r '.isPrerelease' <<< "$release_json")" = "false"
+          else
+            gh release create "$TAG" --verify-tag --generate-notes --title "$TAG"
+          fi
+
+          asset_names="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
+          while IFS= read -r artifact; do
+            name="$(basename "$artifact")"
+            if grep -Fxq "$name" <<< "$asset_names"; then
+              download_dir="$(mktemp -d)"
+              gh release download "$TAG" --pattern "$name" --dir "$download_dir"
+              if ! cmp -s "$artifact" "$download_dir/$name"; then
+                echo "GitHub Release asset $name differs from the verified artifact; refusing to replace it." >&2
+                exit 1
+              fi
+            else
+              gh release upload "$TAG" "$artifact"
+            fi
+          done < <(find dist/python dist/npm -maxdepth 1 -type f -print | sort; printf '%s\n' dist/SHA256SUMS)

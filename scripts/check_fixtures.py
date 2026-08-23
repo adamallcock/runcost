@@ -4,8 +4,10 @@ from __future__ import annotations
 import importlib.util
 import argparse
 import json
+import re
 import subprocess
 import sys
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -64,6 +66,9 @@ SCHEMAS = {name: load_json(path) for name, path in SCHEMA_PATHS.items()}
 TAXONOMY = load_json(ROOT / "schemas" / "taxonomy.json")
 COMPONENT_ORDER = {name: index for index, name in enumerate(TAXONOMY["component_names"])}
 WARNING_METADATA_REQUIRED_KEYS = TAXONOMY["warning_metadata_required_keys"]
+DATE_TIME_PATTERN = re.compile(
+    r"^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$"
+)
 
 
 def expected_languages(fixture):
@@ -98,9 +103,45 @@ def _resolve_ref(schema, root):
     return current
 
 
+def _validate_format(value, format_name, path):
+    if format_name == "date":
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            raise AssertionError(f"{path}: expected RFC 3339 full-date")
+        try:
+            date.fromisoformat(value)
+        except ValueError as exc:
+            raise AssertionError(f"{path}: invalid RFC 3339 full-date {value!r}") from exc
+        return
+
+    if format_name == "date-time":
+        if not DATE_TIME_PATTERN.fullmatch(value):
+            raise AssertionError(f"{path}: expected RFC 3339 date-time with a timezone")
+        normalized = value.replace("t", "T").replace("z", "Z")
+        if normalized.endswith("Z"):
+            normalized = normalized[:-1] + "+00:00"
+        try:
+            datetime.fromisoformat(normalized)
+        except ValueError as exc:
+            raise AssertionError(f"{path}: invalid RFC 3339 date-time {value!r}") from exc
+
+
 def validate_schema(value, schema, root=None, path="$"):
     root = root or schema
     schema = _resolve_ref(schema, root)
+
+    if "oneOf" in schema:
+        matches = 0
+        branch_errors = []
+        for index, branch in enumerate(schema["oneOf"]):
+            try:
+                validate_schema(value, branch, root, path)
+            except AssertionError as exc:
+                branch_errors.append(f"branch {index}: {exc}")
+            else:
+                matches += 1
+        if matches != 1:
+            detail = "; ".join(branch_errors) if matches == 0 else f"{matches} branches matched"
+            raise AssertionError(f"{path}: expected exactly one oneOf branch to match ({detail})")
 
     if "const" in schema and value != schema["const"]:
         raise AssertionError(f"{path}: expected const {schema['const']!r}, got {value!r}")
@@ -120,10 +161,10 @@ def validate_schema(value, schema, root=None, path="$"):
         if "maxLength" in schema and len(value) > schema["maxLength"]:
             raise AssertionError(f"{path}: longer than maxLength {schema['maxLength']}")
         if "pattern" in schema:
-            import re
-
             if not re.match(schema["pattern"], value):
                 raise AssertionError(f"{path}: does not match pattern {schema['pattern']!r}")
+        if "format" in schema:
+            _validate_format(value, schema["format"], path)
 
     if isinstance(value, int) and "minimum" in schema and value < schema["minimum"]:
         raise AssertionError(f"{path}: below minimum {schema['minimum']}")

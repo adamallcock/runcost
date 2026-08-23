@@ -38,6 +38,7 @@ REQUIRED_FILES = [
     "docs/guides/2026-05-26-migration-from-hand-written-formulas.md",
     ".github/workflows/release.yml",
     "scripts/check_release_dry_run.py",
+    "scripts/normalize_python_sdist.py",
     "scripts/check_project_completion_gates.py",
     "scripts/check_trusted_publishing_verification.py",
     "scripts/check_external_price_resolution.py",
@@ -47,6 +48,7 @@ REQUIRED_FILES = [
     "packages/go/ledger/price_resolver.go",
     "schemas/price-resolution.schema.json",
     "packages/javascript/core/README.md",
+    "packages/javascript/core/LICENSE",
     "schemas/trusted-publishing-verification.schema.json",
     "fixtures/source-files/trusted-publishing-verification-template.json",
     "fixtures/source-files/trusted-publishing-verification-2026-07-10.json",
@@ -94,7 +96,10 @@ def check_versions_and_license() -> None:
         license_value == {"text": "MIT"} or license_value == "MIT",
         "Python package must declare MIT license",
     )
-    assert_true((ROOT / "LICENSE").read_text(encoding="utf-8").startswith("MIT License"), "LICENSE must be MIT")
+    root_license = (ROOT / "LICENSE").read_text(encoding="utf-8")
+    npm_license = (ROOT / "packages/javascript/core/LICENSE").read_text(encoding="utf-8")
+    assert_true(root_license.startswith("MIT License"), "LICENSE must be MIT")
+    assert_true(npm_license == root_license, "npm package LICENSE must exactly match the repository LICENSE")
 
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     assert_true("## Unreleased" in changelog, "CHANGELOG.md must include Unreleased section")
@@ -109,6 +114,19 @@ def check_registry_metadata() -> None:
     assert_true(python_project.get("readme") == "README.md", "Python package must publish the root README")
     assert_true(python_project.get("name") == "runcost-ai", "Python distribution name must be runcost-ai")
     assert_true("README.md" in js_package.get("files", []), "npm package files must include README.md")
+    assert_true("LICENSE" in js_package.get("files", []), "npm package files must include LICENSE")
+    assert_true(
+        "Development Status :: 4 - Beta" in python_project.get("classifiers", []),
+        "Python package metadata must use the Beta development-status classifier",
+    )
+    for label, metadata in (("npm", js_package), ("Python", python_project)):
+        description = metadata.get("description", "").lower()
+        keywords = {str(value).lower() for value in metadata.get("keywords", [])}
+        assert_true("local" in description and "auditable" in description, f"{label} description must state the local audit-ledger value")
+        assert_true(
+            {"audit", "provenance", "reconciliation"}.issubset(keywords),
+            f"{label} keywords must cover audit, provenance, and reconciliation",
+        )
     assert_true(js_package.get("homepage") == "https://github.com/adamallcock/runcost#readme", "npm homepage must point at the project README")
     assert_true(
         js_package.get("repository", {}).get("url") == "git+https://github.com/adamallcock/runcost.git",
@@ -142,11 +160,33 @@ def check_release_workflow() -> None:
         "npm run check:release-dry-run",
         "npm run example:framework:js",
         "npm run example:framework:py",
+        "npm ci",
+        "build==1.5.0",
+        "setuptools==84.0.0",
+        "wheel==0.47.0",
+        "twine==7.0.0",
         "python3 -m build",
-        "npm pack ./packages/javascript/core",
+        'source_date_epoch="$(git show -s --format=%ct "$source_sha")"',
+        'echo "SOURCE_DATE_EPOCH=$source_date_epoch" >> "$GITHUB_ENV"',
+        "Build Python and npm artifacts twice reproducibly",
+        "scripts/normalize_python_sdist.py",
+        'npm pack "$source_dir/packages/javascript/core"',
+        'cmp "$first/$relative" "$second/$relative"',
+        'runs-on: ubuntu-24.04',
+        'python-version: "3.12.11"',
+        'node-version: "24.15.0"',
+        "actions/download-artifact@v7",
+        "sha256sum --check dist/SHA256SUMS",
+        "Verify the release tag still matches the tested commit",
+        "Check for existing registry artifacts",
         "id-token: write",
+        "contents: write",
         "pypa/gh-action-pypi-publish@release/v1",
-        "npm publish --provenance --access public",
+        'npm publish "dist/npm/runcost-${{ inputs.version }}.tgz" --provenance --access public',
+        "Verify live npm and PyPI artifact parity",
+        "Create or verify the GitHub Release and exact assets",
+        'gh release create "$TAG" --verify-tag --generate-notes --title "$TAG"',
+        'cmp -s "$artifact" "$download_dir/$name"',
         "environment: release",
         "registry-url: \"https://registry.npmjs.org\"",
     ]
@@ -166,11 +206,26 @@ def check_release_workflow() -> None:
     ]
     for snippet in forbidden_registry_tokens:
         assert_true(snippet not in workflow, f"release workflow must not depend on stored registry token {snippet!r}")
+    assert_true("if git ls-remote" not in workflow, "Go tag verification must fail closed")
+    assert_true("skipping real Go tag verification" not in workflow, "Go tag verification must not be skippable")
 
-    publish_section = workflow.split("  publish:", 1)[1]
+    publish_section = workflow.split("\n  publish:\n", 1)[1]
     assert_true("id-token: write" in publish_section, "publish job must request OIDC id-token permission")
     assert_true("pypa/gh-action-pypi-publish@release/v1" in publish_section, "publish job must use PyPI trusted publishing action")
-    assert_true("npm publish --provenance --access public" in publish_section, "publish job must publish npm with provenance")
+    assert_true(
+        'npm publish "dist/npm/runcost-${{ inputs.version }}.tgz" --provenance --access public' in publish_section,
+        "publish job must publish the verified npm tarball with provenance",
+    )
+    assert_true("actions/download-artifact@v7" in publish_section, "publish job must download verified artifacts")
+    assert_true("python3 -m build" not in publish_section, "publish job must not rebuild Python artifacts")
+    assert_true("npm pack" not in publish_section, "publish job must not rebuild the npm artifact")
+    assert_true("actions/checkout" not in publish_section, "publish job must not depend on a second source checkout")
+    assert_true("skip-existing" not in publish_section, "existing registry versions must be hash-verified, not blindly skipped")
+    assert_true("gh release create" in publish_section, "publish job must create or verify the GitHub Release")
+    assert_true(
+        "SOURCE_DATE_EPOCH: ${{ needs.verify.outputs.source_date_epoch }}" in publish_section,
+        "publish job must retain the verified tag commit epoch",
+    )
     assert_true(
         "inputs.publish && inputs.publish_approval != 'publish-runcost'" in workflow,
         "release workflow must require typed publish approval before publish=true can proceed",
@@ -206,6 +261,9 @@ def check_release_docs() -> None:
         "runcost-ai",
         "public-github",
         "2026-07-30-release-0-2-1-evidence",
+        "SOURCE_DATE_EPOCH",
+        "byte-identical",
+        "normalize_python_sdist.py",
     ]:
         assert_true(re.search(re.escape(phrase), release_doc, re.IGNORECASE), f"release process missing {phrase}")
 

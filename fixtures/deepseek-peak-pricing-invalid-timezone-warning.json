@@ -1,12 +1,12 @@
 {
-  "name": "deepseek-peak-pricing-unsupported-timezone-warning",
-  "description": "Warns when period-specific DeepSeek cards use a non-UTC billing schedule that RunCost cannot safely evaluate.",
+  "name": "deepseek-peak-pricing-invalid-timezone-warning",
+  "description": "Fails closed when period-specific DeepSeek cards use an invalid IANA billing timezone.",
   "metadata": {
     "requirement_ids": ["RC-FIXTURE-CONFORMANCE", "RC-PRICING-PERIOD", "RC-WARNING-MODE"],
     "provider": "deepseek",
     "surface": "deepseek.chat_completions",
     "scenario": "warning",
-    "tags": ["component:output_text_tokens", "pricing_period", "warning", "warning:billing_schedule_unsupported"],
+    "tags": ["component:output_text_tokens", "pricing_period", "timezone", "warning", "warning:billing_schedule_unsupported"],
     "expected_languages": ["python", "javascript", "go"]
   },
   "input": {
@@ -33,13 +33,13 @@
     "price_cards": [
       {
         "schema_version": "0.1",
-        "id": "deepseek:deepseek-v4-pro:regular:unsupported-timezone",
+        "id": "deepseek:deepseek-v4-pro:regular:invalid-timezone",
         "provider": "deepseek",
         "surface": "deepseek.chat_completions",
         "model": "deepseek-v4-pro",
         "pricing_period": "regular",
         "billing_schedule": {
-          "timezone": "Asia/Shanghai",
+          "timezone": "Invalid/TimeZone",
           "default_period": "regular",
           "boundary_policy": "start_inclusive_end_exclusive",
           "windows": [
@@ -57,13 +57,13 @@
       },
       {
         "schema_version": "0.1",
-        "id": "deepseek:deepseek-v4-pro:peak:unsupported-timezone",
+        "id": "deepseek:deepseek-v4-pro:peak:invalid-timezone",
         "provider": "deepseek",
         "surface": "deepseek.chat_completions",
         "model": "deepseek-v4-pro",
         "pricing_period": "peak",
         "billing_schedule": {
-          "timezone": "Asia/Shanghai",
+          "timezone": "Invalid/TimeZone",
           "default_period": "regular",
           "boundary_policy": "start_inclusive_end_exclusive",
           "windows": [
@@ -99,12 +99,12 @@
       "warnings": [
         {
           "code": "billing_schedule_unsupported",
-          "message": "Billing schedule Asia/Shanghai is not supported.",
+          "message": "Billing schedule Invalid/TimeZone is not supported.",
           "metadata": {
             "provider": "deepseek",
             "surface": "deepseek.chat_completions",
             "model": "deepseek-v4-pro",
-            "timezone": "Asia/Shanghai"
+            "timezone": "Invalid/TimeZone"
           }
         }
       ]

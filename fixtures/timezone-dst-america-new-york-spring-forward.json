@@ -1,0 +1,129 @@
+{
+  "name": "timezone-dst-america-new-york-spring-forward",
+  "description": "Selects a synthetic Sunday window at the 2026 America/New_York spring-forward instant, where 07:00 UTC is 03:00 local daylight time.",
+  "metadata": {
+    "requirement_ids": ["RC-FIXTURE-CONFORMANCE", "RC-PRICING-PERIOD"],
+    "provider": "synthetic",
+    "surface": "synthetic.scheduled_usage",
+    "scenario": "normalized_usage",
+    "tags": [
+      "component:output_text_tokens",
+      "pricing_period",
+      "timezone",
+      "dst",
+      "spring_forward",
+      "normalized_usage"
+    ],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "synthetic",
+      "surface": "synthetic.scheduled_usage",
+      "model": {
+        "requested": "dst-regression-model",
+        "billed": "dst-regression-model",
+        "alias_resolution": "none"
+      },
+      "context": {"priced_at": "2026-03-08T07:00:00Z"},
+      "components": [
+        {"name": "output_text_tokens", "quantity": "1000000", "unit": "token"}
+      ]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "synthetic:dst-regression:spring-forward:offpeak",
+        "provider": "synthetic",
+        "surface": "synthetic.scheduled_usage",
+        "model": "dst-regression-model",
+        "pricing_period": "offpeak",
+        "billing_schedule": {
+          "timezone": "America/New_York",
+          "default_period": "offpeak",
+          "boundary_policy": "start_inclusive_end_exclusive",
+          "windows": [
+            {
+              "period": "dst_peak",
+              "start": "03:00",
+              "end": "04:00",
+              "days_of_week": ["sunday"]
+            }
+          ]
+        },
+        "components": [
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {"amount": "1", "currency": "USD", "per": "1000000"}
+          }
+        ],
+        "source": {"name": "synthetic-dst-regression"}
+      },
+      {
+        "schema_version": "0.1",
+        "id": "synthetic:dst-regression:spring-forward:dst-peak",
+        "provider": "synthetic",
+        "surface": "synthetic.scheduled_usage",
+        "model": "dst-regression-model",
+        "pricing_period": "dst_peak",
+        "billing_schedule": {
+          "timezone": "America/New_York",
+          "default_period": "offpeak",
+          "boundary_policy": "start_inclusive_end_exclusive",
+          "windows": [
+            {
+              "period": "dst_peak",
+              "start": "03:00",
+              "end": "04:00",
+              "days_of_week": ["sunday"]
+            }
+          ]
+        },
+        "components": [
+          {
+            "usage_component": "output_text_tokens",
+            "unit": "token",
+            "price": {"amount": "2", "currency": "USD", "per": "1000000"}
+          }
+        ],
+        "source": {"name": "synthetic-dst-regression"}
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "synthetic",
+      "surface": "synthetic.scheduled_usage",
+      "model": {
+        "requested": "dst-regression-model",
+        "billed": "dst-regression-model",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [
+        {
+          "name": "output_text_tokens",
+          "quantity": "1000000",
+          "unit": "token",
+          "unit_price": "0.000002",
+          "cost": "2",
+          "price_card_id": "synthetic:dst-regression:spring-forward:dst-peak",
+          "discount_eligible": true,
+          "metadata": {
+            "pricing_period": "dst_peak",
+            "period_selection": "derived_from_priced_at",
+            "pricing_window": "03:00-04:00",
+            "pricing_timezone": "America/New_York"
+          }
+        }
+      ],
+      "total": "2",
+      "price_sources": [{"name": "synthetic-dst-regression"}],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}

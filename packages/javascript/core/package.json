@@ -1,8 +1,8 @@
 {
   "name": "runcost",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
-  "description": "Auditable LLM API cost calculator and batch ledger for provider responses.",
+  "description": "Local, auditable and itemized USD cost ledger for LLM provider responses, with price sources and warnings.",
   "license": "MIT",
   "engines": {
     "node": ">=20"
@@ -24,6 +24,16 @@
     "tokens",
     "cost",
     "ledger",
+    "audit",
+    "local",
+    "provenance",
+    "reconciliation",
+    "cost-accounting",
+    "llm-cost",
+    "api-cost",
+    "cost-tracking",
+    "cached-tokens",
+    "reasoning-tokens",
     "batch",
     "agents",
     "openai",
@@ -45,6 +55,7 @@
     "cli.js",
     "index.d.ts",
     "generated",
+    "LICENSE",
     "README.md",
     "package.json"
   ],

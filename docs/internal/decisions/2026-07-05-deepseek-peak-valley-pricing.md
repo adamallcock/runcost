@@ -2,10 +2,17 @@
 title: DeepSeek Peak-Valley Pricing Design
 date: 2026-07-05
 type: decision-record
-status: accepted
+status: superseded
 ---
 
 # DeepSeek Peak-Valley Pricing Design
+
+> **Status update, 2026-08-22:** This historical design record is superseded by
+> the [DeepSeek Weekly Timezone Pricing Contract](2026-08-22-deepseek-weekly-timezone-pricing.md).
+> It remains the record of the July public-document review and unverified
+> planning evidence. Use the newer decision record for the current
+> IANA-timezone, weekday-aware schedule and precise timestamp-bound semantics;
+> the historical schedule and prices below are not release-ready bundled data.
 
 ## Decision
 
@@ -65,8 +72,8 @@ Public DeepSeek docs checked on 2026-07-05 EDT:
   `prompt_cache_miss_tokens` are the cache-hit/cache-miss billing split:
   <https://api-docs.deepseek.com/guides/kv_cache>
 
-User-provided screenshot evidence, not yet verified against the public pricing
-page:
+Unverified planning evidence retained as historical context, not verified
+against the public pricing page:
 
 - It says the official DeepSeek V4 release is scheduled for mid-July.
 - It says pricing will move to a peak-valley mechanism on release.
@@ -81,8 +88,6 @@ page:
     `$1.74`.
   - `deepseek-v4-flash`: cache hit `$0.0056`, cache miss `$0.28`, output
     `$0.56`.
-- It says a 24-hour email notice will be sent before the actual pricing update
-  date.
 
 Until the effective date is official, these peak rows should be treated as
 planning evidence, not as release-ready bundled price data.

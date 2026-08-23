@@ -519,6 +519,140 @@ func previousDay(value string) string {
 	return parsed.AddDate(0, 0, -1).Format("2006-01-02")
 }
 
+var genAIConstraintAliases = map[string][]string{
+	"start_date":   {"start_date", "startDate"},
+	"start_time":   {"start_time", "startTime"},
+	"end_time":     {"end_time", "endTime"},
+	"timezone":     {"timezone", "timeZone"},
+	"days_of_week": {"days_of_week", "daysOfWeek"},
+}
+
+type genAIScheduleDetails struct {
+	fields    Object
+	hasTime   bool
+	start     string
+	end       string
+	timezone  string
+	days      []any
+	startDate string
+}
+
+func genAIConstraintFields(value any) (Object, bool) {
+	if value == nil {
+		return Object{}, true
+	}
+	constraint, ok := objectValue(value)
+	if !ok {
+		return nil, false
+	}
+	known := map[string]bool{}
+	for _, aliases := range genAIConstraintAliases {
+		for _, alias := range aliases {
+			known[alias] = true
+		}
+	}
+	for key := range constraint {
+		if !known[key] {
+			return nil, false
+		}
+	}
+	fields := Object{}
+	for canonical, aliases := range genAIConstraintAliases {
+		present := ""
+		for _, alias := range aliases {
+			if _, exists := constraint[alias]; !exists {
+				continue
+			}
+			if present != "" {
+				return nil, false
+			}
+			present = alias
+		}
+		if present != "" {
+			fields[canonical] = constraint[present]
+		}
+	}
+	return fields, true
+}
+
+func validGenAIDate(value string) bool {
+	parsed, err := time.Parse("2006-01-02", value)
+	return err == nil && parsed.Format("2006-01-02") == value
+}
+
+func genAIScheduleConstraint(value any) (genAIScheduleDetails, bool) {
+	fields, ok := genAIConstraintFields(value)
+	if !ok {
+		return genAIScheduleDetails{}, false
+	}
+	startDate := ""
+	if rawStartDate, exists := fields["start_date"]; exists {
+		var isString bool
+		startDate, isString = rawStartDate.(string)
+		if !isString || !validGenAIDate(startDate) {
+			return genAIScheduleDetails{}, false
+		}
+	}
+	_, hasStart := fields["start_time"]
+	_, hasEnd := fields["end_time"]
+	if !hasStart && !hasEnd {
+		if _, hasTimezone := fields["timezone"]; hasTimezone {
+			return genAIScheduleDetails{}, false
+		}
+		if _, hasDays := fields["days_of_week"]; hasDays {
+			return genAIScheduleDetails{}, false
+		}
+		return genAIScheduleDetails{fields: fields, startDate: startDate}, true
+	}
+	if !hasStart || !hasEnd {
+		return genAIScheduleDetails{}, false
+	}
+	startRaw, startOK := fields["start_time"].(string)
+	endRaw, endOK := fields["end_time"].(string)
+	if !startOK || !endOK {
+		return genAIScheduleDetails{}, false
+	}
+	timezoneName := "UTC"
+	if rawTimezone, exists := fields["timezone"]; exists {
+		var timezoneOK bool
+		timezoneName, timezoneOK = rawTimezone.(string)
+		if !timezoneOK || timezoneName == "" {
+			return genAIScheduleDetails{}, false
+		}
+	}
+	if _, err := time.LoadLocation(timezoneName); err != nil {
+		return genAIScheduleDetails{}, false
+	}
+	start := strings.TrimSuffix(startRaw, "Z")
+	end := strings.TrimSuffix(endRaw, "Z")
+	if _, ok := timeSeconds(start); !ok {
+		return genAIScheduleDetails{}, false
+	}
+	if _, ok := timeSeconds(end); !ok {
+		return genAIScheduleDetails{}, false
+	}
+	var days []any
+	if rawDays, exists := fields["days_of_week"]; exists {
+		canonicalDays, daysOK := canonicalBillingDays(rawDays)
+		if !daysOK {
+			return genAIScheduleDetails{}, false
+		}
+		days = make([]any, len(canonicalDays))
+		for index, day := range canonicalDays {
+			days[index] = day
+		}
+	}
+	return genAIScheduleDetails{
+		fields:    fields,
+		hasTime:   true,
+		start:     start,
+		end:       end,
+		timezone:  timezoneName,
+		days:      days,
+		startDate: startDate,
+	}, true
+}
+
 // PriceCardsFromGenAIPrices maps Pydantic genai-prices JSON to canonical cards.
 func PriceCardsFromGenAIPrices(data any, optionValues ...Object) []any {
 	options := Object{}
@@ -567,39 +701,72 @@ func PriceCardsFromGenAIPrices(data any, optionValues ...Object) []any {
 				conditional = []any{Object{"prices": rawPrices}}
 			}
 			datedStarts := []string{}
-			timeIndexes := map[int]int{}
-			windows := []any{}
+			constraintDetails := map[int]genAIScheduleDetails{}
 			for entryIndex, rawEntry := range conditional {
-				constraint := asObject(asObject(rawEntry)["constraint"])
-				if startDate := asString(constraint["start_date"]); startDate != "" {
-					datedStarts = append(datedStarts, startDate)
+				entry, ok := objectValue(rawEntry)
+				if !ok {
+					continue
 				}
-				startTime := strings.TrimSuffix(asString(constraint["start_time"]), "Z")
-				endTime := strings.TrimSuffix(asString(constraint["end_time"]), "Z")
-				if startTime != "" || endTime != "" {
-					periodIndex := len(windows) + 1
-					timeIndexes[entryIndex] = periodIndex
-					if startTime == "" {
-						startTime = "00:00:00"
-					}
-					if endTime == "" {
-						endTime = "00:00:00"
-					}
-					windows = append(windows, Object{"period": fmt.Sprintf("scheduled-%d", periodIndex), "start": startTime, "end": endTime})
+				rawConstraint, exists := entry["constraint"]
+				if !exists {
+					rawConstraint = Object{}
+				}
+				details, supported := genAIScheduleConstraint(rawConstraint)
+				if !supported {
+					continue
+				}
+				constraintDetails[entryIndex] = details
+				if details.startDate != "" {
+					datedStarts = append(datedStarts, details.startDate)
 				}
 			}
 			sort.Strings(datedStarts)
+			timeEntryIndexes := []int{}
+			timezones := map[string]bool{}
+			for entryIndex, details := range constraintDetails {
+				if details.hasTime {
+					timeEntryIndexes = append(timeEntryIndexes, entryIndex)
+					timezones[details.timezone] = true
+				}
+			}
+			sort.Ints(timeEntryIndexes)
+			timeIndexes := map[int]int{}
 			var schedule Object
-			if len(windows) > 0 {
+			if len(timeEntryIndexes) > 0 && len(timezones) == 1 {
+				windows := make([]any, 0, len(timeEntryIndexes))
+				for periodIndex, entryIndex := range timeEntryIndexes {
+					details := constraintDetails[entryIndex]
+					timeIndexes[entryIndex] = periodIndex + 1
+					window := Object{
+						"period": fmt.Sprintf("scheduled-%d", periodIndex+1),
+						"start":  details.start,
+						"end":    details.end,
+					}
+					if details.days != nil {
+						window["days_of_week"] = details.days
+					}
+					windows = append(windows, window)
+				}
+				timezoneName := constraintDetails[timeEntryIndexes[0]].timezone
 				schedule = Object{
-					"timezone": "UTC", "default_period": "default",
+					"timezone": timezoneName, "default_period": "default",
 					"boundary_policy": "start_inclusive_end_exclusive", "windows": windows,
 				}
 			}
 			usedCardIDs := map[string]bool{}
 			for index, rawEntry := range conditional {
-				entry := asObject(rawEntry)
-				prices := asObject(entry["prices"])
+				entry, ok := objectValue(rawEntry)
+				if !ok {
+					continue
+				}
+				details, supported := constraintDetails[index]
+				if !supported {
+					continue
+				}
+				prices, pricesOK := objectValue(entry["prices"])
+				if !pricesOK {
+					continue
+				}
 				components, adapterWarnings := convertGenAIPriceComponents(prices)
 				if len(components) == 0 {
 					continue
@@ -607,32 +774,39 @@ func PriceCardsFromGenAIPrices(data any, optionValues ...Object) []any {
 				if match.unsupported {
 					adapterWarnings = append(adapterWarnings, "non-enumerable model match clause retained in metadata")
 				}
-				constraint := asObject(entry["constraint"])
+				rawConstraint, constraintOK := objectValue(entry["constraint"])
+				if !constraintOK {
+					rawConstraint = Object{}
+				}
 				card := Object{
 					"schema_version": "0.1", "id": fmt.Sprintf("%s:%s:genai-prices:%d", provider, model, index),
 					"provider": provider, "model": model, "aliases": aliases, "components": components, "source": source,
 					"metadata": Object{"genai_prices": Object{
 						"provider_name": providerData["name"], "provider_match": providerData["provider_match"],
 						"model_match": modelData["match"], "api_pattern": providerData["api_pattern"],
-						"context_window": modelData["context_window"], "constraint": constraint,
+						"context_window": modelData["context_window"], "constraint": rawConstraint,
 					}},
 				}
 				suffix := "current"
-				if startDate := asString(constraint["start_date"]); startDate != "" {
-					suffix = startDate
-					effective := Object{"from": startDate}
+				if details.startDate != "" {
+					suffix = details.startDate
+					effective := Object{"from": details.startDate}
 					for _, candidate := range datedStarts {
-						if candidate > startDate {
+						if candidate > details.startDate {
 							effective["to"] = previousDay(candidate)
 							break
 						}
 					}
 					card["effective"] = effective
-				} else if len(datedStarts) > 0 && len(constraint) == 0 {
+				} else if len(datedStarts) > 0 && len(details.fields) == 0 {
 					suffix = "historical"
 					card["effective"] = Object{"to": previousDay(datedStarts[0])}
 				}
-				if periodIndex := timeIndexes[index]; periodIndex > 0 {
+				if details.hasTime {
+					periodIndex, scheduled := timeIndexes[index]
+					if !scheduled || len(schedule) == 0 {
+						continue
+					}
 					suffix = fmt.Sprintf("scheduled-%d", periodIndex)
 					card["pricing_period"] = suffix
 					card["billing_schedule"] = schedule
@@ -644,16 +818,6 @@ func PriceCardsFromGenAIPrices(data any, optionValues ...Object) []any {
 					} else {
 						suffix += "-default"
 					}
-				}
-				unsupportedConstraints := []string{}
-				for key := range constraint {
-					if key != "start_date" && key != "start_time" && key != "end_time" {
-						unsupportedConstraints = append(unsupportedConstraints, key)
-					}
-				}
-				if len(unsupportedConstraints) > 0 {
-					sort.Strings(unsupportedConstraints)
-					adapterWarnings = append(adapterWarnings, "unsupported constraints retained in metadata: "+strings.Join(unsupportedConstraints, ", "))
 				}
 				if len(adapterWarnings) > 0 {
 					seenWarnings := map[string]bool{}

@@ -3,6 +3,19 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const MONEY_PRECISION = 18n;
+const BILLING_WEEKDAYS = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday"
+];
+const BILLING_WEEKDAY_INDEX = new Map(BILLING_WEEKDAYS.map((day, index) => [day, index]));
+const BILLING_TIMEZONE_FORMATTERS = new Map();
+const RFC3339_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const RFC3339_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$/;
 const COMPONENT_ORDER_NAMES = [
   "input_uncached_tokens",
   "input_cache_read_tokens",
@@ -211,9 +224,19 @@ function datePart(value) {
   return String(value).slice(0, 10);
 }
 
+function dateOnlyValue(value) {
+  if (value === undefined || value === null) return null;
+  const text = String(value);
+  if (!RFC3339_DATE_PATTERN.test(text)) return null;
+  const parsed = Date.parse(`${text}T00:00:00Z`);
+  if (Number.isNaN(parsed)) return null;
+  const normalized = new Date(parsed).toISOString().slice(0, 10);
+  return normalized === text ? { kind: "date", text, value: parsed } : null;
+}
+
 function dateValue(value) {
-  const part = datePart(value);
-  return part ? Date.parse(`${part}T00:00:00Z`) : null;
+  const parsed = dateOnlyValue(datePart(value));
+  return parsed ? parsed.value : null;
 }
 
 function usageContext(usageLedger) {
@@ -223,9 +246,28 @@ function usageContext(usageLedger) {
 function dateTimeValue(value) {
   if (value === undefined || value === null) return null;
   const text = String(value);
-  if (!text.includes("T") || !/(Z|[+-]\d\d:\d\d)$/.test(text)) return null;
-  const parsed = Date.parse(text);
+  if (!RFC3339_DATE_TIME_PATTERN.test(text)) return null;
+  const normalizedText = text.replace(/[Tt]/, "T").replace(/[Zz]$/, "Z");
+  const parsed = Date.parse(normalizedText);
   return Number.isNaN(parsed) ? null : new Date(parsed);
+}
+
+function pricedAtValue(value) {
+  const date = dateOnlyValue(value);
+  if (date) return date;
+  const dateTime = dateTimeValue(value);
+  if (dateTime) return { kind: "datetime", value: dateTime.getTime() };
+  if (value === undefined || value === null || value === "") return null;
+  return { kind: "invalid" };
+}
+
+function effectiveBoundary(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const date = dateOnlyValue(value);
+  if (date) return date;
+  const dateTime = dateTimeValue(value);
+  if (dateTime) return { kind: "datetime", value: dateTime.getTime() };
+  return { kind: "invalid" };
 }
 
 function unixSecondsPricedAt(value) {
@@ -266,6 +308,14 @@ function normalizeBillingSchedule(schedule) {
       if (window.period !== undefined) normalizedWindow.period = window.period;
       if (window.start !== undefined) normalizedWindow.start = window.start;
       if (window.end !== undefined) normalizedWindow.end = window.end;
+      if (window.days_of_week !== undefined && window.daysOfWeek !== undefined) {
+        // Keep the ambiguity observable so schedule evaluation fails closed.
+        normalizedWindow.days_of_week = [];
+      } else if (window.days_of_week !== undefined) {
+        normalizedWindow.days_of_week = window.days_of_week;
+      } else if (window.daysOfWeek !== undefined) {
+        normalizedWindow.days_of_week = window.daysOfWeek;
+      }
       return normalizedWindow;
     });
   } else if ("windows" in schedule) {
@@ -303,11 +353,68 @@ function timeInWindow(current, start, end) {
   return current >= start || current < end;
 }
 
-function pricingPeriodFromSchedule(schedule, pricedAt) {
-  const timezone = schedule.timezone || "UTC";
-  if (timezone !== "UTC") {
-    return { unsupported_timezone: timezone };
+function billingTimezoneLabel(timezone) {
+  if (typeof timezone === "string") return timezone;
+  if (timezone === null) return "null";
+  return String(timezone);
+}
+
+function billingTimezoneFormatter(timezone) {
+  if (BILLING_TIMEZONE_FORMATTERS.has(timezone)) {
+    return BILLING_TIMEZONE_FORMATTERS.get(timezone);
   }
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    weekday: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23"
+  });
+  BILLING_TIMEZONE_FORMATTERS.set(timezone, formatter);
+  return formatter;
+}
+
+function billingScheduleTimezone(schedule) {
+  const timezone = schedule.timezone === undefined ? "UTC" : schedule.timezone;
+  if (typeof timezone !== "string" || timezone === "") {
+    return { unsupported_timezone: billingTimezoneLabel(timezone) };
+  }
+  try {
+    // Intl validates IANA zone names in both Node and browser builds. Keeping
+    // this dynamic avoids a provider-specific allowlist while still rejecting
+    // a misspelled or unavailable zone before pricing is attempted.
+    billingTimezoneFormatter(timezone);
+  } catch {
+    return { unsupported_timezone: billingTimezoneLabel(timezone) };
+  }
+  return { timezone };
+}
+
+function billingWindowDays(window) {
+  const hasCanonical = hasOwn(window, "days_of_week");
+  const hasAlias = hasOwn(window, "daysOfWeek");
+  if (hasCanonical && hasAlias) {
+    return { unsupported_schedule: "days_of_week" };
+  }
+  if (!hasCanonical && !hasAlias) return { days: null };
+  const rawDays = hasCanonical ? window.days_of_week : window.daysOfWeek;
+  if (!Array.isArray(rawDays) || rawDays.length === 0) {
+    return { unsupported_schedule: "days_of_week" };
+  }
+  const days = new Set();
+  for (const day of rawDays) {
+    if (typeof day !== "string" || !BILLING_WEEKDAY_INDEX.has(day) || days.has(day)) {
+      return { unsupported_schedule: "days_of_week" };
+    }
+    days.add(day);
+  }
+  return { days };
+}
+
+function billingScheduleDefinition(schedule) {
+  const timezoneResult = billingScheduleTimezone(schedule);
+  if (timezoneResult.unsupported_timezone) return timezoneResult;
   const boundaryPolicy = schedule.boundary_policy || schedule.boundaryPolicy || "start_inclusive_end_exclusive";
   if (boundaryPolicy !== "start_inclusive_end_exclusive") {
     return { unsupported_schedule: "boundary_policy" };
@@ -315,24 +422,79 @@ function pricingPeriodFromSchedule(schedule, pricedAt) {
   if (!Array.isArray(schedule.windows)) {
     return { unsupported_schedule: "windows" };
   }
-  const current = (
-    pricedAt.getUTCHours() * 3600 +
-    pricedAt.getUTCMinutes() * 60 +
-    pricedAt.getUTCSeconds()
-  );
+  const windows = [];
   for (const window of schedule.windows) {
-    if (!window || typeof window !== "object") return { unsupported_schedule: "window" };
+    if (!window || typeof window !== "object" || Array.isArray(window)) {
+      return { unsupported_schedule: "window" };
+    }
     const start = timeSeconds(window.start);
     const end = timeSeconds(window.end);
     if (start === null || end === null || !window.period) {
       return { unsupported_schedule: "window" };
     }
-    if (timeInWindow(current, start, end)) {
+    const days = billingWindowDays(window);
+    if (days.unsupported_schedule) return days;
+    windows.push({ window, start, end, days: days.days });
+  }
+  return { timezone: timezoneResult.timezone, windows };
+}
+
+function billingLocalParts(pricedAt, timezone) {
+  try {
+    const parts = {};
+    for (const part of billingTimezoneFormatter(timezone).formatToParts(pricedAt)) {
+      if (["weekday", "hour", "minute", "second"].includes(part.type)) {
+        parts[part.type] = part.value;
+      }
+    }
+    const weekday = BILLING_WEEKDAY_INDEX.get(String(parts.weekday || "").toLowerCase());
+    const hour = Number(parts.hour);
+    const minute = Number(parts.minute);
+    const second = Number(parts.second);
+    if (
+      weekday === undefined ||
+      !Number.isInteger(hour) ||
+      !Number.isInteger(minute) ||
+      !Number.isInteger(second) ||
+      hour < 0 ||
+      hour > 23 ||
+      minute < 0 ||
+      minute > 59 ||
+      second < 0 ||
+      second > 59
+    ) {
+      return null;
+    }
+    return {
+      weekday,
+      seconds: hour * 3600 + minute * 60 + second
+    };
+  } catch {
+    return null;
+  }
+}
+
+function billingWindowMatches(current, start, end, days) {
+  if (!timeInWindow(current.seconds, start, end)) return false;
+  if (!days) return true;
+  const startDay = current.seconds >= start
+    ? current.weekday
+    : (current.weekday + BILLING_WEEKDAYS.length - 1) % BILLING_WEEKDAYS.length;
+  return days.has(BILLING_WEEKDAYS[startDay]);
+}
+
+function pricingPeriodFromSchedule(schedule, pricedAt) {
+  const definition = billingScheduleDefinition(schedule);
+  if (definition.unsupported_timezone || definition.unsupported_schedule) return definition;
+  const current = billingLocalParts(pricedAt, definition.timezone);
+  if (!current) return { unsupported_schedule: "timezone" };
+  for (const { window, start, end, days } of definition.windows) {
+    if (billingWindowMatches(current, start, end, days)) {
       return {
         pricing_period: String(window.period),
         period_selection: "derived_from_priced_at",
         pricing_window: `${window.start}-${window.end}`,
-        pricing_timezone: timezone
+        pricing_timezone: definition.timezone
       };
     }
   }
@@ -342,7 +504,7 @@ function pricingPeriodFromSchedule(schedule, pricedAt) {
       pricing_period: String(defaultPeriod),
       period_selection: "derived_from_priced_at",
       pricing_window: "default",
-      pricing_timezone: timezone
+      pricing_timezone: definition.timezone
     };
   }
   return {};
@@ -390,8 +552,14 @@ function requestedPricingPeriodForCards(usageLedger, cards) {
 
 function unsupportedBillingScheduleReason(usageLedger, cards) {
   const context = usageContext(usageLedger);
-  if (!dateTimeValue(context.priced_at || context.pricedAt)) return null;
+  if (context.pricing_period || context.pricingPeriod) return null;
   for (const card of cards) {
+    const schedule = cardBillingSchedule(card);
+    if (Object.keys(schedule).length === 0) continue;
+    const definition = billingScheduleDefinition(schedule);
+    if (definition.unsupported_timezone) return String(definition.unsupported_timezone);
+    if (definition.unsupported_schedule) return String(definition.unsupported_schedule);
+    if (!dateTimeValue(context.priced_at || context.pricedAt)) continue;
     const selection = pricingPeriodSelection(usageLedger, card);
     if (selection.unsupported_timezone) return String(selection.unsupported_timezone);
     if (selection.unsupported_schedule) return String(selection.unsupported_schedule);
@@ -494,15 +662,24 @@ function cardModelSurfaceMatches(usageLedger, card) {
 }
 
 function effectiveMatches(card, pricedAt) {
-  if (!pricedAt) {
-    return true;
-  }
   const effective = card.effective || {};
-  if (effective.from && pricedAt < effective.from) {
+  if (!effective || typeof effective !== "object" || Array.isArray(effective)) return false;
+  const from = effectiveBoundary(effective.from);
+  const to = effectiveBoundary(effective.to);
+  if (from?.kind === "invalid" || to?.kind === "invalid") return false;
+  const usage = pricedAtValue(pricedAt);
+  if (!usage) {
+    return from?.kind !== "datetime" && to?.kind !== "datetime";
+  }
+  if (usage.kind === "invalid") return false;
+  if (usage.kind === "date" && (from?.kind === "datetime" || to?.kind === "datetime")) {
     return false;
   }
-  if (effective.to && pricedAt > effective.to) {
-    return false;
+  const usageValue = usage.value;
+  if (from && usageValue < from.value) return false;
+  if (to) {
+    const toExclusive = to.kind === "date" ? to.value + 86400000 : to.value;
+    if (usageValue >= toExclusive) return false;
   }
   return true;
 }
@@ -514,7 +691,7 @@ function cardContextMatches(usageLedger, card) {
 function cardContextExceptPeriodMatches(usageLedger, card) {
   const context = usageContext(usageLedger);
   const requestedServiceTier = context.service_tier || "standard";
-  const pricedAt = datePart(context.priced_at || context.pricedAt);
+  const pricedAt = context.priced_at ?? context.pricedAt;
   if (card.service_tier && card.service_tier !== requestedServiceTier) {
     return false;
   }
@@ -1060,18 +1237,19 @@ function noMatchingCardWarning(usageLedger, priceCards) {
     };
   }
 
-  const pricedAt = datePart(context.priced_at || context.pricedAt);
+  const pricedAt = context.priced_at ?? context.pricedAt;
+  const pricedAtDate = datePart(pricedAt);
   if (
-    pricedAt &&
+    pricedAtDate &&
     identityCards.length > 0 &&
     !identityCards.some((card) => effectiveMatches(card, pricedAt))
   ) {
     return {
       code: "historical_price_missing",
-      message: `No price card effective for ${pricedAt}.`,
+      message: `No price card effective for ${pricedAtDate}.`,
       metadata: {
         model: billedModel(usageLedger),
-        priced_at: pricedAt
+        priced_at: pricedAtDate
       }
     };
   }
@@ -5723,6 +5901,71 @@ function genAIPriceComponents(prices) {
   return { components, warnings };
 }
 
+const GENAI_CONSTRAINT_ALIASES = Object.freeze({
+  start_date: ["start_date", "startDate"],
+  start_time: ["start_time", "startTime"],
+  end_time: ["end_time", "endTime"],
+  timezone: ["timezone", "timeZone"],
+  days_of_week: ["days_of_week", "daysOfWeek"]
+});
+
+function genAIConstraintFields(constraint) {
+  if (!constraint || typeof constraint !== "object" || Array.isArray(constraint)) return null;
+  const allowed = new Set(Object.values(GENAI_CONSTRAINT_ALIASES).flat());
+  if (Object.keys(constraint).some((key) => !allowed.has(key))) return null;
+  const fields = {};
+  for (const [canonical, aliases] of Object.entries(GENAI_CONSTRAINT_ALIASES)) {
+    const present = aliases.filter((key) => hasOwn(constraint, key));
+    if (present.length > 1) return null;
+    if (present.length === 1) fields[canonical] = constraint[present[0]];
+  }
+  return fields;
+}
+
+function genAIScheduleConstraint(constraint) {
+  const fields = genAIConstraintFields(constraint);
+  if (!fields) return { supported: false };
+  if (hasOwn(fields, "start_date") && !dateOnlyValue(fields.start_date)) {
+    return { supported: false };
+  }
+  const hasStartTime = hasOwn(fields, "start_time");
+  const hasEndTime = hasOwn(fields, "end_time");
+  const hasTime = hasStartTime || hasEndTime;
+  const hasTimezone = hasOwn(fields, "timezone");
+  const hasDays = hasOwn(fields, "days_of_week");
+  if (!hasTime && (hasTimezone || hasDays)) return { supported: false };
+  if (!hasTime) return { supported: true, hasTime: false, fields, startDate: fields.start_date };
+  if (!hasStartTime || !hasEndTime || typeof fields.start_time !== "string" || typeof fields.end_time !== "string") {
+    return { supported: false };
+  }
+
+  const timezone = hasTimezone ? fields.timezone : "UTC";
+  const timezoneResult = billingScheduleTimezone({ timezone });
+  if (timezoneResult.unsupported_timezone) return { supported: false };
+  if ((fields.start_time.endsWith("Z") || fields.end_time.endsWith("Z")) && timezoneResult.timezone !== "UTC") {
+    return { supported: false };
+  }
+  const start = fields.start_time.replace(/Z$/, "");
+  const end = fields.end_time.replace(/Z$/, "");
+  if (timeSeconds(start) === null || timeSeconds(end) === null) {
+    return { supported: false };
+  }
+  const daysResult = hasDays
+    ? billingWindowDays({ days_of_week: fields.days_of_week })
+    : { days: null };
+  if (daysResult.unsupported_schedule) return { supported: false };
+  return {
+    supported: true,
+    hasTime: true,
+    timezone: timezoneResult.timezone,
+    start,
+    end,
+    days: daysResult.days,
+    fields,
+    startDate: fields.start_date
+  };
+}
+
 function previousDay(value) {
   const parsed = new Date(`${value}T00:00:00Z`);
   parsed.setUTCDate(parsed.getUTCDate() - 1);
@@ -5747,22 +5990,46 @@ export function priceCardsFromGenAIPrices(data, options = {}) {
       const match = staticMatchAliases(rawModel.match);
       const aliases = match.aliases.filter((alias) => alias !== model);
       const conditional = Array.isArray(rawModel.prices) ? rawModel.prices : [{ prices: rawModel.prices || {} }];
-      const datedStarts = conditional.map((entry) => entry.constraint && entry.constraint.start_date).filter(Boolean).map(String).sort();
-      const timeEntries = conditional.filter((entry) => entry.constraint && (entry.constraint.start_time || entry.constraint.end_time));
-      const schedule = timeEntries.length ? {
-        timezone: "UTC",
+      const constraintDetails = new Map();
+      conditional.forEach((entry, index) => {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) return;
+        const rawConstraint = entry.constraint ?? {};
+        if (typeof rawConstraint !== "object" || Array.isArray(rawConstraint)) return;
+        const scheduleConstraint = genAIScheduleConstraint(rawConstraint);
+        if (scheduleConstraint.supported) constraintDetails.set(index, scheduleConstraint);
+      });
+      const datedStarts = [...constraintDetails.values()]
+        .map((detail) => detail.startDate)
+        .filter(Boolean)
+        .map(String)
+        .sort();
+      const scheduledEntries = [...constraintDetails.entries()]
+        .filter(([, detail]) => detail.hasTime)
+        .map(([index, detail]) => ({ index, ...detail }));
+      const scheduledTimezones = new Set(scheduledEntries.map((entry) => entry.timezone));
+      const schedule = scheduledEntries.length > 0 && scheduledTimezones.size === 1 ? {
+        timezone: scheduledEntries[0].timezone,
         default_period: "default",
         boundary_policy: "start_inclusive_end_exclusive",
-        windows: timeEntries.map((entry, index) => ({
-          period: `scheduled-${index + 1}`,
-          start: String(entry.constraint.start_time || "00:00:00").replace(/Z$/, ""),
-          end: String(entry.constraint.end_time || "00:00:00").replace(/Z$/, "")
+        windows: scheduledEntries.map((entry, periodIndex) => ({
+          period: `scheduled-${periodIndex + 1}`,
+          start: entry.start,
+          end: entry.end,
+          ...(entry.days ? { days_of_week: [...entry.days] } : {})
         }))
       } : undefined;
+      const scheduledEntryIndexes = new Map(
+        scheduledEntries.map((entry, periodIndex) => [entry.index, { ...entry, periodIndex }])
+      );
       const usedCardIds = new Set();
       conditional.forEach((entry, index) => {
         if (!entry || typeof entry !== "object" || !entry.prices || typeof entry.prices !== "object") return;
-        const constraint = entry.constraint && typeof entry.constraint === "object" ? entry.constraint : {};
+        const rawConstraint = entry.constraint ?? {};
+        const scheduleConstraint = constraintDetails.get(index);
+        if (!scheduleConstraint) return;
+        const constraint = scheduleConstraint.fields;
+        const scheduledEntry = scheduledEntryIndexes.get(index);
+        if (scheduleConstraint.hasTime && (!schedule || !scheduledEntry)) return;
         const converted = genAIPriceComponents(entry.prices);
         if (!converted.components.length) return;
         const adapterWarnings = [...converted.warnings];
@@ -5782,7 +6049,7 @@ export function priceCardsFromGenAIPrices(data, options = {}) {
               model_match: rawModel.match ?? null,
               api_pattern: rawProvider.api_pattern ?? null,
               context_window: rawModel.context_window ?? null,
-              constraint
+              constraint: rawConstraint
             }
           }
         };
@@ -5797,9 +6064,8 @@ export function priceCardsFromGenAIPrices(data, options = {}) {
           suffix = "historical";
           card.effective = { to: previousDay(datedStarts[0]) };
         }
-        if (constraint.start_time || constraint.end_time) {
-          const timeIndex = timeEntries.indexOf(entry) + 1;
-          suffix = `scheduled-${timeIndex}`;
+        if (scheduleConstraint.hasTime) {
+          suffix = `scheduled-${scheduledEntry.periodIndex + 1}`;
           card.pricing_period = suffix;
           card.billing_schedule = schedule;
         } else if (schedule) {
@@ -5807,8 +6073,6 @@ export function priceCardsFromGenAIPrices(data, options = {}) {
           card.pricing_period = "default";
           card.billing_schedule = schedule;
         }
-        const unsupportedConstraints = Object.keys(constraint).filter((key) => !["start_date", "start_time", "end_time"].includes(key)).sort();
-        if (unsupportedConstraints.length) adapterWarnings.push(`unsupported constraints retained in metadata: ${unsupportedConstraints.join(", ")}`);
         if (adapterWarnings.length) card.metadata.adapter_warnings = [...new Set(adapterWarnings)].sort();
         const baseId = `${provider}:${model}:genai-prices:${suffix}`;
         card.id = usedCardIds.has(baseId) ? `${baseId}:${index}` : baseId;

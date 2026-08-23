@@ -45,7 +45,9 @@ FORBIDDEN_PUBLIC_README_PHRASES = [
     "docs/reports/",
 ]
 
-PUBLIC_PACKAGE_DESCRIPTION = "Auditable LLM API cost calculator and batch ledger for provider responses."
+PUBLIC_PACKAGE_DESCRIPTION = (
+    "Local, auditable and itemized USD cost ledger for LLM provider responses, with price sources and warnings."
+)
 
 
 def assert_true(condition: bool, message: str) -> None:
@@ -107,7 +109,7 @@ def check_package_metadata() -> None:
     assert_true("README.md" in js_package.get("files", []), "npm package must include README")
     assert_true(pyproject["project"].get("name") == "runcost-ai", "Python distribution must be runcost-ai")
     assert_true(pyproject["project"].get("description") == PUBLIC_PACKAGE_DESCRIPTION, "Python description must be public-ready")
-    assert_true("Development Status :: 3 - Alpha" in pyproject["project"].get("classifiers", []), "Python classifier must be alpha")
+    assert_true("Development Status :: 4 - Beta" in pyproject["project"].get("classifiers", []), "Python classifier must be beta")
 
 
 def check_github_templates() -> None:

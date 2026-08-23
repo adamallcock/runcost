@@ -18,13 +18,14 @@ from runcost import (  # noqa: E402
     price_cards_from_official_snapshot,
 )
 
-DEFAULT_PRICE_SOURCE_PRIORITY = ["openai-official", "anthropic-official", "google-official", "xai-official"]
+DEFAULT_PRICE_SOURCE_PRIORITY = ["openai-official", "anthropic-official", "google-official", "xai-official", "deepseek-official"]
 SNAPSHOTS = {
     "openai-official-gpt-56-pricing-snapshot.json": "openai-official",
     "openai-official-gpt-56-pricing-history-through-2026-07-29.json": "openai-official",
     "anthropic-official-pricing-snapshot.json": "anthropic-official",
     "google-official-pricing-snapshot.json": "google-official",
     "xai-official-pricing-snapshot.json": "xai-official",
+    "deepseek-official-pricing-snapshot.json": "deepseek-official",
 }
 _FIXTURE_CARDS: list[dict] | None = None
 
@@ -74,7 +75,7 @@ def default_price_cards() -> list[dict]:
 
 def check_fixture_shape() -> int:
     cards = default_price_cards()
-    assert_true(len(cards) >= 70, f"official conformance fixtures unexpectedly small: {len(cards)}")
+    assert_true(len(cards) >= 76, f"official conformance fixtures unexpectedly small: {len(cards)}")
     assert_true(all(str((card.get("source") or {}).get("url", "")).startswith("https://") for card in cards), "official fixture cards must retain source URLs")
     assert_true(not any((ROOT / path).exists() for path in [
         "packages/python/runcost/data/default-source-cache.json",
@@ -170,6 +171,111 @@ def check_xai_aliases() -> None:
         assert_true("unknown_model" not in warning_codes, f"xAI redirected slug {slug} must resolve through the explicit snapshot cards")
         assert_true(ledger["model"]["billed"] == slug, f"xAI redirected slug {slug} must not masquerade as grok-4.3 alias")
         assert_true(ledger["total"] == "0.00375", f"xAI redirected slug {slug} must use Grok 4.3 token rates")
+
+
+def check_deepseek_weekly_schedule() -> None:
+    cards = default_price_cards()
+    official_cards = [
+        card for card in cards
+        if card.get("provider") == "deepseek" and (card.get("source") or {}).get("name") == "deepseek-official"
+    ]
+    by_id = {card.get("id"): card for card in official_cards}
+    expected_rates = {
+        "deepseek-v4-flash": {
+            "offpeak": ("0.22", "0.007", "0.66"),
+            "peak": ("0.44", "0.014", "1.32"),
+        },
+        "deepseek-v4-pro": {
+            "offpeak": ("0.66", "0.022", "1.98"),
+            "peak": ("1.32", "0.044", "3.96"),
+        },
+        "deepseek-v4-flash-vision-exp": {
+            "offpeak": ("0.22", "0.007", "0.66"),
+            "peak": ("0.44", "0.014", "1.32"),
+        },
+    }
+    expected_schedule = {
+        "timezone": "UTC",
+        "default_period": "offpeak",
+        "boundary_policy": "start_inclusive_end_exclusive",
+        "windows": [
+            {
+                "period": "peak",
+                "start": "01:00",
+                "end": "04:00",
+                "days_of_week": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+            },
+            {
+                "period": "peak",
+                "start": "06:00",
+                "end": "10:00",
+                "days_of_week": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+            },
+        ],
+    }
+    expected_ids = {
+        f"deepseek:{model}:{period}:official-snapshot"
+        for model in expected_rates
+        for period in ("offpeak", "peak")
+    }
+    assert_true(set(by_id) == expected_ids, f"DeepSeek official card ids mismatch: {sorted(set(by_id) ^ expected_ids)}")
+
+    for model, periods in expected_rates.items():
+        for period, (input_rate, cached_input_rate, output_rate) in periods.items():
+            card = by_id[f"deepseek:{model}:{period}:official-snapshot"]
+            assert_true(card.get("effective") == {"from": "2026-08-22T16:00:00Z"}, f"{model} {period} effective instant mismatch")
+            assert_true(card.get("billing_schedule") == expected_schedule, f"{model} {period} schedule mismatch")
+            components = {
+                component.get("usage_component"): component
+                for component in card.get("components", [])
+                if isinstance(component, dict)
+            }
+            assert_true(
+                tuple(Decimal(components[name]["price"]["amount"]) for name in (
+                    "input_uncached_tokens",
+                    "input_cache_read_tokens",
+                    "output_text_tokens",
+                    "output_reasoning_tokens",
+                )) == tuple(Decimal(value) for value in (input_rate, cached_input_rate, output_rate, output_rate)),
+                f"{model} {period} token-rate matrix mismatch",
+            )
+
+    def ledger_at(priced_at: str) -> dict:
+        return calculate_cost(
+            usage_ledger={
+                "schema_version": "0.1",
+                "provider": "deepseek",
+                "surface": "deepseek.chat_completions",
+                "model": {"requested": "deepseek-v4-pro", "billed": "deepseek-v4-pro"},
+                "context": {"priced_at": priced_at},
+                "components": [{"name": "output_text_tokens", "quantity": "1000000", "unit": "token"}],
+            },
+            price_cards=official_cards,
+            price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
+        )
+
+    activation = ledger_at("2026-08-22T16:00:00Z")
+    activation_component = activation["components"][0]
+    assert_true(activation["total"] == "1.98", "DeepSeek exact effective start must select the weekend off-peak rate")
+    assert_true(activation_component["price_card_id"] == "deepseek:deepseek-v4-pro:offpeak:official-snapshot", "DeepSeek exact effective start selected the wrong card")
+
+    weekend = ledger_at("2026-08-23T06:00:00Z")
+    weekend_component = weekend["components"][0]
+    assert_true(weekend["total"] == "1.98", "DeepSeek Sunday must be priced off-peak")
+    assert_true(weekend_component.get("metadata", {}).get("pricing_window") == "default", "DeepSeek Sunday must use the schedule default period")
+
+    weekday_peak = ledger_at("2026-08-24T01:00:00Z")
+    weekday_peak_component = weekday_peak["components"][0]
+    assert_true(weekday_peak["total"] == "3.96", "DeepSeek weekday first peak boundary must use the peak rate")
+    assert_true(weekday_peak_component["price_card_id"] == "deepseek:deepseek-v4-pro:peak:official-snapshot", "DeepSeek weekday peak selected the wrong card")
+    assert_true(weekday_peak_component.get("metadata", {}).get("pricing_window") == "01:00-04:00", "DeepSeek peak-window metadata mismatch")
+
+    before_activation = ledger_at("2026-08-22T15:59:59Z")
+    assert_true(before_activation["total"] == "0", "DeepSeek cards must not apply before their exact effective instant")
+    assert_true(
+        any(warning.get("code") == "historical_price_missing" for warning in before_activation.get("warnings", [])),
+        "DeepSeek pre-effective usage must be reported as missing historical pricing",
+    )
 
 
 def check_openai_gpt56() -> None:
@@ -881,6 +987,7 @@ def main() -> int:
     card_count = check_fixture_shape()
     check_openai_gpt56()
     check_xai_aliases()
+    check_deepseek_weekly_schedule()
     check_anthropic_fable_mythos()
     check_google_service_tiers()
     check_google_live_translate()

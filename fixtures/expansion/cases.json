@@ -839,6 +839,49 @@
       ]
     },
     {
+      "id": "genai-prices-weekly-timezone-constraint",
+      "operation": "price_cards_from_genai_prices",
+      "input": {
+        "data": {
+          "providers": [{
+            "id": "genai-weekly-fixture",
+            "models": [{
+              "id": "weekly-model",
+              "prices": [
+                {"constraint": {}, "prices": {"input_mtok": "1"}},
+                {"constraint": {"startTime": "09:00", "endTime": "18:00", "timeZone": "Asia/Shanghai", "daysOfWeek": ["monday", "tuesday", "wednesday", "thursday", "friday"]}, "prices": {"input_mtok": "2"}}
+              ]
+            }]
+          }]
+        }
+      },
+      "expected": [
+        {"provider": "genai-weekly-fixture", "model": "weekly-model", "pricing_period": "default", "billing_schedule": {"timezone": "Asia/Shanghai", "default_period": "default", "windows": [{"period": "scheduled-1", "start": "09:00", "end": "18:00", "days_of_week": ["monday", "tuesday", "wednesday", "thursday", "friday"]}]}},
+        {"provider": "genai-weekly-fixture", "model": "weekly-model", "pricing_period": "scheduled-1", "billing_schedule": {"timezone": "Asia/Shanghai", "default_period": "default", "windows": [{"period": "scheduled-1", "start": "09:00", "end": "18:00", "days_of_week": ["monday", "tuesday", "wednesday", "thursday", "friday"]}]}}
+      ]
+    },
+    {
+      "id": "genai-prices-unrepresentable-constraint-omitted",
+      "operation": "price_cards_from_genai_prices",
+      "input": {
+        "data": {
+          "providers": [{
+            "id": "genai-constraint-fixture",
+            "models": [{
+              "id": "constraint-model",
+              "prices": [
+                {"constraint": {}, "prices": {"input_mtok": "1"}},
+                {"constraint": {"region": "us"}, "prices": {"input_mtok": "2"}}
+              ]
+            }]
+          }]
+        }
+      },
+      "expected": [
+        {"provider": "genai-constraint-fixture", "model": "constraint-model"}
+      ]
+    },
+    {
       "id": "price-resolution-unavailable-warning",
       "operation": "attach_price_resolution",
       "input": {

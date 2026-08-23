@@ -1,0 +1,110 @@
+{
+  "name": "deepseek-weekly-pricing-sunday-monday-boundary",
+  "description": "Keeps a Sunday-starting 23:00-01:00 window active when evaluating Monday 00:30 local time.",
+  "metadata": {
+    "requirement_ids": ["RC-FIXTURE-CONFORMANCE", "RC-PRICING-PERIOD"],
+    "provider": "deepseek",
+    "surface": "deepseek.chat_completions",
+    "scenario": "normalized_usage",
+    "tags": ["component:output_text_tokens", "pricing_period", "timezone", "days_of_week", "midnight_crossing", "normalized_usage"],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "usage_ledger": {
+      "schema_version": "0.1",
+      "provider": "deepseek",
+      "surface": "deepseek.chat_completions",
+      "model": {
+        "requested": "deepseek-v4-pro",
+        "billed": "deepseek-v4-pro",
+        "alias_resolution": "none"
+      },
+      "context": {"priced_at": "2026-08-23T16:30:00Z"},
+      "components": [{"name": "output_text_tokens", "quantity": "1000000", "unit": "token"}]
+    },
+    "price_cards": [
+      {
+        "schema_version": "0.1",
+        "id": "synthetic:deepseek-v4-pro:sunday-boundary:offpeak",
+        "provider": "deepseek",
+        "surface": "deepseek.chat_completions",
+        "model": "deepseek-v4-pro",
+        "pricing_period": "offpeak",
+        "billing_schedule": {
+          "timezone": "Asia/Shanghai",
+          "default_period": "offpeak",
+          "boundary_policy": "start_inclusive_end_exclusive",
+          "windows": [{
+            "period": "peak",
+            "start": "23:00",
+            "end": "01:00",
+            "days_of_week": ["sunday"]
+          }]
+        },
+        "components": [{
+          "usage_component": "output_text_tokens",
+          "unit": "token",
+          "price": {"amount": "1", "currency": "USD", "per": "1000000"}
+        }],
+        "source": {"name": "synthetic-deepseek-weekly-pricing"}
+      },
+      {
+        "schema_version": "0.1",
+        "id": "synthetic:deepseek-v4-pro:sunday-boundary:peak",
+        "provider": "deepseek",
+        "surface": "deepseek.chat_completions",
+        "model": "deepseek-v4-pro",
+        "pricing_period": "peak",
+        "billing_schedule": {
+          "timezone": "Asia/Shanghai",
+          "default_period": "offpeak",
+          "boundary_policy": "start_inclusive_end_exclusive",
+          "windows": [{
+            "period": "peak",
+            "start": "23:00",
+            "end": "01:00",
+            "days_of_week": ["sunday"]
+          }]
+        },
+        "components": [{
+          "usage_component": "output_text_tokens",
+          "unit": "token",
+          "price": {"amount": "2", "currency": "USD", "per": "1000000"}
+        }],
+        "source": {"name": "synthetic-deepseek-weekly-pricing"}
+      }
+    ]
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "deepseek",
+      "surface": "deepseek.chat_completions",
+      "model": {
+        "requested": "deepseek-v4-pro",
+        "billed": "deepseek-v4-pro",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [{
+        "name": "output_text_tokens",
+        "quantity": "1000000",
+        "unit": "token",
+        "unit_price": "0.000002",
+        "cost": "2",
+        "price_card_id": "synthetic:deepseek-v4-pro:sunday-boundary:peak",
+        "discount_eligible": true,
+        "metadata": {
+          "pricing_period": "peak",
+          "period_selection": "derived_from_priced_at",
+          "pricing_window": "23:00-01:00",
+          "pricing_timezone": "Asia/Shanghai"
+        }
+      }],
+      "total": "2",
+      "price_sources": [{"name": "synthetic-deepseek-weekly-pricing"}],
+      "applied_discounts": [],
+      "warnings": []
+    }
+  }
+}
