@@ -23,7 +23,12 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  NPM_CLI_VERSION: "12.0.2"
+  # npm 12 emits a single object for `npm pack --json`; the tagged v0.2.2
+  # performance check expects npm 11's array output. Keep the
+  # verification environment deterministic, then use npm 12 only for the
+  # final reproducible artifact pack and publish operations.
+  NPM_VERIFY_CLI_VERSION: "11.13.0"
+  NPM_PACKAGING_CLI_VERSION: "12.0.2"
 
 jobs:
   verify:
@@ -69,9 +74,9 @@ jobs:
         with:
           node-version: "24.15.0"
 
-      - name: Pin npm packaging toolchain
+      - name: Pin npm verification toolchain
         run: |
-          npm install --global "npm@${NPM_CLI_VERSION}"
+          npm install --global "npm@${NPM_VERIFY_CLI_VERSION}"
           npm --version
 
       - name: Install root and playground dependencies
@@ -100,6 +105,11 @@ jobs:
             "setuptools==84.0.0" \
             "wheel==0.47.0" \
             "twine==7.0.0"
+
+      - name: Pin npm artifact packaging toolchain
+        run: |
+          npm install --global "npm@${NPM_PACKAGING_CLI_VERSION}"
+          npm --version
 
       - name: Build Python and npm artifacts twice reproducibly
         run: |
@@ -238,7 +248,7 @@ jobs:
 
       - name: Pin npm publishing toolchain
         run: |
-          npm install --global "npm@${NPM_CLI_VERSION}"
+          npm install --global "npm@${NPM_PACKAGING_CLI_VERSION}"
           npm --version
 
       - name: Verify artifact checksums and versioned filenames
