@@ -60,7 +60,7 @@
     "packages/javascript/core"
   ],
   "devDependencies": {
-    "@ai-sdk/openai": "^4.0.44",
-    "ai": "^7.0.70"
+    "@ai-sdk/openai": "^4.0.51",
+    "ai": "^7.0.84"
   }
 }
