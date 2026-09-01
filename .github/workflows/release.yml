@@ -229,7 +229,7 @@ jobs:
       id-token: write
     steps:
       - name: Download the verified artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: runcost-release-artifacts-${{ inputs.version }}
           path: dist
