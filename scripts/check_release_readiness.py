@@ -175,7 +175,7 @@ def check_release_workflow() -> None:
         'runs-on: ubuntu-24.04',
         'python-version: "3.12.11"',
         'node-version: "24.15.0"',
-        "actions/download-artifact@v7",
+        "actions/download-artifact@v8",
         "sha256sum --check dist/SHA256SUMS",
         "Verify the release tag still matches the tested commit",
         "Check for existing registry artifacts",
@@ -216,7 +216,7 @@ def check_release_workflow() -> None:
         'npm publish "dist/npm/runcost-${{ inputs.version }}.tgz" --provenance --access public' in publish_section,
         "publish job must publish the verified npm tarball with provenance",
     )
-    assert_true("actions/download-artifact@v7" in publish_section, "publish job must download verified artifacts")
+    assert_true("actions/download-artifact@v8" in publish_section, "publish job must download verified artifacts")
     assert_true("python3 -m build" not in publish_section, "publish job must not rebuild Python artifacts")
     assert_true("npm pack" not in publish_section, "publish job must not rebuild the npm artifact")
     assert_true("actions/checkout" not in publish_section, "publish job must not depend on a second source checkout")
