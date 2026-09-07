@@ -151,6 +151,13 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
+      - name: Install package in a clean virtual environment
+        run: |
+          python3 -m venv "$RUNNER_TEMP/runcost-compat-venv"
+          "$RUNNER_TEMP/runcost-compat-venv/bin/python" -m pip install --disable-pip-version-check --no-cache-dir .
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/runcost-compat-venv/bin/python" -c "import runcost; print('Installed package import passed')"
+          "$RUNNER_TEMP/runcost-compat-venv/bin/runcost" --help
       - name: Check compatible core and CLIs
         run: |
           python3 scripts/check_product_expansion.py
