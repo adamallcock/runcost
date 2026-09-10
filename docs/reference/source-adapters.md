@@ -11,9 +11,10 @@ Source adapters convert external pricing catalogs into RunCost price cards. They
 
 RunCost packages contain adapters and resolution logic, but no provider price
 database. The auto resolver tries `genai-prices`, models.dev, and LiteLLM in
-order, with OpenRouter's models API first only for OpenRouter-billed usage. It
-selects one source per calculation and memoizes the adapted, compiled catalog
-after validating its persistent cache.
+order for most providers. Direct DeepSeek usage first tries a reviewed,
+provider-cited DeepSeek snapshot; OpenRouter-billed usage first tries
+OpenRouter's models API. It selects one source per calculation and memoizes the
+adapted, compiled catalog after validating its persistent cache.
 
 ## Supported Prototype Adapters
 
@@ -60,9 +61,12 @@ Supported refresh presets are `llm-prices-current`, `llm-prices-historical`,
 `openrouter-models`, `models-dev`, and `litellm`. Reviewed official snapshots
 are refreshed with `--source-type official-snapshot --input path/to/snapshot.json`.
 For example, the reviewed DeepSeek schedule snapshot is maintained at
-`fixtures/source-files/deepseek-official-pricing-snapshot.json`; applications
-that need pinned DeepSeek prices should copy/review that source into their own
-source cache rather than expecting a package-default catalog.
+`fixtures/source-files/deepseek-official-pricing-snapshot.json`. The direct
+DeepSeek auto policy retrieves that reviewed repository file as an external,
+checksummed cache source before generic catalogs; the package still does not
+embed it. Its cards retain the primary DeepSeek pricing-page citation. An
+explicit `sources` list replaces that default, and applications that need pinned
+prices should copy/review the snapshot into their own source cache.
 
 ## Adapter Contract
 

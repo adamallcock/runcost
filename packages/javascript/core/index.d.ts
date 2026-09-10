@@ -737,7 +737,7 @@ export function priceCardsFromSourceCache(data: Record<string, unknown>, options
 export const DEFAULT_EXTERNAL_PRICE_SOURCES: readonly ["genai-prices", "models.dev", "litellm"];
 export const OPENROUTER_EXTERNAL_PRICE_SOURCES: readonly ["openrouter", "genai-prices", "models.dev", "litellm"];
 export const DEFAULT_PRICE_CACHE_MAX_AGE_SECONDS: number;
-export const EXTERNAL_PRICE_SOURCE_URLS: Readonly<Record<"genai-prices" | "models.dev" | "litellm" | "openrouter", string>>;
+export const EXTERNAL_PRICE_SOURCE_URLS: Readonly<Record<"deepseek-official" | "genai-prices" | "models.dev" | "litellm" | "openrouter", string>>;
 export function compilePriceCatalog(priceCards: PriceCard[] | CompiledPriceCatalog): CompiledPriceCatalog;
 export function priceCardsFromJSONFile(path: string, options?: SourceAdapterOptions & { sourceType?: string; source_type?: string }): PriceCard[];
 export function priceCardsFromYAMLFile(path: string, options?: SourceAdapterOptions & { sourceType?: string; source_type?: string }): PriceCard[];

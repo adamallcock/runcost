@@ -204,9 +204,11 @@ Adapters return canonical `PriceCard` objects. Users can merge these with their 
 
 Explicit cards always win, including an explicitly empty list. Otherwise the
 general source order is `genai-prices`, models.dev, then LiteLLM. OpenRouter
-usage tries the OpenRouter models API first. Results include `price_resolution`
-metadata with the selected source, attempted sources, cache status, timestamps,
-and operational warnings. Sources are never silently merged.
+usage tries the OpenRouter models API first. Direct DeepSeek usage tries the
+reviewed, provider-cited DeepSeek snapshot before the general order. Results
+include `price_resolution` metadata with the selected source, attempted sources,
+cache status, timestamps, and operational warnings. Sources are never silently
+merged.
 
 ## CLI
 

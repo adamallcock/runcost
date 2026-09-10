@@ -74,8 +74,10 @@ const TOOL_OR_FEATURE_COMPONENTS = new Set([
 ]);
 export const DEFAULT_EXTERNAL_PRICE_SOURCES = Object.freeze(["genai-prices", "models.dev", "litellm"]);
 export const OPENROUTER_EXTERNAL_PRICE_SOURCES = Object.freeze(["openrouter", ...DEFAULT_EXTERNAL_PRICE_SOURCES]);
+const DEEPSEEK_EXTERNAL_PRICE_SOURCES = Object.freeze(["deepseek-official", ...DEFAULT_EXTERNAL_PRICE_SOURCES]);
 export const DEFAULT_PRICE_CACHE_MAX_AGE_SECONDS = 24 * 60 * 60;
 export const EXTERNAL_PRICE_SOURCE_URLS = Object.freeze({
+  "deepseek-official": "https://raw.githubusercontent.com/adamallcock/runcost/main/fixtures/source-files/deepseek-official-pricing-snapshot.json",
   "genai-prices": "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/data_slim.json",
   "models.dev": "https://models.dev/api.json",
   litellm: "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
@@ -6442,6 +6444,12 @@ async function fetchResolverSource(url, options) {
 }
 
 function adaptExternalPriceSource(source, payload, options) {
+  if (source === "deepseek-official") {
+    // Keep the snapshot's primary DeepSeek citation on each card. The resolver
+    // cache envelope separately records the fetched GitHub URL, retrieval
+    // time, and checksum.
+    return priceCardsFromOfficialSnapshot(payload);
+  }
   if (source === "genai-prices") return priceCardsFromGenAIPrices(payload, options);
   if (source === "models.dev") return priceCardsFromModelsDev(payload, options);
   if (source === "litellm") return priceCardsFromLiteLLM(payload, options);
@@ -6521,6 +6529,8 @@ function externalSourceOrder(provider, requestedSources) {
     ? [...requestedSources].map(String)
     : String(provider || "").toLowerCase() === "openrouter"
       ? [...OPENROUTER_EXTERNAL_PRICE_SOURCES]
+      : String(provider || "").toLowerCase() === "deepseek"
+        ? [...DEEPSEEK_EXTERNAL_PRICE_SOURCES]
       : [...DEFAULT_EXTERNAL_PRICE_SOURCES];
   const result = [];
   raw.forEach((source) => {

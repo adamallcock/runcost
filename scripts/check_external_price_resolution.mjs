@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  calculateCost,
   clearPriceCache,
   fromResponseAuto,
   priceCacheStatus,
@@ -24,8 +25,21 @@ const usageLedger = {
 };
 const response = { id: "chatcmpl_test", object: "chat.completion", model: "gpt-test", choices: [], usage: { prompt_tokens: 1000, completion_tokens: 500, total_tokens: 1500 } };
 const sourceUrls = {
+  "deepseek-official": "https://example.com/deepseek-official.json",
   "genai-prices": "https://example.com/genai.json",
   "models.dev": "https://example.com/models.json"
+};
+const deepseekSnapshot = JSON.parse(fs.readFileSync(new URL("../fixtures/source-files/deepseek-official-pricing-snapshot.json", import.meta.url), "utf8"));
+const deepseekUsage = {
+  schema_version: "0.1", provider: "deepseek", surface: "deepseek.chat_completions",
+  model: { requested: "deepseek-v4-flash", returned: "deepseek-v4-flash", billed: "deepseek-v4-flash", alias_resolution: "none" },
+  context: { priced_at: "2026-09-10T04:00:00Z" },
+  components: [
+    { name: "input_uncached_tokens", quantity: "1000000", unit: "token" },
+    { name: "input_cache_read_tokens", quantity: "1000000", unit: "token" },
+    { name: "output_text_tokens", quantity: "1000000", unit: "token" },
+    { name: "output_reasoning_tokens", quantity: "1000000", unit: "token" }
+  ]
 };
 const calls = [];
 let mode = "normal";
@@ -33,7 +47,11 @@ const fetcher = async (url, init) => {
   calls.push([url, init.headers]);
   if (mode === "fail") throw new Error("fixture failure");
   if (mode === "not-modified") return { status: 304, url, headers: { forEach(callback) { callback('"fixture-v2"', "etag"); } }, body: "" };
-  const payload = url.includes("genai") ? genaiUnknown : modelsDevTarget;
+  const payload = url.includes("deepseek")
+    ? deepseekSnapshot
+    : url.includes("genai")
+      ? genaiUnknown
+      : modelsDevTarget;
   return {
     status: 200,
     url,
@@ -76,6 +94,49 @@ try {
   const browserFirst = await resolveBrowserPriceCatalog(browserOptions);
   const browserSecond = await resolveBrowserPriceCatalog({ ...browserOptions, now: "2026-07-18T01:00:00Z" });
   if (browserFirst.selected_source !== "models.dev" || browserSecond.sources[0].status !== "cache_fresh" || browserCalls !== 1) throw new Error("browser in-memory cache contract failed");
+
+  const deepseekCacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "runcost-deepseek-resolver-"));
+  try {
+    const deepseekCalls = [];
+    const deepseekFetcher = async (url) => {
+      deepseekCalls.push(url);
+      return { status: 200, url, headers: { forEach() {} }, body: JSON.stringify(deepseekSnapshot) };
+    };
+    const deepseek = await resolvePriceCatalog({
+      usageLedger: deepseekUsage,
+      sourceUrls,
+      cacheDir: deepseekCacheDir,
+      fetcher: deepseekFetcher,
+      now: "2026-09-10T04:00:00Z"
+    });
+    if (deepseek.selected_source !== "deepseek-official" || deepseekCalls.length !== 1 || !deepseekCalls[0].includes("deepseek")) {
+      throw new Error("DeepSeek official-source order failed: " + JSON.stringify(deepseek));
+    }
+    if (new Set(deepseek.price_cards.map((card) => card.source.url)).size !== 1 || deepseek.price_cards[0].source.url !== "https://api-docs.deepseek.com/quick_start/pricing") {
+      throw new Error("DeepSeek card provenance did not retain the provider pricing page");
+    }
+    const deepseekLedger = calculateCost({ usageLedger: deepseekUsage, priceCards: deepseek.price_cards });
+    if (deepseekLedger.total !== "1.353" || deepseekLedger.model.billed !== "deepseek-flash") {
+      throw new Error("DeepSeek V4.1 Flash pricing failed: " + JSON.stringify(deepseekLedger));
+    }
+
+    let browserDeepseekCalls = 0;
+    const browserDeepseek = await resolveBrowserPriceCatalog({
+      usageLedger: deepseekUsage,
+      sourceUrls,
+      cacheDir: "memory://deepseek-v41-flash",
+      fetcher: async (url) => {
+        browserDeepseekCalls += 1;
+        return { status: 200, url, headers: { forEach() {} }, body: JSON.stringify(deepseekSnapshot) };
+      },
+      now: "2026-09-10T04:00:00Z"
+    });
+    if (browserDeepseek.selected_source !== "deepseek-official" || browserDeepseekCalls !== 1) {
+      throw new Error("browser DeepSeek official-source order failed: " + JSON.stringify(browserDeepseek));
+    }
+  } finally {
+    fs.rmSync(deepseekCacheDir, { recursive: true, force: true });
+  }
 } finally {
   fs.rmSync(cacheDir, { recursive: true, force: true });
 }

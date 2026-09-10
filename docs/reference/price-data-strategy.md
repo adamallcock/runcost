@@ -68,9 +68,17 @@ refresh fails, RunCost may use the last-known-good cards with a structured
 `price_source_refresh_failed` warning. Offline cache misses stay visible as
 `price_source_unavailable`.
 
-Targeted official snapshots in this repository prove pricing behavior such as
-service tiers, long-context boundaries, and cache-write components. They are
-test evidence, not production package data.
+Direct DeepSeek auto-resolution additionally fetches the reviewed
+`deepseek-official-pricing-snapshot.json` repository source before generic
+catalogs. It keeps the fetched file in the same checksummed external cache and
+preserves the primary DeepSeek pricing-page citation on adapted cards. This
+avoids embedding a provider catalog in the package while handling documented
+DeepSeek aliases, effective instants, and weekday peak periods. Explicit
+`sources` and explicit cards remain caller-controlled overrides.
+
+Other targeted official snapshots in this repository prove pricing behavior
+such as service tiers, long-context boundaries, and cache-write components.
+They are test evidence, not production package data.
 
 ## Trust Order
 
@@ -78,10 +86,11 @@ Recommended production order:
 
 1. User or contract price cards.
 2. Caller-owned reviewed source-cache snapshots.
-3. `genai-prices`.
-4. models.dev.
-5. LiteLLM pricing data.
-6. Provider-reported cost comparison when the provider exposes an authoritative
+3. The reviewed DeepSeek official snapshot for direct DeepSeek API usage.
+4. `genai-prices`.
+5. models.dev.
+6. LiteLLM pricing data.
+7. Provider-reported cost comparison when the provider exposes an authoritative
    cost field.
 
 OpenRouter-billed responses try the OpenRouter models API before the general

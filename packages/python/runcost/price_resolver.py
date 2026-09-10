@@ -29,6 +29,10 @@ DEFAULT_EXTERNAL_PRICE_SOURCES: Tuple[str, ...] = (
     "models.dev",
     "litellm",
 )
+DEEPSEEK_EXTERNAL_PRICE_SOURCES: Tuple[str, ...] = (
+    "deepseek-official",
+    *DEFAULT_EXTERNAL_PRICE_SOURCES,
+)
 OPENROUTER_EXTERNAL_PRICE_SOURCES: Tuple[str, ...] = (
     "openrouter",
     *DEFAULT_EXTERNAL_PRICE_SOURCES,
@@ -36,6 +40,7 @@ OPENROUTER_EXTERNAL_PRICE_SOURCES: Tuple[str, ...] = (
 DEFAULT_PRICE_CACHE_MAX_AGE_SECONDS = 24 * 60 * 60
 
 EXTERNAL_PRICE_SOURCE_URLS: Dict[str, str] = {
+    "deepseek-official": "https://raw.githubusercontent.com/adamallcock/runcost/main/fixtures/source-files/deepseek-official-pricing-snapshot.json",
     "genai-prices": "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/data_slim.json",
     "models.dev": "https://models.dev/api.json",
     "litellm": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
@@ -250,6 +255,13 @@ def _fetch(
 
 
 def _adapt_source(source: str, payload: Any, *, url: str, retrieved_at: str) -> List[Dict[str, Any]]:
+    if source == "deepseek-official":
+        from .core import price_cards_from_official_snapshot
+
+        # Keep the snapshot's primary DeepSeek citation on each card. The
+        # resolver cache envelope separately records the fetched GitHub URL,
+        # retrieval time, and checksum.
+        return price_cards_from_official_snapshot(payload)
     if source == "genai-prices":
         from .expansion import price_cards_from_genai_prices
 
@@ -410,6 +422,8 @@ def _source_order(provider: Optional[str], sources: Optional[Iterable[str]]) -> 
         order = [str(source) for source in sources]
     elif str(provider or "").lower() == "openrouter":
         order = list(OPENROUTER_EXTERNAL_PRICE_SOURCES)
+    elif str(provider or "").lower() == "deepseek":
+        order = list(DEEPSEEK_EXTERNAL_PRICE_SOURCES)
     else:
         order = list(DEFAULT_EXTERNAL_PRICE_SOURCES)
     result: List[str] = []

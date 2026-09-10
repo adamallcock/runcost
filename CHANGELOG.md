@@ -14,6 +14,20 @@ limitations.
 
 ## Unreleased
 
+## 0.2.3 (2026-09-10)
+
+- Add the reviewed official DeepSeek V4.1 Flash snapshot to direct-DeepSeek
+  auto-resolution ahead of generic catalogs, while preserving deterministic
+  APIs and explicit caller pricing as network-free paths.
+- Price the canonical `deepseek-flash` model from
+  `2026-09-10T04:00:00Z`, route the documented legacy Flash and Flash Vision
+  names to it, and preserve the historic cards through that exact cutoff.
+- Preserve V4 Pro's historic rates through `2026-09-14T04:00:00Z`, then apply
+  the provider-documented routing to V4.1 Flash pricing.
+- Cover the complete cache-hit, cache-miss, output/reasoning, peak/off-peak,
+  effective-time, alias, and cross-language resolver behavior in fixtures and
+  Python, JavaScript/browser, and Go regression checks.
+
 ## 0.2.2 (2026-08-23)
 
 - Add Vercel AI SDK `experimental_streamTranscribe` final-result handling for

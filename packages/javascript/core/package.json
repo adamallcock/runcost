@@ -1,6 +1,6 @@
 {
   "name": "runcost",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "type": "module",
   "description": "Local, auditable and itemized USD cost ledger for LLM provider responses, with price sources and warnings.",
   "license": "MIT",

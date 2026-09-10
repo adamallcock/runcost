@@ -182,6 +182,81 @@ func TestExternalPriceResolverOfflineMissAndExplicitCards(t *testing.T) {
 	}
 }
 
+func TestDeepSeekOfficialResolverPrecedesThirdPartySources(t *testing.T) {
+	snapshot := Object{
+		"provider": "deepseek",
+		"surface":  "deepseek.chat_completions",
+		"source": Object{
+			"name": "deepseek-official", "url": "https://api-docs.deepseek.com/quick_start/pricing",
+			"retrieved_at": "2026-09-10T15:43:02Z", "version": "2026-09-10", "license": "reviewed",
+		},
+		"billing_schedule": Object{
+			"timezone": "UTC", "default_period": "offpeak", "boundary_policy": "start_inclusive_end_exclusive",
+			"windows": []any{
+				Object{"period": "peak", "start": "01:00", "end": "04:00", "days_of_week": []any{"monday", "tuesday", "wednesday", "thursday", "friday"}},
+				Object{"period": "peak", "start": "06:00", "end": "10:00", "days_of_week": []any{"monday", "tuesday", "wednesday", "thursday", "friday"}},
+			},
+		},
+		"rows": []any{
+			Object{
+				"model": "deepseek-flash", "aliases": []any{"deepseek-v4-flash", "deepseek-v4-flash-vision-exp"},
+				"pricing_period": "offpeak", "price_card_id": "deepseek:deepseek-flash:offpeak:official-snapshot",
+				"effective": Object{"from": "2026-09-10T04:00:00Z"},
+				"input":     "0.15", "cached_input": "0.003", "output": "0.6", "reasoning": "0.6",
+			},
+			Object{
+				"model": "deepseek-flash", "aliases": []any{"deepseek-v4-flash", "deepseek-v4-flash-vision-exp"},
+				"pricing_period": "peak", "price_card_id": "deepseek:deepseek-flash:peak:official-snapshot",
+				"effective": Object{"from": "2026-09-10T04:00:00Z"},
+				"input":     "0.3", "cached_input": "0.006", "output": "1.2", "reasoning": "1.2",
+			},
+		},
+	}
+	calls := []string{}
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		calls = append(calls, request.URL.Path)
+		if err := json.NewEncoder(writer).Encode(snapshot); err != nil {
+			t.Errorf("encode DeepSeek snapshot: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	usage := Object{
+		"schema_version": "0.1", "provider": "deepseek", "surface": "deepseek.chat_completions",
+		"model":   Object{"requested": "deepseek-v4-flash", "returned": "deepseek-v4-flash", "billed": "deepseek-v4-flash", "alias_resolution": "none"},
+		"context": Object{"priced_at": "2026-09-10T04:00:00Z"},
+		"components": []any{
+			Object{"name": "input_uncached_tokens", "quantity": "1000000", "unit": "token"},
+			Object{"name": "input_cache_read_tokens", "quantity": "1000000", "unit": "token"},
+			Object{"name": "output_text_tokens", "quantity": "1000000", "unit": "token"},
+			Object{"name": "output_reasoning_tokens", "quantity": "1000000", "unit": "token"},
+		},
+	}
+	resolution, err := ResolvePriceCatalog(context.Background(), Object{
+		"usage_ledger": usage,
+		"source_urls":  Object{"deepseek-official": server.URL + "/deepseek-official"},
+		"cache_dir":    t.TempDir(),
+		"http_client":  server.Client(),
+		"now":          "2026-09-10T04:00:00Z",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if asString(resolution["selected_source"]) != "deepseek-official" || len(calls) != 1 || calls[0] != "/deepseek-official" {
+		t.Fatalf("DeepSeek official source order failed: calls=%#v resolution=%#v", calls, resolution)
+	}
+	cards := asSlice(resolution["price_cards"])
+	for _, rawCard := range cards {
+		if asString(asObject(asObject(rawCard)["source"])["url"]) != "https://api-docs.deepseek.com/quick_start/pricing" {
+			t.Fatalf("DeepSeek card provenance did not retain the provider pricing page: %#v", rawCard)
+		}
+	}
+	ledger := CalculateCost(usage, cards, nil)
+	if asString(ledger["total"]) != "1.353" || asString(asObject(ledger["model"])["billed"]) != "deepseek-flash" {
+		t.Fatalf("DeepSeek V4.1 Flash pricing failed: %#v", ledger)
+	}
+}
+
 func TestLiveExternalPriceSources(t *testing.T) {
 	if os.Getenv("RUNCOST_LIVE_PRICE_SOURCES") != "1" {
 		t.Skip("set RUNCOST_LIVE_PRICE_SOURCES=1 to verify current public datasets")

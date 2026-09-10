@@ -49,11 +49,13 @@ address, or verified provider time-window evidence.
 
 That boundary is now complemented, rather than replaced, by
 `fixtures/source-files/deepseek-official-pricing-snapshot.json`. It records the
-reviewed public DeepSeek pricing page as retrieved on 2026-08-23, including its
-weekday-only UTC peak windows and published rates. It remains explicit
-conformance/source-adapter data: RunCost deliberately does not ship a bundled
-default provider catalog, so callers must choose and provide a reviewed source
-cache or price cards for production calculations.
+reviewed public DeepSeek pricing page as retrieved on 2026-09-10, including
+historical V4 rates, the V4.1 Flash effective instant and legacy aliases, V4
+Pro's documented routing cutoff, weekday-only UTC peak windows, and published
+rates. It remains external source data rather than a bundled provider catalog:
+the direct-DeepSeek auto resolver fetches and checksums the reviewed repository
+snapshot before generic catalogs, while deterministic APIs and explicit
+caller-supplied sources remain network-free.
 
 The fixture schedules cover:
 

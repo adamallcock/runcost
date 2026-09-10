@@ -45,9 +45,12 @@ The Python distribution name is `runcost-ai`; the import package and CLI are
 
 ## 60-Second Quickstart
 
-The convenience APIs resolve current public pricing from `genai-prices`, then
-`models.dev`, then LiteLLM, and cache the selected source for 24 hours. Pass the
-response you already receive; RunCost never sends it to a pricing source.
+For most providers, the convenience APIs resolve current public pricing from
+`genai-prices`, then `models.dev`, then LiteLLM. Direct DeepSeek API usage
+tries the reviewed, provider-cited DeepSeek snapshot first so model aliases,
+effective instants, and weekday peak pricing do not fall through to stale
+general catalogs. The selected source is cached for 24 hours. Pass the response
+you already receive; RunCost never sends it to a pricing source.
 
 Python:
 
@@ -108,7 +111,11 @@ select exactly one upstream catalog per calculation, record attempted-source
 and cache metadata, and fall back to the next source only when the earlier one
 cannot price the requested model. OpenRouter-billed responses try OpenRouter's
 models API first; direct-provider responses do not silently use OpenRouter
-rates.
+rates. Direct DeepSeek usage tries the reviewed snapshot at
+`fixtures/source-files/deepseek-official-pricing-snapshot.json` first; it is
+fetched and cached as an external source rather than bundled in a package, and
+its cards retain the primary DeepSeek pricing-page citation. Passing an explicit
+`sources` list replaces this provider-specific default.
 
 Python: `resolve_price_catalog(...)`, `from_response_auto(...)`
 

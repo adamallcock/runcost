@@ -180,19 +180,47 @@ def check_deepseek_weekly_schedule() -> None:
         if card.get("provider") == "deepseek" and (card.get("source") or {}).get("name") == "deepseek-official"
     ]
     by_id = {card.get("id"): card for card in official_cards}
-    expected_rates = {
-        "deepseek-v4-flash": {
-            "offpeak": ("0.22", "0.007", "0.66"),
-            "peak": ("0.44", "0.014", "1.32"),
-        },
-        "deepseek-v4-pro": {
-            "offpeak": ("0.66", "0.022", "1.98"),
-            "peak": ("1.32", "0.044", "3.96"),
-        },
-        "deepseek-v4-flash-vision-exp": {
-            "offpeak": ("0.22", "0.007", "0.66"),
-            "peak": ("0.44", "0.014", "1.32"),
-        },
+    expected_cards = {
+        "deepseek:deepseek-v4-flash:offpeak:official-snapshot:through-2026-09-10": (
+            {"from": "2026-08-22T16:00:00Z", "to": "2026-09-10T04:00:00Z"},
+            ("0.22", "0.007", "0.66"),
+        ),
+        "deepseek:deepseek-v4-flash:peak:official-snapshot:through-2026-09-10": (
+            {"from": "2026-08-22T16:00:00Z", "to": "2026-09-10T04:00:00Z"},
+            ("0.44", "0.014", "1.32"),
+        ),
+        "deepseek:deepseek-v4-flash-vision-exp:offpeak:official-snapshot:through-2026-09-10": (
+            {"from": "2026-08-22T16:00:00Z", "to": "2026-09-10T04:00:00Z"},
+            ("0.22", "0.007", "0.66"),
+        ),
+        "deepseek:deepseek-v4-flash-vision-exp:peak:official-snapshot:through-2026-09-10": (
+            {"from": "2026-08-22T16:00:00Z", "to": "2026-09-10T04:00:00Z"},
+            ("0.44", "0.014", "1.32"),
+        ),
+        "deepseek:deepseek-v4-pro:offpeak:official-snapshot:through-2026-09-14": (
+            {"from": "2026-08-22T16:00:00Z", "to": "2026-09-14T04:00:00Z"},
+            ("0.66", "0.022", "1.98"),
+        ),
+        "deepseek:deepseek-v4-pro:peak:official-snapshot:through-2026-09-14": (
+            {"from": "2026-08-22T16:00:00Z", "to": "2026-09-14T04:00:00Z"},
+            ("1.32", "0.044", "3.96"),
+        ),
+        "deepseek:deepseek-flash:offpeak:official-snapshot": (
+            {"from": "2026-09-10T04:00:00Z"},
+            ("0.15", "0.003", "0.6"),
+        ),
+        "deepseek:deepseek-flash:peak:official-snapshot": (
+            {"from": "2026-09-10T04:00:00Z"},
+            ("0.3", "0.006", "1.2"),
+        ),
+        "deepseek:deepseek-v4-pro:offpeak:v41-flash-routing:official-snapshot": (
+            {"from": "2026-09-14T04:00:00Z"},
+            ("0.15", "0.003", "0.6"),
+        ),
+        "deepseek:deepseek-v4-pro:peak:v41-flash-routing:official-snapshot": (
+            {"from": "2026-09-14T04:00:00Z"},
+            ("0.3", "0.006", "1.2"),
+        ),
     }
     expected_schedule = {
         "timezone": "UTC",
@@ -213,40 +241,44 @@ def check_deepseek_weekly_schedule() -> None:
             },
         ],
     }
-    expected_ids = {
-        f"deepseek:{model}:{period}:official-snapshot"
-        for model in expected_rates
-        for period in ("offpeak", "peak")
-    }
+    expected_ids = set(expected_cards)
     assert_true(set(by_id) == expected_ids, f"DeepSeek official card ids mismatch: {sorted(set(by_id) ^ expected_ids)}")
 
-    for model, periods in expected_rates.items():
-        for period, (input_rate, cached_input_rate, output_rate) in periods.items():
-            card = by_id[f"deepseek:{model}:{period}:official-snapshot"]
-            assert_true(card.get("effective") == {"from": "2026-08-22T16:00:00Z"}, f"{model} {period} effective instant mismatch")
-            assert_true(card.get("billing_schedule") == expected_schedule, f"{model} {period} schedule mismatch")
-            components = {
-                component.get("usage_component"): component
-                for component in card.get("components", [])
-                if isinstance(component, dict)
-            }
-            assert_true(
-                tuple(Decimal(components[name]["price"]["amount"]) for name in (
-                    "input_uncached_tokens",
-                    "input_cache_read_tokens",
-                    "output_text_tokens",
-                    "output_reasoning_tokens",
-                )) == tuple(Decimal(value) for value in (input_rate, cached_input_rate, output_rate, output_rate)),
-                f"{model} {period} token-rate matrix mismatch",
-            )
+    for card_id, (effective, (input_rate, cached_input_rate, output_rate)) in expected_cards.items():
+        card = by_id[card_id]
+        assert_true(card.get("effective") == effective, f"{card_id} effective range mismatch")
+        assert_true(card.get("billing_schedule") == expected_schedule, f"{card_id} schedule mismatch")
+        components = {
+            component.get("usage_component"): component
+            for component in card.get("components", [])
+            if isinstance(component, dict)
+        }
+        assert_true(
+            tuple(Decimal(components[name]["price"]["amount"]) for name in (
+                "input_uncached_tokens",
+                "input_cache_read_tokens",
+                "output_text_tokens",
+                "output_reasoning_tokens",
+            )) == tuple(Decimal(value) for value in (input_rate, cached_input_rate, output_rate, output_rate)),
+            f"{card_id} token-rate matrix mismatch",
+        )
 
-    def ledger_at(priced_at: str) -> dict:
+    for card_id in (
+        "deepseek:deepseek-flash:offpeak:official-snapshot",
+        "deepseek:deepseek-flash:peak:official-snapshot",
+    ):
+        assert_true(
+            by_id[card_id].get("aliases") == ["deepseek-v4-flash", "deepseek-v4-flash-vision-exp"],
+            f"{card_id} must retain the documented legacy aliases",
+        )
+
+    def ledger_at(model: str, priced_at: str) -> dict:
         return calculate_cost(
             usage_ledger={
                 "schema_version": "0.1",
                 "provider": "deepseek",
                 "surface": "deepseek.chat_completions",
-                "model": {"requested": "deepseek-v4-pro", "billed": "deepseek-v4-pro"},
+                "model": {"requested": model, "billed": model},
                 "context": {"priced_at": priced_at},
                 "components": [{"name": "output_text_tokens", "quantity": "1000000", "unit": "token"}],
             },
@@ -254,23 +286,43 @@ def check_deepseek_weekly_schedule() -> None:
             price_source_priority=DEFAULT_PRICE_SOURCE_PRIORITY,
         )
 
-    activation = ledger_at("2026-08-22T16:00:00Z")
+    historical_flash = ledger_at("deepseek-v4-flash", "2026-09-10T03:59:59Z")
+    assert_true(historical_flash["total"] == "1.32", "DeepSeek legacy Flash must retain its final peak rate before the V4.1 cutoff")
+    assert_true(
+        historical_flash["components"][0]["price_card_id"] == "deepseek:deepseek-v4-flash:peak:official-snapshot:through-2026-09-10",
+        "DeepSeek legacy Flash selected the wrong historical card",
+    )
+
+    activation = ledger_at("deepseek-flash", "2026-09-10T04:00:00Z")
     activation_component = activation["components"][0]
-    assert_true(activation["total"] == "1.98", "DeepSeek exact effective start must select the weekend off-peak rate")
-    assert_true(activation_component["price_card_id"] == "deepseek:deepseek-v4-pro:offpeak:official-snapshot", "DeepSeek exact effective start selected the wrong card")
+    assert_true(activation["total"] == "0.6", "DeepSeek exact V4.1 Flash start must select the off-peak Flash rate")
+    assert_true(activation_component["price_card_id"] == "deepseek:deepseek-flash:offpeak:official-snapshot", "DeepSeek exact V4.1 Flash start selected the wrong card")
 
-    weekend = ledger_at("2026-08-23T06:00:00Z")
-    weekend_component = weekend["components"][0]
-    assert_true(weekend["total"] == "1.98", "DeepSeek Sunday must be priced off-peak")
-    assert_true(weekend_component.get("metadata", {}).get("pricing_window") == "default", "DeepSeek Sunday must use the schedule default period")
+    legacy_flash = ledger_at("deepseek-v4-flash", "2026-09-10T04:00:00Z")
+    assert_true(legacy_flash["total"] == "0.6", "DeepSeek legacy Flash must route to the V4.1 Flash rate at the cutoff")
+    assert_true(legacy_flash["model"]["billed"] == "deepseek-flash", "DeepSeek legacy Flash must resolve to the canonical V4.1 model")
 
-    weekday_peak = ledger_at("2026-08-24T01:00:00Z")
+    legacy_vision = ledger_at("deepseek-v4-flash-vision-exp", "2026-09-10T04:00:00Z")
+    assert_true(legacy_vision["total"] == "0.6", "DeepSeek legacy Flash Vision must route to the V4.1 Flash rate at the cutoff")
+    assert_true(legacy_vision["model"]["billed"] == "deepseek-flash", "DeepSeek legacy Flash Vision must resolve to the canonical V4.1 model")
+
+    weekday_peak = ledger_at("deepseek-flash", "2026-09-11T06:00:00Z")
     weekday_peak_component = weekday_peak["components"][0]
-    assert_true(weekday_peak["total"] == "3.96", "DeepSeek weekday first peak boundary must use the peak rate")
-    assert_true(weekday_peak_component["price_card_id"] == "deepseek:deepseek-v4-pro:peak:official-snapshot", "DeepSeek weekday peak selected the wrong card")
-    assert_true(weekday_peak_component.get("metadata", {}).get("pricing_window") == "01:00-04:00", "DeepSeek peak-window metadata mismatch")
+    assert_true(weekday_peak["total"] == "1.2", "DeepSeek V4.1 Flash weekday peak must use the peak rate")
+    assert_true(weekday_peak_component["price_card_id"] == "deepseek:deepseek-flash:peak:official-snapshot", "DeepSeek V4.1 Flash weekday peak selected the wrong card")
+    assert_true(weekday_peak_component.get("metadata", {}).get("pricing_window") == "06:00-10:00", "DeepSeek V4.1 Flash peak-window metadata mismatch")
 
-    before_activation = ledger_at("2026-08-22T15:59:59Z")
+    v4_pro_before_routing = ledger_at("deepseek-v4-pro", "2026-09-13T06:00:00Z")
+    assert_true(v4_pro_before_routing["total"] == "1.98", "DeepSeek V4 Pro must retain its historic weekend off-peak rate before routing")
+
+    v4_pro_routing = ledger_at("deepseek-v4-pro", "2026-09-14T04:00:00Z")
+    assert_true(v4_pro_routing["total"] == "0.6", "DeepSeek V4 Pro must use the V4.1 Flash rate at the routing cutoff")
+    assert_true(
+        v4_pro_routing["components"][0]["price_card_id"] == "deepseek:deepseek-v4-pro:offpeak:v41-flash-routing:official-snapshot",
+        "DeepSeek V4 Pro routing selected the wrong card",
+    )
+
+    before_activation = ledger_at("deepseek-v4-flash", "2026-08-22T15:59:59Z")
     assert_true(before_activation["total"] == "0", "DeepSeek cards must not apply before their exact effective instant")
     assert_true(
         any(warning.get("code") == "historical_price_missing" for warning in before_activation.get("warnings", [])),

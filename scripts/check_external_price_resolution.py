@@ -14,6 +14,7 @@ if str(PYTHON_PACKAGE) not in sys.path:
     sys.path.insert(0, str(PYTHON_PACKAGE))
 
 from runcost import (  # noqa: E402
+    calculate_cost,
     clear_price_cache,
     from_response_auto,
     price_cache_status,
@@ -41,6 +42,9 @@ OPENROUTER_TARGET = {
         {"id": "openai/gpt-test", "pricing": {"prompt": "0.000001", "completion": "0.000002"}}
     ]
 }
+DEEPSEEK_SNAPSHOT = json.loads(
+    (ROOT / "fixtures" / "source-files" / "deepseek-official-pricing-snapshot.json").read_text(encoding="utf-8")
+)
 RESPONSE = {
     "id": "chatcmpl_test",
     "object": "chat.completion",
@@ -58,7 +62,21 @@ USAGE = {
         {"name": "output_text_tokens", "quantity": "500", "unit": "token"},
     ],
 }
+DEEPSEEK_USAGE = {
+    "schema_version": "0.1",
+    "provider": "deepseek",
+    "surface": "deepseek.chat_completions",
+    "model": {"requested": "deepseek-v4-flash", "returned": "deepseek-v4-flash", "billed": "deepseek-v4-flash", "alias_resolution": "none"},
+    "context": {"priced_at": "2026-09-10T04:00:00Z"},
+    "components": [
+        {"name": "input_uncached_tokens", "quantity": "1000000", "unit": "token"},
+        {"name": "input_cache_read_tokens", "quantity": "1000000", "unit": "token"},
+        {"name": "output_text_tokens", "quantity": "1000000", "unit": "token"},
+        {"name": "output_reasoning_tokens", "quantity": "1000000", "unit": "token"},
+    ],
+}
 SOURCE_URLS = {
+    "deepseek-official": "https://example.com/deepseek-official.json",
     "genai-prices": "https://example.com/genai-prices.json",
     "models.dev": "https://example.com/models-dev.json",
     "openrouter": "https://example.com/openrouter.json",
@@ -76,7 +94,15 @@ class FixtureFetcher:
             raise OSError("fixture refresh failure")
         if self.mode == "not-modified":
             return {"status": 304, "headers": {"etag": '"fixture-v2"'}, "body": b"", "url": url}
-        payload = GENAI_UNKNOWN if "genai" in url else MODELS_DEV_TARGET if "models-dev" in url else OPENROUTER_TARGET
+        payload = (
+            DEEPSEEK_SNAPSHOT
+            if "deepseek" in url
+            else GENAI_UNKNOWN
+            if "genai" in url
+            else MODELS_DEV_TARGET
+            if "models-dev" in url
+            else OPENROUTER_TARGET
+        )
         return {
             "status": 200,
             "headers": {"etag": '"fixture-v1"', "last-modified": "Fri, 18 Jul 2026 00:00:00 GMT"},
@@ -215,6 +241,28 @@ def check_python() -> None:
         )
         assert_true(routed["selected_source"] == "openrouter", "OpenRouter-billed usage must prefer OpenRouter's own price API")
         assert_true(len(openrouter_fetcher.calls) == 1 and "openrouter" in openrouter_fetcher.calls[0][0], "OpenRouter route must not proxy direct-provider pricing")
+
+    with tempfile.TemporaryDirectory(prefix="runcost-deepseek-") as cache:
+        deepseek_fetcher = FixtureFetcher()
+        deepseek = resolve_price_catalog(
+            usage_ledger=DEEPSEEK_USAGE,
+            source_urls=SOURCE_URLS,
+            cache_dir=cache,
+            fetcher=deepseek_fetcher,
+            now="2026-09-10T04:00:00Z",
+        )
+        assert_true(deepseek["selected_source"] == "deepseek-official", "DeepSeek auto-resolution must prefer the reviewed official snapshot")
+        assert_true(
+            len(deepseek_fetcher.calls) == 1 and "deepseek" in deepseek_fetcher.calls[0][0],
+            "DeepSeek auto-resolution must not fall through to third-party catalogs when the official snapshot is applicable",
+        )
+        assert_true(
+            {card["source"]["url"] for card in deepseek["price_cards"]} == {"https://api-docs.deepseek.com/quick_start/pricing"},
+            "DeepSeek cards must preserve their primary provider citation",
+        )
+        ledger = calculate_cost(usage_ledger=DEEPSEEK_USAGE, price_cards=deepseek["price_cards"])
+        assert_true(ledger["total"] == "1.353", f"DeepSeek V4.1 Flash total mismatch: {ledger['total']}")
+        assert_true(ledger["model"]["billed"] == "deepseek-flash", "DeepSeek legacy Flash must resolve to the canonical V4.1 model")
 
     for relative in (
         "packages/python/runcost/data/default-source-cache.json",
