@@ -5,8 +5,8 @@
   "source": {
     "name": "deepseek-official",
     "url": "https://api-docs.deepseek.com/quick_start/pricing",
-    "retrieved_at": "2026-08-23T06:34:12Z",
-    "version": "2026-08-23",
+    "retrieved_at": "2026-09-10T15:43:02Z",
+    "version": "2026-09-10",
     "license": "reviewed"
   },
   "billing_schedule": {
@@ -32,8 +32,8 @@
     {
       "model": "deepseek-v4-flash",
       "pricing_period": "offpeak",
-      "price_card_id": "deepseek:deepseek-v4-flash:offpeak:official-snapshot",
-      "effective": {"from": "2026-08-22T16:00:00Z"},
+      "price_card_id": "deepseek:deepseek-v4-flash:offpeak:official-snapshot:through-2026-09-10",
+      "effective": {"from": "2026-08-22T16:00:00Z", "to": "2026-09-10T04:00:00Z"},
       "input": "0.22",
       "cached_input": "0.007",
       "output": "0.66",
@@ -44,13 +44,13 @@
         "reasoning_priced_as_output": true,
         "weekday_peak_only": true
       },
-      "notes": "The public pricing page lists off-peak and peak token prices and defines peak windows as 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday. The reviewed transition instant is 2026-08-23 00:00 Asia/Shanghai."
+      "notes": "Historical V4 Flash rate retained through the V4.1 Flash effective instant. The current DeepSeek pricing page says the legacy name is accepted but routed to deepseek-flash and billed at the Flash price."
     },
     {
       "model": "deepseek-v4-flash",
       "pricing_period": "peak",
-      "price_card_id": "deepseek:deepseek-v4-flash:peak:official-snapshot",
-      "effective": {"from": "2026-08-22T16:00:00Z"},
+      "price_card_id": "deepseek:deepseek-v4-flash:peak:official-snapshot:through-2026-09-10",
+      "effective": {"from": "2026-08-22T16:00:00Z", "to": "2026-09-10T04:00:00Z"},
       "input": "0.44",
       "cached_input": "0.014",
       "output": "1.32",
@@ -61,13 +61,13 @@
         "reasoning_priced_as_output": true,
         "weekday_peak_only": true
       },
-      "notes": "The public pricing page lists off-peak and peak token prices and defines peak windows as 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday. The reviewed transition instant is 2026-08-23 00:00 Asia/Shanghai."
+      "notes": "Historical V4 Flash rate retained through the V4.1 Flash effective instant. The current DeepSeek pricing page says the legacy name is accepted but routed to deepseek-flash and billed at the Flash price."
     },
     {
       "model": "deepseek-v4-pro",
       "pricing_period": "offpeak",
-      "price_card_id": "deepseek:deepseek-v4-pro:offpeak:official-snapshot",
-      "effective": {"from": "2026-08-22T16:00:00Z"},
+      "price_card_id": "deepseek:deepseek-v4-pro:offpeak:official-snapshot:through-2026-09-14",
+      "effective": {"from": "2026-08-22T16:00:00Z", "to": "2026-09-14T04:00:00Z"},
       "input": "0.66",
       "cached_input": "0.022",
       "output": "1.98",
@@ -78,13 +78,13 @@
         "reasoning_priced_as_output": true,
         "weekday_peak_only": true
       },
-      "notes": "The public pricing page lists off-peak and peak token prices and defines peak windows as 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday. The reviewed transition instant is 2026-08-23 00:00 Asia/Shanghai."
+      "notes": "V4 Pro rate retained until 2026-09-14T04:00:00Z, when DeepSeek says requests will route to V4.1 Flash and be billed at the Flash price."
     },
     {
       "model": "deepseek-v4-pro",
       "pricing_period": "peak",
-      "price_card_id": "deepseek:deepseek-v4-pro:peak:official-snapshot",
-      "effective": {"from": "2026-08-22T16:00:00Z"},
+      "price_card_id": "deepseek:deepseek-v4-pro:peak:official-snapshot:through-2026-09-14",
+      "effective": {"from": "2026-08-22T16:00:00Z", "to": "2026-09-14T04:00:00Z"},
       "input": "1.32",
       "cached_input": "0.044",
       "output": "3.96",
@@ -95,13 +95,13 @@
         "reasoning_priced_as_output": true,
         "weekday_peak_only": true
       },
-      "notes": "The public pricing page lists off-peak and peak token prices and defines peak windows as 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday. The reviewed transition instant is 2026-08-23 00:00 Asia/Shanghai."
+      "notes": "V4 Pro rate retained until 2026-09-14T04:00:00Z, when DeepSeek says requests will route to V4.1 Flash and be billed at the Flash price."
     },
     {
       "model": "deepseek-v4-flash-vision-exp",
       "pricing_period": "offpeak",
-      "price_card_id": "deepseek:deepseek-v4-flash-vision-exp:offpeak:official-snapshot",
-      "effective": {"from": "2026-08-22T16:00:00Z"},
+      "price_card_id": "deepseek:deepseek-v4-flash-vision-exp:offpeak:official-snapshot:through-2026-09-10",
+      "effective": {"from": "2026-08-22T16:00:00Z", "to": "2026-09-10T04:00:00Z"},
       "input": "0.22",
       "cached_input": "0.007",
       "output": "0.66",
@@ -113,13 +113,13 @@
         "weekday_peak_only": true,
         "vision_input_priced_as_text_input": true
       },
-      "notes": "DeepSeek states that images sent to this model are converted to tokens and billed as input tokens. The public pricing page lists off-peak and peak token prices and defines peak windows as 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday."
+      "notes": "Historical V4 Flash Vision Experimental rate retained through the V4.1 Flash effective instant. The current DeepSeek pricing page says this legacy name is accepted but routed to deepseek-flash and billed at the Flash price."
     },
     {
       "model": "deepseek-v4-flash-vision-exp",
       "pricing_period": "peak",
-      "price_card_id": "deepseek:deepseek-v4-flash-vision-exp:peak:official-snapshot",
-      "effective": {"from": "2026-08-22T16:00:00Z"},
+      "price_card_id": "deepseek:deepseek-v4-flash-vision-exp:peak:official-snapshot:through-2026-09-10",
+      "effective": {"from": "2026-08-22T16:00:00Z", "to": "2026-09-10T04:00:00Z"},
       "input": "0.44",
       "cached_input": "0.014",
       "output": "1.32",
@@ -131,7 +131,81 @@
         "weekday_peak_only": true,
         "vision_input_priced_as_text_input": true
       },
-      "notes": "DeepSeek states that images sent to this model are converted to tokens and billed as input tokens. The public pricing page lists off-peak and peak token prices and defines peak windows as 01:00-04:00 and 06:00-10:00 UTC, Monday through Friday."
+      "notes": "Historical V4 Flash Vision Experimental rate retained through the V4.1 Flash effective instant. The current DeepSeek pricing page says this legacy name is accepted but routed to deepseek-flash and billed at the Flash price."
+    },
+    {
+      "model": "deepseek-flash",
+      "aliases": ["deepseek-v4-flash", "deepseek-v4-flash-vision-exp"],
+      "pricing_period": "offpeak",
+      "price_card_id": "deepseek:deepseek-flash:offpeak:official-snapshot",
+      "effective": {"from": "2026-09-10T04:00:00Z"},
+      "input": "0.15",
+      "cached_input": "0.003",
+      "output": "0.6",
+      "reasoning": "0.6",
+      "source_label": "DeepSeek-V4.1-Flash release and Models & Pricing",
+      "capabilities": {
+        "pricing_dimensions": ["token", "cached_input", "pricing_period"],
+        "reasoning_priced_as_output": true,
+        "weekday_peak_only": true,
+        "vision_input_priced_as_text_input": true
+      },
+      "notes": "DeepSeek-V4.1-Flash is called with deepseek-flash. The provider's 2026-09-10 release announcement made these rates effective at 04:00 UTC; the pricing page says the legacy Flash and Flash Vision Experimental names route here and are billed at Flash price."
+    },
+    {
+      "model": "deepseek-flash",
+      "aliases": ["deepseek-v4-flash", "deepseek-v4-flash-vision-exp"],
+      "pricing_period": "peak",
+      "price_card_id": "deepseek:deepseek-flash:peak:official-snapshot",
+      "effective": {"from": "2026-09-10T04:00:00Z"},
+      "input": "0.3",
+      "cached_input": "0.006",
+      "output": "1.2",
+      "reasoning": "1.2",
+      "source_label": "DeepSeek-V4.1-Flash release and Models & Pricing",
+      "capabilities": {
+        "pricing_dimensions": ["token", "cached_input", "pricing_period"],
+        "reasoning_priced_as_output": true,
+        "weekday_peak_only": true,
+        "vision_input_priced_as_text_input": true
+      },
+      "notes": "DeepSeek-V4.1-Flash is called with deepseek-flash. The provider's 2026-09-10 release announcement made these rates effective at 04:00 UTC; the pricing page says the legacy Flash and Flash Vision Experimental names route here and are billed at Flash price."
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "pricing_period": "offpeak",
+      "price_card_id": "deepseek:deepseek-v4-pro:offpeak:v41-flash-routing:official-snapshot",
+      "effective": {"from": "2026-09-14T04:00:00Z"},
+      "input": "0.15",
+      "cached_input": "0.003",
+      "output": "0.6",
+      "reasoning": "0.6",
+      "source_label": "DeepSeek Models & Pricing",
+      "capabilities": {
+        "pricing_dimensions": ["token", "cached_input", "pricing_period"],
+        "reasoning_priced_as_output": true,
+        "weekday_peak_only": true,
+        "routed_to": "deepseek-flash"
+      },
+      "notes": "From 2026-09-14T04:00:00Z, DeepSeek says deepseek-v4-pro requests route to V4.1 Flash and are billed at the V4.1 Flash price."
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "pricing_period": "peak",
+      "price_card_id": "deepseek:deepseek-v4-pro:peak:v41-flash-routing:official-snapshot",
+      "effective": {"from": "2026-09-14T04:00:00Z"},
+      "input": "0.3",
+      "cached_input": "0.006",
+      "output": "1.2",
+      "reasoning": "1.2",
+      "source_label": "DeepSeek Models & Pricing",
+      "capabilities": {
+        "pricing_dimensions": ["token", "cached_input", "pricing_period"],
+        "reasoning_priced_as_output": true,
+        "weekday_peak_only": true,
+        "routed_to": "deepseek-flash"
+      },
+      "notes": "From 2026-09-14T04:00:00Z, DeepSeek says deepseek-v4-pro requests route to V4.1 Flash and are billed at the V4.1 Flash price."
     }
   ]
 }

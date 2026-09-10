@@ -47,10 +47,12 @@ console.log(ledger.warnings);
 ```
 
 The auto helper selects one current external source (`genai-prices`,
-`models.dev`, then LiteLLM), records its provenance, and caches it for 24 hours.
-It never sends your response or usage data to those sources. Published RunCost
-packages contain no provider pricing database. For a zero-code demo or
-browser/edge proof, open the
+`models.dev`, then LiteLLM for most providers). Direct DeepSeek usage tries a
+reviewed, provider-cited DeepSeek snapshot first so aliases and weekday peak
+pricing do not fall through to stale general catalogs. It records provenance and
+caches the selected source for 24 hours. It never sends your response or usage
+data to those sources. Published RunCost packages contain no provider pricing
+database. For a zero-code demo or browser/edge proof, open the
 [RunCost playground](https://adamallcock.github.io/runcost/playground/).
 
 Quote JSON or JSONL from the command line:

@@ -27,11 +27,13 @@ const DefaultPriceCacheMaxAgeSeconds = 24 * 60 * 60
 
 var DefaultExternalPriceSources = []string{"genai-prices", "models.dev", "litellm"}
 var OpenRouterExternalPriceSources = []string{"openrouter", "genai-prices", "models.dev", "litellm"}
+var deepSeekExternalPriceSources = []string{"deepseek-official", "genai-prices", "models.dev", "litellm"}
 var ExternalPriceSourceURLs = map[string]string{
-	"genai-prices": "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/data_slim.json",
-	"models.dev":   "https://models.dev/api.json",
-	"litellm":      "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
-	"openrouter":   "https://openrouter.ai/api/v1/models",
+	"deepseek-official": "https://raw.githubusercontent.com/adamallcock/runcost/main/fixtures/source-files/deepseek-official-pricing-snapshot.json",
+	"genai-prices":      "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/data_slim.json",
+	"models.dev":        "https://models.dev/api.json",
+	"litellm":           "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
+	"openrouter":        "https://openrouter.ai/api/v1/models",
 }
 
 var incompletePriceWarningCodes = map[string]bool{
@@ -306,6 +308,11 @@ func fetchResolverSource(ctx context.Context, sourceURL string, headers Object, 
 func adaptExternalPriceSource(source string, payload any, sourceURL, retrievedAt string) []any {
 	var cards []any
 	switch source {
+	case "deepseek-official":
+		// Keep the snapshot's primary DeepSeek citation on each card. The
+		// resolver cache envelope separately records the fetched GitHub URL,
+		// retrieval time, and checksum.
+		return PriceCardsFromOfficialSnapshot(asObject(payload))
 	case "genai-prices":
 		cards = PriceCardsFromGenAIPrices(payload, Object{"retrieved_at": retrievedAt})
 	case "models.dev":
@@ -453,6 +460,8 @@ func resolverSourceOrder(provider string, requested any) ([]string, error) {
 		sources = resolverStringSlice(requested)
 	} else if strings.EqualFold(provider, "openrouter") {
 		sources = append([]string{}, OpenRouterExternalPriceSources...)
+	} else if strings.EqualFold(provider, "deepseek") {
+		sources = append([]string{}, deepSeekExternalPriceSources...)
 	} else {
 		sources = append([]string{}, DefaultExternalPriceSources...)
 	}
