@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { once } from "node:events";
+import { randomUUID } from "node:crypto";
+import { createInterface } from "node:readline";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -38,7 +41,7 @@ function parseArgs(argv) {
       const value = tokens[++index];
       if (token === "--price-source") options.price_source = [...(options.price_source || []), value];
       else options[key] = value;
-    } else if (["--jsonl", "--offline", "--refresh", "--no-resolve"].includes(token)) {
+    } else if (["--output-jsonl", "--jsonl", "--offline", "--refresh", "--no-resolve"].includes(token)) {
       options[token.slice(2).replaceAll("-", "_")] = true;
     } else if (token.startsWith("--")) {
       throw new Error(`unknown option: ${token}`);
@@ -111,9 +114,59 @@ async function quoteOne(value, options) {
     : fromResponseAuto(response, { ...quoteOptions, ...resolverOptions(options) });
 }
 
+async function streamQuotes(input, options) {
+  const source = input === "-" ? process.stdin : fs.createReadStream(input, { encoding: "utf8" });
+  const lines = createInterface({ input: source, crlfDelay: Infinity });
+  const temporary = options.output ? path.join(path.dirname(options.output), `.runcost-${randomUUID()}`) : null;
+  const destination = temporary ? fs.createWriteStream(temporary, { flags: "wx" }) : process.stdout;
+  let writeError;
+  const rememberError = (error) => { writeError = error; };
+  destination.on("error", rememberError);
+  async function write(chunk) {
+    if (writeError) throw writeError;
+    if (!destination.write(chunk)) await once(destination, "drain");
+  }
+  let completed = false;
+  try {
+    if (!options.output_jsonl) await write("[");
+    let count = 0;
+    let lineNumber = 0;
+    for await (const line of lines) {
+      lineNumber += 1;
+      if (!line.trim()) continue;
+      let value;
+      try { value = JSON.parse(line); }
+      catch (error) { throw new Error(`invalid JSONL at line ${lineNumber}: ${error.message}`); }
+      const encoded = canonicalJSONString(await quoteOne(value, options));
+      await write(options.output_jsonl ? encoded : `${count ? "," : ""}${encoded.trimEnd()}`);
+      count += 1;
+    }
+    if (!count) throw new Error("quote input contains no JSON objects");
+    if (!options.output_jsonl) await write("]\n");
+    if (temporary) {
+      destination.end();
+      await once(destination, "finish");
+      fs.renameSync(temporary, options.output);
+    }
+    if (writeError) throw writeError;
+    completed = true;
+  } finally {
+    lines.close();
+    if (source !== process.stdin) source.destroy();
+    if (temporary && !completed) {
+      destination.destroy();
+      if (!destination.closed) await once(destination, "close").catch(() => {});
+      if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
+    }
+    destination.off("error", rememberError);
+  }
+}
+
 async function commandQuote(options) {
   if (options.positional.length > 1) throw new Error("quote accepts at most one input path");
   const input = options.positional[0] || "-";
+  if (options.output_jsonl && (!options.jsonl || options.batch_provider)) throw new Error("--output-jsonl requires --jsonl independent quotes");
+  if (options.jsonl && !options.batch_provider) return streamQuotes(input, options);
   const { values, multi } = readInput(input, options.jsonl);
   let result;
   if (options.batch_provider) {
@@ -128,7 +181,8 @@ async function commandQuote(options) {
     };
     result = options.no_resolve ? fromBatchResults(items, batchOptions) : await fromBatchResultsAuto(items, batchOptions);
   } else {
-    const results = await Promise.all(values.map((value) => quoteOne(value, options)));
+    const results = [];
+    for (const value of values) results.push(await quoteOne(value, options));
     result = multi ? results : results[0];
   }
   writeResult(result, options.output);

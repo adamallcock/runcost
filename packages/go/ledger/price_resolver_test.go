@@ -224,7 +224,7 @@ func TestDeepSeekOfficialResolverPrecedesThirdPartySources(t *testing.T) {
 	usage := Object{
 		"schema_version": "0.1", "provider": "deepseek", "surface": "deepseek.chat_completions",
 		"model":   Object{"requested": "deepseek-v4-flash", "returned": "deepseek-v4-flash", "billed": "deepseek-v4-flash", "alias_resolution": "none"},
-		"context": Object{"priced_at": "2026-09-10T04:00:00Z"},
+		"context": Object{"priced_at": "2026-09-10T04:00:00Z", "pricing_period": "offpeak"},
 		"components": []any{
 			Object{"name": "input_uncached_tokens", "quantity": "1000000", "unit": "token"},
 			Object{"name": "input_cache_read_tokens", "quantity": "1000000", "unit": "token"},

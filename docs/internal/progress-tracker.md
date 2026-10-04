@@ -7,7 +7,7 @@ status: draft
 
 # RunCost Progress Tracker
 
-Last updated: 2026-07-18
+Last updated: 2026-10-04
 
 Purpose: keep the implementation state explicit across context compaction and long-running work. This file is the handoff ledger for what is done, what is in progress, what is blocked, and what evidence proves it.
 
@@ -26,16 +26,28 @@ The tracker separates roadmap state from active work state:
 
 ## Active Focus
 
-Current active lane: post-beta distribution evidence and V1 stabilization.
+Current active lane: trust hardening, first success, and ongoing integration
+and case cycles.
 
-Why this lane is active: Milestone 8, the `0.2.0` release train, and the
-machine-readable public-beta gate are complete. The next decision is whether
-real external integrations, fixture contributions, and reconciliation cases
-justify continued V1 investment.
+Why this lane is active: real external integrations, fixture contributions,
+and reconciliation cases should reveal the highest-value friction and missing
+billing dimensions. That evidence prioritizes V1 work; it does not determine
+whether RunCost continues.
 
 Doc rename coordination: another agent may rename Markdown files to match repository naming rules. Until that lands, avoid broad documentation churn and re-inspect paths before changing cross-document links.
 
-## Current Verified Baseline
+## October 4 Local Qualification
+
+The [package improvement implementation report](reports/2026-10-04-package-improvements-implementation.md)
+records completed R1–R11 corrections and follow-ups, 249 conformance cases,
+clean installed type/runtime consumers on Node 20, race checks, repeatable
+artifacts, and rendered local QA. The checkout retains `0.2.1` metadata and is
+an uncommitted, unpublished candidate; these are not the published `0.2.1` bytes.
+Remote compatibility CI, a fresh coordinated release, and independent billing
+qualification for this candidate remain open. Earlier evidence below is
+historical and does not prove those candidate gates.
+
+## Historical Verified Baseline
 
 Baseline evidence was first collected on 2026-05-26 and has been updated with
 later verified results:
@@ -185,7 +197,7 @@ This table tracks roadmap completion, not simultaneous active work. At most one 
 | Milestone 7: Packaging and Developer Experience | Complete for current scope | No | Package metadata, types, examples, CI, clean install checks, Python package CLI, migration guide, alpha docs, license metadata, changelog, contributing/security docs, registry README policy, release process, release readiness checks, guarded release workflow, and local no-publish release dry run exist. | First registry publication, external trusted publisher configuration, and real post-tag Go module verification remain release operations outside the repo-side private-alpha gate. |
 | Milestone 8: Alpha Quality and Feedback | Complete for current scope | No | All required live smoke scenarios, the product-truth loop, and the real sanitized OpenAI dashboard comparison pass as one strict evidence bundle. | Repeat smoke and reconciliation when upstream contracts or pricing conditions materially change. |
 | Milestone 9: Public Beta | Complete for current scope | No | Release `0.2.0`, trusted npm/PyPI publishing, Go module verification, public-site QA, hardening docs, and the real dashboard comparison satisfy every machine-readable public-beta gate. | Measure whether external integrations and fixture contributions justify continued investment. |
-| Milestone 10: V1 | Partial | Yes | All 19 stable warning codes have shared fixture coverage; taxonomy-bearing Python, TypeScript, and Go artifacts are generated and drift-checked; V1 release-candidate readiness has a schema-backed checklist and strict checker. | Complete a real release-candidate checklist only after the 90-day adoption gate provides enough external evidence to justify V1. |
+| Milestone 10: V1 | Partial | No | All stable warning codes have shared fixture coverage; taxonomy-bearing Python, TypeScript, and Go artifacts are generated and drift-checked; V1 release-candidate readiness has a schema-backed checklist and strict checker. | Complete a real release-candidate checklist when technical compatibility, packaging, and supported-surface evidence is ready. Adoption evidence guides priorities but does not govern continuation. |
 
 ## Work Log
 

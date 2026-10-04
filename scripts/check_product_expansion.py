@@ -18,6 +18,7 @@ from runcost import (  # noqa: E402
     attach_price_resolution,
     estimate_cost,
     evaluate_budget,
+    export_cost_ledger,
     from_batch_results,
     from_otel_genai_span,
     from_response,
@@ -89,6 +90,8 @@ def run_python_case(case: dict[str, Any], fixture: dict[str, Any]) -> Any:
         return estimate_cost(**value)
     if operation == "attach_price_resolution":
         return attach_price_resolution(value["ledger"], value["resolution"])
+    if operation == "export_cost_ledger":
+        return export_cost_ledger(value["ledger"])
     if operation == "evaluate_budget":
         total = value.pop("ledger_or_total")
         return evaluate_budget(total, **value)
@@ -111,6 +114,8 @@ def validate_result(case: dict[str, Any], result: Any, language: str) -> None:
     elif operation == "price_cards_from_genai_prices":
         for index, price_card in enumerate(result):
             validate_schema(price_card, SCHEMAS["price"], path=f"{path}[{index}]")
+    elif operation == "export_cost_ledger":
+        validate_schema(result, SCHEMAS["cost"])
     elif operation == "evaluate_budget":
         validate_schema(result, SCHEMAS["budget"], path=path)
     elif operation == "reconcile_cost":
@@ -190,6 +195,48 @@ def check_python_edges() -> None:
     unknown = from_response({"unexpected": True})
     if [warning.get("code") for warning in unknown.get("warnings", [])] != ["unknown_surface"]:
         raise AssertionError(f"ambiguous response did not preserve unknown_surface: {unknown}")
+
+    otel_inconsistent_spans = [
+        {
+            "attributes": {
+                "gen_ai.provider.name": "openai",
+                "gen_ai.operation.name": "chat",
+                "gen_ai.request.model": "otel-model",
+                "gen_ai.usage.input_tokens": 10,
+                "gen_ai.usage.cache_read.input_tokens": 12,
+                "gen_ai.usage.cache_creation.input_tokens": 8,
+                "gen_ai.usage.output_tokens": 0,
+            }
+        },
+        {
+            "attributes": {
+                "gen_ai.provider.name": "openai",
+                "gen_ai.operation.name": "chat",
+                "gen_ai.request.model": "otel-model",
+                "gen_ai.usage.input_tokens": 0,
+                "gen_ai.usage.output_tokens": 10,
+                "gen_ai.usage.reasoning.output_tokens": 20,
+            }
+        },
+        {
+            "attributes": {
+                "gen_ai.provider.name": "openai",
+                "gen_ai.operation.name": "chat",
+                "gen_ai.request.model": "otel-model",
+                "gen_ai.usage.input_tokens": -1,
+                "gen_ai.usage.output_tokens": 0,
+            }
+        },
+    ]
+    for index, span in enumerate(otel_inconsistent_spans):
+        expected_code = "invalid_usage" if index == 2 else "usage_inconsistent"
+        try:
+            from_otel_genai_span(span, price_cards=[], mode="strict")
+        except ValueError as exc:
+            if f"strict mode cost calculation failed: {expected_code}" not in str(exc):
+                raise
+        else:
+            raise AssertionError("strict OTel GenAI usage validation did not fail closed")
 
     duplicate_cards = price_cards_from_genai_prices(
         {

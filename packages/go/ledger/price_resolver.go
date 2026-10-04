@@ -30,7 +30,7 @@ var OpenRouterExternalPriceSources = []string{"openrouter", "genai-prices", "mod
 var deepSeekExternalPriceSources = []string{"deepseek-official", "genai-prices", "models.dev", "litellm"}
 var ExternalPriceSourceURLs = map[string]string{
 	"deepseek-official": "https://raw.githubusercontent.com/adamallcock/runcost/main/fixtures/source-files/deepseek-official-pricing-snapshot.json",
-	"genai-prices":      "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/data_slim.json",
+	"genai-prices":      "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/new_data/v2/data_slim.json",
 	"models.dev":        "https://models.dev/api.json",
 	"litellm":           "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
 	"openrouter":        "https://openrouter.ai/api/v1/models",
@@ -212,13 +212,16 @@ func compiledResolverCatalog(cards []any) *CompiledPriceCatalog {
 	if found && len(memoized.cards) == len(cards) && &memoized.cards[0] == &cards[0] {
 		return memoized.catalog
 	}
-	compiled := CompilePriceCatalog(cards)
 	resolverMemo.Lock()
+	defer resolverMemo.Unlock()
+	if memoized, found := resolverMemo.catalogs[key]; found && len(memoized.cards) == len(cards) && &memoized.cards[0] == &cards[0] {
+		return memoized.catalog
+	}
+	compiled := CompilePriceCatalog(cards)
 	if len(resolverMemo.catalogs) >= 32 {
 		resolverMemo.catalogs = map[string]resolverCatalogMemoEntry{}
 	}
 	resolverMemo.catalogs[key] = resolverCatalogMemoEntry{cards: cards, catalog: compiled}
-	resolverMemo.Unlock()
 	return compiled
 }
 
@@ -312,7 +315,11 @@ func adaptExternalPriceSource(source string, payload any, sourceURL, retrievedAt
 		// Keep the snapshot's primary DeepSeek citation on each card. The
 		// resolver cache envelope separately records the fetched GitHub URL,
 		// retrieval time, and checksum.
-		return PriceCardsFromOfficialSnapshot(asObject(payload))
+		snapshot := cloneObject(asObject(payload))
+		if len(asSlice(snapshot["unsupported_billing_constraints"])) == 0 {
+			snapshot["unsupported_billing_constraints"] = []any{"chinese_public_holidays"}
+		}
+		return PriceCardsFromOfficialSnapshot(snapshot)
 	case "genai-prices":
 		cards = PriceCardsFromGenAIPrices(payload, Object{"retrieved_at": retrievedAt})
 	case "models.dev":
@@ -338,14 +345,14 @@ func resolverSourceWarning(code, source, status string) Object {
 	return Object{"code": code, "message": message, "metadata": Object{"source": source, "status": status}}
 }
 
-func resolveExternalSourceState(ctx context.Context, source, sourceURL, cacheDir string, now time.Time, options Object) (Object, []any) {
+func resolveExternalSourceStateUnshared(ctx context.Context, source, sourceURL, cacheDir string, now time.Time, options Object) (Object, []any) {
 	cache, cacheKey := readResolverCache(cacheDir, source, sourceURL)
 	state := Object{"name": source, "type": "external", "url": sourceURL, "cache_key": cacheKey, "status": "unavailable", "card_count": 0}
 	if cache != nil {
 		metadata := asObject(cache["source"])
 		state["card_count"] = len(asSlice(cache["price_cards"]))
-		for _, key := range []string{"retrieved_at", "validated_at", "checksum", "etag", "last_modified"} {
-			if metadata[key] != nil && asString(metadata[key]) != "" {
+		for _, key := range []string{"retrieved_at", "validated_at", "checksum", "etag", "last_modified", "catalog_generated_at", "catalog_revision", "catalog_schema_version", "catalog_frozen"} {
+			if metadata[key] != nil {
 				state[key] = metadata[key]
 			}
 		}
@@ -388,6 +395,8 @@ func resolveExternalSourceState(ctx context.Context, source, sourceURL, cacheDir
 	status, responseHeaders, body, finalURL, err := fetchResolverSource(ctx, sourceURL, headers, options)
 	checkedAt := resolverTimestamp(now)
 	if err == nil && status == http.StatusNotModified && cache != nil {
+		cache = cloneObject(cache)
+		cache["source"] = cloneObject(asObject(cache["source"]))
 		metadata := asObject(cache["source"])
 		metadata["validated_at"] = checkedAt
 		if value := responseHeaders.Get("ETag"); value != "" {
@@ -410,7 +419,21 @@ func resolveExternalSourceState(ctx context.Context, source, sourceURL, cacheDir
 		if decodeErr == nil {
 			cards := adaptExternalPriceSource(source, payload, finalURL, checkedAt)
 			if len(cards) > 0 {
-				metadata := Object{"name": source, "type": "external", "url": sourceURL, "resolved_url": finalURL, "retrieved_at": checkedAt, "validated_at": checkedAt, "checksum": resolverChecksum(body)}
+				for _, raw := range cards {
+					card := asObject(raw)
+					provenance := cloneObject(asObject(card["source"]))
+					if asString(provenance["url"]) == "" {
+						provenance["url"] = finalURL
+					}
+					if asString(provenance["version"]) == "" {
+						provenance["version"] = resolverChecksum(body)
+					}
+					card["source"] = provenance
+				}
+				metadata := Object{"name": source, "type": "external", "url": sourceURL, "resolved_url": finalURL, "retrieved_at": checkedAt, "validated_at": checkedAt, "checksum": resolverChecksum(body), "catalog_generated_at": nil, "catalog_revision": resolverChecksum(body), "catalog_frozen": source == "genai-prices" && !strings.Contains(finalURL, "/new_data/v2/")}
+				if source == "genai-prices" && strings.Contains(finalURL, "/v2/") {
+					metadata["catalog_schema_version"] = "2"
+				}
 				if value := responseHeaders.Get("ETag"); value != "" {
 					metadata["etag"] = value
 				}
@@ -423,6 +446,9 @@ func resolveExternalSourceState(ctx context.Context, source, sourceURL, cacheDir
 					state["retrieved_at"] = checkedAt
 					state["validated_at"] = checkedAt
 					state["checksum"] = metadata["checksum"]
+					for _, key := range []string{"catalog_generated_at", "catalog_revision", "catalog_schema_version", "catalog_frozen"} {
+						state[key] = metadata[key]
+					}
 					state["card_count"] = len(cards)
 					state["price_cards"] = cards
 					return state, nil
@@ -499,7 +525,7 @@ func externalCandidateQuality(usage Object, cards []any) (complete bool, priced 
 }
 
 // ResolvePriceCatalog selects exactly one external source and never merges cards.
-func ResolvePriceCatalog(ctx context.Context, options Object) (Object, error) {
+func resolvePriceCatalog(ctx context.Context, options Object) (Object, error) {
 	if options == nil {
 		options = Object{}
 	}
@@ -549,6 +575,7 @@ func ResolvePriceCatalog(ctx context.Context, options Object) (Object, error) {
 	states := []any{}
 	warnings := []any{}
 	var firstPartial Object
+	partialPriced := 0
 	var selected Object
 	for _, source := range sources {
 		state, sourceWarnings := resolveExternalSourceState(ctx, source, urls[source], cacheDir, now, options)
@@ -559,14 +586,24 @@ func ResolvePriceCatalog(ctx context.Context, options Object) (Object, error) {
 		if len(cards) == 0 {
 			continue
 		}
-		if len(usage) == 0 {
+		usages := asSlice(options["usage_ledgers"])
+		if usages == nil && len(usage) > 0 {
+			usages = []any{usage}
+		}
+		if len(usages) == 0 {
 			selected = Object{"source": source, "cards": cards}
 			break
 		}
-		complete, priced := externalCandidateQuality(usage, cards)
+		complete, priced := true, 0
+		for _, rawUsage := range usages {
+			ok, count := externalCandidateQuality(asObject(rawUsage), cards)
+			complete = complete && ok
+			priced += count
+		}
 		state["priced_component_count"] = priced
 		state["applicable"] = priced > 0
-		if priced > 0 && firstPartial == nil {
+		if priced > partialPriced {
+			partialPriced = priced
 			firstPartial = Object{"source": source, "cards": cards}
 		}
 		if complete {
@@ -630,6 +667,16 @@ func AttachPriceResolution(result, resolution Object) Object {
 	return result
 }
 
+func finishAutoResult(result, resolution Object, mode string) (Object, error) {
+	AttachPriceResolution(result, resolution)
+	warnings := append([]any{}, asSlice(result["warnings"])...)
+	warnings = append(warnings, asSlice(asObject(result["aggregate"])["warnings"])...)
+	if mode == "strict" && len(warnings) > 0 {
+		return nil, fmt.Errorf("strict mode cost calculation failed: %s", asString(asObject(warnings[0])["code"]))
+	}
+	return result, nil
+}
+
 var resolverOptionNames = map[string]bool{
 	"contract_price_cards": true, "contractPriceCards": true, "sources": true,
 	"price_sources": true, "priceSources": true, "source_urls": true, "sourceUrls": true,
@@ -669,7 +716,8 @@ func tryExtractAutoUsage(response Object, options Object) (usage Object, ok bool
 }
 
 // FromResponseAuto resolves external prices before calling deterministic FromResponse.
-func FromResponseAuto(ctx context.Context, response Object, options Object, priceCards []any, discountPolicies []any) (Object, error) {
+func FromResponseAuto(ctx context.Context, response Object, options Object, priceCards []any, discountPolicies []any) (result Object, err error) {
+	defer recoverLedgerError(&result, &err)
 	calculation, resolver := splitResolverOptions(cloneObject(options))
 	if priceCards != nil {
 		resolver["price_cards"] = priceCards
@@ -678,18 +726,20 @@ func FromResponseAuto(ctx context.Context, response Object, options Object, pric
 	if ok {
 		resolver["usage_ledger"] = usage
 		resolver["provider"] = usage["provider"]
+		calculation["_usage_ledger"] = usage
 	}
-	resolution, err := ResolvePriceCatalog(ctx, resolver)
+	resolution, err := resolvePriceCatalog(ctx, resolver)
 	if err != nil {
 		return nil, err
 	}
 	cards := asSlice(resolution["price_cards"])
-	result := fromResponseWithCatalog(response, calculation, cards, discountPolicies, compiledResolverCatalog(cards))
-	return AttachPriceResolution(result, resolution), nil
+	result = fromResponseWithCatalog(response, calculation, cards, discountPolicies, compiledResolverCatalog(cards))
+	return finishAutoResult(result, resolution, asString(calculation["mode"]))
 }
 
 // FromBatchResultsAuto resolves one source for an entire provider batch.
-func FromBatchResultsAuto(ctx context.Context, items []any, options Object) (Object, error) {
+func FromBatchResultsAuto(ctx context.Context, items []any, options Object) (result Object, err error) {
+	defer recoverLedgerError(&result, &err)
 	calculation, resolver := splitResolverOptions(cloneObject(options))
 	resolver["provider"] = calculation["provider"]
 	if value := firstNonNil(calculation["price_cards"], calculation["priceCards"]); value != nil {
@@ -697,12 +747,44 @@ func FromBatchResultsAuto(ctx context.Context, items []any, options Object) (Obj
 	}
 	delete(calculation, "price_cards")
 	delete(calculation, "priceCards")
-	resolution, err := ResolvePriceCatalog(ctx, resolver)
+	usages := []any{}
+	prepared := map[int]Object{}
+	for index, raw := range items {
+		item := unwrapBatchItem(asObject(raw), calculation)
+		if item.status != "succeeded" {
+			continue
+		}
+		extraction := cloneObject(calculation)
+		extraction["surface"] = item.surface
+		switch strings.ToLower(asString(calculation["provider"])) {
+		case "google", "gemini", "google-gemini":
+			extraction["provider"] = "google"
+		case "vertex", "google-vertex", "vertex-ai":
+			extraction["provider"] = "vertex"
+		case "bedrock", "aws-bedrock":
+			extraction["provider"] = "bedrock"
+		case "kimi", "moonshot", "moonshot-ai":
+			extraction["provider"] = "kimi"
+		case "dashscope", "alibaba":
+			extraction["provider"] = "dashscope"
+		}
+		extraction["context"] = cloneObject(asObject(calculation["context"]))
+		asObject(extraction["context"])["service_tier"] = "batch"
+		if usage, ok := tryExtractAutoUsage(item.response, extraction); ok {
+			usage["context"] = extraction["context"]
+			usages = append(usages, usage)
+			prepared[index] = usage
+		}
+	}
+	resolver["usage_ledgers"] = usages
+	calculation["_prepared_usage"] = prepared
+	resolution, err := resolvePriceCatalog(ctx, resolver)
 	if err != nil {
 		return nil, err
 	}
 	calculation["price_cards"] = resolution["price_cards"]
-	result := FromBatchResults(items, calculation)
+	calculation["_compiled_catalog"] = compiledResolverCatalog(asSlice(resolution["price_cards"]))
+	result = FromBatchResults(items, calculation)
 	metadata := cloneObject(asObject(result["metadata"]))
 	metadata["price_resolution"] = resolverMetadata(resolution)
 	result["metadata"] = metadata
@@ -718,11 +800,12 @@ func FromBatchResultsAuto(ctx context.Context, items []any, options Object) (Obj
 	shadow := Object{"warnings": result["warnings"], "metadata": result["metadata"]}
 	AttachPriceResolution(shadow, resolution)
 	result["warnings"] = shadow["warnings"]
-	return result, nil
+	return finishAutoResult(result, resolution, asString(calculation["mode"]))
 }
 
 // FromOTelGenAISpanAuto resolves external prices for a GenAI telemetry span.
-func FromOTelGenAISpanAuto(ctx context.Context, span, options Object, priceCards []any, discountPolicies []any) (Object, error) {
+func FromOTelGenAISpanAuto(ctx context.Context, span, options Object, priceCards []any, discountPolicies []any) (result Object, err error) {
+	defer recoverLedgerError(&result, &err)
 	calculation, resolver := splitResolverOptions(cloneObject(options))
 	usage := UsageLedgerFromOTelGenAISpan(span, calculation)
 	resolver["usage_ledger"] = usage
@@ -730,16 +813,17 @@ func FromOTelGenAISpanAuto(ctx context.Context, span, options Object, priceCards
 	if priceCards != nil {
 		resolver["price_cards"] = priceCards
 	}
-	resolution, err := ResolvePriceCatalog(ctx, resolver)
+	resolution, err := resolvePriceCatalog(ctx, resolver)
 	if err != nil {
 		return nil, err
 	}
-	result := FromOTelGenAISpan(span, calculation, asSlice(resolution["price_cards"]), discountPolicies)
-	return AttachPriceResolution(result, resolution), nil
+	result = FromOTelGenAISpan(span, calculation, asSlice(resolution["price_cards"]), discountPolicies)
+	return finishAutoResult(result, resolution, asString(calculation["mode"]))
 }
 
 // EstimateCostAuto resolves external prices for a pre-call estimate.
-func EstimateCostAuto(ctx context.Context, options Object, priceCards []any, discountPolicies []any) (Object, error) {
+func EstimateCostAuto(ctx context.Context, options Object, priceCards []any, discountPolicies []any) (result Object, err error) {
+	defer recoverLedgerError(&result, &err)
 	calculation, resolver := splitResolverOptions(cloneObject(options))
 	components := []any{}
 	if raw, ok := calculation["components"].([]any); ok {
@@ -759,12 +843,12 @@ func EstimateCostAuto(ctx context.Context, options Object, priceCards []any, dis
 	if priceCards != nil {
 		resolver["price_cards"] = priceCards
 	}
-	resolution, err := ResolvePriceCatalog(ctx, resolver)
+	resolution, err := resolvePriceCatalog(ctx, resolver)
 	if err != nil {
 		return nil, err
 	}
-	result := EstimateCost(calculation, asSlice(resolution["price_cards"]), discountPolicies)
-	return AttachPriceResolution(result, resolution), nil
+	result = EstimateCost(calculation, asSlice(resolution["price_cards"]), discountPolicies)
+	return finishAutoResult(result, resolution, asString(calculation["mode"]))
 }
 
 // PriceCacheStatus inspects cache metadata without returning price payloads.
@@ -848,4 +932,71 @@ func ClearPriceCache(options Object) (Object, error) {
 		removed = append(removed, file.Name())
 	}
 	return Object{"schema_version": "0.1", "cache_dir": cacheDir, "removed": removed}, nil
+}
+
+// ResolvePriceCatalog returns a caller-owned snapshot; mutating it cannot poison the cache.
+func ResolvePriceCatalog(ctx context.Context, options Object) (Object, error) {
+	resolution, err := resolvePriceCatalog(ctx, options)
+	if err != nil {
+		return nil, err
+	}
+	return deepCloneJSON(resolution).(Object), nil
+}
+
+func deepCloneJSON(value any) any {
+	switch data := value.(type) {
+	case map[string]any:
+		result := Object{}
+		for key, child := range data {
+			result[key] = deepCloneJSON(child)
+		}
+		return result
+	case []any:
+		result := make([]any, len(data))
+		for index, child := range data {
+			result[index] = deepCloneJSON(child)
+		}
+		return result
+	default:
+		return value
+	}
+}
+
+type resolverFlight struct {
+	done     chan struct{}
+	state    Object
+	warnings []any
+}
+
+var sourceFlights = struct {
+	sync.Mutex
+	flights map[string]*resolverFlight
+}{flights: map[string]*resolverFlight{}}
+
+func resolveExternalSourceState(ctx context.Context, source, sourceURL, cacheDir string, now time.Time, options Object) (Object, []any) {
+	key := fmt.Sprintf("%s:%s:%s:%v:%v:%v:%v:%v:%v:%p", source, sourceURL, cacheDir, options["offline"], options["refresh"], firstNonNil(options["max_age_seconds"], options["maxAgeSeconds"]), firstNonNil(options["timeout_seconds"], options["timeoutSeconds"]), firstNonNil(options["max_bytes"], options["maxBytes"]), options["now"], options["http_client"])
+	sourceFlights.Lock()
+	if flight, found := sourceFlights.flights[key]; found {
+		sourceFlights.Unlock()
+		select {
+		case <-flight.done:
+			return cloneObject(flight.state), deepCloneJSON(flight.warnings).([]any)
+		case <-ctx.Done():
+			return Object{"name": source, "status": "unavailable"}, []any{resolverSourceWarning("price_source_unavailable", source, "request_canceled")}
+		}
+	}
+	flight := &resolverFlight{done: make(chan struct{})}
+	sourceFlights.flights[key] = flight
+	sourceFlights.Unlock()
+	defer func() {
+		sourceFlights.Lock()
+		delete(sourceFlights.flights, key)
+		close(flight.done)
+		sourceFlights.Unlock()
+	}()
+	flight.state, flight.warnings = resolveExternalSourceStateUnshared(ctx, source, sourceURL, cacheDir, now, options)
+	if flight.warnings == nil {
+		flight.warnings = []any{}
+	}
+	return cloneObject(flight.state), deepCloneJSON(flight.warnings).([]any)
 }

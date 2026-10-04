@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "runcost-ai"
-version = "0.2.3"
+version = "0.2.4"
 description = "Local, auditable and itemized USD cost ledger for LLM provider responses, with price sources and warnings."
 requires-python = ">=3.9"
 readme = "README.md"
@@ -42,3 +42,6 @@ smoke = [
 
 [tool.setuptools.packages.find]
 where = ["packages/python"]
+
+[tool.setuptools.package-data]
+runcost = ["py.typed"]

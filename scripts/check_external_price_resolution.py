@@ -67,7 +67,7 @@ DEEPSEEK_USAGE = {
     "provider": "deepseek",
     "surface": "deepseek.chat_completions",
     "model": {"requested": "deepseek-v4-flash", "returned": "deepseek-v4-flash", "billed": "deepseek-v4-flash", "alias_resolution": "none"},
-    "context": {"priced_at": "2026-09-10T04:00:00Z"},
+    "context": {"priced_at": "2026-09-10T04:00:00Z", "pricing_period": "offpeak"},
     "components": [
         {"name": "input_uncached_tokens", "quantity": "1000000", "unit": "token"},
         {"name": "input_cache_read_tokens", "quantity": "1000000", "unit": "token"},

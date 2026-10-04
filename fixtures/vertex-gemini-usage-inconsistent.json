@@ -1,0 +1,57 @@
+{
+  "name": "vertex-gemini-usage-inconsistent",
+  "description": "The Vertex Gemini surface enforces the same cached-content subtotal invariant as the Google Gemini surface.",
+  "metadata": {
+    "requirement_ids": ["RC-CALC-CORE", "RC-FIXTURE-CONFORMANCE"],
+    "provider": "vertex",
+    "surface": "vertex.gemini.generate_content",
+    "scenario": "warning",
+    "tags": ["usage_validation", "warning:usage_inconsistent"],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "raw_response": {
+      "modelVersion": "gemini-test",
+      "usageMetadata": {
+        "promptTokenCount": 10,
+        "cachedContentTokenCount": 20,
+        "candidatesTokenCount": 0,
+        "totalTokenCount": 10
+      }
+    },
+    "extract": {"provider": "vertex", "surface": "vertex.gemini.generate_content"},
+    "price_cards": []
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "vertex",
+      "surface": "vertex.gemini.generate_content",
+      "model": {
+        "requested": "gemini-test",
+        "returned": "gemini-test",
+        "billed": "gemini-test",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "usage_inconsistent",
+          "message": "Usage subtotal at $.usageMetadata.cachedContentTokenCount exceeds its declared total at $.usageMetadata.promptTokenCount.",
+          "path": "$.usageMetadata.cachedContentTokenCount",
+          "metadata": {
+            "invariant": "cached_content_tokens_lte_prompt_tokens",
+            "total_path": "$.usageMetadata.promptTokenCount",
+            "total": "10",
+            "component_paths": ["$.usageMetadata.cachedContentTokenCount"],
+            "component_total": "20"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -279,7 +279,7 @@ def check_deepseek_weekly_schedule() -> None:
                 "provider": "deepseek",
                 "surface": "deepseek.chat_completions",
                 "model": {"requested": model, "billed": model},
-                "context": {"priced_at": priced_at},
+                "context": {"priced_at": priced_at, "pricing_period": "peak" if "T03:" in priced_at or ("2026-09-11T06:" in priced_at) else "offpeak"},
                 "components": [{"name": "output_text_tokens", "quantity": "1000000", "unit": "token"}],
             },
             price_cards=official_cards,
@@ -310,7 +310,7 @@ def check_deepseek_weekly_schedule() -> None:
     weekday_peak_component = weekday_peak["components"][0]
     assert_true(weekday_peak["total"] == "1.2", "DeepSeek V4.1 Flash weekday peak must use the peak rate")
     assert_true(weekday_peak_component["price_card_id"] == "deepseek:deepseek-flash:peak:official-snapshot", "DeepSeek V4.1 Flash weekday peak selected the wrong card")
-    assert_true(weekday_peak_component.get("metadata", {}).get("pricing_window") == "06:00-10:00", "DeepSeek V4.1 Flash peak-window metadata mismatch")
+    assert_true(weekday_peak_component.get("metadata", {}).get("period_selection") == "explicit_context", "DeepSeek caller-confirmed period must remain explicit")
 
     v4_pro_before_routing = ledger_at("deepseek-v4-pro", "2026-09-13T06:00:00Z")
     assert_true(v4_pro_before_routing["total"] == "1.98", "DeepSeek V4 Pro must retain its historic weekend off-peak rate before routing")

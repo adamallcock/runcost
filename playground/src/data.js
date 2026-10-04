@@ -136,27 +136,27 @@ export const COMPONENT_LABELS = {
 
 export const PROBLEM_CONTENT = {
   home: {
-    heading: "Explain the exact cost of every LLM response.",
-    body: "Paste the response you already receive. RunCost separates cached input, reasoning output, tools, tiers, and batch discounts—then shows every rate and source.",
+    heading: "Provider response in. Itemized cost ledger out.",
+    body: "RunCost turns the response you already receive into an auditable USD estimate with separate usage components, rates, sources, assumptions, and warnings. It runs locally—no proxy, account, or usage database required.",
     provider: "OpenAI"
   },
   openai: {
-    heading: "Calculate the cost of an OpenAI response.",
-    body: "Paste the response you already receive. RunCost separates cached input, reasoning output, tools, tiers, and batch discounts—then shows every rate and source.",
+    heading: "Turn an OpenAI response into an itemized cost ledger.",
+    body: "RunCost separates cached input, reasoning output, tools, tiers, and batch discounts, then records the selected rates, sources, assumptions, and warnings.",
     provider: "OpenAI"
   },
   anthropic: {
-    heading: "Calculate the cost of an Anthropic response.",
+    heading: "Turn an Anthropic response into an itemized cost ledger.",
     body: "Separate uncached input, cache reads, cache writes, output, and Message Batch discounts from the usage object Claude already returns.",
     provider: "Anthropic"
   },
   gemini: {
-    heading: "Calculate the cost of a Gemini response.",
+    heading: "Turn Gemini usage into an itemized cost ledger.",
     body: "Turn usageMetadata into a ledger for cached content, thinking tokens, media modalities, service tiers, and Batch API pricing.",
     provider: "Gemini"
   },
   "batch-problem": {
-    heading: "Calculate the cost of an LLM batch.",
+    heading: "Turn LLM batch results into one itemized ledger.",
     body: "Normalize OpenAI, Anthropic, Gemini, Vertex, Bedrock, Kimi, and DashScope result files without hiding failed or pending items.",
     provider: "Batch APIs"
   }

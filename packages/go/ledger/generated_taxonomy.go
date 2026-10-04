@@ -68,6 +68,8 @@ var warningCodeNames = []string{
 	"price_source_unavailable",
 	"price_source_refresh_failed",
 	"price_source_disagreement",
+	"invalid_usage",
+	"usage_inconsistent",
 	"usage_field_ignored",
 	"usage_missing",
 	"inclusive_usage_ambiguous",

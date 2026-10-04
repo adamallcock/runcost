@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tarfile
 import tempfile
 from pathlib import Path
@@ -15,7 +16,8 @@ REGISTRY = ROOT / "fixtures" / "source-files" / "public-api-registry.json"
 
 def run(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
     print(f"$ {' '.join(command)}", flush=True)
-    subprocess.run(command, cwd=cwd, env=env, check=True)
+    executable = shutil.which(command[0]) or command[0]
+    subprocess.run([executable, *command[1:]], cwd=cwd, env=env, check=True)
 
 
 def runtime_names(language: str) -> list[str]:
@@ -71,8 +73,10 @@ def write_quote_fixture(path: Path) -> None:
 
 def check_python_install(source_root: Path, workdir: Path) -> None:
     venv_dir = workdir / "python-venv"
-    run(["python3", "-m", "venv", str(venv_dir)], workdir)
-    python = venv_dir / "bin" / "python"
+    run([sys.executable, "-m", "venv", str(venv_dir)], workdir)
+    executable_dir = venv_dir / ("Scripts" if os.name == "nt" else "bin")
+    python = executable_dir / ("python.exe" if os.name == "nt" else "python")
+    cli = executable_dir / ("runcost.exe" if os.name == "nt" else "runcost")
     environment = os.environ.copy()
     environment.setdefault("PIP_DISABLE_PIP_VERSION_CHECK", "1")
     run([str(python), "-m", "pip", "install", "--quiet", str(source_root)], workdir, env=environment)
@@ -112,10 +116,35 @@ print('Python installed-package smoke passed')
         encoding="utf-8",
     )
     run([str(python), str(smoke)], workdir)
+    consumer = workdir / "typed-consumer.py"
+    consumer.write_text("""from runcost import CostLedger, CostLedgerExport, BudgetEvaluation, CostReconciliation, from_response, evaluate_budget, reconcile_cost, export_cost_ledger
+ledger: CostLedger = from_response({"model":"test"}, provider="openai", surface="openai.responses", price_cards=[])
+budget: BudgetEvaluation = evaluate_budget(ledger, budget="1")
+comparison: CostReconciliation = reconcile_cost(ledger, "1")
+shared: CostLedgerExport = export_cost_ledger(ledger)
+total: str = shared["total"]
+""", encoding="utf-8")
+    run([sys.executable, "-m", "mypy", "--strict", "--follow-imports=silent", "--python-executable", str(python), "--cache-dir", str(workdir / "mypy-cache"), str(consumer)], workdir)
+    negative = workdir / "typed-invalid.py"
+    negative.write_text('from runcost import from_response\nwrong: int = from_response({}, provider="openai")["total"]\n', encoding="utf-8")
+    rejected = subprocess.run([sys.executable, "-m", "mypy", "--strict", "--follow-imports=silent", "--python-executable", str(python), str(negative)], cwd=workdir, capture_output=True, text=True)
+    if rejected.returncode == 0 or "Incompatible types" not in rejected.stdout:
+        raise AssertionError("installed Python package typing did not reject an invalid consumer: " + rejected.stdout + rejected.stderr)
+
     quote = workdir / "quote.json"
     write_quote_fixture(quote)
-    run([str(venv_dir / "bin" / "runcost"), "quote", str(quote), "--no-resolve"], workdir)
-    run([str(venv_dir / "bin" / "runcost"), "prices", "status", "--cache-dir", str(workdir / "python-cache")], workdir)
+    run([str(cli), "quote", str(quote), "--no-resolve"], workdir)
+    run([str(cli), "prices", "status", "--cache-dir", str(workdir / "python-cache")], workdir)
+    integration_cache = workdir / "integration-cache"
+    seed = workdir / "seed-integration.py"
+    seed.write_text("import json\nfrom runcost import resolve_price_catalog\n" +
+                    "payload = [{'id':'openai','models':[{'id':'install-model','prices':{'input_mtok':1,'output_mtok':2}}]}]\n" +
+                    f"resolve_price_catalog(sources=['genai-prices'], cache_dir={str(integration_cache)!r}, fetcher=lambda *args: {{'status':200,'body':json.dumps(payload)}})\n", encoding="utf-8")
+    run([str(python), str(seed)], workdir)
+    response_path = workdir / "integration-response.json"
+    response_path.write_text(json.dumps({"model":"install-model","usage":{"prompt_tokens":100,"completion_tokens":50,"total_tokens":150}}), encoding="utf-8")
+    run([str(python), str(ROOT / "scripts/run_local_integration.py"), "--response", str(response_path), "--provider", "openai", "--surface", "openai.chat_completions", "--reported-total", "0.0002", "--cache-dir", str(integration_cache), "--offline", "--output", str(workdir / "integration-report.json")], workdir)
+
 
 
 def check_javascript_install(source_root: Path, workdir: Path) -> None:
@@ -136,6 +165,30 @@ def check_javascript_install(source_root: Path, workdir: Path) -> None:
             raise AssertionError("npm tarball contains an unexpectedly large file")
     (project_dir / "package.json").write_text('{"name":"runcost-install-check","version":"0.0.0","type":"module"}\n', encoding="utf-8")
     run(["npm", "install", "--silent", str(tarballs[0])], project_dir)
+    consumer = project_dir / "typed-consumer.mts"
+    consumer.write_text("""import { compilePriceCatalog, fromResponse, fromResponseAuto, fromBatchResultsAuto, fromOTelGenAISpanAuto, estimateCostAuto, exportCostLedger, evaluateBudget, reconcileCost, type PriceCard, type CostLedger, type CostLedgerExport } from 'runcost';
+import { fromResponse as browserResponse } from 'runcost/browser';
+const cards: PriceCard[] = [];
+const compiled = compilePriceCatalog(cards);
+// @ts-expect-error compiled catalogs cannot be mutated
+compiled.priceCards.push({} as PriceCard);
+// @ts-expect-error nested card prices are read-only
+compiled.priceCards[0].components[0].price.amount = "9";
+const options = {provider:'openai', surface:'openai.responses', priceCards:compiled};
+const direct: CostLedger = fromResponse({}, options);
+const browser: CostLedger = browserResponse({}, options);
+const auto: CostLedger = await fromResponseAuto({}, options);
+await fromBatchResultsAuto([], options);
+await fromOTelGenAISpanAuto({}, options);
+await estimateCostAuto({...options,model:'test',components:{input_uncached_tokens:'1'}});
+const share: CostLedgerExport = exportCostLedger(direct);
+const money: string = share.total;
+evaluateBudget(money,{budget:'1'});
+reconcileCost(money,'1');
+""", encoding="utf-8")
+    compiler = ROOT / "node_modules/typescript/bin/tsc"
+    for resolution, module in [("NodeNext", "NodeNext"), ("bundler", "ESNext")]:
+        run(["node", str(compiler), "--strict", "--noEmit", "--target", "ES2022", "--module", module, "--moduleResolution", resolution, str(consumer)], project_dir)
     javascript_names = runtime_names("javascript")
     smoke = project_dir / "package-smoke.mjs"
     smoke.write_text(
@@ -179,7 +232,7 @@ def check_go_install(source_root: Path, workdir: Path) -> None:
     project_dir.mkdir()
     references = "\n".join(f"    _ = ledger.{name}" for name in runtime_names("go"))
     (project_dir / "go.mod").write_text(
-        f"module runcost-install-check\n\ngo 1.26\n\nrequire github.com/adamallcock/runcost v0.0.0\n\nreplace github.com/adamallcock/runcost => {source_root}\n",
+        f"module runcost-install-check\n\ngo 1.26\n\nrequire github.com/adamallcock/runcost v0.0.0\n\nreplace github.com/adamallcock/runcost => {json.dumps(source_root.as_posix())}\n",
         encoding="utf-8",
     )
     (project_dir / "ledger_test.go").write_text(

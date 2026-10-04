@@ -1,0 +1,27 @@
+{
+  "name": "strict-gemini-generate-content-usage-inconsistent",
+  "description": "Strict mode fails closed when Gemini cached content exceeds the provider-declared prompt total.",
+  "metadata": {
+    "requirement_ids": ["RC-FIXTURE-CONFORMANCE", "RC-STRICT-MODE"],
+    "provider": "google",
+    "surface": "google.gemini.generate_content",
+    "scenario": "strict_error",
+    "tags": ["strict_error", "usage_validation", "warning:usage_inconsistent"],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "mode": "strict",
+    "raw_response": {
+      "modelVersion": "gemini-test",
+      "usageMetadata": {
+        "promptTokenCount": 10,
+        "cachedContentTokenCount": 20,
+        "candidatesTokenCount": 0,
+        "totalTokenCount": 10
+      }
+    },
+    "extract": {"provider": "google", "surface": "google.gemini.generate_content"},
+    "price_cards": []
+  },
+  "expected": {"error": {"code": "usage_inconsistent"}}
+}

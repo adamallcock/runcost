@@ -123,6 +123,8 @@ func runGoExpansionCase(t *testing.T, testCase, fixture Object) any {
 		return EstimateCost(input, priceCards, discountPolicies)
 	case "attach_price_resolution":
 		return AttachPriceResolution(asObject(input["ledger"]), asObject(input["resolution"]))
+	case "export_cost_ledger":
+		return ExportCostLedger(asObject(input["ledger"]))
 	case "evaluate_budget":
 		total := input["ledger_or_total"]
 		delete(input, "ledger_or_total")
@@ -244,5 +246,51 @@ func TestExpansionEdgeCases(t *testing.T) {
 	}
 	if len(duplicateCards) != 2 || len(ids) != 2 {
 		t.Fatalf("genai-prices duplicate IDs were not disambiguated: %#v", duplicateCards)
+	}
+}
+
+func TestOTelGenAIUsageInvariantsStrict(t *testing.T) {
+	spans := []Object{
+		{
+			"attributes": Object{
+				"gen_ai.provider.name":                     "openai",
+				"gen_ai.operation.name":                    "chat",
+				"gen_ai.request.model":                     "otel-model",
+				"gen_ai.usage.input_tokens":                10,
+				"gen_ai.usage.cache_read.input_tokens":     12,
+				"gen_ai.usage.cache_creation.input_tokens": 8,
+				"gen_ai.usage.output_tokens":               0,
+			},
+		},
+		{
+			"attributes": Object{
+				"gen_ai.provider.name":                 "openai",
+				"gen_ai.operation.name":                "chat",
+				"gen_ai.request.model":                 "otel-model",
+				"gen_ai.usage.input_tokens":            0,
+				"gen_ai.usage.output_tokens":           10,
+				"gen_ai.usage.reasoning.output_tokens": 20,
+			},
+		},
+		{
+			"attributes": Object{
+				"gen_ai.provider.name":       "openai",
+				"gen_ai.operation.name":      "chat",
+				"gen_ai.request.model":       "otel-model",
+				"gen_ai.usage.input_tokens":  -1,
+				"gen_ai.usage.output_tokens": 0,
+			},
+		},
+	}
+	for index, span := range spans {
+		t.Run(fmt.Sprintf("case-%d", index), func(t *testing.T) {
+			expectedCode := "usage_inconsistent"
+			if index == 2 {
+				expectedCode = "invalid_usage"
+			}
+			assertPanicsContaining(t, "strict mode cost calculation failed: "+expectedCode, func() {
+				FromOTelGenAISpan(span, Object{"mode": "strict"}, nil, nil)
+			})
+		})
 	}
 }

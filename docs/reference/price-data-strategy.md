@@ -104,3 +104,9 @@ a merged set of explicit cards, `price_source_priority` /
 When a source adapter cannot safely map a billable field, add a fixture that
 shows either the correct mapping or the structured warning. Do not silently turn
 unknown source fields into prices.
+
+## Source Freshness and Calendar Limits
+
+The default GenAI Prices feed now uses the reviewed v2 contract; legacy v1 feeds are frozen. A retrieved or HTTP-304-validated representation can still contain old rates. Source records expose retrieval/validation time, representation revision, schema version, and separately unknown generation time. The playground labels retrieval evidence explicitly.
+
+Direct DeepSeek official resolution requires a caller-confirmed pricing period while the provider's Chinese public-holiday calendar is unsupported. See [adapter contracts](source-adapters.md#genai-prices-v2-contract) and the [local reconciliation recipe](../guides/2026-10-04-local-integration-and-reconciliation.md).

@@ -1,6 +1,6 @@
 ---
 title: RunCost Conformance Report
-date: 2026-07-18
+date: 2026-10-04
 type: report
 status: generated
 ---
@@ -18,12 +18,12 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 
 ## Summary
 
-229 cases are inventoried.
+249 cases are inventoried.
 
 | Outcome | Cases |
 | --- | ---: |
-| Preserved | 173 |
-| Warned | 49 |
+| Preserved | 179 |
+| Warned | 63 |
 | Unsupported | 7 |
 | Not Tested | 0 |
 
@@ -43,7 +43,9 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `anthropic-messages-fable-sticky-fallback-inferred` | anthropic | `anthropic.messages` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `anthropic-messages-fable-sticky-fallback-served` | anthropic | `anthropic.messages` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `anthropic-messages-generic-fallback-chain` | anthropic | `anthropic.messages` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `anthropic-messages-malformed-usage` | anthropic | `anthropic.messages` | warned | python: warned, javascript: warned, go: warned |
 | `anthropic-messages-missing-usage-warning` | anthropic | `anthropic.messages` | warned | python: warned, javascript: warned, go: warned |
+| `anthropic-messages-negative-usage` | anthropic | `anthropic.messages` | warned | python: warned, javascript: warned, go: warned |
 | `anthropic-messages-raw-cache-1h` | anthropic | `anthropic.messages` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `anthropic-messages-raw-cache` | anthropic | `anthropic.messages` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `anthropic-messages-stream-events` | anthropic | `anthropic.messages` | preserved | python: preserved, javascript: preserved, go: preserved |
@@ -61,6 +63,7 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `date-only-priced-at-effective-date-selection` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `debug-trace-explain-decisions` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `decimal-arithmetic-adversarial` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `decimal-round-half-even` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `deepseek-chat-created-out-of-range-ignored` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `deepseek-chat-created-priced-at` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `deepseek-chat-raw-cache-reasoning` | deepseek | `deepseek.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
@@ -102,6 +105,7 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `gemini-generate-content-service-tier-header-downgrade` | google | `google.gemini.generate_content` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `gemini-generate-content-service-tier-usage-metadata` | google | `google.gemini.generate_content` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `gemini-generate-content-stream-chunks` | google | `google.gemini.generate_content` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `gemini-generate-content-usage-inconsistent` | google | `google.gemini.generate_content` | warned | python: warned, javascript: warned, go: warned |
 | `gemini-live-translate-aggregate-audio-thinking` | google | `google.gemini.live` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `gemini-live-translate-audio-plus-text-output` | google | `google.gemini.live` | unsupported | python: unsupported, javascript: unsupported, go: unsupported |
 | `gemini-live-translate-audio-thinking-preferred` | google | `google.gemini.live` | preserved | python: preserved, javascript: preserved, go: preserved |
@@ -136,6 +140,7 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `meta-reviewed-preview-snapshot-adapter` | meta | `meta.responses` | warned | python: warned, javascript: warned, go: warned |
 | `mistral-chat-raw-cache` | mistral | `mistral.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `models-dev-adapter-basic` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `normalized-negative-usage` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `official-snapshot-adapter-basic` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-agents-sdk-usage` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `openai-audio-transcription-duration-usage` | openai | `openai.audio_transcriptions` | preserved | python: preserved, javascript: preserved, go: preserved |
@@ -155,12 +160,14 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `openai-priority-does-not-fallback-to-fast` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `openai-responses-basic` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-responses-gpt-56-luna-fast-tier` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `openai-responses-invalid-usage` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `openai-responses-raw-cached-reasoning` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-responses-raw-computer-and-function-tools` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `openai-responses-raw-dated-alias` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `openai-responses-raw-orchestration-usage` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-responses-raw-tool-calls` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-responses-stream-completed-event` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `openai-responses-usage-inconsistent` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `openai-usage-audio-speeches-buckets` | openai | `openai.usage.audio_speeches` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-usage-audio-transcriptions-buckets` | openai | `openai.usage.audio_transcriptions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `openai-usage-code-interpreter-sessions` | openai | `openai.usage.code_interpreter_sessions` | preserved | python: preserved, javascript: preserved, go: preserved |
@@ -197,7 +204,11 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `stale-price-warning` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `storage-gb-day-pricing` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `stream-final-usage-missing-warning` | aggregate | `aggregate.cost_ledgers` | warned | python: warned, javascript: warned, go: warned |
+| `strict-anthropic-messages-malformed-usage` | anthropic | `anthropic.messages` | warned | python: warned, javascript: warned, go: warned |
+| `strict-anthropic-messages-negative-usage` | anthropic | `anthropic.messages` | warned | python: warned, javascript: warned, go: warned |
+| `strict-gemini-generate-content-usage-inconsistent` | google | `google.gemini.generate_content` | warned | python: warned, javascript: warned, go: warned |
 | `strict-unknown-model` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
+| `strict-usage-inconsistent` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `timezone-dst-america-new-york-fall-back` | synthetic | `synthetic.scheduled_usage` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `timezone-dst-america-new-york-spring-forward` | synthetic | `synthetic.scheduled_usage` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `tool-call-units-basic` | openai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
@@ -216,6 +227,7 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `vercel-ai-sdk-stream-text-finish` | openai | `openai.responses` | warned | python: warned, javascript: warned, go: warned |
 | `vercel-ai-sdk-stream-transcribe-finish` | openai | `openai.audio_transcriptions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `vertex-gemini-generate-content-raw-basic` | vertex | `vertex.gemini.generate_content` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `vertex-gemini-usage-inconsistent` | vertex | `vertex.gemini.generate_content` | warned | python: warned, javascript: warned, go: warned |
 | `xai-chat-raw-cache-reasoning` | xai | `xai.chat_completions` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `xai-grok-4-3-reasoning-output-pricing` | xai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `xai-responses-output-x-search-call` | xai | `openai.responses` | preserved | python: preserved, javascript: preserved, go: preserved |
@@ -247,6 +259,9 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `xiaomi-compatible-route` | xiaomi | `from_response` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `minimax-anthropic-compatible-route` | minimax | `from_response` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `otel-genai-usage-netting` | cross-provider | `usage_ledger_from_otel` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `otel-genai-input-cache-usage-inconsistent` | cross-provider | `from_otel` | warned | python: warned, javascript: warned, go: warned |
+| `otel-genai-reasoning-usage-inconsistent` | cross-provider | `from_otel` | warned | python: warned, javascript: warned, go: warned |
+| `otel-genai-negative-raw-usage` | cross-provider | `from_otel` | warned | python: warned, javascript: warned, go: warned |
 | `otel-genai-cost` | cross-provider | `from_otel` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `otel-genai-fast-tier` | cross-provider | `from_otel` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `otel-genai-fast-request-context` | cross-provider | `usage_ledger_from_otel` | preserved | python: preserved, javascript: preserved, go: preserved |
@@ -260,5 +275,10 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `genai-prices-unrepresentable-constraint-omitted` | cross-provider | `price_cards_from_genai_prices` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `price-resolution-unavailable-warning` | cross-provider | `attach_price_resolution` | warned | python: warned, javascript: warned, go: warned |
 | `price-resolution-refresh-failed-warning` | cross-provider | `attach_price_resolution` | warned | python: warned, javascript: warned, go: warned |
+| `privacy-export-allowlist` | cross-provider | `export_cost_ledger` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `genai-v2-unit-contract` | cross-provider | `price_cards_from_genai_prices` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `budget-subquantum-total` | cross-provider | `evaluate_budget` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `budget-half-even-warning-boundary` | cross-provider | `evaluate_budget` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `reconciliation-subquantum-residual` | cross-provider | `reconcile_cost` | preserved | python: preserved, javascript: preserved, go: preserved |
 
 The canonical machine-readable form is [`conformance-report.json`](./conformance-report.json).

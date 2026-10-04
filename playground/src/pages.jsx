@@ -78,10 +78,10 @@ function pricingMode(ledger) {
 export function ProblemPage({ content, ledger: initialLedger, providerId }) {
   const [ledger, setLedger] = useState(initialLedger);
   const [refreshing, setRefreshing] = useState(true);
+  const provider = PROVIDERS[providerId];
   useEffect(() => {
     let active = true;
-    const config = PROVIDERS[providerId];
-    priceWithExternalSources(providerId, config.model, config.response, true).then((nextLedger) => {
+    priceWithExternalSources(providerId, provider.model, provider.response, true).then((nextLedger) => {
       if (active) {
         setLedger(nextLedger);
         setRefreshing(false);
@@ -93,8 +93,8 @@ export function ProblemPage({ content, ledger: initialLedger, providerId }) {
     <><div className="page-shell"><Header />
       <main>
         <section className="problem-hero">
-          <div className="hero-copy"><h1>{content.heading}</h1><p>{content.body}</p><div className="hero-actions"><a className="button primary" href={appPath("/playground/")}>Explain a response</a><a className="text-link" href="#install">View the 60-second install</a><a className="text-link" href="https://github.com/adamallcock/runcost/issues/57">Send a billing edge case</a></div></div>
-          <ResponsePreview ledger={ledger} />
+          <div className="hero-copy"><h1>{content.heading}</h1><p>{content.body}</p><div className="hero-actions"><a className="button primary" href={appPath("/playground/")}>Try a response</a><a className="text-link" href="#install">View the 60-second install</a><a className="text-link" href="https://github.com/adamallcock/runcost#when-to-use-runcost">When to use RunCost</a></div></div>
+          <ResponsePreview ledger={ledger} response={provider.response} />
         </section>
         <section className="evidence-grid">
           <div>
@@ -104,14 +104,14 @@ export function ProblemPage({ content, ledger: initialLedger, providerId }) {
               <tr><td>Reasoning output</td><td>Folded into completion</td><td>Retained as its own dimension</td></tr>
               <tr><td>Tools and media</td><td>Usually ignored</td><td>Counted when a rate exists</td></tr>
               <tr><td>Batch and tiers</td><td>Flat-rate assumption</td><td>Matched to the service mode</td></tr>
-              <tr><td>Sources</td><td>Unknown</td><td>Every line names its rate card</td></tr>
+              <tr><td>Sources</td><td>Unknown</td><td>Each priced line names its rate card</td></tr>
             </tbody></table></div>
             <h2 className="provider-heading">One contract across providers</h2>
             <div className="provider-rail"><a href={appPath("/openai-cost-calculator/")}>OpenAI</a><a href={appPath("/anthropic-cost-calculator/")}>Anthropic</a><a href={appPath("/gemini-cost-calculator/")}>Gemini</a><span>Bedrock</span><span>Vertex</span><span>Kimi</span></div>
             <p className="rail-note">The response shape changes. The componentized ledger does not.</p>
           </div>
           <aside className="evidence-aside"><h2>Evidence, not a black box</h2>
-            <dl><div><dt>Methodology</dt><dd><a href={appPath("/methodology/")}>Usage → rate → ledger</a></dd></div><div><dt>Rate source</dt><dd>{ledger.price_sources?.[0]?.name || "No matching source"}</dd></div><div><dt>Resolution</dt><dd>{refreshing ? "Checking external sources…" : pricingMode(ledger)}</dd></div><div><dt>Pricing snapshot</dt><dd>{ledger.price_sources?.[0]?.retrieved_at || "Unavailable"}</dd></div><div><dt>Example</dt><dd>{content.provider}</dd></div><div><dt>Notice</dt><dd>Warnings stay visible when evidence is missing or ambiguous.</dd></div></dl>
+            <dl><div><dt>Methodology</dt><dd><a href={appPath("/methodology/")}>Usage → rate → ledger</a></dd></div><div><dt>Rate source</dt><dd>{ledger.price_sources?.[0]?.name || "No matching source"}</dd></div><div><dt>Resolution</dt><dd>{refreshing ? "Checking external sources…" : pricingMode(ledger)}</dd></div><div><dt>Retrieved</dt><dd>{ledger.price_sources?.[0]?.retrieved_at || "Unavailable"}</dd></div><div><dt>Example</dt><dd>{content.provider}</dd></div><div><dt>Notice</dt><dd>Retrieval time records when evidence was fetched. It does not prove that the source rates are current. Warnings stay visible when evidence is missing or ambiguous.</dd></div></dl>
           </aside>
         </section>
         <InstallBand />
@@ -177,7 +177,7 @@ export function PlaygroundPage() {
           <p className="privacy-note" id="privacy-note">The response stays in this browser. RunCost only downloads public price catalogs; do not paste secrets or private content.</p>
           <button className="button primary submit-button" type="submit" disabled={loading}>{loading ? "Resolving prices…" : "Explain cost"}</button>
         </section>
-        <section className="result-pane" aria-live="polite"><p className="section-number">2. Cost breakdown</p><p className="total-label">Calculated total (USD)</p><p className="exact-total">${ledger.total}</p><p className="total-explanation">Calculated for <strong>{ledger.model.billed}</strong> on {provider.label} {provider.endpointLabel} using the rates and usage dimensions below.</p>
+        <section className="result-pane" aria-live="polite"><p className="section-number">2. Cost breakdown</p><p className="total-label">Calculated estimate (USD)</p><p className="calculated-total">${ledger.total}</p><p className="total-explanation">Exact arithmetic for <strong>{ledger.model.billed}</strong> on {provider.label} {provider.endpointLabel}, using the rates and usage dimensions below. Reconcile against provider billing before treating it as invoice-exact.</p>
           <ComponentTable ledger={ledger} />
           <div className="source-line"><span>Source: <a href={ledger.price_sources?.[0]?.url || appPath("/methodology/")}>{ledger.price_sources?.map((source) => source.name).join(", ") || "No matching source"}</a></span><span>{pricingMode(ledger)}</span><span>Retrieved: {ledger.price_sources?.[0]?.retrieved_at || "—"}</span></div>
           <div className="result-section"><p className="section-number">3. Pricing warnings</p><WarningList warnings={ledger.warnings} /></div>
@@ -221,8 +221,8 @@ export function BatchPage() {
 }
 
 export function MethodologyPage() {
-  return <><div className="page-shell"><Header /><main className="methodology-page"><header><h1>Evidence, not a black box.</h1><p>RunCost separates extraction, price selection, and exact decimal arithmetic so every result can be explained, tested, and reproduced.</p></header>
-    <section className="method-steps"><article><span>01</span><h2>Normalize usage</h2><p>Provider and framework adapters map response fields into named billing components. Inclusive totals are netted only when the relationship is explicit.</p></article><article><span>02</span><h2>Select a dated rate</h2><p>Provider, surface, model alias, service mode, region, effective date, and conditional thresholds are matched with deterministic precedence.</p></article><article><span>03</span><h2>Calculate exactly</h2><p>Decimal arithmetic prices each component independently. Discounts are separate ledger entries rather than invisible mutations.</p></article><article><span>04</span><h2>Preserve uncertainty</h2><p>Unknown models, stale sources, unpriced dimensions, ambiguous inclusive counts, and provider-cost disagreements remain visible warnings.</p></article></section>
+  return <><div className="page-shell"><Header /><main className="methodology-page"><header><h1>Evidence, not a black box.</h1><p>RunCost separates extraction, price selection, and decimal arithmetic so each estimate can be explained, tested, and reproduced.</p></header>
+    <section className="method-steps"><article><span>01</span><h2>Normalize usage</h2><p>Provider and framework adapters map response fields into named billing components. Inclusive totals are netted only when the relationship is explicit.</p></article><article><span>02</span><h2>Select a dated rate</h2><p>Provider, surface, model alias, service mode, region, effective date, and conditional thresholds are matched with deterministic precedence.</p></article><article><span>03</span><h2>Use exact arithmetic</h2><p>Decimal arithmetic prices each component independently. Discounts are separate ledger entries rather than invisible mutations.</p></article><article><span>04</span><h2>Preserve uncertainty</h2><p>Unknown models, stale sources, unpriced dimensions, ambiguous inclusive counts, and provider-cost disagreements remain visible warnings.</p></article></section>
     <section className="method-proof"><h2>Three implementations, one fixture truth.</h2><p>Python, JavaScript/TypeScript, and Go run the same shared fixtures. The generated conformance report labels preserved, warned, unsupported, and not-yet-tested pathways instead of claiming blanket support.</p><div className="method-links"><a className="button primary" href="https://github.com/adamallcock/runcost/blob/main/docs/generated/conformance-report.md">Open conformance report</a><a className="text-link" href="https://github.com/adamallcock/runcost/blob/main/docs/internal/reports/2026-07-18-openai-dashboard-export-comparison.md">Read the real dashboard comparison</a><a className="text-link" href="https://github.com/adamallcock/runcost/tree/main/schemas">Inspect JSON Schemas</a></div></section>
     <section className="precedence"><h2>Default source precedence</h2><ol><li>Explicit user or contract prices</li><li><code>genai-prices</code></li><li><code>models.dev</code></li><li>LiteLLM pricing data</li><li>Compatibility warnings when no safe match exists</li></ol><p>OpenRouter requests try the OpenRouter models API first. RunCost selects one source per calculation, records cache and freshness metadata, and never silently merges competing catalogs. The published packages contain no provider price database.</p></section>
   </main><Footer /></div></>;

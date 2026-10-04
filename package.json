@@ -1,10 +1,10 @@
 {
   "name": "runcost-workspace",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "python3 scripts/check_fixtures.py && python3 scripts/check_go_fixtures.py && python3 scripts/check_fixture_generator.py && python3 scripts/check_source_refresh.py && python3 scripts/check_external_price_resolution.py && python3 scripts/check_official_price_snapshots.py && python3 scripts/check_cost_accounting.py && python3 scripts/check_alpha_smoke_contract.py && python3 scripts/check_alpha_smoke.py && python3 scripts/check_meta_model_api_smoke.py && python3 scripts/check_alpha_smoke_preflight.py && python3 scripts/check_alpha_product_truth.py && python3 scripts/create_alpha_product_truth_entry.py --self-check && python3 scripts/check_invoice_comparison_contract.py && python3 scripts/check_invoice_comparison.py && python3 scripts/check_alpha_evidence_bundle.py && python3 scripts/check_alpha_evidence_collector.py && python3 scripts/check_trusted_publishing_verification.py && python3 scripts/check_v1_stabilization_checklist.py && python3 scripts/check_project_completion_gates.py && python3 scripts/check_fixture_coverage.py && python3 scripts/check_schema_taxonomy.py && python3 scripts/check_generated_contract_docs.py && python3 scripts/generate_language_types.py && python3 scripts/check_type_taxonomy_parity.py && python3 scripts/check_public_api_registry.py && python3 scripts/check_python_type_surface.py && python3 scripts/check_public_github_readiness.py && python3 scripts/check_product_expansion.py && python3 scripts/check_external_fixture_workflow.py && python3 scripts/check_cli_activation.py && python3 scripts/check_catalog_manifest.py && python3 scripts/check_browser_entrypoint.py && python3 scripts/check_catalog_performance.py && python3 scripts/check_expansion_examples.py && python3 scripts/check_openai_expansion_smoke.py && python3 scripts/generate_conformance_report.py --check && python3 scripts/check_playground_site.py && go test ./packages/go/... && python3 scripts/check_project_hygiene.py",
+    "test": "python3 scripts/check_fixtures.py && python3 scripts/check_go_fixtures.py && python3 scripts/check_fixture_generator.py && python3 scripts/check_source_refresh.py && python3 scripts/check_external_price_resolution.py && python3 scripts/check_official_price_snapshots.py && python3 scripts/check_cost_accounting.py && python3 scripts/check_alpha_smoke_contract.py && python3 scripts/check_alpha_smoke.py && python3 scripts/check_meta_model_api_smoke.py && python3 scripts/check_alpha_smoke_preflight.py && python3 scripts/check_alpha_product_truth.py && python3 scripts/create_alpha_product_truth_entry.py --self-check && python3 scripts/check_invoice_comparison_contract.py && python3 scripts/check_invoice_comparison.py && python3 scripts/check_alpha_evidence_bundle.py && python3 scripts/check_alpha_evidence_collector.py && python3 scripts/check_trusted_publishing_verification.py && python3 scripts/check_v1_stabilization_checklist.py && python3 scripts/check_project_completion_gates.py && python3 scripts/check_fixture_coverage.py && python3 scripts/check_schema_taxonomy.py && python3 scripts/check_generated_contract_docs.py && python3 scripts/generate_language_types.py && python3 scripts/check_type_taxonomy_parity.py && python3 scripts/check_public_api_registry.py && python3 scripts/check_python_type_surface.py && python3 scripts/check_public_github_readiness.py && python3 scripts/check_product_expansion.py && python3 scripts/check_external_fixture_workflow.py && python3 scripts/check_cli_activation.py && python3 scripts/check_catalog_manifest.py && python3 scripts/check_browser_entrypoint.py && python3 scripts/check_catalog_performance.py && python3 scripts/check_expansion_examples.py && python3 scripts/check_openai_expansion_smoke.py && python3 scripts/generate_conformance_report.py --check && python3 scripts/check_playground_site.py && go test ./packages/go/... && python3 scripts/check_project_hygiene.py && python3 scripts/check_package_regressions.py && python3 scripts/check_cli_streaming.py && python3 scripts/measure_resolver_performance.py --check",
     "check:taxonomy": "python3 scripts/check_schema_taxonomy.py",
     "check:types": "python3 scripts/generate_language_types.py && python3 scripts/check_type_taxonomy_parity.py",
     "check:api-registry": "python3 scripts/check_public_api_registry.py",
@@ -54,13 +54,15 @@
     "example:batch:js": "node examples/javascript_batch_endpoints.mjs",
     "example:batch:py": "python3 examples/python_batch_endpoints.py",
     "example:otel:js": "node examples/javascript_genai_prices_otel.mjs",
-    "example:otel:py": "python3 examples/python_pydantic_genai_prices.py"
+    "example:otel:py": "python3 examples/python_pydantic_genai_prices.py",
+    "check:source-contract": "python3 scripts/check_live_source_contract.py"
   },
   "workspaces": [
     "packages/javascript/core"
   ],
   "devDependencies": {
     "@ai-sdk/openai": "^4.0.51",
-    "ai": "^7.0.84"
+    "ai": "^7.0.84",
+    "typescript": "7.0.2"
   }
 }

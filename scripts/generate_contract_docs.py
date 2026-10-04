@@ -509,6 +509,16 @@ def generate_public_api_docs() -> str:
     return "\n".join(lines)
 
 
+def generate_warning_reference() -> str:
+    path = ROOT / "docs/reference/warnings-and-limitations.md"
+    current = path.read_text(encoding="utf-8")
+    taxonomy = load_taxonomy()
+    start = current.index("## Warning Codes")
+    end = current.index("## Common Causes", start)
+    section = ["## Warning Codes", "", "This list and metadata table are generated from `schemas/taxonomy.json`.", "", *[f"- `{code}`" for code in taxonomy["warning_codes"]], "", "Warnings contain stable codes and typed metadata; optional paths identify source fields.", "See [warning coverage](../generated/warning-coverage.md) for fixture evidence and [beta/V1 caveats](../generated/beta-v1-caveats.md) for qualification limits.", "", *table(["Warning code", "Required metadata keys"], [[f"`{code}`", ", ".join(f"`{key}`" for key in taxonomy["warning_metadata_required_keys"][code])] for code in taxonomy["warning_codes"]]), "", ""]
+    return current[:start] + "\n".join(section) + current[end:]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate taxonomy-derived contract documentation.")
     parser.add_argument("--output", help="Write generated markdown to this path instead of stdout.")
@@ -534,6 +544,7 @@ def main() -> int:
         DEFAULT_WARNING_OUTPUT.write_text(warning_content, encoding="utf-8")
         DEFAULT_BETA_OUTPUT.write_text(beta_content, encoding="utf-8")
         DEFAULT_API_OUTPUT.write_text(api_content, encoding="utf-8")
+        (ROOT / "docs/reference/warnings-and-limitations.md").write_text(generate_warning_reference(), encoding="utf-8")
         print(f"Wrote generated contract docs to {DEFAULT_OUTPUT}")
         print(f"Wrote generated schema docs to {DEFAULT_SCHEMA_OUTPUT}")
         print(f"Wrote generated support docs to {DEFAULT_SUPPORT_OUTPUT}")

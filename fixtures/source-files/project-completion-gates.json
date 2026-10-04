@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1",
-  "updated_at": "2026-07-18",
+  "updated_at": "2026-08-08",
   "status_scale": {
     "satisfied": "Completion evidence exists and is machine-checkable where practical.",
     "partial": "Useful repo-side work exists, but the final requirement is not proven.",
@@ -1061,8 +1061,8 @@
         },
         {
           "kind": "report",
-          "path": "docs/internal/reports/2026-07-15-product-market-and-distribution-assessment.md",
-          "proves": "The 90-day continuation thresholds distinguish real integrations and external evidence from registry-download noise."
+          "path": "docs/internal/reports/2026-08-08-trust-quickstart-and-adoption-plan.md",
+          "proves": "The ongoing adoption program prioritizes work from real integrations without making project continuation depend on a calendar gate."
         },
         {
           "kind": "docs",
@@ -1071,7 +1071,7 @@
         }
       ],
       "completion_check": "python3 scripts/check_v1_stabilization_checklist.py --checklist <release-candidate-checklist.json> --require-real",
-      "remaining_action": "Review the 90-day adoption gate on 2026-10-16; proceed to a real release-candidate V1 checklist only if at least two continuation thresholds have independent evidence."
+      "remaining_action": "Complete a real release-candidate V1 checklist when the technical compatibility, packaging, and supported-surface evidence is ready; use adoption evidence to prioritize work, not to decide whether the project continues."
     }
   ]
 }

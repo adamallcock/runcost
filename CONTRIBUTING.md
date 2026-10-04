@@ -27,6 +27,9 @@ as supported.
 5. Run the validation battery:
 
 ```bash
+python3 -m pip install -r requirements-dev.txt
+npm ci
+npm ci --prefix playground
 npm test
 npm run check:coverage
 npm run check:packages

@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +15,16 @@ ROOT = Path(__file__).resolve().parents[1]
 BUDGET_PATH = ROOT / "fixtures" / "source-files" / "performance-budgets.json"
 REPORT_PATH = ROOT / "docs" / "internal" / "reports" / "2026-07-18-catalog-performance-baseline.json"
 MB = 1024 * 1024
+
+
+def evidence_date() -> str:
+    epoch = os.environ.get("SOURCE_DATE_EPOCH")
+    if epoch is not None:
+        try:
+            return datetime.fromtimestamp(int(epoch), tz=timezone.utc).date().isoformat()
+        except (OverflowError, ValueError) as exc:
+            raise SystemExit("SOURCE_DATE_EPOCH must be an integer Unix timestamp") from exc
+    return datetime.now().astimezone().date().isoformat()
 
 
 def command_json(command: list[str]) -> dict[str, Any]:
@@ -79,7 +91,18 @@ def measurements() -> dict[str, float]:
             text=True,
             capture_output=True,
         ).stdout
-    )[0]
+    )
+    if isinstance(npm_data, list):
+        if len(npm_data) != 1:
+            raise AssertionError("npm pack must describe exactly one package")
+        npm_data = npm_data[0]
+    elif isinstance(npm_data, dict) and "size" not in npm_data:
+        # npm 12 keys its result by package name; npm 11 returns an array.
+        if len(npm_data) != 1:
+            raise AssertionError("npm pack must describe exactly one package")
+        npm_data = next(iter(npm_data.values()))
+    if not isinstance(npm_data, dict) or not {"size", "unpackedSize"} <= npm_data.keys():
+        raise AssertionError("npm pack returned unrecognized package metadata")
     return {
         "python_import_ms": round(float(python["import_ms"]), 3),
         "python_compile_10000_cards_ms": round(float(python["compile_ms"]), 3),
@@ -111,7 +134,7 @@ def main() -> int:
     failures = [f"{name}={measured[name]} exceeds {limit}" for name, limit in budgets.items() if measured[name] > limit]
     report = {
         "schema_version": "0.1",
-        "measured_on": "2026-07-18",
+        "measured_on": evidence_date(),
         "measurements": measured,
         "budgets": budgets,
         "status": "failed" if failures else "passed",

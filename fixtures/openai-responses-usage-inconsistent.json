@@ -1,0 +1,61 @@
+{
+  "name": "openai-responses-usage-inconsistent",
+  "description": "Compatibility mode refuses to price cached input that exceeds the provider-declared input total.",
+  "metadata": {
+    "requirement_ids": ["RC-CALC-CORE", "RC-FIXTURE-CONFORMANCE"],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "warning",
+    "tags": ["usage_validation", "warning:usage_inconsistent"],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "raw_response": {
+      "id": "resp_inconsistent",
+      "object": "response",
+      "model": "gpt-usage-validation",
+      "usage": {
+        "input_tokens": 10,
+        "input_tokens_details": {"cached_tokens": 20},
+        "output_tokens": 0
+      }
+    },
+    "extract": {"provider": "openai", "surface": "openai.responses"},
+    "price_cards": []
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "openai",
+      "surface": "openai.responses",
+      "model": {
+        "requested": "gpt-usage-validation",
+        "returned": "gpt-usage-validation",
+        "billed": "gpt-usage-validation",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "usage_inconsistent",
+          "message": "Usage subtotal at $.usage.input_tokens_details.cached_tokens exceeds its declared total at $.usage.input_tokens.",
+          "path": "$.usage.input_tokens_details.cached_tokens",
+          "metadata": {
+            "invariant": "input_cache_subtotals_lte_input_tokens",
+            "total_path": "$.usage.input_tokens",
+            "total": "10",
+            "component_paths": [
+              "$.usage.input_tokens_details.cached_tokens",
+              "$.usage.input_tokens_details.cache_write_tokens"
+            ],
+            "component_total": "20"
+          }
+        }
+      ]
+    }
+  }
+}

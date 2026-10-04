@@ -16,19 +16,31 @@ import (
 // CompiledPriceCatalog indexes immutable price cards for repeated selection.
 type CompiledPriceCatalog struct {
 	PriceCards      []any
+	priceCards      []any
 	byProviderModel map[string][]any
 	byModel         map[string][]any
 }
 
 // CompilePriceCatalog builds provider/model and alias indexes once.
 func CompilePriceCatalog(priceCards []any) *CompiledPriceCatalog {
+	priceCards = deepCloneJSON(priceCards).([]any)
 	catalog := &CompiledPriceCatalog{
-		PriceCards:      priceCards,
+		PriceCards:      deepCloneJSON(priceCards).([]any),
+		priceCards:      priceCards,
 		byProviderModel: map[string][]any{},
 		byModel:         map[string][]any{},
 	}
 	for _, rawCard := range priceCards {
 		card := asObject(rawCard)
+		for componentIndex, rawComponent := range asSlice(card["components"]) {
+			currency := asString(asObject(asObject(rawComponent)["price"])["currency"])
+			if currency != "USD" {
+				panic(fmt.Sprintf(
+					"unsupported currency for price card %s component %d: %q; RunCost supports USD only",
+					asString(card["id"]), componentIndex, currency,
+				))
+			}
+		}
 		provider := asString(card["provider"])
 		names := []string{asString(card["model"])}
 		for _, alias := range asSlice(card["aliases"]) {
@@ -87,6 +99,12 @@ var toolOrFeatureComponents = map[string]bool{
 // Object is the prototype map-backed representation for canonical ledgers,
 // price cards, discount policies, provider responses, and adapter inputs.
 type Object = map[string]any
+
+// Currency is the currency identifier accepted by RunCost's public typed API.
+// Runtime validation rejects every value except CurrencyUSD.
+type Currency string
+
+const CurrencyUSD Currency = "USD"
 
 // ModelIdentity identifies the requested, returned, and billable model names
 // on a canonical usage ledger.
@@ -204,7 +222,7 @@ func (usage UsageLedger) Object() Object {
 // Price is a typed Go representation of a component price.
 type Price struct {
 	Amount   string
-	Currency string
+	Currency Currency
 	Per      string
 }
 
@@ -212,7 +230,7 @@ type Price struct {
 func (price Price) Object() Object {
 	return Object{
 		"amount":   price.Amount,
-		"currency": price.Currency,
+		"currency": string(price.Currency),
 		"per":      price.Per,
 	}
 }
@@ -631,42 +649,6 @@ func numberString(value any) string {
 	default:
 		return fmt.Sprint(typed)
 	}
-}
-
-func rat(value any) *big.Rat {
-	parsed, ok := new(big.Rat).SetString(numberString(value))
-	if !ok {
-		panic(fmt.Sprintf("invalid decimal: %v", value))
-	}
-	return parsed
-}
-
-func decimal(value *big.Rat) string {
-	text := value.FloatString(18)
-	text = strings.TrimRight(text, "0")
-	text = strings.TrimRight(text, ".")
-	if text == "-0" || text == "" {
-		return "0"
-	}
-	return text
-}
-
-func add(left any, right any) string {
-	return decimal(new(big.Rat).Add(rat(left), rat(right)))
-}
-
-func subtract(left any, right any) string {
-	return decimal(new(big.Rat).Sub(rat(left), rat(right)))
-}
-
-func multiplyDivide(quantity any, amount any, per any) string {
-	perRat := rat(per)
-	if perRat.Sign() == 0 {
-		panic("price.per must not be zero")
-	}
-	result := new(big.Rat).Mul(rat(quantity), rat(amount))
-	result.Quo(result, perRat)
-	return decimal(result)
 }
 
 func asObject(value any) Object {
@@ -1159,6 +1141,9 @@ func pricingPeriodSelection(usageLedger Object, card Object) Object {
 	}
 	if explicit := asString(context["pricingPeriod"]); explicit != "" {
 		return Object{"pricing_period": explicit, "period_selection": "explicit_context"}
+	}
+	if unsupported := asSlice(asObject(card["metadata"])["unsupported_billing_constraints"]); len(unsupported) > 0 {
+		return Object{"unsupported_schedule": fmt.Sprint(unsupported)}
 	}
 	schedule := cardBillingSchedule(card)
 	if len(schedule) == 0 {
@@ -2175,6 +2160,34 @@ func discountEligible(priceComponent Object) bool {
 	return value.(bool)
 }
 
+func validateDiscountPolicies(policies []any) {
+	for _, raw := range policies {
+		policy, valid := objectValue(raw)
+		if !valid {
+			panic("discount policy must be an object")
+		}
+		id, ok := policy["id"].(string)
+		if !ok || strings.TrimSpace(id) == "" {
+			panic("discount policy requires a non-empty id")
+		}
+		adjustment, valid := objectValue(policy["adjustment"])
+		if !valid {
+			panic("discount adjustment must be an object")
+		}
+		kind, valid := adjustment["type"].(string)
+		if !valid {
+			panic("discount adjustment type must be a string")
+		}
+		if kind != "multiplier" && kind != "percentage_discount" && kind != "percentage_markup" {
+			panic("unsupported discount adjustment type")
+		}
+		if adjustment["value"] == nil || numberString(adjustment["value"]) == "" {
+			panic("discount adjustment value must be a finite decimal")
+		}
+		rat(adjustment["value"])
+	}
+}
+
 func applyDiscounts(cost string, policies []any, usageLedger Object, component Object, eligible bool) (string, []any) {
 	if !eligible {
 		return cost, nil
@@ -2274,6 +2287,397 @@ func usageMetadataFieldWarnings(usageLedger Object) []any {
 		})
 	}
 	return warnings
+}
+
+func invalidUsageWarning(path string, reason string, value any, component string) Object {
+	metadata := Object{"reason": reason}
+	if value != nil {
+		metadata["value"] = fmt.Sprint(value)
+	}
+	if component != "" {
+		metadata["component"] = component
+	}
+	return Object{
+		"code":     "invalid_usage",
+		"message":  fmt.Sprintf("Usage value at %s is invalid: %s.", path, strings.ReplaceAll(reason, "_", " ")),
+		"path":     path,
+		"metadata": metadata,
+	}
+}
+
+func validatedUsageRat(value any, path string, warnings *[]any) (*big.Rat, bool) {
+	parsed, ok := new(big.Rat).SetString(numberString(value))
+	if !ok {
+		*warnings = append(*warnings, invalidUsageWarning(path, "malformed_decimal", value, ""))
+		return nil, false
+	}
+	if parsed.Sign() < 0 {
+		*warnings = append(*warnings, invalidUsageWarning(path, "negative_quantity", value, ""))
+		return nil, false
+	}
+	return parsed, true
+}
+
+func validateUsageFieldIfPresent(object Object, key string, path string, warnings *[]any) {
+	value, exists := object[key]
+	if !exists {
+		return
+	}
+	validatedUsageRat(value, path, warnings)
+}
+
+type usageSubtotalComponent struct {
+	value any
+	path  string
+}
+
+func checkUsageSubtotal(
+	warnings *[]any,
+	totalValue any,
+	totalPath string,
+	components []usageSubtotalComponent,
+	invariant string,
+) {
+	total, totalOK := validatedUsageRat(totalValue, totalPath, warnings)
+	componentTotal := new(big.Rat)
+	componentPaths := []any{}
+	componentsOK := true
+	for _, component := range components {
+		parsed, ok := validatedUsageRat(component.value, component.path, warnings)
+		componentsOK = componentsOK && ok
+		if ok {
+			componentTotal.Add(componentTotal, parsed)
+			componentPaths = append(componentPaths, component.path)
+		}
+	}
+	if !totalOK || !componentsOK || componentTotal.Cmp(total) <= 0 {
+		return
+	}
+	path := totalPath
+	if len(componentPaths) > 0 {
+		path = asString(componentPaths[0])
+	}
+	*warnings = append(*warnings, Object{
+		"code":    "usage_inconsistent",
+		"message": fmt.Sprintf("Usage subtotal at %s exceeds its declared total at %s.", path, totalPath),
+		"path":    path,
+		"metadata": Object{
+			"invariant":       invariant,
+			"total_path":      totalPath,
+			"total":           decimal(total),
+			"component_paths": componentPaths,
+			"component_total": decimal(componentTotal),
+		},
+	})
+}
+
+func rawUsageRootPath(rawUsage Object, surface string) string {
+	if surface == "google.gemini.generate_content" || surface == "vertex.gemini.generate_content" || surface == "google.gemini.live" {
+		return "$.usageMetadata"
+	}
+	for key := range rawUsage {
+		if strings.HasPrefix(key, "gen_ai.usage.") {
+			return "$.attributes"
+		}
+	}
+	return "$.usage"
+}
+
+func appendNegativeRawUsageWarnings(value any, path string, warnings *[]any) {
+	switch typed := value.(type) {
+	case map[string]any:
+		keys := make([]string, 0, len(typed))
+		for key := range typed {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			appendNegativeRawUsageWarnings(typed[key], path+"."+key, warnings)
+		}
+		return
+	case []any:
+		for index, item := range typed {
+			appendNegativeRawUsageWarnings(item, fmt.Sprintf("%s[%d]", path, index), warnings)
+		}
+		return
+	case nil, bool:
+		return
+	}
+	parsed, ok := new(big.Rat).SetString(numberString(value))
+	if !ok || parsed.Sign() >= 0 {
+		return
+	}
+	for _, rawWarning := range *warnings {
+		warning := asObject(rawWarning)
+		metadata := asObject(warning["metadata"])
+		if asString(warning["code"]) == "invalid_usage" && asString(warning["path"]) == path && asString(metadata["reason"]) == "negative_quantity" {
+			return
+		}
+	}
+	*warnings = append(*warnings, invalidUsageWarning(path, "negative_quantity", value, ""))
+}
+
+func rawUsageFieldIsNumeric(fieldName string) bool {
+	lowered := strings.ToLower(fieldName)
+	if strings.Contains(lowered, "token") &&
+		(strings.HasSuffix(lowered, "token") || strings.HasSuffix(lowered, "tokens") || strings.HasSuffix(lowered, "count")) {
+		return true
+	}
+	for _, suffix := range []string{
+		"_units", "units", "_seconds", "seconds", "_characters", "characters",
+		"_images", "images", "_requests", "requests", "_sessions", "sessions", "_count",
+	} {
+		if strings.HasSuffix(lowered, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
+func appendMalformedRawUsageWarnings(value any, path string, warnings *[]any, fieldName string) {
+	switch typed := value.(type) {
+	case map[string]any:
+		keys := make([]string, 0, len(typed))
+		for key := range typed {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			appendMalformedRawUsageWarnings(typed[key], path+"."+key, warnings, key)
+		}
+		return
+	case []any:
+		for index, item := range typed {
+			appendMalformedRawUsageWarnings(item, fmt.Sprintf("%s[%d]", path, index), warnings, fieldName)
+		}
+		return
+	case nil:
+		return
+	}
+	if !rawUsageFieldIsNumeric(fieldName) {
+		return
+	}
+	candidateWarnings := []any{}
+	validatedUsageRat(value, path, &candidateWarnings)
+	for _, rawCandidate := range candidateWarnings {
+		candidate := asObject(rawCandidate)
+		candidateMetadata := asObject(candidate["metadata"])
+		duplicate := false
+		for _, rawWarning := range *warnings {
+			warning := asObject(rawWarning)
+			warningMetadata := asObject(warning["metadata"])
+			if asString(warning["code"]) == asString(candidate["code"]) &&
+				asString(warning["path"]) == asString(candidate["path"]) &&
+				asString(warningMetadata["reason"]) == asString(candidateMetadata["reason"]) {
+				duplicate = true
+				break
+			}
+		}
+		if !duplicate {
+			*warnings = append(*warnings, candidate)
+		}
+	}
+}
+
+func rawUsageConsistencyWarnings(rawUsage Object, surface string) []any {
+	warnings := []any{}
+	hasOTelUsage := false
+	for key := range rawUsage {
+		if strings.HasPrefix(key, "gen_ai.usage.") {
+			hasOTelUsage = true
+			break
+		}
+	}
+	if hasOTelUsage {
+		if input, ok := rawUsage["gen_ai.usage.input_tokens"]; ok {
+			checkUsageSubtotal(&warnings, input, "$.attributes.gen_ai.usage.input_tokens", []usageSubtotalComponent{
+				{firstNonNil(rawUsage["gen_ai.usage.cache_read.input_tokens"], 0), "$.attributes.gen_ai.usage.cache_read.input_tokens"},
+				{firstNonNil(rawUsage["gen_ai.usage.cache_creation.input_tokens"], 0), "$.attributes.gen_ai.usage.cache_creation.input_tokens"},
+			}, "otel_input_cache_subtotals_lte_input_tokens")
+		} else {
+			validateUsageFieldIfPresent(rawUsage, "gen_ai.usage.cache_read.input_tokens", "$.attributes.gen_ai.usage.cache_read.input_tokens", &warnings)
+			validateUsageFieldIfPresent(rawUsage, "gen_ai.usage.cache_creation.input_tokens", "$.attributes.gen_ai.usage.cache_creation.input_tokens", &warnings)
+		}
+		if output, ok := rawUsage["gen_ai.usage.output_tokens"]; ok {
+			checkUsageSubtotal(&warnings, output, "$.attributes.gen_ai.usage.output_tokens", []usageSubtotalComponent{{
+				firstNonNil(rawUsage["gen_ai.usage.reasoning.output_tokens"], 0),
+				"$.attributes.gen_ai.usage.reasoning.output_tokens",
+			}}, "otel_reasoning_tokens_lte_output_tokens")
+		} else {
+			validateUsageFieldIfPresent(rawUsage, "gen_ai.usage.reasoning.output_tokens", "$.attributes.gen_ai.usage.reasoning.output_tokens", &warnings)
+		}
+	}
+	if surface == "openai.responses" || surface == "xai.responses" || surface == "meta.responses" {
+		inputDetails := asObject(rawUsage["input_tokens_details"])
+		outputDetails := asObject(rawUsage["output_tokens_details"])
+		if input, ok := rawUsage["input_tokens"]; ok {
+			checkUsageSubtotal(&warnings, input, "$.usage.input_tokens", []usageSubtotalComponent{
+				{firstNonNil(inputDetails["cached_tokens"], 0), "$.usage.input_tokens_details.cached_tokens"},
+				{firstNonNil(inputDetails["cache_write_tokens"], 0), "$.usage.input_tokens_details.cache_write_tokens"},
+			}, "input_cache_subtotals_lte_input_tokens")
+		} else {
+			validateUsageFieldIfPresent(inputDetails, "cached_tokens", "$.usage.input_tokens_details.cached_tokens", &warnings)
+			validateUsageFieldIfPresent(inputDetails, "cache_write_tokens", "$.usage.input_tokens_details.cache_write_tokens", &warnings)
+		}
+		if inputDetails["orchestration_input_tokens"] != nil || inputDetails["orchestration_input_cached_tokens"] != nil {
+			checkUsageSubtotal(
+				&warnings,
+				firstNonNil(inputDetails["orchestration_input_tokens"], 0),
+				"$.usage.input_tokens_details.orchestration_input_tokens",
+				[]usageSubtotalComponent{{
+					firstNonNil(inputDetails["orchestration_input_cached_tokens"], 0),
+					"$.usage.input_tokens_details.orchestration_input_cached_tokens",
+				}},
+				"orchestration_cached_tokens_lte_orchestration_input_tokens",
+			)
+		}
+		if output, ok := rawUsage["output_tokens"]; ok {
+			checkUsageSubtotal(&warnings, output, "$.usage.output_tokens", []usageSubtotalComponent{{
+				firstNonNil(outputDetails["reasoning_tokens"], 0),
+				"$.usage.output_tokens_details.reasoning_tokens",
+			}}, "reasoning_tokens_lte_output_tokens")
+		} else {
+			validateUsageFieldIfPresent(outputDetails, "reasoning_tokens", "$.usage.output_tokens_details.reasoning_tokens", &warnings)
+			validateUsageFieldIfPresent(outputDetails, "orchestration_output_tokens", "$.usage.output_tokens_details.orchestration_output_tokens", &warnings)
+		}
+	} else if strings.HasSuffix(surface, "chat_completions") || strings.Contains(surface, ".chat_completions") {
+		promptDetails := asObject(rawUsage["prompt_tokens_details"])
+		completionDetails := asObject(rawUsage["completion_tokens_details"])
+		if prompt, ok := rawUsage["prompt_tokens"]; ok {
+			checkUsageSubtotal(&warnings, prompt, "$.usage.prompt_tokens", []usageSubtotalComponent{
+				{firstNonNil(promptDetails["cached_tokens"], 0), "$.usage.prompt_tokens_details.cached_tokens"},
+				{firstNonNil(promptDetails["cache_write_tokens"], 0), "$.usage.prompt_tokens_details.cache_write_tokens"},
+			}, "prompt_cache_subtotals_lte_prompt_tokens")
+		} else {
+			validateUsageFieldIfPresent(promptDetails, "cached_tokens", "$.usage.prompt_tokens_details.cached_tokens", &warnings)
+			validateUsageFieldIfPresent(promptDetails, "cache_write_tokens", "$.usage.prompt_tokens_details.cache_write_tokens", &warnings)
+		}
+		if completion, ok := rawUsage["completion_tokens"]; ok {
+			checkUsageSubtotal(&warnings, completion, "$.usage.completion_tokens", []usageSubtotalComponent{{
+				firstNonNil(completionDetails["reasoning_tokens"], 0),
+				"$.usage.completion_tokens_details.reasoning_tokens",
+			}}, "reasoning_tokens_lte_completion_tokens")
+		} else {
+			validateUsageFieldIfPresent(completionDetails, "reasoning_tokens", "$.usage.completion_tokens_details.reasoning_tokens", &warnings)
+		}
+	} else if surface == "google.gemini.generate_content" || surface == "vertex.gemini.generate_content" {
+		if prompt, ok := rawUsage["promptTokenCount"]; ok {
+			checkUsageSubtotal(&warnings, prompt, "$.usageMetadata.promptTokenCount", []usageSubtotalComponent{{
+				firstNonNil(rawUsage["cachedContentTokenCount"], 0),
+				"$.usageMetadata.cachedContentTokenCount",
+			}}, "cached_content_tokens_lte_prompt_tokens")
+		} else {
+			validateUsageFieldIfPresent(rawUsage, "cachedContentTokenCount", "$.usageMetadata.cachedContentTokenCount", &warnings)
+		}
+	}
+	appendNegativeRawUsageWarnings(rawUsage, rawUsageRootPath(rawUsage, surface), &warnings)
+	appendMalformedRawUsageWarnings(rawUsage, rawUsageRootPath(rawUsage, surface), &warnings, "")
+	return warnings
+}
+
+func usageConsistencyWarnings(usageLedger Object) []any {
+	warnings := rawUsageConsistencyWarnings(asObject(usageLedger["raw_usage"]), asString(usageLedger["surface"]))
+	for index, rawComponent := range asSlice(usageLedger["components"]) {
+		component, ok := rawComponent.(map[string]any)
+		if !ok {
+			warnings = append(warnings, invalidUsageWarning(fmt.Sprintf("$.components[%d]", index), "component_not_object", nil, ""))
+			continue
+		}
+		path := asString(component["source_path"])
+		if path == "" {
+			path = fmt.Sprintf("$.components[%d].quantity", index)
+		}
+		componentWarnings := []any{}
+		validatedUsageRat(component["quantity"], path, &componentWarnings)
+		for _, rawWarning := range componentWarnings {
+			warning := asObject(rawWarning)
+			warningMetadata := asObject(warning["metadata"])
+			warningMetadata["component"] = asString(component["name"])
+			represented := false
+			for _, rawExisting := range warnings {
+				existing := asObject(rawExisting)
+				existingMetadata := asObject(existing["metadata"])
+				if asString(existing["code"]) == asString(warning["code"]) &&
+					asString(existing["path"]) == asString(warning["path"]) &&
+					asString(existingMetadata["reason"]) == asString(warningMetadata["reason"]) {
+					represented = true
+					break
+				}
+				if asString(warning["code"]) == "invalid_usage" &&
+					asString(warningMetadata["reason"]) == "negative_quantity" &&
+					asString(existing["code"]) == "usage_inconsistent" {
+					totalPath := asString(existingMetadata["total_path"])
+					if totalPath != "" && strings.Contains(path, totalPath) {
+						represented = true
+						break
+					}
+					for _, rawComponentPath := range asSlice(existingMetadata["component_paths"]) {
+						if path == asString(rawComponentPath) {
+							represented = true
+							break
+						}
+					}
+					if represented {
+						break
+					}
+				}
+			}
+			if !represented {
+				warnings = append(warnings, warning)
+			}
+		}
+	}
+	return warnings
+}
+
+func emptyCostLedgerForInvalidUsage(usageLedger Object, warnings []any) Object {
+	model := asObject(usageLedger["model"])
+	requested := asString(model["requested"])
+	if requested == "" {
+		requested = asString(model["returned"])
+	}
+	if requested == "" {
+		requested = asString(model["billed"])
+	}
+	if requested == "" {
+		requested = "unknown"
+	}
+	returned := asString(model["returned"])
+	billed := asString(model["billed"])
+	if billed == "" {
+		billed = returned
+	}
+	if billed == "" {
+		billed = requested
+	}
+	aliasResolution := asString(model["alias_resolution"])
+	if aliasResolution == "" {
+		aliasResolution = "none"
+	}
+	result := Object{
+		"schema_version": "0.1",
+		"provider":       asString(usageLedger["provider"]),
+		"surface":        asString(usageLedger["surface"]),
+		"model": Object{
+			"requested":        requested,
+			"returned":         returned,
+			"billed":           billed,
+			"alias_resolution": aliasResolution,
+		},
+		"currency":          "USD",
+		"components":        []any{},
+		"total":             "0",
+		"price_sources":     []any{},
+		"applied_discounts": []any{},
+		"warnings":          orderedWarnings(warnings),
+	}
+	if metadata, ok := objectValue(usageLedger["metadata"]); ok && len(metadata) > 0 {
+		result["metadata"] = cloneObject(metadata)
+	}
+	if attribution := NormalizeAttribution(asObject(usageLedger["attribution"])); len(attribution) > 0 {
+		result["attribution"] = attribution
+	}
+	return result
 }
 
 func optionalInt(value any) (int, bool) {
@@ -2542,6 +2946,21 @@ func CalculateCostWithOptions(usageLedger Object, priceCards []any, discountPoli
 }
 
 func calculateCostWithCompiledOptions(usageLedger Object, catalog *CompiledPriceCatalog, discountPolicies []any, options Object) Object {
+	validateDiscountPolicies(discountPolicies)
+	mode := asString(options["mode"])
+	if mode == "" {
+		mode = "compatibility"
+	}
+	consistencyWarnings := usageConsistencyWarnings(usageLedger)
+	if len(consistencyWarnings) > 0 {
+		if mode == "strict" {
+			panic(fmt.Sprintf("strict mode cost calculation failed: %s", asString(asObject(consistencyWarnings[0])["code"])))
+		}
+		return emptyCostLedgerForInvalidUsage(
+			usageLedger,
+			append(usageMetadataFieldWarnings(usageLedger), consistencyWarnings...),
+		)
+	}
 	components := []any{}
 	warnings := usageMetadataFieldWarnings(usageLedger)
 	appliedDiscounts := []any{}
@@ -2556,10 +2975,6 @@ func calculateCostWithCompiledOptions(usageLedger Object, catalog *CompiledPrice
 	aliasResolution := asString(asObject(usageLedger["model"])["alias_resolution"])
 	if aliasResolution == "" {
 		aliasResolution = "none"
-	}
-	mode := asString(options["mode"])
-	if mode == "" {
-		mode = "compatibility"
 	}
 	warnedUnknownModel := map[string]bool{}
 	warnedUnknownProvider := map[string]bool{}
@@ -2731,7 +3146,7 @@ func calculateCostWithCompiledOptions(usageLedger Object, catalog *CompiledPrice
 		total = add(total, finalCost)
 
 		source := asObject(card["source"])
-		sourceName := asString(source["name"])
+		sourceName := sourceKey(source)
 		if _, exists := sourceByName[sourceName]; !exists {
 			sourceNames = append(sourceNames, sourceName)
 		}
@@ -2746,7 +3161,7 @@ func calculateCostWithCompiledOptions(usageLedger Object, catalog *CompiledPrice
 
 		costComponent := Object{
 			"name":              asString(component["name"]),
-			"quantity":          numberString(component["quantity"]),
+			"quantity":          decimal(rat(component["quantity"])),
 			"unit":              asString(component["unit"]),
 			"unit_price":        multiplyDivide(price["amount"], "1", price["per"]),
 			"cost":              finalCost,
@@ -2849,12 +3264,8 @@ func calculateCostWithCompiledOptions(usageLedger Object, catalog *CompiledPrice
 }
 
 func sourceKey(source Object) string {
-	return strings.Join([]string{
-		asString(source["name"]),
-		asString(source["url"]),
-		asString(source["retrieved_at"]),
-		asString(source["version"]),
-	}, "|")
+	encoded, _ := json.Marshal([]string{asString(source["name"]), asString(source["url"]), asString(source["retrieved_at"]), asString(source["version"])})
+	return string(encoded)
 }
 
 func componentRank(name string) int {
@@ -3011,6 +3422,13 @@ func AggregateCostLedgers(costLedgers []any, options Object) Object {
 
 	for ledgerIndex, rawLedger := range costLedgers {
 		ledger := asObject(rawLedger)
+		currency := asString(ledger["currency"])
+		if currency != "USD" {
+			panic(fmt.Sprintf(
+				"unsupported currency for cost ledger %d: %q; RunCost aggregation supports USD only",
+				ledgerIndex, currency,
+			))
+		}
 		total = add(total, ledger["total"])
 		for _, rawComponent := range asSlice(ledger["components"]) {
 			component := asObject(rawComponent)
@@ -3138,12 +3556,12 @@ func getNumber(object Object, keys ...string) any {
 }
 
 func positiveComponent(name string, quantity any, unit string, sourcePath string) any {
-	if rat(quantity).Sign() <= 0 {
+	if rat(quantity).Sign() == 0 {
 		return nil
 	}
 	return Object{
 		"name":        name,
-		"quantity":    numberString(quantity),
+		"quantity":    decimal(rat(quantity)),
 		"unit":        unit,
 		"source_path": sourcePath,
 	}
@@ -3467,6 +3885,7 @@ func openAICompatibleChatPayload(response Object) Object {
 // completions, Anthropic Messages, Cohere Chat, Gemini generateContent, AWS
 // Bedrock Converse, and AWS Bedrock InvokeModel.
 func ExtractUsageLedger(response Object, options Object) Object {
+	options = cloneObject(options)
 	adapter := asString(options["adapter"])
 	if adapter == "" {
 		adapter = asString(options["framework"])
@@ -7065,6 +7484,7 @@ func PriceCardsFromOfficialSnapshot(data Object) []any {
 			"components":     components,
 			"source":         source,
 			"metadata": Object{
+				"unsupported_billing_constraints": firstNonNil(row["unsupported_billing_constraints"], asObject(data)["unsupported_billing_constraints"], []any{}),
 				"official_snapshot": Object{
 					"source_label": sourceLabel,
 					"notes":        row["notes"],
@@ -7540,10 +7960,60 @@ func FromResponse(response Object, options Object, priceCards []any, discountPol
 	return fromResponseWithCatalog(response, options, priceCards, discountPolicies, nil)
 }
 
-func fromResponseWithCatalog(response Object, options Object, priceCards []any, discountPolicies []any, compiledCatalog *CompiledPriceCatalog) Object {
-	if options == nil {
-		options = Object{}
+func responsePreflightPayloadAndRawUsage(response Object, surface string) (Object, Object) {
+	payload := openAIResponsesPayload(response)
+	if surface == "anthropic.messages" || surface == "minimax.messages" {
+		payload = anthropicMessagesPayload(response)
+	} else if surface == "google.gemini.generate_content" || surface == "vertex.gemini.generate_content" || surface == "google.gemini.live" {
+		payload = geminiGenerateContentPayload(response)
+	} else if strings.HasSuffix(surface, "chat_completions") || strings.Contains(surface, ".chat_completions") {
+		payload = openAICompatibleChatPayload(response)
 	}
+	if surface == "google.gemini.generate_content" || surface == "vertex.gemini.generate_content" || surface == "google.gemini.live" {
+		rawUsage := asObject(payload["usageMetadata"])
+		if len(rawUsage) == 0 {
+			rawUsage = asObject(payload["usage_metadata"])
+		}
+		return payload, rawUsage
+	}
+	return payload, asObject(payload["usage"])
+}
+
+func invalidUsageResponseIdentity(payload, options Object, surface string) (string, string, string) {
+	provider := asString(options["provider"])
+	if provider == "" {
+		provider = strings.Split(surface, ".")[0]
+		if strings.HasPrefix(surface, "aws.bedrock.") {
+			provider = "bedrock"
+		}
+	}
+	returnedModel := asString(firstNonNil(payload["model"], payload["modelVersion"], payload["modelId"], payload["model_id"]))
+	model := asString(options["model"])
+	if model == "" {
+		model = returnedModel
+	}
+	if model == "" {
+		model = "unknown"
+	}
+	return provider, model, returnedModel
+}
+
+func extractUsageLedgerSafely(response, options Object) (usageLedger Object, invalidDecimal any) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			if strings.Contains(fmt.Sprint(recovered), "invalid decimal:") {
+				usageLedger = nil
+				invalidDecimal = recovered
+				return
+			}
+			panic(recovered)
+		}
+	}()
+	return ExtractUsageLedger(response, options), nil
+}
+
+func fromResponseWithCatalog(response Object, options Object, priceCards []any, discountPolicies []any, compiledCatalog *CompiledPriceCatalog) Object {
+	options = cloneObject(options)
 	if asString(options["surface"]) == "" {
 		options["surface"] = InferSurface(response, asString(options["provider"]))
 		if asString(options["surface"]) == "" {
@@ -7584,7 +8054,66 @@ func fromResponseWithCatalog(response Object, options Object, priceCards []any, 
 		}
 		return unsupportedSurfaceLedger(response, options)
 	}
-	usageLedger := ExtractUsageLedger(response, options)
+	payload, rawUsage := responsePreflightPayloadAndRawUsage(response, surface)
+	if consistencyWarnings := rawUsageConsistencyWarnings(rawUsage, surface); len(consistencyWarnings) > 0 {
+		if mode == "strict" {
+			panic(fmt.Sprintf("strict mode cost calculation failed: %s", asString(asObject(consistencyWarnings[0])["code"])))
+		}
+		provider, model, returnedModel := invalidUsageResponseIdentity(payload, options, surface)
+		return emptyCostLedgerForInvalidUsage(Object{
+			"provider": provider,
+			"surface":  surface,
+			"model": Object{
+				"requested":        model,
+				"returned":         returnedModel,
+				"billed":           model,
+				"alias_resolution": "none",
+			},
+			"components": []any{},
+			"raw_usage":  rawUsage,
+		}, consistencyWarnings)
+	}
+	usageLedger, prepared := objectValue(options["_usage_ledger"])
+	if prepared {
+		usageLedger = deepCloneJSON(usageLedger).(Object)
+		context := cloneObject(asObject(usageLedger["context"]))
+		for key, value := range asObject(options["context"]) {
+			context[key] = value
+		}
+		if len(context) > 0 {
+			usageLedger["context"] = context
+		}
+	}
+	var invalidDecimal any
+	if !prepared {
+		usageLedger, invalidDecimal = extractUsageLedgerSafely(response, options)
+	}
+	if invalidDecimal != nil {
+		if mode == "strict" {
+			panic("strict mode cost calculation failed: invalid_usage")
+		}
+		provider, model, returnedModel := invalidUsageResponseIdentity(payload, options, surface)
+		return emptyCostLedgerForInvalidUsage(Object{
+			"provider": provider,
+			"surface":  surface,
+			"model": Object{
+				"requested":        model,
+				"returned":         returnedModel,
+				"billed":           model,
+				"alias_resolution": "none",
+			},
+			"components": []any{},
+			"raw_usage":  rawUsage,
+		}, []any{Object{
+			"code":    "invalid_usage",
+			"message": "Supported provider usage contains a malformed numeric value.",
+			"path":    rawUsageRootPath(rawUsage, surface),
+			"metadata": Object{
+				"reason": "malformed_decimal",
+				"error":  fmt.Sprint(invalidDecimal),
+			},
+		}})
+	}
 	if context, ok := objectValue(options["context"]); ok && len(context) > 0 {
 		mergedContext := cloneObject(asObject(usageLedger["context"]))
 		for key, value := range context {
@@ -7622,6 +8151,7 @@ func fromResponseWithCatalog(response Object, options Object, priceCards []any, 
 // FromLangChainMessage prices a LangChain AIMessage-like object by reading its
 // usage_metadata field and applying the supplied provider price cards.
 func FromLangChainMessage(message Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options = cloneObject(options)
 	options["adapter"] = "langchain.chat_message"
 	return FromResponse(message, options, priceCards, discountPolicies)
 }
@@ -7629,6 +8159,7 @@ func FromLangChainMessage(message Object, options Object, priceCards []any, disc
 // FromVercelAISDKResult prices a Vercel AI SDK generateText-like result by
 // reading usage or totalUsage and applying the supplied provider price cards.
 func FromVercelAISDKResult(result Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options = cloneObject(options)
 	options["adapter"] = "vercel_ai_sdk.generate_text"
 	return FromResponse(result, options, priceCards, discountPolicies)
 }
@@ -7636,6 +8167,7 @@ func FromVercelAISDKResult(result Object, options Object, priceCards []any, disc
 // FromVercelAISDKStreamFinish prices a Vercel AI SDK streamText finish/onFinish
 // object by reading usage or totalUsage and applying provider price cards.
 func FromVercelAISDKStreamFinish(result Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options = cloneObject(options)
 	options["adapter"] = "vercel_ai_sdk.stream_text"
 	return FromResponse(result, options, priceCards, discountPolicies)
 }
@@ -7644,6 +8176,7 @@ func FromVercelAISDKStreamFinish(result Object, options Object, priceCards []any
 // experimental_streamTranscribe final result by reading duration metadata and
 // applying provider transcription price cards.
 func FromVercelAISDKStreamTranscribeFinish(result Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options = cloneObject(options)
 	options["adapter"] = "vercel_ai_sdk.stream_transcribe"
 	return FromResponse(result, options, priceCards, discountPolicies)
 }
@@ -7651,6 +8184,7 @@ func FromVercelAISDKStreamTranscribeFinish(result Object, options Object, priceC
 // FromLlamaIndexTokenCounter prices a LlamaIndex TokenCountingHandler-like
 // object by reading its LLM token counters and applying provider price cards.
 func FromLlamaIndexTokenCounter(counter Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options = cloneObject(options)
 	options["adapter"] = "llamaindex.token_counter"
 	return FromResponse(counter, options, priceCards, discountPolicies)
 }
@@ -7658,6 +8192,7 @@ func FromLlamaIndexTokenCounter(counter Object, options Object, priceCards []any
 // FromHaystackGeneratorResult prices a Haystack OpenAI generator result by
 // reading reply/meta usage metadata and applying provider price cards.
 func FromHaystackGeneratorResult(result Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options = cloneObject(options)
 	options["adapter"] = "haystack.generator_result"
 	return FromResponse(result, options, priceCards, discountPolicies)
 }
@@ -7665,6 +8200,7 @@ func FromHaystackGeneratorResult(result Object, options Object, priceCards []any
 // FromLiteLLMResponse prices a LiteLLM proxy or SDK response by reading
 // OpenAI-compatible usage and comparing hidden response_cost metadata when present.
 func FromLiteLLMResponse(response Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options = cloneObject(options)
 	hidden := asObject(response["_hidden_params"])
 	if len(hidden) == 0 {
 		hidden = asObject(response["hidden_params"])
@@ -7684,6 +8220,7 @@ func FromLiteLLMResponse(response Object, options Object, priceCards []any, disc
 // FromAG2UsageSummary prices an AG2 usage summary returned from get_actual_usage,
 // get_total_usage, or gather_usage_summary.
 func FromAG2UsageSummary(summary Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options = cloneObject(options)
 	usageSummary, _ := ag2UsageSummaryPayload(summary, options)
 	_, modelUsage := ag2ModelUsage(usageSummary, asString(options["model"]))
 	if _, exists := options["provider_reported_cost"]; !exists {
@@ -7705,6 +8242,7 @@ func FromAG2UsageSummary(summary Object, options Object, priceCards []any, disco
 // FromOpenAIAgentsUsage prices an OpenAI Agents SDK usage or result-like object
 // without importing the Agents SDK.
 func FromOpenAIAgentsUsage(usage Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options = cloneObject(options)
 	options["adapter"] = "openai_agents.usage"
 	return FromResponse(usage, options, priceCards, discountPolicies)
 }
@@ -7728,6 +8266,7 @@ func langSmithReportedCost(run Object) (any, bool) {
 // FromLangSmithRun prices a LangSmith run/export object and compares
 // total_cost as framework-reported cost when present.
 func FromLangSmithRun(run Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options = cloneObject(options)
 	if _, exists := options["provider_reported_cost"]; !exists {
 		if reportedCost, ok := langSmithReportedCost(run); ok {
 			options["provider_reported_cost"] = reportedCost
@@ -7743,6 +8282,7 @@ func FromLangSmithRun(run Object, options Object, priceCards []any, discountPoli
 // FromSemanticKernelTelemetry prices Semantic Kernel telemetry/filter metadata
 // without importing Semantic Kernel.
 func FromSemanticKernelTelemetry(telemetry Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options = cloneObject(options)
 	options["adapter"] = "semantic_kernel.telemetry"
 	return FromResponse(telemetry, options, priceCards, discountPolicies)
 }
@@ -7767,6 +8307,7 @@ func openRouterReportedCost(response Object) (any, bool) {
 // FromOpenRouterSDKResponse prices OpenRouter-compatible SDK responses,
 // including OpenAI SDK-routed chat responses and resolved Agent SDK responses.
 func FromOpenRouterSDKResponse(response Object, options Object, priceCards []any, discountPolicies []any) Object {
+	options = cloneObject(options)
 	if _, exists := options["provider_reported_cost"]; !exists {
 		if reportedCost, ok := openRouterReportedCost(response); ok {
 			options["provider_reported_cost"] = reportedCost

@@ -1,0 +1,48 @@
+{
+  "name": "anthropic-messages-negative-usage",
+  "description": "Compatibility mode refuses to price a negative raw Anthropic usage quantity.",
+  "metadata": {
+    "requirement_ids": ["RC-CALC-CORE", "RC-FIXTURE-CONFORMANCE"],
+    "provider": "anthropic",
+    "surface": "anthropic.messages",
+    "scenario": "warning",
+    "tags": ["usage_validation", "warning:invalid_usage"],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "raw_response": {
+      "id": "msg_negative_usage",
+      "type": "message",
+      "model": "claude-negative",
+      "usage": {"input_tokens": -1, "output_tokens": 0}
+    },
+    "extract": {"provider": "anthropic", "surface": "anthropic.messages"},
+    "price_cards": []
+  },
+  "expected": {
+    "cost_ledger": {
+      "schema_version": "0.1",
+      "provider": "anthropic",
+      "surface": "anthropic.messages",
+      "model": {
+        "requested": "claude-negative",
+        "returned": "claude-negative",
+        "billed": "claude-negative",
+        "alias_resolution": "none"
+      },
+      "currency": "USD",
+      "components": [],
+      "total": "0",
+      "price_sources": [],
+      "applied_discounts": [],
+      "warnings": [
+        {
+          "code": "invalid_usage",
+          "message": "Usage value at $.usage.input_tokens is invalid: negative quantity.",
+          "path": "$.usage.input_tokens",
+          "metadata": {"reason": "negative_quantity", "value": "-1"}
+        }
+      ]
+    }
+  }
+}

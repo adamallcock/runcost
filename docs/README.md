@@ -7,21 +7,25 @@ status: active
 
 # RunCost Documentation
 
-Start here if you are using RunCost in an application:
+Start with one real provider response and the [quickstart](guides/quickstart.md).
+It is the shortest path from installation to an itemized USD ledger. Continue
+only into the reference that matches the next problem you have:
 
-- [Quickstart](guides/quickstart.md)
+- [Quickstart: first local ledger](guides/quickstart.md)
+- [Supported providers and frameworks](reference/supported-surfaces.md)
+- [Warnings and limitations](reference/warnings-and-limitations.md)
 - [Batch, telemetry, budgets, and direct providers](guides/2026-07-18-product-expansion-quickstart.md)
 - [External fixture contributions](guides/external-fixture-contributions.md)
 - [Integration case-study template](guides/2026-07-18-integration-case-study-template.md)
 - [Package installation](guides/package-installation.md)
 - [API reference](reference/api-reference.md)
-- [Supported surfaces](reference/supported-surfaces.md)
 - [Custom pricing and discounts](reference/custom-pricing-and-discounts.md)
 - [Source adapters](reference/source-adapters.md)
 - [Price data strategy](reference/price-data-strategy.md)
 - [Aggregation and streaming](reference/aggregation-and-streaming.md)
-- [Warnings and limitations](reference/warnings-and-limitations.md)
 - [Debug trace](reference/debug-trace.md)
+
+- [Local installation and reconciliation recipe](guides/2026-10-04-local-integration-and-reconciliation.md)
 
 Generated contract references:
 

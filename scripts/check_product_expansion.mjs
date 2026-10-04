@@ -6,6 +6,7 @@ import {
   attachPriceResolution,
   estimateCost,
   evaluateBudget,
+  exportCostLedger,
   fromBatchResults,
   fromOTelGenAISpan,
   fromResponse,
@@ -60,6 +61,7 @@ function runCase(testCase) {
       return estimateCost(value);
     case "attach_price_resolution":
       return attachPriceResolution(value.ledger, value.resolution);
+    case "export_cost_ledger": return exportCostLedger(value.ledger);
     case "evaluate_budget": {
       const total = value.ledger_or_total;
       delete value.ledger_or_total;
@@ -104,6 +106,39 @@ function checkEdgeCases() {
   if (JSON.stringify((unknown.warnings || []).map((warning) => warning.code)) !== JSON.stringify(["unknown_surface"])) {
     throw new Error(`ambiguous response did not preserve unknown_surface: ${JSON.stringify(unknown)}`);
   }
+  const otelInconsistentSpans = [
+    { attributes: {
+      "gen_ai.provider.name": "openai",
+      "gen_ai.operation.name": "chat",
+      "gen_ai.request.model": "otel-model",
+      "gen_ai.usage.input_tokens": 10,
+      "gen_ai.usage.cache_read.input_tokens": 12,
+      "gen_ai.usage.cache_creation.input_tokens": 8,
+      "gen_ai.usage.output_tokens": 0
+    } },
+    { attributes: {
+      "gen_ai.provider.name": "openai",
+      "gen_ai.operation.name": "chat",
+      "gen_ai.request.model": "otel-model",
+      "gen_ai.usage.input_tokens": 0,
+      "gen_ai.usage.output_tokens": 10,
+      "gen_ai.usage.reasoning.output_tokens": 20
+    } },
+    { attributes: {
+      "gen_ai.provider.name": "openai",
+      "gen_ai.operation.name": "chat",
+      "gen_ai.request.model": "otel-model",
+      "gen_ai.usage.input_tokens": -1,
+      "gen_ai.usage.output_tokens": 0
+    } }
+  ];
+  otelInconsistentSpans.forEach((span, index) => {
+    const expectedCode = index === 2 ? "invalid_usage" : "usage_inconsistent";
+    expectThrow(
+      () => fromOTelGenAISpan(span, { priceCards: [], mode: "strict" }),
+      `strict mode cost calculation failed: ${expectedCode}`
+    );
+  });
   const duplicateCards = priceCardsFromGenAIPrices({ providers: [{
     id: "duplicate-fixture",
     models: [{ id: "model", prices: [

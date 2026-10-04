@@ -509,3 +509,243 @@ func TestFromResponseDoesNotResolvePricesImplicitly(t *testing.T) {
 		t.Fatal("missing explicit-price warning")
 	}
 }
+
+func assertPanicsContaining(t *testing.T, expected string, action func()) {
+	t.Helper()
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Fatalf("expected panic containing %q", expected)
+		}
+		if !strings.Contains(fmt.Sprint(recovered), expected) {
+			t.Fatalf("expected panic containing %q, got %v", expected, recovered)
+		}
+	}()
+	action()
+}
+
+func TestUSDOnlyRuntimeContract(t *testing.T) {
+	t.Run("price card", func(t *testing.T) {
+		assertPanicsContaining(t, "RunCost supports USD only", func() {
+			CompilePriceCatalog([]any{Object{
+				"id": "eur-card",
+				"components": []any{Object{
+					"price": Object{"amount": "1", "currency": "EUR", "per": "1"},
+				}},
+			}})
+		})
+	})
+	t.Run("aggregation", func(t *testing.T) {
+		assertPanicsContaining(t, "aggregation supports USD only", func() {
+			AggregateCostLedgers([]any{Object{
+				"currency": "EUR",
+				"total":    "1",
+			}}, nil)
+		})
+	})
+}
+
+func TestFromResponseDoesNotMutateOrStickCallerOptions(t *testing.T) {
+	options := Object{}
+	first := FromResponse(
+		Object{"id": "resp_1", "object": "response", "model": "gpt-test", "usage": Object{"input_tokens": 1, "output_tokens": 1}},
+		options,
+		nil,
+		nil,
+	)
+	second := FromResponse(
+		Object{"type": "message", "model": "claude-test", "usage": Object{"input_tokens": 1, "output_tokens": 1}},
+		options,
+		nil,
+		nil,
+	)
+	if len(options) != 0 {
+		t.Fatalf("caller options mutated: %#v", options)
+	}
+	if asString(first["surface"]) != "openai.responses" {
+		t.Fatalf("unexpected first surface: %#v", first)
+	}
+	if asString(second["surface"]) != "anthropic.messages" {
+		t.Fatalf("surface inference stuck across calls: %#v", second)
+	}
+}
+
+func TestAdapterHelpersAreNilSafeAndDoNotMutateOptions(t *testing.T) {
+	helpers := []struct {
+		name string
+		call func(Object, Object) Object
+	}{
+		{"langchain", func(input, options Object) Object { return FromLangChainMessage(input, options, nil, nil) }},
+		{"vercel-generate", func(input, options Object) Object { return FromVercelAISDKResult(input, options, nil, nil) }},
+		{"vercel-stream", func(input, options Object) Object { return FromVercelAISDKStreamFinish(input, options, nil, nil) }},
+		{"vercel-transcribe", func(input, options Object) Object {
+			return FromVercelAISDKStreamTranscribeFinish(input, options, nil, nil)
+		}},
+		{"llamaindex", func(input, options Object) Object { return FromLlamaIndexTokenCounter(input, options, nil, nil) }},
+		{"haystack", func(input, options Object) Object { return FromHaystackGeneratorResult(input, options, nil, nil) }},
+		{"litellm", func(input, options Object) Object { return FromLiteLLMResponse(input, options, nil, nil) }},
+		{"ag2", func(input, options Object) Object { return FromAG2UsageSummary(input, options, nil, nil) }},
+		{"openai-agents", func(input, options Object) Object { return FromOpenAIAgentsUsage(input, options, nil, nil) }},
+		{"langsmith", func(input, options Object) Object { return FromLangSmithRun(input, options, nil, nil) }},
+		{"semantic-kernel", func(input, options Object) Object { return FromSemanticKernelTelemetry(input, options, nil, nil) }},
+		{"openrouter", func(input, options Object) Object { return FromOpenRouterSDKResponse(input, options, nil, nil) }},
+	}
+	for _, helper := range helpers {
+		t.Run(helper.name, func(t *testing.T) {
+			_ = helper.call(Object{}, nil)
+			options := Object{"provider": "openai"}
+			_ = helper.call(Object{}, options)
+			if !reflect.DeepEqual(options, Object{"provider": "openai"}) {
+				t.Fatalf("caller options mutated: %#v", options)
+			}
+		})
+	}
+}
+
+func TestFromResponseConcurrentCallerOptionsReuse(t *testing.T) {
+	options := Object{"provider": "openai", "surface": "openai.responses"}
+	response := Object{
+		"id": "resp_concurrent", "object": "response", "model": "gpt-test",
+		"usage": Object{"input_tokens": 1, "output_tokens": 1},
+	}
+	done := make(chan bool, 64)
+	for index := 0; index < cap(done); index++ {
+		go func() {
+			result := FromResponse(response, options, nil, nil)
+			done <- asString(result["surface"]) == "openai.responses"
+		}()
+	}
+	for index := 0; index < cap(done); index++ {
+		if !<-done {
+			t.Fatal("concurrent response used an unexpected surface")
+		}
+	}
+	if !reflect.DeepEqual(options, Object{"provider": "openai", "surface": "openai.responses"}) {
+		t.Fatalf("caller options mutated: %#v", options)
+	}
+}
+
+func TestFromResponseMalformedSupportedUsageWithoutDeclaredTotal(t *testing.T) {
+	response := Object{
+		"id":     "resp_malformed_detail",
+		"object": "response",
+		"model":  "gpt-test",
+		"usage": Object{
+			"input_tokens_details": Object{"cached_tokens": "oops"},
+			"output_tokens":        0,
+		},
+	}
+	options := Object{"provider": "openai", "surface": "openai.responses"}
+
+	result := FromResponse(response, options, nil, nil)
+	if asString(result["total"]) != "0" {
+		t.Fatalf("malformed supported usage produced a nonzero total: %#v", result)
+	}
+	if len(asSlice(result["components"])) != 0 {
+		t.Fatalf("malformed supported usage produced cost components: %#v", result)
+	}
+	warnings := asSlice(result["warnings"])
+	if len(warnings) != 1 {
+		t.Fatalf("expected one invalid_usage warning, got %#v", warnings)
+	}
+	warning := asObject(warnings[0])
+	if asString(warning["code"]) != "invalid_usage" {
+		t.Fatalf("malformed supported usage was misclassified: %#v", warning)
+	}
+	if asString(warning["path"]) != "$.usage.input_tokens_details.cached_tokens" {
+		t.Fatalf("malformed usage warning lost its source path: %#v", warning)
+	}
+	if asString(asObject(warning["metadata"])["reason"]) != "malformed_decimal" {
+		t.Fatalf("malformed usage warning lost its reason: %#v", warning)
+	}
+	if len(options) != 2 || asString(options["surface"]) != "openai.responses" {
+		t.Fatalf("caller options mutated: %#v", options)
+	}
+
+	strictOptions := Object{"provider": "openai", "surface": "openai.responses", "mode": "strict"}
+	assertPanicsContaining(t, "invalid_usage", func() {
+		FromResponse(response, strictOptions, nil, nil)
+	})
+}
+
+func TestFromResponseMalformedNativeUsage(t *testing.T) {
+	testCases := []struct {
+		name          string
+		response      Object
+		options       Object
+		expectedPath  string
+		expectedModel string
+	}{
+		{
+			name: "anthropic",
+			response: Object{
+				"type": "message", "model": "claude-test",
+				"usage": Object{"input_tokens": "oops", "output_tokens": 0},
+			},
+			options:       Object{"provider": "anthropic", "surface": "anthropic.messages"},
+			expectedPath:  "$.usage.input_tokens",
+			expectedModel: "claude-test",
+		},
+		{
+			name: "gemini",
+			response: Object{
+				"modelVersion":  "gemini-test",
+				"usageMetadata": Object{"promptTokenCount": 1, "candidatesTokenCount": "oops"},
+			},
+			options:       Object{"provider": "google", "surface": "google.gemini.generate_content"},
+			expectedPath:  "$.usageMetadata.candidatesTokenCount",
+			expectedModel: "gemini-test",
+		},
+		{
+			name: "bedrock",
+			response: Object{
+				"modelId": "bedrock-test",
+				"usage":   Object{"inputTokens": "oops", "outputTokens": 0},
+			},
+			options:       Object{"provider": "bedrock", "surface": "aws.bedrock.converse"},
+			expectedPath:  "$.usage.inputTokens",
+			expectedModel: "bedrock-test",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			result := FromResponse(testCase.response, testCase.options, nil, nil)
+			if asString(result["provider"]) != asString(testCase.options["provider"]) || asString(result["surface"]) != asString(testCase.options["surface"]) {
+				t.Fatalf("malformed supported usage lost its identity: %#v", result)
+			}
+			model := asObject(result["model"])
+			if asString(model["requested"]) != testCase.expectedModel || asString(model["returned"]) != testCase.expectedModel {
+				t.Fatalf("malformed supported usage lost its model: %#v", result)
+			}
+			if asString(result["total"]) != "0" || len(asSlice(result["components"])) != 0 {
+				t.Fatalf("malformed supported usage did not fail closed: %#v", result)
+			}
+			warnings := asSlice(result["warnings"])
+			if len(warnings) != 1 {
+				t.Fatalf("expected one invalid_usage warning: %#v", result)
+			}
+			warning := asObject(warnings[0])
+			if asString(warning["code"]) != "invalid_usage" || asString(warning["path"]) != testCase.expectedPath || asString(asObject(warning["metadata"])["reason"]) != "malformed_decimal" {
+				t.Fatalf("malformed supported usage warning mismatch: %#v", warning)
+			}
+			strictOptions := cloneObject(testCase.options)
+			strictOptions["mode"] = "strict"
+			assertPanicsContaining(t, "invalid_usage", func() {
+				FromResponse(testCase.response, strictOptions, nil, nil)
+			})
+		})
+	}
+}
+
+func TestFromResponseUnknownSurfaceRemainsDistinctFromInvalidUsage(t *testing.T) {
+	result := FromResponse(
+		Object{"model": "mystery-model", "usage": Object{}},
+		Object{"provider": "mystery", "surface": "mystery.unsupported"},
+		nil,
+		nil,
+	)
+	warnings := asSlice(result["warnings"])
+	if len(warnings) != 1 || asString(asObject(warnings[0])["code"]) != "unknown_surface" {
+		t.Fatalf("unsupported surface did not retain unknown_surface classification: %#v", result)
+	}
+}

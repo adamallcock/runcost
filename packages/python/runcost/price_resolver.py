@@ -7,6 +7,10 @@ or one of the ``*_auto`` convenience functions below.
 
 from __future__ import annotations
 
+from .types import BatchCostLedger, CostLedger, PriceResolution
+
+from concurrent.futures import Future
+import copy
 import hashlib
 import json
 import os
@@ -41,7 +45,7 @@ DEFAULT_PRICE_CACHE_MAX_AGE_SECONDS = 24 * 60 * 60
 
 EXTERNAL_PRICE_SOURCE_URLS: Dict[str, str] = {
     "deepseek-official": "https://raw.githubusercontent.com/adamallcock/runcost/main/fixtures/source-files/deepseek-official-pricing-snapshot.json",
-    "genai-prices": "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/data_slim.json",
+    "genai-prices": "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/new_data/v2/data_slim.json",
     "models.dev": "https://models.dev/api.json",
     "litellm": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
     "openrouter": "https://openrouter.ai/api/v1/models",
@@ -63,6 +67,7 @@ _INCOMPLETE_WARNING_CODES = {
 }
 
 _CACHE_LOCK = threading.RLock()
+_SOURCE_INFLIGHT: Dict[tuple, Future] = {}
 _CACHE_MEMORY: Dict[Path, Tuple[int, int, Dict[str, Any]]] = {}
 _COMPILED_CACHE: "OrderedDict[int, Tuple[List[Dict[str, Any]], CompiledPriceCatalog]]" = OrderedDict()
 _COMPILED_CACHE_LIMIT = 32
@@ -197,12 +202,16 @@ def _compiled_catalog(cards: List[Dict[str, Any]]) -> CompiledPriceCatalog:
         if cached and cached[0] is cards:
             _COMPILED_CACHE.move_to_end(key)
             return cached[1]
-    compiled = compile_price_catalog(cards)
     with _CACHE_LOCK:
+        cached = _COMPILED_CACHE.get(key)
+        if cached and cached[0] is cards:
+            return cached[1]
+        compiled = compile_price_catalog(cards)
         _COMPILED_CACHE[key] = (cards, compiled)
         _COMPILED_CACHE.move_to_end(key)
         while len(_COMPILED_CACHE) > _COMPILED_CACHE_LIMIT:
             _COMPILED_CACHE.popitem(last=False)
+
     return compiled
 
 
@@ -261,7 +270,7 @@ def _adapt_source(source: str, payload: Any, *, url: str, retrieved_at: str) -> 
         # Keep the snapshot's primary DeepSeek citation on each card. The
         # resolver cache envelope separately records the fetched GitHub URL,
         # retrieval time, and checksum.
-        return price_cards_from_official_snapshot(payload)
+        return price_cards_from_official_snapshot({**payload, "unsupported_billing_constraints": payload.get("unsupported_billing_constraints") or ["chinese_public_holidays"]})
     if source == "genai-prices":
         from .expansion import price_cards_from_genai_prices
 
@@ -292,7 +301,7 @@ def _source_warning(code: str, source: str, status: str) -> Dict[str, Any]:
     return {"code": code, "message": message, "metadata": {"source": source, "status": status}}
 
 
-def _source_state(
+def _source_state_unlocked(
     source: str,
     *,
     url: str,
@@ -327,6 +336,7 @@ def _source_state(
                 "etag": metadata.get("etag"),
                 "last_modified": metadata.get("last_modified"),
                 "card_count": len(cache["price_cards"]),
+                **{key: metadata.get(key) for key in ['catalog_generated_at', 'catalog_revision', 'catalog_schema_version', 'catalog_frozen']},
             }
         )
     if offline:
@@ -354,6 +364,7 @@ def _source_state(
         if status == 304:
             if not cache:
                 raise ValueError("received 304 without a cached representation")
+            cache = {**cache, "source": dict(cache["source"])}
             cache["source"]["validated_at"] = checked_at
             cache["source"]["etag"] = response_headers.get("etag") or cache["source"].get("etag")
             cache["source"]["last_modified"] = response_headers.get("last-modified") or cache["source"].get("last_modified")
@@ -375,6 +386,10 @@ def _source_state(
         cards = _adapt_source(source, payload, url=final_url, retrieved_at=retrieved_at)
         if not cards:
             raise ValueError("price source produced no supported price cards")
+        for card in cards:
+            provenance = card.setdefault("source", {"name": source})
+            provenance.setdefault("url", final_url)
+            provenance.setdefault("version", _sha256(body))
         envelope: Dict[str, Any] = {
             "schema_version": "0.1",
             "source": {
@@ -385,6 +400,10 @@ def _source_state(
                 "retrieved_at": retrieved_at,
                 "validated_at": retrieved_at,
                 "checksum": _sha256(body),
+                "catalog_generated_at": None,
+                "catalog_revision": _sha256(body),
+                "catalog_schema_version": "2" if source == "genai-prices" and "/v2/" in final_url else None,
+                "catalog_frozen": source == "genai-prices" and "/new_data/v2/" not in final_url,
             },
             "cards_checksum": _sha256(_canonical_bytes(cards)),
             "price_cards": cards,
@@ -400,6 +419,7 @@ def _source_state(
                 "retrieved_at": retrieved_at,
                 "validated_at": retrieved_at,
                 "checksum": envelope["source"]["checksum"],
+                **{key: envelope["source"][key] for key in ['catalog_generated_at', 'catalog_revision', 'catalog_schema_version', 'catalog_frozen']},
                 "etag": envelope["source"].get("etag"),
                 "last_modified": envelope["source"].get("last_modified"),
                 "card_count": len(cards),
@@ -415,6 +435,28 @@ def _source_state(
         else:
             warnings.append(_source_warning("price_source_unavailable", source, "fetch_failed"))
         return public_state, warnings
+
+
+def _source_state(source: str, **options: Any) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+    key = (str(_cache_path(options["cache_dir"], source, options["url"])), options["offline"], options["refresh"], options["max_age_seconds"], options["timeout"], options["max_bytes"], id(options.get("fetcher")), options.get("policy_now"))
+    with _CACHE_LOCK:
+        future = _SOURCE_INFLIGHT.get(key)
+        owner = future is None
+        if owner:
+            future = Future()
+            _SOURCE_INFLIGHT[key] = future
+    if owner:
+        try:
+            unshared_options = {key: value for key, value in options.items() if key != "policy_now"}
+            future.set_result(_source_state_unlocked(source, **unshared_options))
+        except BaseException as exc:
+            future.set_exception(exc)
+        finally:
+            with _CACHE_LOCK:
+                _SOURCE_INFLIGHT.pop(key, None)
+    state, warnings = future.result()
+    # The private card sequence stays stable for compiled-catalog reuse.
+    return dict(state), copy.deepcopy(warnings)
 
 
 def _source_order(provider: Optional[str], sources: Optional[Iterable[str]]) -> List[str]:
@@ -449,9 +491,10 @@ def _candidate_quality(usage_ledger: Mapping[str, Any], cards: Sequence[Dict[str
     return not incomplete, len(ledger.get("components", []))
 
 
-def resolve_price_catalog(
+def _resolve_price_catalog(
     *,
     usage_ledger: Optional[Mapping[str, Any]] = None,
+    usage_ledgers: Optional[Sequence[Mapping[str, Any]]] = None,
     provider: Optional[str] = None,
     price_cards: Optional[Iterable[Dict[str, Any]]] = None,
     contract_price_cards: Optional[Iterable[Dict[str, Any]]] = None,
@@ -502,6 +545,7 @@ def resolve_price_catalog(
     public_states: List[Dict[str, Any]] = []
     operational_warnings: List[Dict[str, Any]] = []
     first_partial: Optional[Tuple[str, List[Dict[str, Any]]]] = None
+    partial_priced = 0
     selected: Optional[Tuple[str, List[Dict[str, Any]]]] = None
 
     for source in order:
@@ -516,20 +560,25 @@ def resolve_price_catalog(
             max_bytes=max_bytes,
             fetcher=fetcher,
             now=observed_at,
+            policy_now=str(now) if now is not None else None,
         )
-        cards = list(state.pop("price_cards", []))
+        cards = state.pop("price_cards", [])
         public_states.append(state)
         operational_warnings.extend(warnings)
         if not cards:
             continue
-        if usage_ledger is None:
+        candidates = list(usage_ledgers) if usage_ledgers is not None else [usage_ledger] if usage_ledger else []
+        if not candidates:
             selected = (source, cards)
             break
-        complete, priced_components = _candidate_quality(usage_ledger, cards)
+        qualities = [_candidate_quality(usage, cards) for usage in candidates]
+        complete = all(quality[0] for quality in qualities)
+        priced_components = sum(quality[1] for quality in qualities)
         state["priced_component_count"] = priced_components
         state["applicable"] = priced_components > 0
-        if priced_components > 0 and first_partial is None:
+        if priced_components > partial_priced:
             first_partial = (source, cards)
+            partial_priced = priced_components
         if complete:
             selected = (source, cards)
             break
@@ -563,6 +612,20 @@ def resolve_price_catalog(
         "warnings": deduplicated_warnings,
         "resolved_at": _timestamp(observed_at),
     }
+
+
+def resolve_price_catalog(**options: Any) -> PriceResolution:
+    """Resolve one source; returned data is a caller-owned snapshot of the cache."""
+    return copy.deepcopy(_resolve_price_catalog(**options))
+
+
+def _finish_auto(result: Dict[str, Any], resolution: Mapping[str, Any], mode: str) -> Dict[str, Any]:
+    attach_price_resolution(result, resolution)
+    if mode == "strict":
+        warnings = [*result.get("warnings", []), *(result.get("aggregate") or {}).get("warnings", [])]
+        if warnings:
+            raise ValueError(f"strict mode cost calculation failed: {warnings[0]['code']}")
+    return result
 
 
 def _resolution_metadata(resolution: Mapping[str, Any]) -> Dict[str, Any]:
@@ -621,15 +684,15 @@ def _split_resolver_options(options: Mapping[str, Any]) -> Tuple[Dict[str, Any],
     return calculation, resolver
 
 
-def from_response_auto(response: Any, **options: Any) -> Dict[str, Any]:
+def from_response_auto(response: Any, **options: Any) -> CostLedger:
     """Price a response using external sources and the persistent cache."""
 
     calculation, resolver_options = _split_resolver_options(options)
     explicit_cards = calculation.pop("price_cards", None)
     if explicit_cards is not None:
-        resolution = resolve_price_catalog(price_cards=explicit_cards, **resolver_options)
+        resolution = _resolve_price_catalog(price_cards=explicit_cards, **resolver_options)
         result = from_response(response, price_cards=_compiled_catalog(resolution["price_cards"]), **calculation)
-        return attach_price_resolution(result, resolution)
+        return _finish_auto(result, resolution, calculation.get("mode", "compatibility"))
     surface = calculation.get("surface") or infer_surface(response, provider=calculation.get("provider"))
     extraction_options = {
         key: value
@@ -649,24 +712,38 @@ def from_response_auto(response: Any, **options: Any) -> Dict[str, Any]:
         usage = extract_usage_ledger(response, **extraction_options)
     except ValueError:
         return from_response(response, price_cards=[], **calculation)
-    resolution = resolve_price_catalog(usage_ledger=usage, provider=usage.get("provider"), **resolver_options)
-    result = from_response(response, price_cards=_compiled_catalog(resolution["price_cards"]), **calculation)
-    return attach_price_resolution(result, resolution)
+    resolution = _resolve_price_catalog(usage_ledger=usage, provider=usage.get("provider"), **resolver_options)
+    result = from_response(response, _usage_ledger=usage, price_cards=_compiled_catalog(resolution["price_cards"]), **calculation)
+    return _finish_auto(result, resolution, calculation.get("mode", "compatibility"))
 
 
-def from_batch_results_auto(items: Iterable[Any], *, provider: str, **options: Any) -> Dict[str, Any]:
+def from_batch_results_auto(items: Iterable[Any], *, provider: str, **options: Any) -> BatchCostLedger:
     """Price provider batch output with one externally resolved catalog."""
 
-    from .expansion import from_batch_results
+    from .expansion import from_batch_results, _batch_item_details
 
     calculation, resolver_options = _split_resolver_options(options)
     explicit_cards = calculation.pop("price_cards", None)
-    resolution = resolve_price_catalog(
+    items = list(items)
+    prepared_usage = {}
+    for index, item in enumerate(items):
+        status, response, _, _, metadata, item_provider = _batch_item_details(item, provider, calculation.get("surface"), calculation.get("endpoint"))
+        if status != "succeeded" or response is None:
+            continue
+        context = {**dict(calculation.get("context") or {}), "service_tier": "batch", "batch_item_id": str(index)}
+        try:
+            usage = extract_usage_ledger(response, provider=item_provider, surface=metadata.get("surface") or calculation.get("surface"), model=calculation.get("model"))
+        except (ValueError, TypeError, ArithmeticError):
+            continue
+        usage["context"] = {**dict(usage.get("context") or {}), **context}
+        prepared_usage[index] = usage
+    resolution = _resolve_price_catalog(
+        usage_ledgers=list(prepared_usage.values()),
         provider=provider,
         price_cards=explicit_cards,
         **resolver_options,
     )
-    result = from_batch_results(items, provider=provider, price_cards=_compiled_catalog(resolution["price_cards"]), **calculation)
+    result = from_batch_results(items, provider=provider, price_cards=_compiled_catalog(resolution["price_cards"]), _prepared_usage=prepared_usage, **calculation)
     metadata = dict(result.get("metadata") or {})
     metadata["price_resolution"] = _resolution_metadata(resolution)
     result["metadata"] = metadata
@@ -686,10 +763,10 @@ def from_batch_results_auto(items: Iterable[Any], *, provider: str, **options: A
         if key not in existing_codes:
             result.setdefault("warnings", []).append(dict(warning))
             existing_codes.add(key)
-    return result
+    return _finish_auto(result, resolution, calculation.get("mode", "compatibility"))
 
 
-def from_otel_genai_span_auto(span: Mapping[str, Any], **options: Any) -> Dict[str, Any]:
+def from_otel_genai_span_auto(span: Mapping[str, Any], **options: Any) -> CostLedger:
     """Price an OpenTelemetry GenAI span through the external resolver."""
 
     from .expansion import from_otel_genai_span, usage_ledger_from_otel_genai_span
@@ -703,14 +780,14 @@ def from_otel_genai_span_auto(span: Mapping[str, Any], **options: Any) -> Dict[s
         model=calculation.get("model"),
         attribution=calculation.get("attribution"),
     )
-    resolution = resolve_price_catalog(
+    resolution = _resolve_price_catalog(
         usage_ledger=usage,
         provider=usage.get("provider"),
         price_cards=explicit_cards,
         **resolver_options,
     )
     result = from_otel_genai_span(span, price_cards=_compiled_catalog(resolution["price_cards"]), **calculation)
-    return attach_price_resolution(result, resolution)
+    return _finish_auto(result, resolution, calculation.get("mode", "compatibility"))
 
 
 def estimate_cost_auto(
@@ -720,7 +797,7 @@ def estimate_cost_auto(
     model: str,
     components: Any,
     **options: Any,
-) -> Dict[str, Any]:
+) -> CostLedger:
     """Estimate a call using one externally resolved price source."""
 
     from .expansion import estimate_cost
@@ -747,7 +824,7 @@ def estimate_cost_auto(
     }
     if isinstance(calculation.get("context"), Mapping):
         usage["context"] = dict(calculation["context"])
-    resolution = resolve_price_catalog(
+    resolution = _resolve_price_catalog(
         usage_ledger=usage,
         provider=provider,
         price_cards=explicit_cards,
@@ -761,7 +838,7 @@ def estimate_cost_auto(
         price_cards=_compiled_catalog(resolution["price_cards"]),
         **calculation,
     )
-    return attach_price_resolution(result, resolution)
+    return _finish_auto(result, resolution, calculation.get("mode", "compatibility"))
 
 
 def price_cache_status(*, cache_dir: Optional[Any] = None, now: Optional[Any] = None) -> Dict[str, Any]:

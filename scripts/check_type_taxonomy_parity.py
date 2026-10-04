@@ -75,7 +75,7 @@ def main() -> int:
     taxonomy = load_taxonomy()
     import_checks = {
         PYTHON_TYPES: ["from .generated.taxonomy import", "UsageComponentName", "WarningCode", "DebugDecisionType"],
-        TYPESCRIPT_TYPES: ['from "./generated/taxonomy"', "UsageComponentName", "WarningCode", "DebugDecisionType"],
+        TYPESCRIPT_TYPES: ['from "./generated/taxonomy.js"', "UsageComponentName", "WarningCode", "DebugDecisionType"],
     }
     for path, needles in import_checks.items():
         source = path.read_text(encoding="utf-8")

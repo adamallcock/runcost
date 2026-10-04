@@ -9,10 +9,14 @@ or a telemetry backend. Network-enabled convenience functions live in
 
 from __future__ import annotations
 
+from .types import BatchCostLedger, BudgetEvaluation, CostLedger, CostLedgerExport, CostReconciliation
+
+import copy
 import hashlib
 import json
 from datetime import date, timedelta
 from decimal import Decimal
+from .money import _decimal, _format_decimal, _subtract, _multiply_divide
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -36,22 +40,19 @@ def normalize_attribution(value: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
 
 
 def _number(value: Any) -> Decimal:
-    if value is None or value == "":
-        return Decimal("0")
-    return Decimal(str(value))
+    return _decimal("0" if value is None or value == "" else value)
 
 
 def _decimal_string(value: Any) -> str:
-    number = _number(value)
-    text = format(number, "f")
-    if "." in text:
-        text = text.rstrip("0").rstrip(".")
-    return text or "0"
+    return _format_decimal(_number(value))
 
 
 def _nonnegative_difference(total: Any, *parts: Any) -> str:
-    value = _number(total) - sum((_number(part) for part in parts), Decimal("0"))
-    return _decimal_string(max(value, Decimal("0")))
+    # Subtract in an isolated context, never the host application's Decimal context.
+    value = _decimal_string(total)
+    for part in parts:
+        value = _subtract(value, _decimal_string(part))
+    return "0" if _number(value) < 0 else value
 
 
 def _error_object(value: Any, fallback: str) -> Dict[str, Any]:
@@ -157,6 +158,31 @@ def _bedrock_batch_item(item: Mapping[str, Any], *, surface: Optional[str]) -> T
     return "pending", None, _error_object(None, "Bedrock batch item has no modelOutput yet."), None, {}
 
 
+def _batch_item_details(raw_item: Any, provider: str, surface: Optional[str], endpoint: Optional[str]) -> tuple:
+    normalized_provider = provider.lower().replace("_", "-")
+    item = _response_mapping(raw_item)
+    if normalized_provider in {"openai", "kimi", "moonshot", "moonshot-ai", "dashscope", "alibaba"}:
+        status, response, error, http_status, metadata = _openai_batch_item(item, surface=surface, endpoint=endpoint)
+        item_provider = "openai" if normalized_provider == "openai" else "kimi" if normalized_provider in {"kimi", "moonshot", "moonshot-ai"} else "dashscope"
+        if item_provider != "openai" and metadata.get("surface") == "openai.chat_completions":
+            metadata["surface"] = f"{item_provider}.chat_completions"
+    elif normalized_provider == "anthropic":
+        status, response, error, http_status, metadata = _anthropic_batch_item(item)
+        item_provider = "anthropic"
+    elif normalized_provider in {"google", "gemini", "google-gemini"}:
+        status, response, error, http_status, metadata = _gemini_batch_item(item, vertex=False)
+        item_provider = "google"
+    elif normalized_provider in {"vertex", "google-vertex", "vertex-ai"}:
+        status, response, error, http_status, metadata = _gemini_batch_item(item, vertex=True)
+        item_provider = "vertex"
+    elif normalized_provider in {"bedrock", "aws-bedrock"}:
+        status, response, error, http_status, metadata = _bedrock_batch_item(item, surface=surface)
+        item_provider = "bedrock"
+    else:
+        raise ValueError(f"unsupported batch provider: {provider}")
+    return status, response, error, http_status, metadata, item_provider
+
+
 def from_batch_results(
     items: Iterable[Any],
     *,
@@ -170,7 +196,7 @@ def from_batch_results(
     mode: str = "compatibility",
     attribution: Optional[Mapping[str, Any]] = None,
     **options: Any,
-) -> Dict[str, Any]:
+) -> BatchCostLedger:
     """Price provider batch output records without hiding partial failures."""
 
     normalized_provider = provider.lower().replace("_", "-")
@@ -189,25 +215,7 @@ def from_batch_results(
     for index, raw_item in enumerate(items):
         item = _response_mapping(raw_item)
         item_id = _batch_item_id(item, index)
-        if normalized_provider in {"openai", "kimi", "moonshot", "moonshot-ai", "dashscope", "alibaba"}:
-            status, response, error, http_status, metadata = _openai_batch_item(item, surface=surface, endpoint=endpoint)
-            item_provider = "openai" if normalized_provider == "openai" else "kimi" if normalized_provider in {"kimi", "moonshot", "moonshot-ai"} else "dashscope"
-            if item_provider != "openai" and metadata.get("surface") == "openai.chat_completions":
-                metadata["surface"] = f"{item_provider}.chat_completions"
-        elif normalized_provider == "anthropic":
-            status, response, error, http_status, metadata = _anthropic_batch_item(item)
-            item_provider = "anthropic"
-        elif normalized_provider in {"google", "gemini", "google-gemini"}:
-            status, response, error, http_status, metadata = _gemini_batch_item(item, vertex=False)
-            item_provider = "google"
-        elif normalized_provider in {"vertex", "google-vertex", "vertex-ai"}:
-            status, response, error, http_status, metadata = _gemini_batch_item(item, vertex=True)
-            item_provider = "vertex"
-        elif normalized_provider in {"bedrock", "aws-bedrock"}:
-            status, response, error, http_status, metadata = _bedrock_batch_item(item, surface=surface)
-            item_provider = "bedrock"
-        else:
-            raise ValueError(f"unsupported batch provider: {provider}")
+        status, response, error, http_status, metadata, item_provider = _batch_item_details(item, provider, surface, endpoint)
 
         output_item: Dict[str, Any] = {"id": item_id, "status": status}
         if http_status is not None:
@@ -237,6 +245,7 @@ def from_batch_results(
                 context["batch_id"] = batch_id
             ledger = from_response(
                 response,
+                _usage_ledger=(options.get("_prepared_usage") or {}).get(index),
                 provider=item_provider,
                 surface=item_surface,
                 model=model,
@@ -245,7 +254,7 @@ def from_batch_results(
                 price_cards=cards,
                 discount_policies=discount_policies,
                 mode=mode,
-                **{key: value for key, value in options.items() if key != "context"},
+                **{key: value for key, value in options.items() if key not in {"context", "_prepared_usage"}},
             )
             output_item["ledger"] = ledger
             if item_provider == "anthropic":
@@ -337,14 +346,22 @@ def _tier_values(value: Any) -> List[Tuple[Any, Optional[Any], Optional[Any]]]:
     )
     values: List[Tuple[Any, Optional[Any], Optional[Any]]] = []
     first_start = tiers[0]["start"] if tiers else None
-    values.append((value.get("base"), None, _number(first_start) - 1 if first_start is not None else None))
+    values.append((value.get("base"), None, _number(_subtract(first_start, "1")) if first_start is not None else None))
     for index, tier in enumerate(tiers):
         next_start = tiers[index + 1]["start"] if index + 1 < len(tiers) else None
-        values.append((tier.get("price"), tier["start"], _number(next_start) - 1 if next_start is not None else None))
+        values.append((tier.get("price"), tier["start"], _number(_subtract(next_start, "1")) if next_start is not None else None))
     return [entry for entry in values if entry[0] is not None]
 
 
 GENAI_PRICE_COMPONENTS = {
+    "cache_write_1h_mtok": ('input_cache_write_1h_tokens', 'token', '1000000'),
+    "web_searches_kcount": ('web_search_units', 'search', '1000'),
+    "output_image_mtok": ('output_image_tokens', 'token', '1000000'),
+    "input_image_mtok": ('input_image_tokens', 'token', '1000000'),
+    "input_video_mtok": ('input_video_tokens', 'token', '1000000'),
+    "output_video_mtok": ('output_video_tokens', 'token', '1000000'),
+    "cache_image_read_mtok": ('input_cache_read_tokens', 'token', '1000000'),
+    "output_reasoning_mtok": ('output_reasoning_tokens', 'token', '1000000'),
     "input_mtok": ("input_uncached_tokens", "token", "1000000"),
     "cache_write_mtok": ("input_cache_write_tokens", "token", "1000000"),
     "cache_read_mtok": ("input_cache_read_tokens", "token", "1000000"),
@@ -603,6 +620,8 @@ def price_cards_from_genai_prices(data: Any, **options: Any) -> List[Dict[str, A
                             "api_pattern": raw_provider.get("api_pattern"),
                             "context_window": raw_model.get("context_window"),
                             "constraint": constraint,
+                            "adapter_contract": "genai-prices/v2-compatible",
+                            "unsupported_prices": {key: value for key, value in entry["prices"].items() if key not in GENAI_PRICE_COMPONENTS},
                         }
                     },
                 }
@@ -814,7 +833,7 @@ def estimate_cost(
     price_cards: Optional[Iterable[Dict[str, Any]]] = None,
     discount_policies: Optional[Iterable[Dict[str, Any]]] = None,
     **options: Any,
-) -> Dict[str, Any]:
+) -> CostLedger:
     """Stateless pre-call estimate from caller-provided expected quantities."""
 
     normalized_components: List[Dict[str, Any]] = []
@@ -854,26 +873,31 @@ def evaluate_budget(
     *,
     budget: Any,
     warning_threshold: Any = "0.8",
-) -> Dict[str, Any]:
+) -> BudgetEvaluation:
     """Evaluate one estimate/ledger against a stateless budget policy."""
 
     ledger = ledger_or_total if isinstance(ledger_or_total, Mapping) else None
-    total = _number(ledger.get("total", 0) if ledger else ledger_or_total)
-    limit = _number(budget)
-    threshold = _number(warning_threshold)
-    if limit < 0:
+    total = _number(_decimal_string(ledger.get("total", 0) if ledger else ledger_or_total))
+    raw_limit = _number(budget)
+    raw_threshold = _number(warning_threshold)
+    if not raw_limit.is_finite() or raw_limit < 0:
         raise ValueError("budget must be non-negative")
-    if threshold < 0 or threshold > 1:
+    if not raw_threshold.is_finite() or raw_threshold < 0 or raw_threshold > 1:
         raise ValueError("warning_threshold must be between 0 and 1")
-    status = "exceeded" if total > limit else "warning" if limit > 0 and total >= limit * threshold else "within_budget"
+    limit = _number(_decimal_string(raw_limit))
+    threshold = _number(_decimal_string(raw_threshold))
+    status = "exceeded" if total > limit else "warning" if limit > 0 and total >= _number(_multiply_divide(limit, threshold, "1")) else "within_budget"
+    resolved_currency = str(ledger.get("currency", "USD") if ledger else "USD")
+    if resolved_currency != "USD":
+        raise ValueError(f"unsupported currency {resolved_currency!r}; RunCost supports USD only")
     result: Dict[str, Any] = {
         "schema_version": "0.1",
         "status": status,
         "estimated_cost": _decimal_string(total),
         "budget": _decimal_string(limit),
-        "remaining": _decimal_string(limit - total),
+        "remaining": _subtract(limit, total),
         "warning_threshold": _decimal_string(threshold),
-        "currency": str(ledger.get("currency", "USD") if ledger else "USD"),
+        "currency": resolved_currency,
     }
     if ledger:
         result["ledger"] = dict(ledger)
@@ -886,17 +910,21 @@ def reconcile_cost(
     *,
     tolerance: Any = "0",
     currency: str = "USD",
-) -> Dict[str, Any]:
+) -> CostReconciliation:
     """Compare independent and provider-reported totals without replacing either."""
 
     ledger = cost_ledger_or_total if isinstance(cost_ledger_or_total, Mapping) else None
-    calculated = _number(ledger.get("total", 0) if ledger else cost_ledger_or_total)
-    reported = _number(reported_total)
-    allowed = _number(tolerance)
-    if allowed < 0:
+    calculated = _number(_decimal_string(ledger.get("total", 0) if ledger else cost_ledger_or_total))
+    reported = _number(_decimal_string(reported_total))
+    raw_allowed = _number(tolerance)
+    if not raw_allowed.is_finite() or raw_allowed < 0:
         raise ValueError("tolerance must be non-negative")
-    residual = reported - calculated
-    absolute = abs(residual)
+    allowed = _number(_decimal_string(raw_allowed))
+    resolved_currency = str(ledger.get("currency", currency) if ledger else currency)
+    if resolved_currency != "USD":
+        raise ValueError(f"unsupported currency {resolved_currency!r}; RunCost supports USD only")
+    residual = _number(_subtract(reported, calculated))
+    absolute = residual.copy_abs()
     status = "matched" if absolute == 0 else "within_tolerance" if absolute <= allowed else "mismatch"
     return {
         "schema_version": "0.1",
@@ -906,8 +934,19 @@ def reconcile_cost(
         "signed_residual": _decimal_string(residual),
         "absolute_residual": _decimal_string(absolute),
         "tolerance": _decimal_string(allowed),
-        "currency": str(ledger.get("currency", currency) if ledger else currency),
+        "currency": resolved_currency,
     }
+
+
+def export_cost_ledger(ledger: Mapping[str, Any]) -> CostLedgerExport:
+    """Return an allowlisted copy without raw usage or attribution identifiers."""
+    result = {key: ledger[key] for key in ['schema_version', 'provider', 'surface', 'currency', 'total'] if key in ledger}
+    result["model"] = {key: value for key, value in (ledger.get("model") or {}).items() if key in ("requested", "returned", "billed")}
+    result["components"] = [{key: value for key, value in item.items() if key in ['name', 'quantity', 'unit', 'unit_price', 'cost', 'price_card_id', 'discount_eligible']} for item in ledger.get("components", [])]
+    result["price_sources"] = [{key: value for key, value in item.items() if key in ['name', 'retrieved_at', 'version', 'license']} for item in ledger.get("price_sources", [])]
+    result["applied_discounts"] = [{key: value for key, value in item.items() if key in ("policy_id", "component", "amount")} for item in ledger.get("applied_discounts", [])]
+    result["warnings"] = [{"code": item["code"], "message": item["code"], "metadata": {}} for item in ledger.get("warnings", [])]
+    return copy.deepcopy(result)
 
 
 def canonical_json_bytes(value: Any) -> bytes:

@@ -32,8 +32,25 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Install development validators
+        run: python3 -m pip install -r requirements-dev.txt
+
+      - name: Install root dependencies
+        run: npm ci
+
       - name: Install playground dependencies
         run: npm ci --prefix playground
+
+      - name: Verify dependency trees and imports
+        run: |
+          npm ls --all
+          npm ls --prefix playground --all
+          node --input-type=module -e "await Promise.all([import('ai'), import('@ai-sdk/openai')]); console.log('root dependency imports passed')"
+
+      - name: Audit npm dependency locks
+        run: |
+          npm audit --package-lock-only --audit-level=high
+          npm audit --prefix playground --package-lock-only --audit-level=high
 
       - name: Run conformance tests
         run: npm test
@@ -122,6 +139,7 @@ jobs:
             scripts/check_product_expansion.py \
             scripts/run_openai_expansion_smoke.py \
             scripts/generate_conformance_report.py \
+            scripts/normalize_python_sdist.py \
             scripts/create_fixture.py \
             examples/python_batch_endpoints.py \
             examples/python_direct_providers.py \
@@ -131,15 +149,23 @@ jobs:
 
   compatibility:
     name: Python ${{ matrix.python }} / Node ${{ matrix.node }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - python: "3.9"
             node: "20"
+            os: ubuntu-latest
           - python: "3.14"
             node: "24"
+            os: ubuntu-latest
+          - python: "3.12"
+            node: "22"
+            os: macos-latest
+          - python: "3.12"
+            node: "22"
+            os: windows-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -151,7 +177,24 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Install test dependencies
+        run: |
+          python -m pip install -r requirements-dev.txt
+          npm ci
+      - name: Run full shared conformance on each platform
+        run: |
+          python scripts/check_fixtures.py
+          python scripts/check_go_fixtures.py
+          python scripts/check_package_regressions.py
+          go test -race ./packages/go/...
+      - name: Check installed consumer types and runtime on each platform
+        run: python scripts/check_package_installs.py
       - name: Install package in a clean virtual environment
+        if: runner.os != 'Windows'
         run: |
           python3 -m venv "$RUNNER_TEMP/runcost-compat-venv"
           "$RUNNER_TEMP/runcost-compat-venv/bin/python" -m pip install --disable-pip-version-check --no-cache-dir .

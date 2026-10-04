@@ -13,8 +13,8 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 
 ## Summary
 
-- Fixtures scanned: 192
-- Public API capabilities scanned: 21
+- Fixtures scanned: 204
+- Public API capabilities scanned: 23
 - Provider/surface component rows: 37
 - Price-source component rows: 11
 - Gemini separate output/thinking fixtures: 6
@@ -28,15 +28,15 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `discount` | 2 |
 | `framework_adapter` | 18 |
 | `long_context` | 2 |
-| `normalized_usage` | 31 |
+| `normalized_usage` | 32 |
 | `provider_reported` | 4 |
 | `raw_provider_response` | 78 |
 | `service_mode` | 3 |
 | `service_tier` | 8 |
 | `source_adapter` | 21 |
 | `source_priority` | 5 |
-| `strict_error` | 1 |
-| `warning` | 15 |
+| `strict_error` | 5 |
+| `warning` | 22 |
 
 ## Components
 
@@ -60,17 +60,17 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 | `input_cache_write_tokens` | 20 |
 | `input_image_tokens` | 4 |
 | `input_image_units` | 1 |
-| `input_uncached_tokens` | 132 |
+| `input_uncached_tokens` | 134 |
 | `input_video_tokens` | 1 |
 | `output_audio_tokens` | 10 |
 | `output_image_tokens` | 3 |
 | `output_reasoning_tokens` | 50 |
-| `output_text_tokens` | 135 |
+| `output_text_tokens` | 136 |
 | `output_video_tokens` | 2 |
-| `request_units` | 3 |
+| `request_units` | 4 |
 | `rerank_search_units` | 2 |
 | `storage_gb_days` | 2 |
-| `tool_call_units` | 5 |
+| `tool_call_units` | 6 |
 | `tool_execution_seconds` | 1 |
 | `transcription_seconds` | 4 |
 | `video_generation_units` | 1 |
@@ -139,9 +139,9 @@ This report tracks fixture-backed safeguards against silent nonzero usage-compon
 
 | Category | Capabilities |
 |---|---:|
-| `core` | 7 |
+| `core` | 8 |
 | `framework_adapter` | 2 |
-| `language_specific` | 2 |
+| `language_specific` | 3 |
 | `provider_extractor` | 5 |
 | `source_adapter` | 3 |
 | `type_contract` | 2 |

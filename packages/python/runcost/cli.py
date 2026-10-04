@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from contextlib import ExitStack
+import os
+import tempfile
 import argparse
 import json
 import sys
@@ -229,7 +232,57 @@ def _quote_one(value: Any, args: argparse.Namespace) -> Dict[str, Any]:
     return from_response_auto(response, **{**options, **_resolver_options(args)})
 
 
+def _stream_quotes(args: argparse.Namespace) -> int:
+    temporary = None
+    try:
+        with ExitStack() as stack:
+            source = sys.stdin if args.input in (None, "-") else stack.enter_context(Path(args.input).open(encoding="utf-8"))
+            if args.output:
+                destination = Path(args.output)
+                stream = stack.enter_context(tempfile.NamedTemporaryFile(mode="wb", dir=destination.parent, prefix=".runcost-", delete=False))
+                temporary = stream.name
+            else:
+                stream = sys.stdout.buffer
+            jsonl = args.output_jsonl
+            if not jsonl:
+                stream.write(b"[")
+            count = 0
+            for line_number, line in enumerate(source, 1):
+                if not line.strip():
+                    continue
+                try:
+                    value = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    raise ValueError(f"invalid JSONL at line {line_number}: {exc.msg}") from exc
+                ledger = _quote_one(value, args)
+                encoded = canonical_json_bytes(ledger)
+                if jsonl:
+                    stream.write(encoded)
+                else:
+                    if count:
+                        stream.write(b",")
+                    stream.write(encoded.rstrip(b"\n"))
+                stream.flush()
+                count += 1
+            if not count:
+                raise ValueError("quote input contains no JSON objects")
+            if not jsonl:
+                stream.write(b"]\n")
+            stream.flush()
+        if temporary:
+            os.replace(temporary, args.output)
+            temporary = None
+        return 0
+    finally:
+        if temporary:
+            Path(temporary).unlink(missing_ok=True)
+
+
 def command_quote(args: argparse.Namespace) -> int:
+    if args.output_jsonl and (not args.jsonl or args.batch_provider):
+        raise ValueError("--output-jsonl requires --jsonl independent quotes")
+    if args.jsonl and not args.batch_provider:
+        return _stream_quotes(args)
     values, multi = _read_quote_input(args.input, args.jsonl)
     if args.batch_provider:
         batch_value: Any = values
@@ -317,6 +370,7 @@ def build_parser() -> argparse.ArgumentParser:
     quote.add_argument("--provider")
     quote.add_argument("--surface")
     quote.add_argument("--model")
+    quote.add_argument("--output-jsonl", action="store_true", help="write one ledger per line for independent --jsonl input")
     quote.add_argument("--jsonl", action="store_true", help="parse input as newline-delimited JSON")
     quote.add_argument("--price-source", action="append", choices=["genai-prices", "models.dev", "litellm", "openrouter"], help="external source order; repeat to add fallbacks")
     quote.add_argument("--cache-dir", help="external price-cache directory")

@@ -1,0 +1,24 @@
+{
+  "name": "strict-anthropic-messages-negative-usage",
+  "description": "Strict mode fails closed for a negative raw Anthropic usage quantity.",
+  "metadata": {
+    "requirement_ids": ["RC-FIXTURE-CONFORMANCE", "RC-STRICT-MODE"],
+    "provider": "anthropic",
+    "surface": "anthropic.messages",
+    "scenario": "strict_error",
+    "tags": ["strict_error", "usage_validation", "warning:invalid_usage"],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "mode": "strict",
+    "raw_response": {
+      "id": "msg_negative_usage_strict",
+      "type": "message",
+      "model": "claude-negative",
+      "usage": {"input_tokens": -1, "output_tokens": 0}
+    },
+    "extract": {"provider": "anthropic", "surface": "anthropic.messages"},
+    "price_cards": []
+  },
+  "expected": {"error": {"code": "invalid_usage"}}
+}
