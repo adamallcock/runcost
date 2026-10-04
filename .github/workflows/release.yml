@@ -374,23 +374,26 @@ jobs:
           }
           local_npm = hashlib.sha1(Path(f"dist/npm/runcost-{version}.tgz").read_bytes()).hexdigest()
 
-          for attempt in range(10):
+          # npm can accept a provenance-backed publish before the version is
+          # publicly served. Allow a bounded five-minute processing window;
+          # every successful check still requires exact registry hash parity.
+          for attempt in range(30):
               try:
                   with urllib.request.urlopen(f"https://pypi.org/pypi/runcost-ai/{version}/json", timeout=30) as response:
                       pypi = json.load(response)
                   with urllib.request.urlopen(f"https://registry.npmjs.org/runcost/{version}", timeout=30) as response:
                       npm = json.load(response)
               except urllib.error.HTTPError as exc:
-                  if exc.code != 404 or attempt == 9:
+                  if exc.code != 404 or attempt == 29:
                       raise
               else:
                   remote_python = {item["filename"]: item["digests"]["sha256"] for item in pypi["urls"]}
                   if remote_python == local_python and npm.get("dist", {}).get("shasum") == local_npm:
                       print(f"Verified live npm and PyPI artifacts for {version}")
                       break
-                  if attempt == 9:
+                  if attempt == 29:
                       raise SystemExit("live npm/PyPI artifacts do not match the verified release artifacts")
-              time.sleep(6)
+              time.sleep(10)
           PY
 
       - name: Create or verify the GitHub Release and exact assets

@@ -11,6 +11,20 @@ RunCost `0.2.x` is published as a public-beta package for Python,
 JavaScript/TypeScript, and Go. Source checkout install paths remain useful for
 local development and release verification.
 
+The current release is `0.2.4` / Go tag `v0.2.4`. Its
+[release evidence](../internal/reports/2026-10-04-release-0-2-4-evidence.md)
+records exact artifact parity, platform CI, public registry consumer checks,
+and any remaining distribution check. CI exercises Python 3.9 and Node 20 as
+the minimum runtime lane, alongside newer runtimes and macOS/Windows.
+
+For a reproducible installation, pin the coordinated version:
+
+```bash
+python3 -m pip install runcost-ai==0.2.4
+npm install runcost@0.2.4
+go get github.com/adamallcock/runcost/packages/go/ledger@v0.2.4
+```
+
 ## Current Support Matrix
 
 | Language | Current install path | Validation |
@@ -94,7 +108,7 @@ That command creates temporary projects for Python, npm, and Go and verifies tha
 
 - MIT license and package license metadata are present.
 - Guarded registry publish workflow exists for PyPI and npm and has published
-  `0.2.1` through the release environment.
+  `0.2.4` through the release environment with matching reviewed artifact bytes.
 - Go module tags, PyPI publishing, and npm publishing are guarded by the maintainer release process.
 - `npm run check:release` verifies package version sync, license metadata, changelog presence, registry README policy, and release workflow guardrails.
 - The npm package ships a package-facing README aligned with the root public README.

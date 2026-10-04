@@ -1,0 +1,211 @@
+{
+  "schema_version": "0.1",
+  "date": "2026-10-04",
+  "version": "0.2.4",
+  "source_commit": "95b05360f4b3ee4c3c37b5e663137bd43a4f45f2",
+  "annotated_tag_object": "782311887e4864f535f8b3d42f50df88a6ab99f9",
+  "release_pr": "https://github.com/adamallcock/runcost/pull/82",
+  "ci_run": 37217344275,
+  "main_ci_run": 37217589207,
+  "rehearsal_run": 37217912134,
+  "publish_run": 37218088387,
+  "successful_publish_attempt": 2,
+  "github_release": {
+    "url": "https://github.com/adamallcock/runcost/releases/tag/v0.2.4",
+    "published_at": "2026-10-04T16:53:15Z",
+    "draft": false,
+    "prerelease": false
+  },
+  "artifacts": [
+    {
+      "filename": "runcost_ai-0.2.4-py3-none-any.whl",
+      "sha256": "0dd3d2284bb7190bc68ed6602375955a06f911525c2181104a4dadaacaed8b48",
+      "bytes": 79617
+    },
+    {
+      "filename": "runcost_ai-0.2.4.tar.gz",
+      "sha256": "cb7e349769a9e8f941bcd2c1ea622fae61e6311282a1834faa44ac7037268c83",
+      "bytes": 78884
+    },
+    {
+      "filename": "runcost-0.2.4.tgz",
+      "sha256": "69ed87aad81ab172de1810c334c299fce66f2cb80d971454d9ee24e7eab44bd5",
+      "bytes": 126919
+    }
+  ],
+  "rehearsal_publish_byte_parity": true,
+  "registry_github_byte_parity": true,
+  "npm": {
+    "version": "0.2.4",
+    "latest": "0.2.4",
+    "sha1": "a21c68cee9e132ff03344a61a8507ea49f767be4",
+    "integrity": "sha512-sOndOdF9bu99Ojne4++qZHy/as1k0sIEf5BB21Tc0cWENuZVRHEoBxQ8/RvEo916WX8ImTYUwGr9BDvPjckgyA==",
+    "attestation_types": [
+      "https://github.com/npm/attestation/tree/main/specs/publish/v0.1",
+      "https://slsa.dev/provenance/v1"
+    ],
+    "provenance_source_commit_verified": true
+  },
+  "public_installation": {
+    "python_version": "0.2.4",
+    "npm_version": "0.2.4",
+    "go": {
+      "Path": "github.com/adamallcock/runcost",
+      "Version": "v0.2.4",
+      "Sum": "h1:kGIke870zFD5Ir5HwMSVY/mmIZxvXYQrQXsW8fl4wGQ=",
+      "GoModSum": "h1:Pz7KMxEcpDSXKk8XqLsjmMlMitxniH+Fma2Ve4/HQT8=",
+      "Origin": {
+        "VCS": "git",
+        "URL": "https://github.com/adamallcock/runcost",
+        "Hash": "95b05360f4b3ee4c3c37b5e663137bd43a4f45f2",
+        "Ref": "refs/tags/v0.2.4"
+      }
+    },
+    "go_verification_environment": {
+      "GONOSUMDB": "",
+      "GOPRIVATE": "",
+      "GOPROXY": "https://proxy.golang.org,direct",
+      "GOSUMDB": "sum.golang.org"
+    },
+    "checks": [
+      "public API exports",
+      "caller-owned pricing",
+      "missing-price warnings",
+      "auto selection",
+      "Python positive/negative typing",
+      "NodeNext and bundler typing",
+      "browser entrypoint",
+      "quote and cache CLI",
+      "offline synthetic reconciliation",
+      "Go public import without replace"
+    ]
+  },
+  "pages": {
+    "source_commit": "95b05360f4b3ee4c3c37b5e663137bd43a4f45f2",
+    "pages_run": 37217589314,
+    "cache_buster": "release=0.2.4-95b0536",
+    "crawler_user_agent": "Twitterbot/1.0",
+    "routes": [
+      {
+        "route": "/",
+        "status": 200,
+        "mime_type": "text/html",
+        "canonical": "https://adamallcock.github.io/runcost/",
+        "social_image": "https://adamallcock.github.io/runcost/social-preview.png",
+        "assets": [
+          "/runcost/assets/react-CkQa1mN8.js",
+          "/runcost/assets/runcost-core-BIL3RYck.js",
+          "/runcost/assets/main-DWV0jpka.js"
+        ]
+      },
+      {
+        "route": "playground/",
+        "status": 200,
+        "mime_type": "text/html",
+        "canonical": "https://adamallcock.github.io/runcost/playground/",
+        "social_image": "https://adamallcock.github.io/runcost/social-preview.png",
+        "assets": [
+          "/runcost/assets/react-CkQa1mN8.js",
+          "/runcost/assets/runcost-core-BIL3RYck.js",
+          "/runcost/assets/main-DWV0jpka.js"
+        ]
+      },
+      {
+        "route": "batch/",
+        "status": 200,
+        "mime_type": "text/html",
+        "canonical": "https://adamallcock.github.io/runcost/batch/",
+        "social_image": "https://adamallcock.github.io/runcost/social-preview.png",
+        "assets": [
+          "/runcost/assets/react-CkQa1mN8.js",
+          "/runcost/assets/runcost-core-BIL3RYck.js",
+          "/runcost/assets/main-DWV0jpka.js"
+        ]
+      },
+      {
+        "route": "methodology/",
+        "status": 200,
+        "mime_type": "text/html",
+        "canonical": "https://adamallcock.github.io/runcost/methodology/",
+        "social_image": "https://adamallcock.github.io/runcost/social-preview.png",
+        "assets": [
+          "/runcost/assets/react-CkQa1mN8.js",
+          "/runcost/assets/runcost-core-BIL3RYck.js",
+          "/runcost/assets/main-DWV0jpka.js"
+        ]
+      },
+      {
+        "route": "openai-cost-calculator/",
+        "status": 200,
+        "mime_type": "text/html",
+        "canonical": "https://adamallcock.github.io/runcost/openai-cost-calculator/",
+        "social_image": "https://adamallcock.github.io/runcost/social-preview.png",
+        "assets": [
+          "/runcost/assets/react-CkQa1mN8.js",
+          "/runcost/assets/runcost-core-BIL3RYck.js",
+          "/runcost/assets/main-DWV0jpka.js"
+        ]
+      },
+      {
+        "route": "anthropic-cost-calculator/",
+        "status": 200,
+        "mime_type": "text/html",
+        "canonical": "https://adamallcock.github.io/runcost/anthropic-cost-calculator/",
+        "social_image": "https://adamallcock.github.io/runcost/social-preview.png",
+        "assets": [
+          "/runcost/assets/react-CkQa1mN8.js",
+          "/runcost/assets/runcost-core-BIL3RYck.js",
+          "/runcost/assets/main-DWV0jpka.js"
+        ]
+      },
+      {
+        "route": "gemini-cost-calculator/",
+        "status": 200,
+        "mime_type": "text/html",
+        "canonical": "https://adamallcock.github.io/runcost/gemini-cost-calculator/",
+        "social_image": "https://adamallcock.github.io/runcost/social-preview.png",
+        "assets": [
+          "/runcost/assets/react-CkQa1mN8.js",
+          "/runcost/assets/runcost-core-BIL3RYck.js",
+          "/runcost/assets/main-DWV0jpka.js"
+        ]
+      },
+      {
+        "route": "batch-api-cost-calculator/",
+        "status": 200,
+        "mime_type": "text/html",
+        "canonical": "https://adamallcock.github.io/runcost/batch-api-cost-calculator/",
+        "social_image": "https://adamallcock.github.io/runcost/social-preview.png",
+        "assets": [
+          "/runcost/assets/react-CkQa1mN8.js",
+          "/runcost/assets/runcost-core-BIL3RYck.js",
+          "/runcost/assets/main-DWV0jpka.js"
+        ]
+      }
+    ],
+    "social_image": {
+      "status": 200,
+      "mime_type": "image/png",
+      "width": 1200,
+      "height": 630
+    },
+    "robots_allow": true,
+    "sitemap_routes": 8
+  },
+  "rendered_checks": {
+    "openai_total": "0.0020712",
+    "invalid_usage_warning": true,
+    "mobile_viewport_width": 500,
+    "mobile_content_width": 500,
+    "warning_error_console_messages": 0
+  },
+  "maintenance_retry_checks": {
+    "processing_404_then_match_after_12_attempts": "passed",
+    "persistent_digest_mismatch": "failed_closed_after_30",
+    "non_404_http_error": "failed_immediately"
+  },
+  "evidence_limits": [
+    "controlled synthetic reconciliation is not independent customer billing evidence",
+    "V1 stabilization remains partial"
+  ]
+}
