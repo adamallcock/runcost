@@ -36,16 +36,20 @@ whether RunCost continues.
 
 Doc rename coordination: another agent may rename Markdown files to match repository naming rules. Until that lands, avoid broad documentation churn and re-inspect paths before changing cross-document links.
 
-## October 4 Local Qualification
+## October 4 Package Release
 
-The [package improvement implementation report](reports/2026-10-04-package-improvements-implementation.md)
-records completed R1–R11 corrections and follow-ups, 249 conformance cases,
-clean installed type/runtime consumers on Node 20, race checks, repeatable
-artifacts, and rendered local QA. The checkout retains `0.2.1` metadata and is
-an uncommitted, unpublished candidate; these are not the published `0.2.1` bytes.
-Remote compatibility CI, a fresh coordinated release, and independent billing
-qualification for this candidate remain open. Earlier evidence below is
-historical and does not prove those candidate gates.
+The [0.2.4 release report](reports/2026-10-04-release-0-2-4-evidence.md)
+records completed R1-R11 corrections and follow-ups, 249 conformance cases,
+all six remote CI jobs, and the exact merged/tagged commit
+`95b05360f4b3ee4c3c37b5e663137bd43a4f45f2`. GitHub, npm, and PyPI serve the
+reviewed reproducible artifacts; public Python/JavaScript type, runtime, CLI,
+and controlled offline integration checks pass. The Go tag import passed in
+the workflow and through the default public proxy/checksum consumer path. The release site is deployed and rendered/crawler QA passed.
+
+The [local implementation report](reports/2026-10-04-package-improvements-implementation.md)
+preserves the earlier unreleased checkpoint. Independent billing qualification
+for this candidate and V1 stabilization remain open. Earlier evidence below is
+historical and does not prove independent qualification for the new candidate.
 
 ## Historical Verified Baseline
 

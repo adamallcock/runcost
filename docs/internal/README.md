@@ -25,6 +25,7 @@ without putting it in the end-user README path.
 - [Package improvement review](reports/2026-10-04-package-improvement-review.md)
 - [Package improvement implementation plan](plans/2026-10-04-package-improvements.md)
 - [Package improvement local qualification](reports/2026-10-04-package-improvements-implementation.md)
+- [Release 0.2.4 evidence](reports/2026-10-04-release-0-2-4-evidence.md)
 
 ## Maintainer Areas
 

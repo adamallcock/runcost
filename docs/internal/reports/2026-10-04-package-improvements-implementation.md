@@ -12,6 +12,11 @@ This records the implementation checkpoint before the user authorized the
 [implementation plan](../plans/2026-10-04-package-improvements.md). The hashes
 below identify that earlier `0.2.1`-metadata candidate, before the version bump.
 
+The subsequent [0.2.4 release report](2026-10-04-release-0-2-4-evidence.md)
+records the merged/tagged revision, remote platform checks, publication, and
+registry installation evidence. The remaining statements here describe the
+earlier local checkpoint.
+
 The code, tooling, documentation, and CI changes recommended by the
 [package review](2026-10-04-package-improvement-review.md) are implemented and
 validated locally. Publication, remote CI execution, and an independent

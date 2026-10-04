@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1",
-  "updated_at": "2026-08-08",
+  "updated_at": "2026-10-04",
   "status_scale": {
     "satisfied": "Completion evidence exists and is machine-checkable where practical.",
     "partial": "Useful repo-side work exists, but the final requirement is not proven.",
@@ -583,6 +583,11 @@
           "kind": "code",
           "path": "pyproject.toml",
           "proves": "The Python package metadata uses distribution name `runcost-ai`."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-10-04-release-0-2-4-evidence.md",
+          "proves": "Release 0.2.4 successfully published via PyPI OIDC; downloaded registry bytes match the reviewed artifacts."
         }
       ],
       "completion_check": "python3 scripts/check_trusted_publishing_verification.py --verification <sanitized-manual-verification.json> --require-real plus guarded release workflow evidence.",
@@ -643,6 +648,11 @@
           "kind": "report",
           "path": "docs/internal/reports/2026-05-26-package-name-availability-check.md",
           "proves": "Historical registry checks explain why the npm package target is `runcost`."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-10-04-release-0-2-4-evidence.md",
+          "proves": "Release 0.2.4 successfully published through npm trusted publishing with SLSA provenance identifying the exact tag commit."
         }
       ],
       "completion_check": "python3 scripts/check_trusted_publishing_verification.py --verification <sanitized-manual-verification.json> --require-real plus guarded release workflow evidence.",
@@ -673,6 +683,11 @@
           "kind": "report",
           "path": "docs/internal/reports/2026-07-30-release-0-2-1-evidence.md",
           "proves": "A publish=false guarded release workflow rehearsal succeeded for release 0.2.1 before the publish run, and its artifacts were inspected."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-10-04-release-0-2-4-evidence.md",
+          "proves": "The 0.2.4 no-publish rehearsal passed; artifacts were reviewed and match the publish run byte for byte."
         }
       ],
       "completion_check": "gh workflow run release.yml --ref main -f version=<real-version> -f publish=false",
@@ -708,6 +723,11 @@
           "kind": "report",
           "path": "docs/internal/reports/2026-07-30-release-0-2-1-evidence.md",
           "proves": "Remote tag v0.2.1 is available through the Go module path and was verified by workflow and post-publish smoke."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-10-04-release-0-2-4-evidence.md",
+          "proves": "The 0.2.4 release workflow imported the pushed semantic version tag from a clean external Go module without a local replace."
         }
       ],
       "completion_check": "go get github.com/adamallcock/runcost/packages/go/ledger@v<version>",
@@ -735,6 +755,11 @@
           "kind": "workflow",
           "path": ".github/workflows/release.yml",
           "proves": "The guarded release workflow requires publish=true and publish_approval=publish-runcost, then publishes Python and npm packages through the release environment."
+        },
+        {
+          "kind": "report",
+          "path": "docs/internal/reports/2026-10-04-release-0-2-4-evidence.md",
+          "proves": "The user approved 0.2.4 publication; GitHub, PyPI, and npm serve the exact reviewed artifacts, and public Python/JavaScript installed-consumer checks pass."
         }
       ],
       "completion_check": "Guarded release workflow with publish=true and publish_approval=publish-runcost plus post-publish registry install smokes.",

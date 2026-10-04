@@ -14,6 +14,10 @@ limitations.
 
 ## Unreleased
 
+- Release maintenance: allow up to five minutes for npm processing before the
+  live artifact-parity gate expires, preserving exact checksums and immutable
+  publication. Record verified 0.2.4 registry, Go, and public-site evidence.
+
 ## 0.2.4 (2026-10-04)
 
 This coordinated release consolidates the source improvements since the last

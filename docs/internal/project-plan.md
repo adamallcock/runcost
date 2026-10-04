@@ -612,8 +612,8 @@ Exit gate:
 
 - The library is ready for alpha users from registry or source-install paths.
   First registry publication, trusted-publisher setup, and post-tag Go module
-  verification are current through `0.2.0`; release evidence is recorded in
-  `docs/internal/reports/2026-07-18-release-0-2-0-evidence.md`.
+  verification are current through `0.2.4`; release evidence is recorded in
+  `docs/internal/reports/2026-10-04-release-0-2-4-evidence.md`.
 
 ### Milestone 8: Alpha Quality and Feedback
 
@@ -751,9 +751,9 @@ Release rehearsal progress:
   from `github.com/adamallcock/runcost/packages/go/ledger@v<version>` without a
   local `replace`.
 - Trusted-publisher configuration, real-version no-publish workflow execution,
-  real Go tag verification, and publishing are proven for `0.2.0`. Current
+  real Go tag verification, and publishing are proven for `0.2.4`. Current
   evidence is recorded in
-  `docs/internal/reports/2026-07-18-release-0-2-0-evidence.md`.
+  `docs/internal/reports/2026-10-04-release-0-2-4-evidence.md`.
 
 Polyglot hardening progress:
 
@@ -808,14 +808,14 @@ Beta requirements:
 Delivered so far:
 
 - Guarded release workflow and local release dry-run checks exist.
-- PyPI/npm trusted-publishing setup instructions exist, and `0.2.0` was
+- PyPI/npm trusted-publishing setup instructions exist, and `0.2.4` was
   published through the guarded release workflow.
 - Guarded `publish=false` and `publish=true` workflow runs have passed for
-  `0.2.0`; current evidence is recorded in
-  `docs/internal/reports/2026-07-18-release-0-2-0-evidence.md`.
+  `0.2.4`; current evidence is recorded in
+  `docs/internal/reports/2026-10-04-release-0-2-4-evidence.md`.
 - Real Go tag verification exists in the guarded release workflow when a remote
-  `v<version>` tag is present, and `v0.2.0` is available through the Go module
-  path.
+  `v<version>` tag is present. The `v0.2.4` tag passed clean workflow import
+  and ordinary public proxy/checksum installation without a local replace.
 - Source-data update ownership, cadence, review checklist, and product-truth
   loop are documented in
   `docs/internal/process/2026-05-26-source-data-update-process.md` and checked by

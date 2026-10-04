@@ -67,9 +67,9 @@ npm run example:framework:py
    `--require-public-beta`, or `--require-v1`.
 6. Confirm source-data updates, if any, followed
    `docs/internal/process/2026-05-26-source-data-update-process.md`.
-7. Confirm the bundled default source-cache catalog is intentionally refreshed
-   or intentionally unchanged. If refreshed, run `npm run prices:build-default`
-   and record the review in `docs/internal/reports/`.
+7. Confirm the packages contain no bundled provider catalog. Review changes to
+   external source adapters and snapshots under the source-data update process;
+   run `npm run check:source-contract` when a live adapter contract changes.
 8. Confirm `npm run check:public-github` passes and the public-github settings
    in `docs/internal/process/2026-05-28-public-github-readiness.md` are current.
 9. Confirm `git diff --check` is clean.
@@ -141,6 +141,19 @@ Existing GitHub Release assets are downloaded and compared byte-for-byte;
 missing assets are uploaded, while conflicting assets are never replaced
 automatically.
 
+npm may accept a publish while processing the package before serving it
+publicly. Live parity verification allows up to five minutes for this delay
+and still fails unless every registry digest matches the verified artifacts.
+If a run expires after a successful publish, inspect registry state and rerun
+only its failed job once the exact version is available. Existing versions are
+compared with the original artifacts and skipped only when their hashes match.
+
+The public Go mirror can briefly retain an earlier negative lookup. Keep the
+tag immutable and verify the ordinary consumer path with checksum verification
+enabled before recording public-mirror installation as complete. The
+[Go module service FAQ](https://proxy.golang.org/) describes a cache delay of up
+to 30 minutes after a version was requested before its tag existed.
+
 Publishing is double-gated. Setting `publish=true` is not enough; the workflow
 also requires `publish_approval=publish-runcost`. A `publish=true` dispatch
 without that typed approval fails before publish jobs can run.
@@ -175,10 +188,13 @@ small package-local `README.md` that summarizes the JavaScript entrypoint and
 links back to the repository for the full docs. Keep the npm README short; do
 not duplicate the full docs tree there.
 
-Current release evidence for `0.2.1`, including GitHub Release, PyPI, npm, Go,
+Current release evidence for `0.2.4`, including GitHub Release, PyPI, npm, Go,
 npm provenance, public-site QA, and post-publish install smoke checks, is
 recorded in
-`docs/internal/reports/2026-07-30-release-0-2-1-evidence.md`.
+`docs/internal/reports/2026-10-04-release-0-2-4-evidence.md`.
+
+The preceding coordinated release remains documented in
+`docs/internal/reports/2026-07-30-release-0-2-1-evidence.md` as historical evidence.
 
 ## PyPI Publishing
 

@@ -2,7 +2,7 @@
 title: Package Improvement Implementation
 date: 2026-10-04
 type: plan
-status: release-in-progress
+status: complete
 ---
 
 # Package Improvement Implementation
@@ -31,7 +31,7 @@ The starting checkout has substantial existing uncommitted changes. A content-pr
 
 ## Evidence
 
-Initial base: `b86518fef92215522d8d05819fdc680093e45070`. Reviewed upstream: `bc99b18bbd4d9eae73f58ba7cd28ecc4877355c3`. Local implementation and validation are complete. See [the implementation report](../reports/2026-10-04-package-improvements-implementation.md) for results, behavior changes, and publication/platform/customer evidence gates. No publication or independent candidate qualification is claimed.
+Initial base: `b86518fef92215522d8d05819fdc680093e45070`. Reviewed upstream: `bc99b18bbd4d9eae73f58ba7cd28ecc4877355c3`. Local implementation and validation are complete. See [the implementation report](../reports/2026-10-04-package-improvements-implementation.md) for the historical local checkpoint and [release evidence](../reports/2026-10-04-release-0-2-4-evidence.md) for the merged/tagged revision, publication, and remote checks. Independent customer qualification remains a separate gate.
 
 
 ## Authorized release train
@@ -39,10 +39,16 @@ Initial base: `b86518fef92215522d8d05819fdc680093e45070`. Reviewed upstream: `bc
 The user authorized commit, push, PR creation, merge, and release on 2026-10-04.
 Target version: `0.2.4`, preserving existing tags and all reviewed trust work.
 
-- [ ] Commit the reviewed public candidate on current upstream main.
-- [ ] Push and create a release PR; pass required platform and consumer checks.
-- [ ] Merge the reviewed PR and tag that exact merged commit.
-- [ ] Complete the pinned no-publish rehearsal and inspect its artifacts.
-- [ ] Publish the exact verified artifacts through the approved OIDC workflow.
-- [ ] Verify GitHub, npm, PyPI, Go, and the rendered public site.
-- [ ] Update completion gates, generated caveats, install/status docs, and sanitized release evidence.
+- [x] Commit the reviewed public candidate on current upstream main.
+- [x] Push and create a release PR; pass required platform and consumer checks.
+- [x] Merge the reviewed PR and tag that exact merged commit.
+- [x] Complete the pinned no-publish rehearsal and inspect its artifacts.
+- [x] Publish the exact verified artifacts through the approved OIDC workflow.
+- [x] Verify GitHub, npm, PyPI, Go, and the rendered public site.
+- [x] Update completion gates, generated caveats, install/status docs, and sanitized release evidence.
+
+PR #82 is merged and `v0.2.4` identifies its exact commit. The publish workflow
+passed after retrying only its failed job once npm finished processing the
+accepted package. Public Go proxy/checksum installation and rendered/crawler QA
+passed. Post-release evidence and the bounded processing retry improvement are
+recorded in the maintenance change; the `v0.2.4` tag remains immutable.
