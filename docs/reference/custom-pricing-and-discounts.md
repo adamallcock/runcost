@@ -9,6 +9,34 @@ status: active
 
 RunCost treats provider prices, user overrides, and discounts as data. The calculator should not need a code change when a customer wants to override one model, add a private contract rate, or apply a provider-level discount.
 
+## Decimal Arithmetic And Rounding
+
+Supply decimal strings for rates and monetary amounts to avoid losing precision
+before RunCost receives a binary floating-point number. Money output uses at
+most 18 fractional places, round-half-even, no exponent notation, and no
+insignificant trailing zeros. Both positive and negative rounded zero serialize
+as `"0"`.
+
+The core computes `quantity × amount / per` from decimal inputs before rounding
+the component's monetary result. Unit rates, discount arithmetic, component
+costs, and additions to the total use the same canonical output policy. Input
+rates are not first truncated to 18 places. Integer usage counts remain exact.
+Python uses private decimal contexts, so the application's precision, rounding,
+and traps cannot change the ledger.
+
+Budget and reconciliation helpers canonicalize incoming monetary amounts before
+subtraction or status comparisons. Warning thresholds are also canonicalized;
+the budget times threshold product is rounded before comparison. This keeps
+statuses consistent with displayed amounts: `0.0000000000000000001` against a
+zero budget is `within_budget`, and reconciling that amount with zero is
+`matched`. A budget of `0.000000000000000001` at a threshold of `0.5` has a
+canonical warning boundary of zero. Validate the caller's desired granularity
+before using such tiny policy amounts.
+
+Negative budgets/tolerances and warning thresholds outside 0–1 are rejected
+before rounding; a tiny invalid value cannot become valid by rounding to zero
+or one. RunCost does not widen reconciliation tolerances automatically.
+
 ## Price Cards
 
 A price card describes one priced model variant for a provider, surface, service tier, region, and optional effective date range.

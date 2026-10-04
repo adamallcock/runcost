@@ -51,27 +51,20 @@ export function InstallBand() {
   );
 }
 
-export function ResponsePreview({ ledger }) {
+export function ResponsePreview({ ledger, response }) {
   const rows = ledger?.components || [];
   return (
     <div className="response-preview" aria-label="Example componentized cost ledger">
-      <p className="preview-label">Your provider response</p>
-      <pre className="preview-code"><code>{`{
-  "model": "gpt-4.1-mini",
-  "usage": {
-    "input_tokens": 1842,
-    "cached_tokens": 1024,
-    "output_tokens": 1026
-  }
-}`}</code></pre>
+      <p className="preview-label">Example OpenAI response</p>
+      <pre className="preview-code"><code>{JSON.stringify(response, null, 2)}</code></pre>
       <ArrowDown />
       <div className="preview-ledger">
         <div className="preview-head"><span>Component</span><span>Quantity</span><span>Cost</span></div>
         {rows.slice(0, 4).map((component) => <div className="preview-row" key={component.name}><span>{COMPONENT_LABELS[component.name]?.[0] || component.name}</span><span>{component.quantity}</span><span>${component.cost}</span></div>)}
       </div>
       <ArrowDown />
-      <div className="preview-total"><strong>Exact total</strong><strong>${ledger?.total || "0.00"} USD</strong></div>
-      <p className="preview-note">Every selected rate and source remains visible.</p>
+      <div className="preview-total"><strong>Calculated estimate</strong><strong>${ledger?.total || "0.00"} USD</strong></div>
+      <p className="preview-note">Exact arithmetic, with the selected rates, sources, and warnings visible.</p>
     </div>
   );
 }
@@ -85,9 +78,9 @@ export function ComponentTable({ ledger }) {
         <tbody>
           {ledger.components.map((component) => {
             const labels = COMPONENT_LABELS[component.name] || [component.name, component.unit];
-            return <tr key={`${component.name}-${component.price_card_id}`}><td><strong>{labels[0]}</strong><small>{labels[1]}</small></td><td>{component.quantity} {component.unit === "token" ? "tokens" : component.unit}</td><td>${component.unit_price} / {component.unit}</td><td><strong>${component.cost}</strong></td></tr>;
+            return <tr key={`${component.name}-${component.price_card_id}`}><td className="component-name"><strong>{labels[0]}</strong><small>{labels[1]}</small></td><td className="component-quantity" data-label="Quantity">{component.quantity} {component.unit === "token" ? "tokens" : component.unit}</td><td className="component-rate" data-label="Rate">${component.unit_price} / {component.unit}</td><td className="component-cost" data-label="Cost"><strong>${component.cost}</strong></td></tr>;
           })}
-          <tr className="total-row"><td><strong>Total</strong></td><td></td><td></td><td><strong>${ledger.total}</strong></td></tr>
+          <tr className="total-row"><td colSpan="3"><strong>Total estimate</strong></td><td className="component-cost"><strong>${ledger.total}</strong></td></tr>
         </tbody>
       </table>
     </div>

@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { UnsupportedSurfaceError, InvalidUsageError, deepFreeze, readonlyMap } from "./contracts.js";
+import { normalizeDecimalString, parseDecimal, canonicalDecimal, pow10, roundDivideHalfEven, formatDecimal, addDecimal, subtractDecimal, compareDecimal, multiplyDivideDecimal, multiplyDecimal } from "./money.js";
 
-const MONEY_PRECISION = 18n;
 const BILLING_WEEKDAYS = [
   "monday",
   "tuesday",
@@ -16,6 +17,7 @@ const BILLING_WEEKDAY_INDEX = new Map(BILLING_WEEKDAYS.map((day, index) => [day,
 const BILLING_TIMEZONE_FORMATTERS = new Map();
 const RFC3339_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const RFC3339_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$/;
+
 const COMPONENT_ORDER_NAMES = [
   "input_uncached_tokens",
   "input_cache_read_tokens",
@@ -78,137 +80,14 @@ const DEEPSEEK_EXTERNAL_PRICE_SOURCES = Object.freeze(["deepseek-official", ...D
 export const DEFAULT_PRICE_CACHE_MAX_AGE_SECONDS = 24 * 60 * 60;
 export const EXTERNAL_PRICE_SOURCE_URLS = Object.freeze({
   "deepseek-official": "https://raw.githubusercontent.com/adamallcock/runcost/main/fixtures/source-files/deepseek-official-pricing-snapshot.json",
-  "genai-prices": "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/data_slim.json",
+  "genai-prices": "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/new_data/v2/data_slim.json",
   "models.dev": "https://models.dev/api.json",
   litellm: "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
   openrouter: "https://openrouter.ai/api/v1/models"
 });
 
-function normalizeDecimalString(value) {
-  if (value === null || value === undefined) {
-    return "0";
-  }
-  if (typeof value === "number" && !Number.isFinite(value)) {
-    throw new Error(`invalid decimal: ${value}`);
-  }
-  const text = String(value).trim();
-  if (text === "") {
-    return "0";
-  }
-  if (!/[eE]/.test(text)) {
-    return text.startsWith("+") ? text.slice(1) : text;
-  }
-
-  const match = text.match(/^([+-]?)(?:(\d+)(?:\.(\d*))?|\.(\d+))[eE]([+-]?\d+)$/);
-  if (!match) {
-    throw new Error(`invalid decimal: ${value}`);
-  }
-  const [, rawSign, rawWhole, rawFrac, rawLeadingFrac, rawExponent] = match;
-  const whole = rawWhole || "0";
-  const frac = rawFrac ?? rawLeadingFrac ?? "";
-  const rawDigits = `${whole}${frac}`;
-  const leadingZeros = rawDigits.match(/^0*/)[0].length;
-  const digits = rawDigits.slice(leadingZeros) || "0";
-  if (digits === "0") {
-    return "0";
-  }
-  const decimalIndex = whole.length + Number.parseInt(rawExponent, 10) - leadingZeros;
-  let normalizedWhole;
-  let normalizedFrac;
-  if (decimalIndex <= 0) {
-    normalizedWhole = "0";
-    normalizedFrac = `${"0".repeat(-decimalIndex)}${digits}`;
-  } else if (decimalIndex >= digits.length) {
-    normalizedWhole = `${digits}${"0".repeat(decimalIndex - digits.length)}`;
-    normalizedFrac = "";
-  } else {
-    normalizedWhole = digits.slice(0, decimalIndex);
-    normalizedFrac = digits.slice(decimalIndex);
-  }
-  normalizedWhole = normalizedWhole.replace(/^0+(?=\d)/, "") || "0";
-  normalizedFrac = normalizedFrac.replace(/0+$/, "");
-  const sign = rawSign === "-" ? "-" : "";
-  return `${sign}${normalizedWhole}${normalizedFrac ? `.${normalizedFrac}` : ""}`;
-}
-
-function parseDecimal(value) {
-  const text = normalizeDecimalString(value);
-  const sign = text.startsWith("-") ? -1n : 1n;
-  const unsigned = text.startsWith("-") ? text.slice(1) : text;
-  const [wholeRaw, fracRaw = ""] = unsigned.split(".");
-  const whole = wholeRaw || "0";
-  const frac = fracRaw.replace(/0+$/, "");
-  const digits = `${whole}${frac}`.replace(/^0+(?=\d)/, "") || "0";
-  return {
-    value: sign * BigInt(digits),
-    scale: BigInt(frac.length)
-  };
-}
-
-function canonicalDecimal(value) {
-  const parsed = parseDecimal(value);
-  return formatDecimal(parsed.value, parsed.scale);
-}
-
-function pow10(scale) {
-  return 10n ** BigInt(scale);
-}
-
-function formatDecimal(value, scale) {
-  const sign = value < 0n ? "-" : "";
-  const abs = value < 0n ? -value : value;
-  const divisor = pow10(scale);
-  const whole = abs / divisor;
-  const frac = abs % divisor;
-  if (frac === 0n) {
-    return `${sign}${whole}`;
-  }
-  const fracText = frac.toString().padStart(Number(scale), "0").replace(/0+$/, "");
-  return `${sign}${whole}.${fracText}`;
-}
-
 function hasOwn(object, key) {
   return Object.prototype.hasOwnProperty.call(object, key);
-}
-
-function addDecimal(left, right) {
-  const a = parseDecimal(left);
-  const b = parseDecimal(right);
-  const scale = a.scale > b.scale ? a.scale : b.scale;
-  const av = a.value * pow10(scale - a.scale);
-  const bv = b.value * pow10(scale - b.scale);
-  return formatDecimal(av + bv, scale);
-}
-
-function subtractDecimal(left, right) {
-  const a = parseDecimal(left);
-  const b = parseDecimal(right);
-  const scale = a.scale > b.scale ? a.scale : b.scale;
-  const av = a.value * pow10(scale - a.scale);
-  const bv = b.value * pow10(scale - b.scale);
-  return formatDecimal(av - bv, scale);
-}
-
-function compareDecimal(left, right) {
-  const difference = parseDecimal(subtractDecimal(left, right)).value;
-  return difference < 0n ? -1 : difference > 0n ? 1 : 0;
-}
-
-function multiplyDivideDecimal(quantity, amount, per) {
-  const q = parseDecimal(quantity);
-  const a = parseDecimal(amount);
-  const p = parseDecimal(per);
-  if (p.value === 0n) {
-    throw new Error("price.per must not be zero");
-  }
-
-  const numerator = q.value * a.value * pow10(p.scale) * pow10(MONEY_PRECISION);
-  const denominator = p.value * pow10(q.scale + a.scale);
-  return formatDecimal(numerator / denominator, MONEY_PRECISION);
-}
-
-function multiplyDecimal(left, right) {
-  return multiplyDivideDecimal(left, right, "1");
 }
 
 function billedModel(usageLedger) {
@@ -518,6 +397,8 @@ function pricingPeriodSelection(usageLedger, card) {
   if (explicit) {
     return { pricing_period: String(explicit), period_selection: "explicit_context" };
   }
+  const unsupported = card.metadata?.unsupported_billing_constraints;
+  if (unsupported?.length) return { unsupported_schedule: unsupported.join(", ") };
   const schedule = cardBillingSchedule(card);
   if (Object.keys(schedule).length === 0) return {};
   const pricedAt = dateTimeValue(context.priced_at || context.pricedAt);
@@ -585,10 +466,10 @@ function compareTuple(left, right) {
 
 function stableStringify(value) {
   if (Array.isArray(value)) {
-    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+    return `[${value.map((item) => stableStringify(item) ?? "null").join(",")}]`;
   }
   if (value && typeof value === "object") {
-    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(",")}}`;
+    return `{${Object.keys(value).filter((key) => value[key] !== undefined && typeof value[key] !== "function" && typeof value[key] !== "symbol").sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(",")}}`;
   }
   return JSON.stringify(value);
 }
@@ -1274,10 +1155,19 @@ function hasPriceCardForModelSurface(usageLedger, priceCards) {
 
 export function compilePriceCatalog(priceCards) {
   if (priceCards && priceCards.__runcostCompiledCatalog === true) return priceCards;
-  const cards = [...(priceCards || [])];
+  const cards = deepFreeze(JSON.parse(JSON.stringify([...(priceCards || [])])));
   const byProviderModel = new Map();
   const byModel = new Map();
   for (const card of cards) {
+    (card.components || []).forEach((component, index) => {
+      const currency = component?.price?.currency;
+      if (currency !== "USD") {
+        throw new Error(
+          `unsupported currency for price card ${card.id || "<unknown>"} component ${index}: ` +
+          `${JSON.stringify(currency)}; RunCost supports USD only`
+        );
+      }
+    });
     const provider = String(card.provider || "");
     const names = [...new Set([card.model, ...(card.aliases || [])].filter(Boolean).map(String))];
     for (const name of names) {
@@ -1291,8 +1181,8 @@ export function compilePriceCatalog(priceCards) {
   return Object.freeze({
     __runcostCompiledCatalog: true,
     priceCards: cards,
-    byProviderModel,
-    byModel
+    byProviderModel: readonlyMap(new Map([...byProviderModel].map(([key, value]) => [key, Object.freeze(value)]))),
+    byModel: readonlyMap(new Map([...byModel].map(([key, value]) => [key, Object.freeze(value)])))
   });
 }
 
@@ -1354,6 +1244,373 @@ function usageMetadataFieldWarnings(usageLedger) {
   return warnings;
 }
 
+function invalidUsageWarning({ path, reason, value, component }) {
+  const metadata = { reason };
+  if (value !== undefined && value !== null) metadata.value = String(value);
+  if (component) metadata.component = component;
+  return {
+    code: "invalid_usage",
+    message: `Usage value at ${path} is invalid: ${reason.replaceAll("_", " ")}.`,
+    path,
+    metadata
+  };
+}
+
+function usageInconsistentWarning({ path, invariant, totalPath, total, componentPaths, componentTotal }) {
+  return {
+    code: "usage_inconsistent",
+    message: `Usage subtotal at ${path} exceeds its declared total at ${totalPath}.`,
+    path,
+    metadata: {
+      invariant,
+      total_path: totalPath,
+      total: canonicalDecimal(total),
+      component_paths: componentPaths,
+      component_total: canonicalDecimal(componentTotal)
+    }
+  };
+}
+
+function validatedUsageDecimal(value, path, warnings) {
+  let parsed;
+  try {
+    parsed = parseDecimal(value);
+  } catch (error) {
+    if (!(error instanceof InvalidUsageError)) throw error;
+    warnings.push(invalidUsageWarning({ path, reason: "malformed_decimal", value }));
+    return null;
+  }
+  if (parsed.value < 0n) {
+    warnings.push(invalidUsageWarning({ path, reason: "negative_quantity", value }));
+    return null;
+  }
+  return parsed;
+}
+
+function validateUsageFieldIfPresent(value, key, path, warnings) {
+  if (!hasOwn(value, key)) return;
+  validatedUsageDecimal(value[key], path, warnings);
+}
+
+function checkUsageSubtotal(warnings, { totalValue, totalPath, components, invariant }) {
+  const total = validatedUsageDecimal(totalValue, totalPath, warnings);
+  const componentValues = [];
+  const componentPaths = [];
+  for (const [value, path] of components) {
+    const parsed = validatedUsageDecimal(value, path, warnings);
+    if (parsed) {
+      componentValues.push(formatDecimal(parsed.value, parsed.scale));
+      componentPaths.push(path);
+    }
+  }
+  if (!total || componentValues.length !== components.length) return;
+  const componentTotal = componentValues.reduce((sum, value) => addDecimal(sum, value), "0");
+  const totalText = formatDecimal(total.value, total.scale);
+  if (compareDecimal(componentTotal, totalText) > 0) {
+    warnings.push(usageInconsistentWarning({
+      path: componentPaths[0],
+      invariant,
+      totalPath,
+      total: totalText,
+      componentPaths,
+      componentTotal
+    }));
+  }
+}
+
+function rawUsageRootPath(rawUsage, surface) {
+  if (["google.gemini.generate_content", "vertex.gemini.generate_content", "google.gemini.live"].includes(surface)) {
+    return "$.usageMetadata";
+  }
+  if (Object.keys(rawUsage).some((key) => key.startsWith("gen_ai.usage."))) {
+    return "$.attributes";
+  }
+  return "$.usage";
+}
+
+function appendNegativeRawUsageWarnings(value, path, warnings) {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => appendNegativeRawUsageWarnings(item, `${path}[${index}]`, warnings));
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const key of Object.keys(value).sort()) {
+      appendNegativeRawUsageWarnings(value[key], `${path}.${key}`, warnings);
+    }
+    return;
+  }
+  if (value === undefined || value === null || typeof value === "boolean") return;
+  let parsed;
+  try {
+    parsed = parseDecimal(value);
+  } catch (error) {
+    if (!(error instanceof InvalidUsageError)) throw error;
+    return;
+  }
+  if (parsed.value >= 0n) return;
+  const duplicate = warnings.some((warning) => (
+    warning.code === "invalid_usage" &&
+    warning.path === path &&
+    warning.metadata?.reason === "negative_quantity"
+  ));
+  if (!duplicate) warnings.push(invalidUsageWarning({ path, reason: "negative_quantity", value }));
+}
+
+function rawUsageFieldIsNumeric(fieldName) {
+  const lowered = String(fieldName || "").toLowerCase();
+  if (lowered.includes("token") && ["token", "tokens", "count"].some((suffix) => lowered.endsWith(suffix))) {
+    return true;
+  }
+  return [
+    "_units", "units", "_seconds", "seconds", "_characters", "characters",
+    "_images", "images", "_requests", "requests", "_sessions", "sessions", "_count"
+  ].some((suffix) => lowered.endsWith(suffix));
+}
+
+function appendMalformedRawUsageWarnings(value, path, warnings, fieldName = "") {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => appendMalformedRawUsageWarnings(item, `${path}[${index}]`, warnings, fieldName));
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const key of Object.keys(value).sort()) {
+      appendMalformedRawUsageWarnings(value[key], `${path}.${key}`, warnings, key);
+    }
+    return;
+  }
+  if (value === undefined || value === null || !rawUsageFieldIsNumeric(fieldName)) return;
+  const candidateWarnings = [];
+  validatedUsageDecimal(value, path, candidateWarnings);
+  for (const candidate of candidateWarnings) {
+    const duplicate = warnings.some((warning) => (
+      warning.code === candidate.code &&
+      warning.path === candidate.path &&
+      warning.metadata?.reason === candidate.metadata?.reason
+    ));
+    if (!duplicate) warnings.push(candidate);
+  }
+}
+
+function rawUsageConsistencyWarnings(rawUsage, surface) {
+  const warnings = [];
+  if (!rawUsage || typeof rawUsage !== "object" || Array.isArray(rawUsage)) return warnings;
+  if (Object.keys(rawUsage).some((key) => key.startsWith("gen_ai.usage."))) {
+    if (hasOwn(rawUsage, "gen_ai.usage.input_tokens")) {
+      checkUsageSubtotal(warnings, {
+        totalValue: rawUsage["gen_ai.usage.input_tokens"],
+        totalPath: "$.attributes.gen_ai.usage.input_tokens",
+        components: [
+          [rawUsage["gen_ai.usage.cache_read.input_tokens"] ?? 0, "$.attributes.gen_ai.usage.cache_read.input_tokens"],
+          [rawUsage["gen_ai.usage.cache_creation.input_tokens"] ?? 0, "$.attributes.gen_ai.usage.cache_creation.input_tokens"]
+        ],
+        invariant: "otel_input_cache_subtotals_lte_input_tokens"
+      });
+    } else {
+      validateUsageFieldIfPresent(
+        rawUsage,
+        "gen_ai.usage.cache_read.input_tokens",
+        "$.attributes.gen_ai.usage.cache_read.input_tokens",
+        warnings
+      );
+      validateUsageFieldIfPresent(
+        rawUsage,
+        "gen_ai.usage.cache_creation.input_tokens",
+        "$.attributes.gen_ai.usage.cache_creation.input_tokens",
+        warnings
+      );
+    }
+    if (hasOwn(rawUsage, "gen_ai.usage.output_tokens")) {
+      checkUsageSubtotal(warnings, {
+        totalValue: rawUsage["gen_ai.usage.output_tokens"],
+        totalPath: "$.attributes.gen_ai.usage.output_tokens",
+        components: [[
+          rawUsage["gen_ai.usage.reasoning.output_tokens"] ?? 0,
+          "$.attributes.gen_ai.usage.reasoning.output_tokens"
+        ]],
+        invariant: "otel_reasoning_tokens_lte_output_tokens"
+      });
+    } else {
+      validateUsageFieldIfPresent(
+        rawUsage,
+        "gen_ai.usage.reasoning.output_tokens",
+        "$.attributes.gen_ai.usage.reasoning.output_tokens",
+        warnings
+      );
+    }
+  }
+  if (["openai.responses", "xai.responses", "meta.responses"].includes(surface)) {
+    const inputDetails = rawUsage.input_tokens_details && typeof rawUsage.input_tokens_details === "object"
+      ? rawUsage.input_tokens_details
+      : {};
+    const outputDetails = rawUsage.output_tokens_details && typeof rawUsage.output_tokens_details === "object"
+      ? rawUsage.output_tokens_details
+      : {};
+    if (hasOwn(rawUsage, "input_tokens")) {
+      checkUsageSubtotal(warnings, {
+        totalValue: rawUsage.input_tokens,
+        totalPath: "$.usage.input_tokens",
+        components: [
+          [inputDetails.cached_tokens ?? 0, "$.usage.input_tokens_details.cached_tokens"],
+          [inputDetails.cache_write_tokens ?? 0, "$.usage.input_tokens_details.cache_write_tokens"]
+        ],
+        invariant: "input_cache_subtotals_lte_input_tokens"
+      });
+    } else {
+      validateUsageFieldIfPresent(inputDetails, "cached_tokens", "$.usage.input_tokens_details.cached_tokens", warnings);
+      validateUsageFieldIfPresent(inputDetails, "cache_write_tokens", "$.usage.input_tokens_details.cache_write_tokens", warnings);
+    }
+    if (hasOwn(inputDetails, "orchestration_input_tokens") || hasOwn(inputDetails, "orchestration_input_cached_tokens")) {
+      checkUsageSubtotal(warnings, {
+        totalValue: inputDetails.orchestration_input_tokens ?? 0,
+        totalPath: "$.usage.input_tokens_details.orchestration_input_tokens",
+        components: [[
+          inputDetails.orchestration_input_cached_tokens ?? 0,
+          "$.usage.input_tokens_details.orchestration_input_cached_tokens"
+        ]],
+        invariant: "orchestration_cached_tokens_lte_orchestration_input_tokens"
+      });
+    }
+    if (hasOwn(rawUsage, "output_tokens")) {
+      checkUsageSubtotal(warnings, {
+        totalValue: rawUsage.output_tokens,
+        totalPath: "$.usage.output_tokens",
+        components: [[outputDetails.reasoning_tokens ?? 0, "$.usage.output_tokens_details.reasoning_tokens"]],
+        invariant: "reasoning_tokens_lte_output_tokens"
+      });
+    } else {
+      validateUsageFieldIfPresent(outputDetails, "reasoning_tokens", "$.usage.output_tokens_details.reasoning_tokens", warnings);
+      validateUsageFieldIfPresent(
+        outputDetails,
+        "orchestration_output_tokens",
+        "$.usage.output_tokens_details.orchestration_output_tokens",
+        warnings
+      );
+    }
+  } else if (surface.endsWith("chat_completions") || surface.includes(".chat_completions")) {
+    const promptDetails = rawUsage.prompt_tokens_details && typeof rawUsage.prompt_tokens_details === "object"
+      ? rawUsage.prompt_tokens_details
+      : {};
+    const completionDetails = rawUsage.completion_tokens_details && typeof rawUsage.completion_tokens_details === "object"
+      ? rawUsage.completion_tokens_details
+      : {};
+    if (hasOwn(rawUsage, "prompt_tokens")) {
+      checkUsageSubtotal(warnings, {
+        totalValue: rawUsage.prompt_tokens,
+        totalPath: "$.usage.prompt_tokens",
+        components: [
+          [promptDetails.cached_tokens ?? 0, "$.usage.prompt_tokens_details.cached_tokens"],
+          [promptDetails.cache_write_tokens ?? 0, "$.usage.prompt_tokens_details.cache_write_tokens"]
+        ],
+        invariant: "prompt_cache_subtotals_lte_prompt_tokens"
+      });
+    } else {
+      validateUsageFieldIfPresent(promptDetails, "cached_tokens", "$.usage.prompt_tokens_details.cached_tokens", warnings);
+      validateUsageFieldIfPresent(promptDetails, "cache_write_tokens", "$.usage.prompt_tokens_details.cache_write_tokens", warnings);
+    }
+    if (hasOwn(rawUsage, "completion_tokens")) {
+      checkUsageSubtotal(warnings, {
+        totalValue: rawUsage.completion_tokens,
+        totalPath: "$.usage.completion_tokens",
+        components: [[
+          completionDetails.reasoning_tokens ?? 0,
+          "$.usage.completion_tokens_details.reasoning_tokens"
+        ]],
+        invariant: "reasoning_tokens_lte_completion_tokens"
+      });
+    } else {
+      validateUsageFieldIfPresent(
+        completionDetails,
+        "reasoning_tokens",
+        "$.usage.completion_tokens_details.reasoning_tokens",
+        warnings
+      );
+    }
+  } else if (["google.gemini.generate_content", "vertex.gemini.generate_content"].includes(surface)) {
+    if (hasOwn(rawUsage, "promptTokenCount")) {
+      checkUsageSubtotal(warnings, {
+        totalValue: rawUsage.promptTokenCount,
+        totalPath: "$.usageMetadata.promptTokenCount",
+        components: [[rawUsage.cachedContentTokenCount ?? 0, "$.usageMetadata.cachedContentTokenCount"]],
+        invariant: "cached_content_tokens_lte_prompt_tokens"
+      });
+    } else {
+      validateUsageFieldIfPresent(
+        rawUsage,
+        "cachedContentTokenCount",
+        "$.usageMetadata.cachedContentTokenCount",
+        warnings
+      );
+    }
+  }
+  appendNegativeRawUsageWarnings(rawUsage, rawUsageRootPath(rawUsage, surface), warnings);
+  appendMalformedRawUsageWarnings(rawUsage, rawUsageRootPath(rawUsage, surface), warnings);
+  return warnings;
+}
+
+function usageConsistencyWarnings(usageLedger) {
+  const warnings = rawUsageConsistencyWarnings(usageLedger.raw_usage || {}, String(usageLedger.surface || ""));
+  for (const [index, component] of (usageLedger.components || []).entries()) {
+    if (!component || typeof component !== "object" || Array.isArray(component)) {
+      warnings.push(invalidUsageWarning({ path: `$.components[${index}]`, reason: "component_not_object" }));
+      continue;
+    }
+    const path = String(component.source_path || `$.components[${index}].quantity`);
+    const componentWarnings = [];
+    validatedUsageDecimal(component.quantity, path, componentWarnings);
+    for (const warning of componentWarnings) {
+      warning.metadata.component = String(component.name || "unknown");
+      const represented = warnings.some((existing) => {
+        if (
+          existing.code === warning.code &&
+          existing.path === warning.path &&
+          existing.metadata?.reason === warning.metadata?.reason
+        ) return true;
+        if (
+          warning.code === "invalid_usage" &&
+          warning.metadata?.reason === "negative_quantity" &&
+          existing.code === "usage_inconsistent"
+        ) {
+          const totalPath = String(existing.metadata?.total_path || "");
+          const componentPaths = (existing.metadata?.component_paths || []).map(String);
+          return (totalPath && path.includes(totalPath)) || componentPaths.includes(path);
+        }
+        return false;
+      });
+      if (!represented) warnings.push(warning);
+    }
+  }
+  return warnings;
+}
+
+function emptyCostLedgerForInvalidUsage(usageLedger, warnings) {
+  const model = usageLedger.model && typeof usageLedger.model === "object" ? usageLedger.model : {};
+  const requested = String(model.requested || model.returned || model.billed || "unknown");
+  const returned = String(model.returned || "");
+  const result = {
+    schema_version: "0.1",
+    provider: String(usageLedger.provider || "unknown"),
+    surface: String(usageLedger.surface || "unknown"),
+    model: {
+      requested,
+      returned,
+      billed: String(model.billed || returned || requested),
+      alias_resolution: String(model.alias_resolution || "none")
+    },
+    currency: "USD",
+    components: [],
+    total: "0",
+    price_sources: [],
+    applied_discounts: [],
+    warnings: orderedWarnings(warnings)
+  };
+  if (usageLedger.metadata && typeof usageLedger.metadata === "object" && Object.keys(usageLedger.metadata).length > 0) {
+    result.metadata = { ...usageLedger.metadata };
+  }
+  const attribution = normalizeAttribution(usageLedger.attribution);
+  if (Object.keys(attribution).length > 0) result.attribution = attribution;
+  return result;
+}
+
 function policyMatches(policy, usageLedger, component) {
   const match = policy.match || {};
   const billedModel =
@@ -1378,6 +1635,13 @@ function policyMatches(policy, usageLedger, component) {
     }
   }
   return true;
+}
+
+function validateDiscountPolicy(policy) {
+  if (!policy || typeof policy.id !== "string" || !policy.id) throw new Error("discount policy requires a non-empty id");
+  if (!["multiplier", "percentage_discount", "percentage_markup"].includes(policy.adjustment?.type)) throw new Error("unsupported discount adjustment type");
+  if (policy.adjustment.value === undefined || policy.adjustment.value === null || policy.adjustment.value === "") throw new Error("discount adjustment value must be a finite decimal");
+  parseDecimal(policy.adjustment.value);
 }
 
 function applyDiscounts(cost, policies, usageLedger, component, discountEligible) {
@@ -1582,8 +1846,19 @@ export function calculateCost({
   debugTrace,
   debug_trace
 }) {
+  for (const policy of discountPolicies) validateDiscountPolicy(policy);
   const compiledCatalog = compilePriceCatalog(priceCards);
   priceCards = compiledCatalog.priceCards;
+  const consistencyWarnings = usageConsistencyWarnings(usageLedger);
+  if (consistencyWarnings.length > 0) {
+    if (mode === "strict") {
+      throw new Error(`strict mode cost calculation failed: ${consistencyWarnings[0].code}`);
+    }
+    return emptyCostLedgerForInvalidUsage(
+      usageLedger,
+      [...usageMetadataFieldWarnings(usageLedger), ...consistencyWarnings]
+    );
+  }
   const components = [];
   const warnings = usageMetadataFieldWarnings(usageLedger);
   const appliedDiscounts = [];
@@ -1772,7 +2047,7 @@ export function calculateCost({
       }
     }
     total = addDecimal(total, discounted.cost);
-    sourceByName.set(card.source.name, card.source);
+    sourceByName.set(sourceKey(card.source), card.source);
     if (!warnedStaleCards.has(card.id)) {
       const staleWarning = stalePriceWarning(componentUsageLedger, card, staleThreshold);
       if (staleWarning) {
@@ -1781,9 +2056,9 @@ export function calculateCost({
       }
     }
 
-    const costComponent = {
-      name: component.name,
-      quantity: component.quantity,
+      const costComponent = {
+        name: component.name,
+        quantity: canonicalDecimal(component.quantity),
       unit: component.unit,
       unit_price: multiplyDivideDecimal(priceComponent.price.amount, "1", priceComponent.price.per),
       cost: discounted.cost,
@@ -1871,12 +2146,7 @@ export function calculateCost({
 }
 
 function sourceKey(source) {
-  return [
-    source.name || "",
-    source.url || "",
-    source.retrieved_at || "",
-    source.version || ""
-  ].join("|");
+  return JSON.stringify([source.name || "", source.url || "", source.retrieved_at || "", source.version || ""]);
 }
 
 function componentKey(component) {
@@ -1924,6 +2194,12 @@ export function aggregateCostLedgers({
   let total = "0";
 
   ledgers.forEach((ledger, ledgerIndex) => {
+    if (ledger.currency !== "USD") {
+      throw new Error(
+        `unsupported currency for cost ledger ${ledgerIndex}: ${JSON.stringify(ledger.currency)}; ` +
+        "RunCost aggregation supports USD only"
+      );
+    }
     total = addDecimal(total, ledger.total || "0");
     for (const component of ledger.components || []) {
       const key = componentKey(component);
@@ -2009,12 +2285,12 @@ function numberString(value) {
 
 function positiveComponent(name, quantity, unit, sourcePath) {
   const decimal = parseDecimal(quantity);
-  if (decimal.value <= 0n) {
+  if (decimal.value === 0n) {
     return null;
   }
   return {
     name,
-    quantity: numberString(quantity),
+    quantity: canonicalDecimal(quantity),
     unit,
     source_path: sourcePath
   };
@@ -4426,7 +4702,7 @@ export function extractUsageLedger(response, options = {}) {
   if (surface === "cohere.rerank") {
     return extractCohereRerankUsage(response, options);
   }
-  throw new Error(`Unsupported surface: ${surface}`);
+  throw new UnsupportedSurfaceError(surface);
 }
 
 function unsupportedSurfaceLedger(response, options = {}) {
@@ -5123,6 +5399,7 @@ export function priceCardsFromOfficialSnapshot(data, options = {}) {
       components,
       source,
       metadata: {
+        unsupported_billing_constraints: row.unsupported_billing_constraints || data.unsupported_billing_constraints || [],
         official_snapshot: {
           source_label: row.source_label || row.sourceLabel,
           notes: row.notes,
@@ -5383,20 +5660,106 @@ export function inferSurface(response, options = {}) {
   return undefined;
 }
 
+function responsePreflightPayloadAndRawUsage(response, surface) {
+  let payload = openAIResponsesPayload(response);
+  if (["anthropic.messages", "minimax.messages"].includes(surface)) {
+    payload = anthropicMessagesPayload(response);
+  } else if ([
+    "google.gemini.generate_content",
+    "vertex.gemini.generate_content",
+    "google.gemini.live"
+  ].includes(surface)) {
+    payload = geminiGenerateContentPayload(response);
+  } else if (surface.endsWith("chat_completions") || surface.includes(".chat_completions")) {
+    payload = openAICompatibleChatPayload(response);
+  }
+  const rawUsage = [
+    "google.gemini.generate_content",
+    "vertex.gemini.generate_content",
+    "google.gemini.live"
+  ].includes(surface)
+    ? (payload.usageMetadata || payload.usage_metadata)
+    : payload.usage;
+  return {
+    payload,
+    rawUsage: rawUsage && typeof rawUsage === "object" && !Array.isArray(rawUsage) ? rawUsage : {}
+  };
+}
+
+function invalidUsageResponseIdentity(payload, options, surface) {
+  let provider = options.provider || surface.split(".")[0] || "unknown";
+  if (surface.startsWith("aws.bedrock.") && !options.provider) provider = "bedrock";
+  const returnedModel = payload.model || payload.modelVersion || payload.modelId || payload.model_id;
+  const model = options.model || returnedModel || "unknown";
+  return { provider: String(provider), model: String(model), returnedModel };
+}
+
 export function fromResponse(response, options = {}) {
   const resolvedOptions = {
     ...options,
     surface: options.surface || inferSurface(response, options) || "unknown"
   };
   const mode = resolvedOptions.mode || "compatibility";
+  if (!resolvedOptions.adapter && !resolvedOptions.framework) {
+    const { payload, rawUsage } = responsePreflightPayloadAndRawUsage(response, resolvedOptions.surface);
+    const preflightWarnings = rawUsageConsistencyWarnings(rawUsage, resolvedOptions.surface);
+    if (preflightWarnings.length > 0) {
+      if (mode === "strict") {
+        throw new Error(`strict mode cost calculation failed: ${preflightWarnings[0].code}`);
+      }
+      const identity = invalidUsageResponseIdentity(payload, resolvedOptions, resolvedOptions.surface);
+      return emptyCostLedgerForInvalidUsage(
+        {
+          provider: identity.provider,
+          surface: resolvedOptions.surface,
+          model: {
+            requested: identity.model,
+            returned: identity.returnedModel || "",
+            billed: identity.returnedModel || identity.model,
+            alias_resolution: "none"
+          },
+          components: [],
+          raw_usage: rawUsage
+        },
+        preflightWarnings
+      );
+    }
+  }
   let usageLedger;
   try {
-    usageLedger = extractUsageLedger(response, resolvedOptions);
+    usageLedger = options._usageLedger ? clonePriceValue(options._usageLedger) : extractUsageLedger(response, resolvedOptions);
+    if (options._usageLedger && resolvedOptions.context) usageLedger.context = { ...(usageLedger.context || {}), ...resolvedOptions.context };
   } catch (error) {
-    if (mode === "strict") {
-      throw error;
+    if (error instanceof UnsupportedSurfaceError) {
+      if (mode === "strict") throw error;
+      return unsupportedSurfaceLedger(response, resolvedOptions);
     }
-    return unsupportedSurfaceLedger(response, resolvedOptions);
+    if (error instanceof InvalidUsageError) {
+      if (mode === "strict") throw new Error("strict mode cost calculation failed: invalid_usage", { cause: error });
+      const { payload, rawUsage } = responsePreflightPayloadAndRawUsage(response, resolvedOptions.surface);
+      const identity = invalidUsageResponseIdentity(payload, resolvedOptions, resolvedOptions.surface);
+      return emptyCostLedgerForInvalidUsage(
+        {
+          provider: identity.provider,
+          surface: resolvedOptions.surface,
+          model: {
+            requested: identity.model,
+            returned: identity.returnedModel || "",
+            billed: identity.returnedModel || identity.model,
+            alias_resolution: "none"
+          },
+          components: [],
+          raw_usage: rawUsage
+        },
+        [{
+          code: "invalid_usage",
+          message: "Supported provider usage contains a malformed numeric value.",
+          path: error.path || "$.usage",
+          metadata: { reason: "malformed_decimal", error: error.message }
+        }]
+      );
+    }
+    throw error;
   }
   if (resolvedOptions.context && typeof resolvedOptions.context === "object") {
     usageLedger.context = { ...(usageLedger.context || {}), ...resolvedOptions.context };
@@ -5774,6 +6137,7 @@ export function fromBatchResults(items, options = {}) {
       if (options.batchId ?? options.batch_id) context.batch_id = options.batchId ?? options.batch_id;
       const ledger = fromResponse(unwrapped.response, {
         ...options,
+        _usageLedger: options._preparedUsage?.get(index),
         provider: ["google", "gemini", "google-gemini"].includes(String(options.provider).toLowerCase()) ? "google"
           : ["vertex", "google-vertex", "vertex-ai"].includes(String(options.provider).toLowerCase()) ? "vertex"
           : ["bedrock", "aws-bedrock"].includes(String(options.provider).toLowerCase()) ? "bedrock"
@@ -5867,6 +6231,14 @@ function tierValues(value) {
 }
 
 const GENAI_PRICE_COMPONENTS = {
+  cache_write_1h_mtok: ['input_cache_write_1h_tokens', 'token', '1000000'],
+  web_searches_kcount: ['web_search_units', 'search', '1000'],
+  output_image_mtok: ['output_image_tokens', 'token', '1000000'],
+  input_image_mtok: ['input_image_tokens', 'token', '1000000'],
+  input_video_mtok: ['input_video_tokens', 'token', '1000000'],
+  output_video_mtok: ['output_video_tokens', 'token', '1000000'],
+  cache_image_read_mtok: ['input_cache_read_tokens', 'token', '1000000'],
+  output_reasoning_mtok: ['output_reasoning_tokens', 'token', '1000000'],
   input_mtok: ["input_uncached_tokens", "token", "1000000"],
   cache_write_mtok: ["input_cache_write_tokens", "token", "1000000"],
   cache_read_mtok: ["input_cache_read_tokens", "token", "1000000"],
@@ -6051,7 +6423,9 @@ export function priceCardsFromGenAIPrices(data, options = {}) {
               model_match: rawModel.match ?? null,
               api_pattern: rawProvider.api_pattern ?? null,
               context_window: rawModel.context_window ?? null,
-              constraint: rawConstraint
+              constraint: rawConstraint,
+              adapter_contract: "genai-prices/v2-compatible",
+              unsupported_prices: Object.fromEntries(Object.entries(entry.prices).filter(([key]) => !Object.hasOwn(GENAI_PRICE_COMPONENTS, key)))
             }
           }
         };
@@ -6227,25 +6601,29 @@ export function estimateCost(options = {}) {
 
 export function evaluateBudget(ledgerOrTotal, options = {}) {
   const ledger = ledgerOrTotal && typeof ledgerOrTotal === "object" ? ledgerOrTotal : null;
-  const total = ledger ? ledger.total || "0" : ledgerOrTotal;
-  const budget = normalizeDecimalString(options.budget);
-  const threshold = normalizeDecimalString(options.warningThreshold ?? options.warning_threshold ?? "0.8");
-  if (parseDecimal(budget).value < 0n) throw new Error("budget must be non-negative");
-  if (compareDecimal(threshold, "0") < 0 || compareDecimal(threshold, "1") > 0) throw new Error("warning_threshold must be between 0 and 1");
+  const total = canonicalDecimal(ledger ? ledger.total ?? "0" : ledgerOrTotal);
+  const rawBudget = options.budget;
+  const rawThreshold = options.warningThreshold ?? options.warning_threshold ?? "0.8";
+  if (parseDecimal(rawBudget).value < 0n) throw new Error("budget must be non-negative");
+  if (compareDecimal(rawThreshold, "0") < 0 || compareDecimal(rawThreshold, "1") > 0) throw new Error("warning_threshold must be between 0 and 1");
+  const budget = canonicalDecimal(rawBudget);
+  const threshold = canonicalDecimal(rawThreshold);
   const warningAmount = multiplyDivideDecimal(budget, threshold, "1");
   const status = compareDecimal(total, budget) > 0
     ? "exceeded"
     : compareDecimal(budget, "0") > 0 && compareDecimal(total, warningAmount) >= 0
       ? "warning"
       : "within_budget";
+  const currency = ledger ? ledger.currency || "USD" : "USD";
+  if (currency !== "USD") throw new Error(`unsupported currency ${JSON.stringify(currency)}; RunCost supports USD only`);
   const result = {
     schema_version: "0.1",
     status,
-    estimated_cost: normalizeDecimalString(total),
+    estimated_cost: canonicalDecimal(total),
     budget,
     remaining: subtractDecimal(budget, total),
     warning_threshold: threshold,
-    currency: ledger ? ledger.currency || "USD" : "USD"
+    currency
   };
   if (ledger) result.ledger = ledger;
   return result;
@@ -6253,13 +6631,16 @@ export function evaluateBudget(ledgerOrTotal, options = {}) {
 
 export function reconcileCost(costLedgerOrTotal, reportedTotal, options = {}) {
   const ledger = costLedgerOrTotal && typeof costLedgerOrTotal === "object" ? costLedgerOrTotal : null;
-  const calculated = canonicalDecimal(ledger ? ledger.total || "0" : costLedgerOrTotal);
+  const calculated = canonicalDecimal(ledger ? ledger.total ?? "0" : costLedgerOrTotal);
   const reported = canonicalDecimal(reportedTotal);
-  const tolerance = canonicalDecimal(options.tolerance || "0");
-  if (parseDecimal(tolerance).value < 0n) throw new Error("tolerance must be non-negative");
+  const rawTolerance = options.tolerance ?? "0";
+  if (parseDecimal(rawTolerance).value < 0n) throw new Error("tolerance must be non-negative");
+  const tolerance = canonicalDecimal(rawTolerance);
   const residual = subtractDecimal(reported, calculated);
   const absolute = residual.startsWith("-") ? residual.slice(1) : residual;
   const status = compareDecimal(absolute, "0") === 0 ? "matched" : compareDecimal(absolute, tolerance) <= 0 ? "within_tolerance" : "mismatch";
+  const currency = ledger ? ledger.currency || options.currency || "USD" : options.currency || "USD";
+  if (currency !== "USD") throw new Error(`unsupported currency ${JSON.stringify(currency)}; RunCost supports USD only`);
   return {
     schema_version: "0.1",
     status,
@@ -6268,7 +6649,7 @@ export function reconcileCost(costLedgerOrTotal, reportedTotal, options = {}) {
     signed_residual: residual,
     absolute_residual: absolute,
     tolerance,
-    currency: ledger ? ledger.currency || options.currency || "USD" : options.currency || "USD"
+    currency
   };
 }
 
@@ -6365,7 +6746,7 @@ async function readResolverCache(cacheDir, source, url) {
 }
 
 function atomicWriteResolverCache(cacheDir, cacheKey, data) {
-  const cloned = clonePriceValue(data);
+  const cloned = data;
   if (!nodeRuntimeAvailable() || String(cacheDir).startsWith("memory://")) {
     EXTERNAL_PRICE_MEMORY_CACHE.set(`${cacheDir}/${cacheKey}`, cloned);
     return;
@@ -6431,7 +6812,21 @@ async function fetchResolverSource(url, options) {
     if (!resolverSafeURL(finalURL)) throw new Error("price source redirected to an unsupported URL");
     if (status === 304) return { status, headers, body: new Uint8Array(), url: finalURL };
     let body;
-    if (typeof response.arrayBuffer === "function") body = new Uint8Array(await response.arrayBuffer());
+    if (response.body?.getReader) {
+      const reader = response.body.getReader();
+      const chunks = []; let size = 0;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          size += value.byteLength;
+          if (size > options.maxBytes) { await reader.cancel(); throw new Error(`price source exceeds the ${options.maxBytes}-byte safety limit`); }
+          chunks.push(value);
+        }
+      } finally { reader.releaseLock(); }
+      body = new Uint8Array(size); let offset = 0;
+      for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.byteLength; }
+    } else if (typeof response.arrayBuffer === "function") body = new Uint8Array(await response.arrayBuffer());
     else if (response.body instanceof Uint8Array) body = response.body;
     else if (typeof response.body === "string") body = new TextEncoder().encode(response.body);
     else if (typeof response.text === "function") body = new TextEncoder().encode(await response.text());
@@ -6448,7 +6843,7 @@ function adaptExternalPriceSource(source, payload, options) {
     // Keep the snapshot's primary DeepSeek citation on each card. The resolver
     // cache envelope separately records the fetched GitHub URL, retrieval
     // time, and checksum.
-    return priceCardsFromOfficialSnapshot(payload);
+    return priceCardsFromOfficialSnapshot({ ...payload, unsupported_billing_constraints: payload.unsupported_billing_constraints || ["chinese_public_holidays"] });
   }
   if (source === "genai-prices") return priceCardsFromGenAIPrices(payload, options);
   if (source === "models.dev") return priceCardsFromModelsDev(payload, options);
@@ -6457,13 +6852,13 @@ function adaptExternalPriceSource(source, payload, options) {
   throw new Error(`unsupported external price source: ${source}`);
 }
 
-async function resolveExternalSourceState(source, options) {
+async function resolveExternalSourceStateUnshared(source, options) {
   const { cacheKey, data: cache } = await readResolverCache(options.cacheDir, source, options.url);
   const age = cache ? resolverCacheAge(cache, options.now) : null;
   const state = { name: source, type: "external", url: options.url, cache_key: cacheKey, status: "unavailable", card_count: cache?.price_cards?.length || 0 };
   if (cache) {
-    ["retrieved_at", "validated_at", "checksum", "etag", "last_modified"].forEach((key) => {
-      if (cache.source[key]) state[key] = cache.source[key];
+    ["retrieved_at", "validated_at", "checksum", "etag", "last_modified", "catalog_generated_at", "catalog_revision", "catalog_schema_version", "catalog_frozen"].forEach((key) => {
+      if (Object.hasOwn(cache.source, key)) state[key] = cache.source[key];
     });
   }
   if (options.offline) {
@@ -6500,9 +6895,11 @@ async function resolveExternalSourceState(source, options) {
       sourceUrl: response.url, source_url: response.url, retrievedAt: checkedAt, retrieved_at: checkedAt
     })));
     if (!priceCards.length) throw new Error("price source produced no supported price cards");
+    const revision = await resolverChecksum(response.body);
+    for (const card of priceCards) card.source = { ...card.source, url: card.source?.url || response.url, version: card.source?.version || revision };
     const envelope = {
       schema_version: "0.1",
-      source: { name: source, type: "external", url: options.url, resolved_url: response.url, retrieved_at: checkedAt, validated_at: checkedAt, checksum: await resolverChecksum(response.body) },
+      source: { name: source, type: "external", url: options.url, resolved_url: response.url, retrieved_at: checkedAt, validated_at: checkedAt, checksum: await resolverChecksum(response.body), catalog_generated_at: null, catalog_revision: await resolverChecksum(response.body), catalog_schema_version: source === "genai-prices" && response.url.includes("/v2/") ? "2" : null, catalog_frozen: source === "genai-prices" && !response.url.includes("/new_data/v2/") },
       cards_checksum: await resolverChecksum(stableStringify(priceCards)),
       price_cards: priceCards
     };
@@ -6510,7 +6907,7 @@ async function resolveExternalSourceState(source, options) {
     if (response.headers["last-modified"]) envelope.source.last_modified = response.headers["last-modified"];
     atomicWriteResolverCache(options.cacheDir, cacheKey, envelope);
     Object.assign(state, {
-      status: "refreshed", retrieved_at: checkedAt, validated_at: checkedAt, checksum: envelope.source.checksum,
+      ...envelope.source, status: "refreshed", retrieved_at: checkedAt, validated_at: checkedAt, checksum: envelope.source.checksum,
       etag: envelope.source.etag, last_modified: envelope.source.last_modified, card_count: priceCards.length, priceCards
     });
     return { state, warnings: [] };
@@ -6522,6 +6919,22 @@ async function resolveExternalSourceState(source, options) {
     }
     return { state, warnings: [resolverSourceWarning("price_source_unavailable", source, "fetch_failed")] };
   }
+}
+
+const EXTERNAL_SOURCE_INFLIGHT = new Map();
+const RESOLVER_FETCHER_IDS = new WeakMap();
+let resolverFetcherSequence = 0;
+async function resolveExternalSourceState(source, options) {
+  if (options.fetcher && !RESOLVER_FETCHER_IDS.has(options.fetcher)) RESOLVER_FETCHER_IDS.set(options.fetcher, ++resolverFetcherSequence);
+  const key = JSON.stringify([source, options.url, options.cacheDir, options.offline, options.refresh, options.maxAgeSeconds, options.maxBytes, options.timeoutMs, options.policyNow || "", options.fetcher ? RESOLVER_FETCHER_IDS.get(options.fetcher) : 0]);
+  if (!EXTERNAL_SOURCE_INFLIGHT.has(key)) {
+    const promise = resolveExternalSourceStateUnshared(source, options);
+    EXTERNAL_SOURCE_INFLIGHT.set(key, promise);
+    promise.finally(() => { if (EXTERNAL_SOURCE_INFLIGHT.get(key) === promise) EXTERNAL_SOURCE_INFLIGHT.delete(key); }).catch(() => {});
+  }
+  const value = await EXTERNAL_SOURCE_INFLIGHT.get(key);
+  // State is caller-owned; retain the protected card list so compilation is reused.
+  return { state: { ...value.state }, warnings: clonePriceValue(value.warnings) };
 }
 
 function externalSourceOrder(provider, requestedSources) {
@@ -6547,11 +6960,11 @@ function externalCandidateQuality(usageLedger, priceCards) {
   return { complete: ![...codes].some((code) => INCOMPLETE_PRICE_WARNING_CODES.has(code)), pricedComponents: (ledger.components || []).length };
 }
 
-export async function resolvePriceCatalog(options = {}) {
+async function resolvePriceCatalogInternal(options = {}) {
   const explicitCards = options.contractPriceCards ?? options.contract_price_cards ?? options.priceCards ?? options.price_cards;
   const now = resolverNow(options.now);
   if (explicitCards !== undefined) {
-    const cards = Array.isArray(explicitCards) ? explicitCards : [...explicitCards];
+    const cards = explicitCards?.__runcostCompiledCatalog ? explicitCards.priceCards : Array.isArray(explicitCards) ? explicitCards : [...explicitCards];
     return {
       schema_version: "0.1", selected_source: "user", price_cards: cards,
       sources: [{ name: "user", type: options.contractPriceCards !== undefined || options.contract_price_cards !== undefined ? "contract" : "user", status: "selected", card_count: cards.length }],
@@ -6565,6 +6978,10 @@ export async function resolvePriceCatalog(options = {}) {
   const cacheDir = options.cacheDir || options.cache_dir || defaultPriceCacheDir();
   const maxAgeSeconds = Number(options.maxAgeSeconds ?? options.max_age_seconds ?? DEFAULT_PRICE_CACHE_MAX_AGE_SECONDS);
   if (!Number.isFinite(maxAgeSeconds) || maxAgeSeconds < 0) throw new Error("maxAgeSeconds must be a non-negative number");
+  const maxBytes = Number(options.maxBytes ?? options.max_bytes ?? 64 * 1024 * 1024);
+  const timeoutMs = Number(options.timeoutMs ?? options.timeout_ms ?? 15000);
+  if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) throw new Error("maxBytes must be a positive safe integer");
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error("timeoutMs must be a positive finite number");
   const sourceStates = [];
   const operationalWarnings = [];
   let firstPartial = null;
@@ -6572,19 +6989,21 @@ export async function resolvePriceCatalog(options = {}) {
   for (const source of order) {
     const resolved = await resolveExternalSourceState(source, {
       url: sourceURLs[source], cacheDir, offline: Boolean(options.offline), refresh: Boolean(options.refresh), maxAgeSeconds,
-      timeoutMs: Number(options.timeoutMs ?? options.timeout_ms ?? 15000), maxBytes: Number(options.maxBytes ?? options.max_bytes ?? 64 * 1024 * 1024),
-      fetcher: options.fetcher, now
+      timeoutMs, maxBytes,
+      fetcher: options.fetcher, now, policyNow: options.now ? String(options.now) : ""
     });
     const priceCards = resolved.state.priceCards || [];
     delete resolved.state.priceCards;
     sourceStates.push(resolved.state);
     operationalWarnings.push(...resolved.warnings);
     if (!priceCards.length) continue;
-    if (!usageLedger) { selected = { source, priceCards }; break; }
-    const quality = externalCandidateQuality(usageLedger, priceCards);
+    const usageLedgers = options.usageLedgers ?? options.usage_ledgers ?? (usageLedger ? [usageLedger] : []);
+    if (!usageLedgers.length) { selected = { source, priceCards }; break; }
+    const qualities = usageLedgers.map((usage) => externalCandidateQuality(usage, priceCards));
+    const quality = { complete: qualities.every((value) => value.complete), pricedComponents: qualities.reduce((total, value) => total + value.pricedComponents, 0) };
     resolved.state.priced_component_count = quality.pricedComponents;
     resolved.state.applicable = quality.pricedComponents > 0;
-    if (quality.pricedComponents > 0 && !firstPartial) firstPartial = { source, priceCards };
+    if (quality.pricedComponents > (firstPartial?.pricedComponents || 0)) firstPartial = { source, priceCards, pricedComponents: quality.pricedComponents };
     if (quality.complete) { selected = { source, priceCards }; break; }
   }
   selected ||= firstPartial;
@@ -6613,6 +7032,19 @@ function priceResolutionMetadata(resolution) {
     sources: resolution.sources || [],
     resolved_at: resolution.resolved_at
   };
+}
+
+export async function resolvePriceCatalog(options = {}) {
+  return clonePriceValue(await resolvePriceCatalogInternal(options));
+}
+
+function finishAuto(result, resolution, mode) {
+  attachPriceResolution(result, resolution);
+  if (mode === "strict") {
+    const warnings = [...(result.warnings || []), ...(result.aggregate?.warnings || [])];
+    if (warnings.length) throw new Error(`strict mode cost calculation failed: ${warnings[0].code}`);
+  }
+  return result;
 }
 
 export function attachPriceResolution(result, resolution) {
@@ -6658,8 +7090,8 @@ export async function fromResponseAuto(response, options = {}) {
   delete calculation.priceCards;
   delete calculation.price_cards;
   if (explicitCards !== undefined) {
-    const resolution = await resolvePriceCatalog({ ...resolver, priceCards: explicitCards });
-    return attachPriceResolution(fromResponse(response, { ...calculation, priceCards: compiledExternalPriceCatalog(resolution.price_cards) }), resolution);
+    const resolution = await resolvePriceCatalogInternal({ ...resolver, priceCards: explicitCards });
+    return finishAuto(fromResponse(response, { ...calculation, priceCards: compiledExternalPriceCatalog(resolution.price_cards) }), resolution, calculation.mode);
   }
   const resolvedOptions = { ...calculation, surface: calculation.surface || inferSurface(response, calculation) || "unknown" };
   let usageLedger;
@@ -6668,8 +7100,8 @@ export async function fromResponseAuto(response, options = {}) {
   } catch {
     return fromResponse(response, { ...calculation, priceCards: [] });
   }
-  const resolution = await resolvePriceCatalog({ ...resolver, usageLedger, provider: usageLedger.provider });
-  return attachPriceResolution(fromResponse(response, { ...calculation, priceCards: compiledExternalPriceCatalog(resolution.price_cards) }), resolution);
+  const resolution = await resolvePriceCatalogInternal({ ...resolver, usageLedger, provider: usageLedger.provider });
+  return finishAuto(fromResponse(response, { ...calculation, _usageLedger: usageLedger, priceCards: compiledExternalPriceCatalog(resolution.price_cards) }), resolution, calculation.mode);
 }
 
 export async function fromBatchResultsAuto(items, options = {}) {
@@ -6677,8 +7109,21 @@ export async function fromBatchResultsAuto(items, options = {}) {
   const explicitCards = calculation.priceCards ?? calculation.price_cards;
   delete calculation.priceCards;
   delete calculation.price_cards;
-  const resolution = await resolvePriceCatalog({ ...resolver, provider: calculation.provider, priceCards: explicitCards });
-  const result = fromBatchResults(items, { ...calculation, priceCards: compiledExternalPriceCatalog(resolution.price_cards) });
+  items = [...items];
+  const preparedUsage = new Map();
+  for (const [index, item] of items.entries()) {
+    const unwrapped = unwrapBatchItem(item, calculation);
+    if (unwrapped.status !== "succeeded") continue;
+    try {
+      const rawProvider = String(calculation.provider || "openai").toLowerCase();
+      const provider = ["gemini", "google-gemini"].includes(rawProvider) ? "google" : ["vertex", "vertex-ai", "google-vertex"].includes(rawProvider) ? "vertex" : ["kimi", "moonshot", "moonshot-ai"].includes(rawProvider) ? "kimi" : ["dashscope", "alibaba"].includes(rawProvider) ? "dashscope" : rawProvider;
+      const usage = extractUsageLedger(unwrapped.response, { ...calculation, provider, surface: unwrapped.surface });
+      usage.context = { ...(usage.context || {}), ...(calculation.context || {}), service_tier: "batch" };
+      preparedUsage.set(index, usage);
+    } catch { /* Deterministic pricing retains malformed usage warnings. */ }
+  }
+  const resolution = await resolvePriceCatalogInternal({ ...resolver, provider: calculation.provider, usageLedgers: [...preparedUsage.values()], priceCards: explicitCards });
+  const result = fromBatchResults(items, { ...calculation, _preparedUsage: preparedUsage, priceCards: compiledExternalPriceCatalog(resolution.price_cards) });
   result.metadata = { ...(result.metadata || {}), price_resolution: priceResolutionMetadata(resolution) };
   attachPriceResolution(result.aggregate, resolution);
   (result.items || []).forEach((item) => {
@@ -6692,7 +7137,7 @@ export async function fromBatchResultsAuto(items, options = {}) {
       existing.add(key);
     }
   });
-  return result;
+  return finishAuto(result, resolution, calculation.mode);
 }
 
 export async function fromOTelGenAISpanAuto(span, options = {}) {
@@ -6701,8 +7146,8 @@ export async function fromOTelGenAISpanAuto(span, options = {}) {
   delete calculation.priceCards;
   delete calculation.price_cards;
   const usageLedger = usageLedgerFromOTelGenAISpan(span, calculation);
-  const resolution = await resolvePriceCatalog({ ...resolver, provider: usageLedger.provider, usageLedger, priceCards: explicitCards });
-  return attachPriceResolution(fromOTelGenAISpan(span, { ...calculation, priceCards: compiledExternalPriceCatalog(resolution.price_cards) }), resolution);
+  const resolution = await resolvePriceCatalogInternal({ ...resolver, provider: usageLedger.provider, usageLedger, priceCards: explicitCards });
+  return finishAuto(fromOTelGenAISpan(span, { ...calculation, priceCards: compiledExternalPriceCatalog(resolution.price_cards) }), resolution, calculation.mode);
 }
 
 export async function estimateCostAuto(options = {}) {
@@ -6723,8 +7168,8 @@ export async function estimateCostAuto(options = {}) {
     }))
   };
   if (calculation.context) usageLedger.context = { ...calculation.context };
-  const resolution = await resolvePriceCatalog({ ...resolver, provider: calculation.provider, usageLedger, priceCards: explicitCards });
-  return attachPriceResolution(estimateCost({ ...calculation, priceCards: compiledExternalPriceCatalog(resolution.price_cards) }), resolution);
+  const resolution = await resolvePriceCatalogInternal({ ...resolver, provider: calculation.provider, usageLedger, priceCards: explicitCards });
+  return finishAuto(estimateCost({ ...calculation, priceCards: compiledExternalPriceCatalog(resolution.price_cards) }), resolution, calculation.mode);
 }
 
 export async function priceCacheStatus(options = {}) {
@@ -6824,4 +7269,17 @@ export async function verifyCatalogManifest(manifest, artifacts = {}) {
     checked.push({ path: entry.path, exists, sha256: digest, matches });
   }
   return { schema_version: "0.1", valid, algorithm: "sha256", artifacts: checked };
+}
+
+/** Allowlisted sharing copy; raw usage, attribution, debug metadata and URLs are excluded. */
+export function exportCostLedger(ledger) {
+  const pick = (object, keys) => Object.fromEntries(keys.filter((key) => Object.hasOwn(object || {}, key)).map((key) => [key, object[key]]));
+  return clonePriceValue({
+    ...pick(ledger, ["schema_version", "provider", "surface", "currency", "total"]),
+    model: pick(ledger.model, ["requested", "returned", "billed"]),
+    components: (ledger.components || []).map((item) => pick(item, ["name", "quantity", "unit", "unit_price", "cost", "price_card_id", "discount_eligible"])),
+    price_sources: (ledger.price_sources || []).map((item) => pick(item, ["name", "retrieved_at", "version", "license"])),
+    applied_discounts: (ledger.applied_discounts || []).map((item) => pick(item, ["policy_id", "component", "amount"])),
+    warnings: (ledger.warnings || []).map((item) => ({ code: item.code, message: item.code, metadata: {} }))
+  });
 }

@@ -218,7 +218,7 @@ the source/fixture maintenance commands:
 | Command | Purpose |
 |---|---|
 | `runcost quote PATH --provider PROVIDER` | Price one provider-response JSON object using external resolution and cache. Use `-` for stdin. |
-| `runcost quote - --jsonl --provider PROVIDER` | Price a JSONL stream with one canonical JSON ledger per input row. |
+| `runcost quote - --jsonl --provider PROVIDER` | Process a JSONL stream incrementally and emit a canonical JSON array. Add `--output-jsonl` for one ledger per line. |
 | `npx runcost quote PATH --provider PROVIDER` | Run the equivalent npm CLI. |
 | `runcost prices refresh|status|clear` | Refresh, inspect, or clear managed external price-cache entries. |
 | `runcost price-cards --source-type TYPE --input PATH` | Convert one pricing source JSON file to canonical price cards. |
@@ -253,3 +253,11 @@ The trace records price-card candidates, selected component prices, alias resolu
 - `schemas/reconciliation.schema.json`
 
 The schemas are language-neutral and should remain the source of truth for future generated types.
+
+## Sharing Exports and Checked Go Calls
+
+Python `export_cost_ledger`, JavaScript `exportCostLedger`, and Go `ExportCostLedger` return allowlisted sharing documents. They remove raw usage, attribution, arbitrary metadata, debug traces, source URLs, and warning detail without changing the input. Python and TypeScript expose `CostLedgerExport` separately because redacted warning metadata cannot satisfy the full audit-warning contract. Model names, rate identifiers, quantities, and amounts remain; review these before sharing.
+
+Go callers can use `CalculateCostWithOptionsE`, `CalculateCostTypedWithOptionsE`, and `FromResponseE` to receive validation and strict failures as ordinary errors. Existing calculation APIs retain their panic behavior. All Go auto APIs return final strict failures through their existing error results.
+
+Compiled catalogs own snapshots of the supplied cards. JavaScript exposes recursively read-only cards and maps. Python accessors and Go's public `PriceCards` field provide separate snapshots; editing those copies does not change indexed calculations.

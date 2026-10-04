@@ -173,6 +173,22 @@
       "warning_codes": []
     },
     {
+      "fixture": "fixtures/anthropic-messages-malformed-usage.json",
+      "id": "anthropic-messages-malformed-usage",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "anthropic",
+      "scenario": "warning",
+      "surface": "anthropic.messages",
+      "warning_codes": [
+        "invalid_usage"
+      ]
+    },
+    {
       "fixture": "fixtures/anthropic-messages-missing-usage-warning.json",
       "id": "anthropic-messages-missing-usage-warning",
       "languages": {
@@ -186,6 +202,22 @@
       "surface": "anthropic.messages",
       "warning_codes": [
         "usage_missing"
+      ]
+    },
+    {
+      "fixture": "fixtures/anthropic-messages-negative-usage.json",
+      "id": "anthropic-messages-negative-usage",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "anthropic",
+      "scenario": "warning",
+      "surface": "anthropic.messages",
+      "warning_codes": [
+        "invalid_usage"
       ]
     },
     {
@@ -417,6 +449,20 @@
     {
       "fixture": "fixtures/decimal-arithmetic-adversarial.json",
       "id": "decimal-arithmetic-adversarial",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "openai",
+      "scenario": "normalized_usage",
+      "surface": "openai.responses",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/decimal-round-half-even.json",
+      "id": "decimal-round-half-even",
       "languages": {
         "go": "preserved",
         "javascript": "preserved",
@@ -1019,6 +1065,22 @@
       "warning_codes": []
     },
     {
+      "fixture": "fixtures/gemini-generate-content-usage-inconsistent.json",
+      "id": "gemini-generate-content-usage-inconsistent",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "google",
+      "scenario": "warning",
+      "surface": "google.gemini.generate_content",
+      "warning_codes": [
+        "usage_inconsistent"
+      ]
+    },
+    {
       "fixture": "fixtures/gemini-live-translate-aggregate-audio-thinking.json",
       "id": "gemini-live-translate-aggregate-audio-thinking",
       "languages": {
@@ -1523,6 +1585,22 @@
       "warning_codes": []
     },
     {
+      "fixture": "fixtures/normalized-negative-usage.json",
+      "id": "normalized-negative-usage",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "warning",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "invalid_usage"
+      ]
+    },
+    {
       "fixture": "fixtures/official-snapshot-adapter-basic.json",
       "id": "official-snapshot-adapter-basic",
       "languages": {
@@ -1793,6 +1871,22 @@
       "warning_codes": []
     },
     {
+      "fixture": "fixtures/openai-responses-invalid-usage.json",
+      "id": "openai-responses-invalid-usage",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "warning",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "invalid_usage"
+      ]
+    },
+    {
       "fixture": "fixtures/openai-responses-raw-cached-reasoning.json",
       "id": "openai-responses-raw-cached-reasoning",
       "languages": {
@@ -1879,6 +1973,22 @@
       "scenario": "raw_provider_response",
       "surface": "openai.responses",
       "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/openai-responses-usage-inconsistent.json",
+      "id": "openai-responses-usage-inconsistent",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "warning",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "usage_inconsistent"
+      ]
     },
     {
       "fixture": "fixtures/openai-usage-audio-speeches-buckets.json",
@@ -2409,6 +2519,54 @@
       ]
     },
     {
+      "fixture": "fixtures/strict-anthropic-messages-malformed-usage.json",
+      "id": "strict-anthropic-messages-malformed-usage",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "anthropic",
+      "scenario": "strict_error",
+      "surface": "anthropic.messages",
+      "warning_codes": [
+        "invalid_usage"
+      ]
+    },
+    {
+      "fixture": "fixtures/strict-anthropic-messages-negative-usage.json",
+      "id": "strict-anthropic-messages-negative-usage",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "anthropic",
+      "scenario": "strict_error",
+      "surface": "anthropic.messages",
+      "warning_codes": [
+        "invalid_usage"
+      ]
+    },
+    {
+      "fixture": "fixtures/strict-gemini-generate-content-usage-inconsistent.json",
+      "id": "strict-gemini-generate-content-usage-inconsistent",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "google",
+      "scenario": "strict_error",
+      "surface": "google.gemini.generate_content",
+      "warning_codes": [
+        "usage_inconsistent"
+      ]
+    },
+    {
       "fixture": "fixtures/strict-unknown-model.json",
       "id": "strict-unknown-model",
       "languages": {
@@ -2422,6 +2580,22 @@
       "surface": "openai.responses",
       "warning_codes": [
         "unknown_model"
+      ]
+    },
+    {
+      "fixture": "fixtures/strict-usage-inconsistent.json",
+      "id": "strict-usage-inconsistent",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "openai",
+      "scenario": "strict_error",
+      "surface": "openai.responses",
+      "warning_codes": [
+        "usage_inconsistent"
       ]
     },
     {
@@ -2693,6 +2867,22 @@
       "scenario": "raw_provider_response",
       "surface": "vertex.gemini.generate_content",
       "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/vertex-gemini-usage-inconsistent.json",
+      "id": "vertex-gemini-usage-inconsistent",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "vertex",
+      "scenario": "warning",
+      "surface": "vertex.gemini.generate_content",
+      "warning_codes": [
+        "usage_inconsistent"
+      ]
     },
     {
       "fixture": "fixtures/xai-chat-raw-cache-reasoning.json",
@@ -3136,6 +3326,54 @@
     },
     {
       "fixture": "fixtures/expansion/cases.json",
+      "id": "otel-genai-input-cache-usage-inconsistent",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "cross-provider",
+      "scenario": "from_otel",
+      "surface": "from_otel",
+      "warning_codes": [
+        "usage_inconsistent"
+      ]
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "otel-genai-reasoning-usage-inconsistent",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "cross-provider",
+      "scenario": "from_otel",
+      "surface": "from_otel",
+      "warning_codes": [
+        "usage_inconsistent"
+      ]
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "otel-genai-negative-raw-usage",
+      "languages": {
+        "go": "warned",
+        "javascript": "warned",
+        "python": "warned"
+      },
+      "outcome": "warned",
+      "provider": "cross-provider",
+      "scenario": "from_otel",
+      "surface": "from_otel",
+      "warning_codes": [
+        "invalid_usage"
+      ]
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
       "id": "otel-genai-cost",
       "languages": {
         "go": "preserved",
@@ -3319,9 +3557,79 @@
       "warning_codes": [
         "price_source_refresh_failed"
       ]
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "privacy-export-allowlist",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "export_cost_ledger",
+      "surface": "export_cost_ledger",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "genai-v2-unit-contract",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "price_cards_from_genai_prices",
+      "surface": "price_cards_from_genai_prices",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "budget-subquantum-total",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "evaluate_budget",
+      "surface": "evaluate_budget",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "budget-half-even-warning-boundary",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "evaluate_budget",
+      "surface": "evaluate_budget",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "reconciliation-subquantum-residual",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "reconcile_cost",
+      "surface": "reconcile_cost",
+      "warning_codes": []
     }
   ],
-  "generated_on": "2026-07-18",
+  "generated_on": "2026-10-04",
   "methodology": {
     "not_tested": "The case does not request that language implementation.",
     "preserved": "The expected billing semantics are asserted without warning.",
@@ -3331,31 +3639,31 @@
   },
   "schema_version": "0.1",
   "summary": {
-    "case_count": 229,
+    "case_count": 249,
     "languages": {
       "go": {
         "not_tested": 2,
-        "preserved": 173,
+        "preserved": 179,
         "unsupported": 7,
-        "warned": 47
+        "warned": 61
       },
       "javascript": {
         "not_tested": 1,
-        "preserved": 173,
+        "preserved": 179,
         "unsupported": 7,
-        "warned": 48
+        "warned": 62
       },
       "python": {
         "not_tested": 1,
-        "preserved": 173,
+        "preserved": 179,
         "unsupported": 7,
-        "warned": 48
+        "warned": 62
       }
     },
     "outcomes": {
-      "preserved": 173,
+      "preserved": 179,
       "unsupported": 7,
-      "warned": 49
+      "warned": 63
     }
   }
 }

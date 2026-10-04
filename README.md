@@ -5,54 +5,31 @@
 [![npm](https://img.shields.io/npm/v/runcost)](https://www.npmjs.com/package/runcost)
 [![PyPI](https://img.shields.io/pypi/v/runcost-ai)](https://pypi.org/project/runcost-ai/)
 [![Go Reference](https://pkg.go.dev/badge/github.com/adamallcock/runcost/packages/go/ledger.svg)](https://pkg.go.dev/github.com/adamallcock/runcost/packages/go/ledger)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](pyproject.toml)
-[![TypeScript types](https://img.shields.io/npm/types/runcost)](packages/javascript/core/index.d.ts)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/adamallcock/runcost/blob/main/LICENSE)
 [![Playground](https://img.shields.io/badge/try-playground-ff4f24)](https://adamallcock.github.io/runcost/playground/)
 
-RunCost Ledger is an auditable LLM API cost calculator for answering one
-question:
+**Provider response in. Itemized USD cost ledger out.**
+
+RunCost turns the LLM or agent response you already receive into a local,
+auditable cost estimate. It separates cached input, uncached input, output,
+reasoning, tools, media, tiers, batches, and discounts, then records the rates,
+sources, assumptions, and warnings behind the total.
+
+No proxy, hosted account, or usage database is required.
 
 > What did this LLM or agent API call cost, and why?
 
-It turns provider responses, framework usage objects, or normalized usage into a
-componentized cost ledger with input, cached input, output, reasoning, tool
-units, batch results, discounts, dated price sources, and warnings. It runs in
-Python, JavaScript/TypeScript, Go, the CLI, browsers, and edge runtimes without
-requiring a proxy or hosted account.
+[Try the browser playground](https://adamallcock.github.io/runcost/playground/)
+or get a first result below.
 
-## Install
+## First Success: Python
 
-Install from package registries:
+The Python **distribution** is `runcost-ai`. The import package and installed
+CLI are both `runcost`.
 
 ```bash
 pip install runcost-ai
-npm install runcost
-go get github.com/adamallcock/runcost/packages/go/ledger
 ```
-
-Source checkout development paths:
-
-```bash
-python3 -m pip install git+https://github.com/adamallcock/runcost.git
-PKG_TGZ=$(npm pack ./packages/javascript/core --silent)
-npm install "./$PKG_TGZ"
-```
-
-The Python distribution name is `runcost-ai`; the import package and CLI are
-`runcost`. The npm package is `runcost`. The Go package is
-`github.com/adamallcock/runcost/packages/go/ledger`.
-
-## 60-Second Quickstart
-
-For most providers, the convenience APIs resolve current public pricing from
-`genai-prices`, then `models.dev`, then LiteLLM. Direct DeepSeek API usage
-tries the reviewed, provider-cited DeepSeek snapshot first so model aliases,
-effective instants, and weekday peak pricing do not fall through to stale
-general catalogs. The selected source is cached for 24 hours. Pass the response
-you already receive; RunCost never sends it to a pricing source.
-
-Python:
 
 ```python
 from runcost import from_response_auto
@@ -60,7 +37,7 @@ from runcost import from_response_auto
 response = {
     "id": "resp_example",
     "object": "response",
-    "model": "gpt-4.1-mini-2025-04-14",
+    "model": "gpt-4.1-mini",
     "usage": {
         "input_tokens": 36,
         "input_tokens_details": {"cached_tokens": 6},
@@ -70,10 +47,36 @@ response = {
 }
 
 ledger = from_response_auto(response, provider="openai")
-print(ledger["total"], ledger["components"], ledger["warnings"])
+
+for component in ledger["components"]:
+    print(component["name"], component["quantity"], component["cost"])
+print("total", ledger["total"], ledger["currency"])
+print("source", ledger["price_sources"][0]["name"])
+print("warnings", ledger["warnings"])
 ```
 
-JavaScript/TypeScript:
+The result is a structured ledger, not just a number:
+
+```text
+input_uncached_tokens    30   0.000012
+input_cache_read_tokens   6   0.0000006
+output_text_tokens       75   0.00012
+output_reasoning_tokens  12   0.0000192
+total 0.0001518 USD
+```
+
+This is example output using rates selected on 2026-08-08. Auto-selected public
+rates can change; the ledger records the source and exact rates used for each
+calculation.
+
+The selected source is recorded alongside the result. RunCost downloads public
+pricing data, but never sends your response or usage data to the pricing source.
+
+## JavaScript And TypeScript
+
+```bash
+npm install runcost
+```
 
 ```js
 import { fromResponseAuto } from "runcost";
@@ -81,7 +84,7 @@ import { fromResponseAuto } from "runcost";
 const response = {
   id: "resp_example",
   object: "response",
-  model: "gpt-4.1-mini-2025-04-14",
+  model: "gpt-4.1-mini",
   usage: {
     input_tokens: 36,
     input_tokens_details: { cached_tokens: 6 },
@@ -91,323 +94,114 @@ const response = {
 };
 
 const ledger = await fromResponseAuto(response, { provider: "openai" });
-console.log(ledger.total, ledger.components, ledger.warnings);
+console.log(ledger.total, ledger.currency);
+console.table(ledger.components);
+console.log(ledger.price_sources, ledger.warnings);
 ```
 
-CLI (Python install or `npx runcost`):
+The npm package includes TypeScript declarations and an equivalent CLI:
+
+```bash
+npx runcost quote response.json --provider openai
+```
+
+## CLI And Go
+
+The Python CLI prices one JSON response or a JSONL stream:
 
 ```bash
 runcost quote response.json --provider openai
-cat batch-results.jsonl | runcost quote - --jsonl --provider openai
+runcost quote - --jsonl --provider openai < responses.jsonl
 ```
 
-Try the same flow without installing anything in the
-[browser playground](https://adamallcock.github.io/runcost/playground/).
+The Go implementation uses the same shared conformance fixtures:
 
-## External Price Resolution
+```bash
+go get github.com/adamallcock/runcost/packages/go/ledger
+```
+
+See the [multi-language quickstart](https://github.com/adamallcock/runcost/blob/main/docs/guides/quickstart.md)
+for Go and explicit-price examples.
+
+## When To Use RunCost
+
+Use RunCost when you need to:
+
+- Explain a total as separate billing components instead of `tokens × rate`.
+- Keep pricing provenance, effective dates, assumptions, and warnings with the result.
+- Reconcile an independent estimate against provider-reported cost or an export.
+- Use the same ledger contract in Python, JavaScript/TypeScript, Go, a CLI, or a browser.
+- Run locally without placing a proxy or telemetry service in the request path.
+
+RunCost is probably unnecessary when a rough input/output estimate is enough,
+or when an existing gateway or observability platform already provides the
+billing record you trust.
+
+## How Pricing Works
 
 Published RunCost packages contain no provider price database. The auto APIs
-select exactly one upstream catalog per calculation, record attempted-source
-and cache metadata, and fall back to the next source only when the earlier one
-cannot price the requested model. OpenRouter-billed responses try OpenRouter's
-models API first; direct-provider responses do not silently use OpenRouter
-rates. Direct DeepSeek usage tries the reviewed snapshot at
-`fixtures/source-files/deepseek-official-pricing-snapshot.json` first; it is
-fetched and cached as an external source rather than bundled in a package, and
-its cards retain the primary DeepSeek pricing-page citation. Passing an explicit
-`sources` list replaces this provider-specific default.
+select one upstream catalog—normally `genai-prices`, `models.dev`, or LiteLLM—
+cache it, and record the selected source. OpenRouter-billed responses try
+OpenRouter first; direct-provider responses do not silently use OpenRouter rates.
 
-Python: `resolve_price_catalog(...)`, `from_response_auto(...)`
+Pass explicit price cards for negotiated rates, historical snapshots, or
+network-free tests. See the [Price data strategy](https://github.com/adamallcock/runcost/blob/main/docs/reference/price-data-strategy.md)
+and [custom pricing guide](https://github.com/adamallcock/runcost/blob/main/docs/reference/custom-pricing-and-discounts.md).
 
-JavaScript/TypeScript: `resolvePriceCatalog(...)`, `fromResponseAuto(...)`
+RunCost currently calculates USD ledgers only. Arithmetic is deterministic;
+the estimate is only as accurate as the response fields and selected rates.
+Reconcile with provider-reported costs, exports, or invoices before treating a
+result as invoice-exact.
 
-Go: `ResolvePriceCatalog(...)`, `FromResponseAuto(...)`
-
-Node, Python, Go, and the CLIs use an OS cache with conditional refresh and a
-last-known-good fallback. Browser/edge builds use an in-memory cache. Use
-`runcost prices status|refresh|clear` to inspect or manage the CLI cache.
-
-## Explicit Custom Prices
-
-Explicit cards remain the deterministic, network-free path for negotiated
-rates, unpublished models, reviewed snapshots, or fully self-contained tests.
-
-Python:
-
-```python
-from runcost import from_response
-
-response = {
-    "model": "gpt-4.1-mini-2025-04-14",
-    "usage": {
-        "input_tokens": 36,
-        "input_tokens_details": {"cached_tokens": 6},
-        "output_tokens": 87,
-        "output_tokens_details": {"reasoning_tokens": 12},
-    },
-}
-
-price_cards = [{
-    "schema_version": "0.1",
-    "id": "openai:gpt-4.1-mini:example",
-    "provider": "openai",
-    "surface": "openai.responses",
-    "model": "gpt-4.1-mini",
-    "aliases": ["gpt-4.1-mini-2025-04-14"],
-    "components": [
-        {"usage_component": "input_uncached_tokens", "unit": "token", "price": {"amount": "0.40", "currency": "USD", "per": "1000000"}},
-        {"usage_component": "input_cache_read_tokens", "unit": "token", "price": {"amount": "0.10", "currency": "USD", "per": "1000000"}},
-        {"usage_component": "output_text_tokens", "unit": "token", "price": {"amount": "1.60", "currency": "USD", "per": "1000000"}},
-        {"usage_component": "output_reasoning_tokens", "unit": "token", "price": {"amount": "1.60", "currency": "USD", "per": "1000000"}},
-    ],
-    "source": {"name": "example"},
-}]
-
-ledger = from_response(
-    response,
-    provider="openai",
-    surface="openai.responses",
-    model="gpt-4.1-mini",
-    price_cards=price_cards,
-)
-
-print(ledger["total"])
-print(ledger["components"])
-print(ledger["warnings"])
-```
-
-TypeScript:
-
-```ts
-import { fromResponse } from "runcost";
-
-// Using the same response and priceCards shape as the Python example above.
-const ledger = fromResponse(response, {
-  provider: "openai",
-  surface: "openai.responses",
-  model: "gpt-4.1-mini",
-  priceCards
-});
-
-console.log(ledger.total);
-console.log(ledger.components);
-console.log(ledger.warnings);
-```
-
-Go:
-
-```go
-package main
-
-import (
-    "fmt"
-
-    ledger "github.com/adamallcock/runcost/packages/go/ledger"
-)
-
-func main() {
-    priceCards := []any{
-        ledger.Object{
-            "schema_version": "0.1",
-            "id":             "openai:gpt-4.1-mini:example",
-            "provider":       "openai",
-            "surface":        "openai.responses",
-            "model":          "gpt-4.1-mini",
-            "aliases":        []any{"gpt-4.1-mini-2025-04-14"},
-            "components": []any{
-                ledger.Object{
-                    "usage_component": "input_uncached_tokens",
-                    "unit":            "token",
-                    "price": ledger.Object{"amount": "0.40", "currency": "USD", "per": "1000000"},
-                },
-                ledger.Object{
-                    "usage_component": "output_text_tokens",
-                    "unit":            "token",
-                    "price": ledger.Object{"amount": "1.60", "currency": "USD", "per": "1000000"},
-                },
-            },
-            "source": ledger.Object{"name": "example"},
-        },
-    }
-
-    cost := ledger.FromResponse(
-        ledger.Object{
-            "model": "gpt-4.1-mini-2025-04-14",
-            "usage": ledger.Object{
-                "input_tokens":  36,
-                "output_tokens": 87,
-            },
-        },
-        ledger.Object{
-            "provider": "openai",
-            "surface":  "openai.responses",
-            "model":    "gpt-4.1-mini",
-        },
-        priceCards,
-        nil,
-    )
-
-    fmt.Println(cost["total"])
-}
-```
-
-Already have normalized usage? Use the deterministic calculator directly:
-
-```python
-from runcost import calculate_cost
-
-ledger = calculate_cost(
-    usage_ledger={
-        "schema_version": "0.1",
-        "provider": "openai",
-        "surface": "openai.responses",
-        "model": {"requested": "gpt-4.1-mini"},
-        "components": [
-            {"name": "input_uncached_tokens", "quantity": "30", "unit": "token"},
-            {"name": "output_text_tokens", "quantity": "75", "unit": "token"},
-        ],
-    },
-    price_cards=price_cards,
-)
-```
+Fixtures are behavioral conformance tests, not a complete model-price database.
 
 ## Main APIs
 
 | Job | Python | JavaScript/TypeScript | Go |
 |---|---|---|---|
-| Price normalized usage | `calculate_cost(...)` | `calculateCost(options)` | `CalculateCost(options)` |
-| Price a provider response | `from_response(...)` | `fromResponse(response, options)` | `FromResponse(response, options, priceCards, discountPolicies)` |
-| Normalize batch results | `from_batch_results(...)` | `fromBatchResults(items, options)` | `FromBatchResults(items, options)` |
-| Adapt OpenTelemetry GenAI spans | `from_otel_genai_span(...)` | `fromOTelGenAISpan(span, options)` | `FromOTelGenAISpan(...)` |
-| Adapt Pydantic `genai-prices` | `price_cards_from_genai_prices(...)` | `priceCardsFromGenAIPrices(...)` | `PriceCardsFromGenAIPrices(...)` |
-| Estimate and check a budget | `estimate_cost(...)`, `evaluate_budget(...)` | `estimateCost(...)`, `evaluateBudget(...)` | `EstimateCost(...)`, `EvaluateBudget(...)` |
+| Price a provider response | `from_response(...)` | `fromResponse(...)` | `FromResponse(...)` |
+| Resolve prices and price a response | `from_response_auto(...)` | `fromResponseAuto(...)` | `FromResponseAuto(...)` |
+| Price normalized usage | `calculate_cost(...)` | `calculateCost(...)` | `CalculateCost(...)` |
+| Aggregate call ledgers | `aggregate_cost_ledgers(...)` | `aggregateCostLedgers(...)` | `AggregateCostLedgers(...)` |
 | Reconcile a provider total | `reconcile_cost(...)` | `reconcileCost(...)` | `ReconcileCost(...)` |
-| Resolve and cache external prices | `resolve_price_catalog(...)` | `resolvePriceCatalog(options)` | `ResolvePriceCatalog(ctx, options)` |
-| Price with automatic resolution | `from_response_auto(...)` | `fromResponseAuto(response, options)` | `FromResponseAuto(...)` |
-| Aggregate call ledgers | `aggregate_cost_ledgers(...)` | `aggregateCostLedgers(options)` | `AggregateCostLedgers(...)` |
-| Use framework outputs | `from_vercel_ai_sdk_stream_transcribe_finish(...)`, `from_langsmith_run(...)`, and more | `fromVercelAISDKStreamTranscribeFinish(...)`, `createRunCostVercelOnFinish(...)`, and more | `FromVercelAISDKStreamTranscribeFinish(...)`, `FromLangSmithRun(...)`, and more |
-| Load price sources | `price_cards_from_json_file(...)`, `price_cards_from_openrouter_models(...)` | `priceCardsFromJSONFile(...)`, `priceCardsFromOpenRouterModels(...)` | `PriceCardsFromJSONFile(...)`, `PriceCardsFromOpenRouterModels(...)` |
-| Add custom prices | Pass `price_cards` | Pass `priceCards` | Pass `price_cards` in options |
-| Apply discounts | Pass `discount_policies` | Pass `discountPolicies` | Pass `discount_policies` in options |
-| Audit decisions | `debug_trace=True` | `debugTrace: true` | `"debug_trace": true` |
-| Fail on ambiguity | `mode="strict"` | `mode: "strict"` | `mode: "strict"` |
-| CLI quote/checks | `runcost quote`, `runcost price-cards`, `runcost fixture-check` | `npx runcost quote` | N/A |
 
-## Supported Inputs
-
-Fixture-backed surfaces include OpenAI Responses, Chat Completions, Embeddings,
-Images, and Batch; Anthropic Messages and Message Batches; Gemini Developer and
-Vertex AI batch/generateContent; AWS Bedrock Converse and model-invocation batch;
-Kimi and DashScope batch; OpenRouter;
-Cohere Chat and Rerank, OpenAI-compatible providers such as Meta, Groq, xAI,
-Mistral, DeepSeek, Azure OpenAI, Hugging Face Inference Providers, Tinker,
-NVIDIA NIM, AI21, Arcee, DashScope, Inception, Poolside, Xiaomi, ZAI, and
-MiniMax, plus selected
-framework objects from LangChain, Vercel AI SDK, OpenAI Agents SDK, LlamaIndex,
-Haystack, LiteLLM, AutoGen/AG2, LangSmith, Semantic Kernel, and OpenRouter SDK
-paths.
-
-Anthropic Messages includes generic per-attempt fallback attribution across raw
-responses, Python SDK objects, and final streaming events. Ledgers expose the
-requested, attempted, serving, and pricing models; Message Batch refusals remain
-visible as successful provider results that require a separate retry.
-
-See [supported surfaces](docs/reference/supported-surfaces.md) for the current
-matrix.
+Batch APIs, OpenTelemetry GenAI spans, framework adapters, budgets, streaming,
+discounts, and debug traces are also supported. Browse the [API reference](https://github.com/adamallcock/runcost/blob/main/docs/reference/api-reference.md)
+or [supported surfaces](https://github.com/adamallcock/runcost/blob/main/docs/reference/supported-surfaces.md)
+instead of starting with the full surface area.
 
 ## Custom Prices And Discounts
 
-RunCost treats provider pricing as data. You can pass user price cards for
-private rates, exact aliases, service tiers, long-context prices, historical
-effective dates, tool units, or internal billing units.
-
-```python
-discounts = [{
-    "schema_version": "0.1",
-    "id": "openai-contract-4pct",
-    "match": {"provider": "openai"},
-    "adjustment": {"type": "percentage_discount", "value": "4"},
-}]
-```
-
-The returned ledger records selected price sources, applied discounts, and any
-warning that prevents the total from being fully explained.
-
-Fixtures are behavioral conformance tests, not a complete model-price database.
-Use the external resolver, a caller-owned reviewed source-cache snapshot, or
-explicit contract cards; see [price data strategy](docs/reference/price-data-strategy.md).
-
-Python:
-
-```python
-from runcost import from_response_auto
-
-ledger = from_response_auto(
-    response,
-    provider="openai",
-    surface="openai.responses",
-    model="gpt-4.1-mini",
-    sources=["genai-prices", "models.dev", "litellm"],
-)
-```
-
-TypeScript:
-
-```ts
-import { fromResponseAuto } from "runcost";
-
-const ledger = await fromResponseAuto(response, {
-  provider: "openai",
-  surface: "openai.responses",
-  model: "gpt-4.1-mini",
-  sources: ["genai-prices", "models.dev", "litellm"]
-});
-```
+Use caller-owned price cards for private contracts, exact aliases, service tiers,
+long-context rates, historical dates, tool units, or self-contained tests. Use
+discount policies for explicit adjustments that should remain visible as ledger
+entries. The [custom pricing guide](https://github.com/adamallcock/runcost/blob/main/docs/reference/custom-pricing-and-discounts.md)
+contains complete Python, JavaScript, and Go examples.
 
 ## Warnings
 
-RunCost is designed to be boring. When it cannot confidently price something, it
-returns a structured warning such as `unknown_model`, `component_unpriced`,
-`price_stale`, `stream_usage_missing`, or `provider_reported_cost_mismatch`.
-Use strict mode in tests or reconciliation flows when warnings should fail.
+RunCost preserves uncertainty rather than hiding it. Unknown models, unpriced
+components, stale sources, ambiguous usage, missing stream usage, and
+provider-reported cost mismatches appear as structured warnings. Use strict mode
+when those conditions should fail a test or reconciliation workflow.
 
-## CLI
+See [warnings and limitations](https://github.com/adamallcock/runcost/blob/main/docs/reference/warnings-and-limitations.md).
 
-The Python and npm packages install equivalent quote CLIs:
+## Bring RunCost Into A Project
 
-```bash
-runcost quote response.json --provider openai
-runcost quote - --jsonl --provider openai < responses.jsonl
-runcost price-cards --source-type user-pricing --input prices.json
-runcost fixture-check fixtures/my-case.json
-npx runcost quote response.json --provider openai
-```
-
-## Read Next
-
-- [Quickstart](docs/guides/quickstart.md)
-- [Product expansion quickstart](docs/guides/2026-07-18-product-expansion-quickstart.md)
-- [External fixture contributions](docs/guides/external-fixture-contributions.md)
-- [Send a billing edge case that calculators get wrong](https://github.com/adamallcock/runcost/issues/57)
-- [Integration case-study template](docs/guides/2026-07-18-integration-case-study-template.md)
-- [Package installation](docs/guides/package-installation.md)
-- [Migration from hand-written formulas](docs/guides/2026-05-26-migration-from-hand-written-formulas.md)
-- [API reference](docs/reference/api-reference.md)
-- [Supported surfaces](docs/reference/supported-surfaces.md)
-- [Custom pricing and discounts](docs/reference/custom-pricing-and-discounts.md)
-- [Source adapters](docs/reference/source-adapters.md)
-- [Price data strategy](docs/reference/price-data-strategy.md)
-- [Aggregation and streaming](docs/reference/aggregation-and-streaming.md)
-- [Warnings and limitations](docs/reference/warnings-and-limitations.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security](SECURITY.md)
-- [Changelog](CHANGELOG.md)
+- Replace a hand-written formula with the [migration guide](https://github.com/adamallcock/runcost/blob/main/docs/guides/2026-05-26-migration-from-hand-written-formulas.md).
+- Add one sanitized real-world case through the [external fixture guide](https://github.com/adamallcock/runcost/blob/main/docs/guides/external-fixture-contributions.md).
+- Share a billing edge case that ordinary calculators mishandle in [issue #57](https://github.com/adamallcock/runcost/issues/57).
+- Start with the [quickstart](https://github.com/adamallcock/runcost/blob/main/docs/guides/quickstart.md), then browse the [documentation index](https://github.com/adamallcock/runcost/blob/main/docs/README.md).
 
 ## Status
 
-RunCost `0.2.x` is public beta. The strict live-smoke, release, and real
-dashboard-comparison gates pass, and the core behavior is fixture-backed across
-Python, JavaScript/TypeScript, and Go. The public conformance report inventories
-202 cases without claiming unsupported behavior. Packages are published to
-PyPI, npm, and Go module tags. Use provider-reported costs, exports, or dashboard
-reconciliation before treating any independent calculation as invoice-exact.
+RunCost `0.2.x` is public beta and published on PyPI, npm, and the Go module
+proxy. Python, JavaScript/TypeScript, and Go are checked against shared fixtures;
+the [generated conformance report](https://github.com/adamallcock/runcost/blob/main/docs/generated/conformance-report.md)
+is the source of truth for the current case count and pathway status.
+
+[Contributing](https://github.com/adamallcock/runcost/blob/main/CONTRIBUTING.md) ·
+[Security](https://github.com/adamallcock/runcost/blob/main/SECURITY.md) ·
+[Changelog](https://github.com/adamallcock/runcost/blob/main/CHANGELOG.md) ·
+[MIT License](https://github.com/adamallcock/runcost/blob/main/LICENSE)

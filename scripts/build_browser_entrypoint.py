@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,7 +42,14 @@ def render() -> str:
     source = SOURCE.read_text(encoding="utf-8")
     if not source.startswith(NODE_IMPORTS):
         raise SystemExit("JavaScript core Node import prelude changed; update the browser generator deliberately.")
-    return BROWSER_STUBS + source[len(NODE_IMPORTS) :]
+    source = source[len(NODE_IMPORTS) :]
+    modules = []
+    for name in ("contracts.js", "money.js"):
+        module = (SOURCE.parent / name).read_text(encoding="utf-8")
+        module = re.sub(r'^import .*?;\n', '', module, flags=re.M)
+        modules.append(re.sub(r'^export ', '', module, flags=re.M))
+        source = re.sub(r'^import .*?from "\./' + re.escape(name) + r'";\n', '', source, flags=re.M)
+    return BROWSER_STUBS + "\n".join(modules) + source
 
 
 def main() -> int:

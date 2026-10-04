@@ -1,0 +1,204 @@
+{
+  "base_commit": "b86518fef92215522d8d05819fdc680093e45070",
+  "baseline_preservation": {
+    "files_present_before": 492,
+    "missing_files_after": 0
+  },
+  "candidate_file_sha256": {
+    ".github/workflows/ci.yml": "a6651b0f0b2df766605edc504010659a4678b82f07c5609975cec84032ac69e4",
+    ".github/workflows/release.yml": "bb88abf367fc80a4b60606e97419410ace977509bfa6cdb42953b04ab77501b0",
+    ".github/workflows/source-contract.yml": "0f28747e07f99b70de1047e000cd07cf4853ec758d39a258d9a50d026114851e",
+    "fixtures/expansion/cases.json": "aba761b9fb3cdff3564108eb7b4c27fc7ff99fa475e7c599328ad9a00579e797",
+    "package-lock.json": "d192420731405fbdd9af08cfc57db9b2b1c35612ebeffe7f945a1a5f562c4070",
+    "package.json": "3684a382fbe2033a7e910d5d0e44650b77bb03e65b78dbf020ab98b6c0efe03d",
+    "packages/go/ledger/errors.go": "3a321439ed3d4a1da692de872929157a41f2dc59eac231410d3d5dde856ac1b0",
+    "packages/go/ledger/example_test.go": "c4d80f3fd9794cd9d81324ed11547ce5017a72dc236eaf45e1db17be67722365",
+    "packages/go/ledger/expansion.go": "d14d94700bdb04f0af8b5d6e7f474adfb7d6028ba467411685e87e655207d15f",
+    "packages/go/ledger/expansion_test.go": "a8a06d6e2d7b77080f072dd34013e4cc4796e6dd8e6a18dfbf7b8172b48a24be",
+    "packages/go/ledger/generated_taxonomy.go": "7c5e89f29f9ad4e3eb865b63698e4d38b7e04d0fe79ba9437aa27a463e806618",
+    "packages/go/ledger/improvements_test.go": "6fb5d8543682c921a18d01164782b57b8e75de39e011d5fc4d83347cb82394e7",
+    "packages/go/ledger/ledger.go": "d7a0844e71d6e99a0bad6120ddfe3c72c3cf115c47b40fc78e70d956a7dd8c31",
+    "packages/go/ledger/ledger_test.go": "2565c4980cdb5b719b52197ff618b4049efeb5ba52e79880f770b26e9ccc9bf8",
+    "packages/go/ledger/money.go": "72930b27d544de1eab75f36920435172b03c384b5e7f1a7673a223d7a3afe01e",
+    "packages/go/ledger/price_resolver.go": "fcd0727ff926303954119d69b7fb1f7c14f159e60e42565ca203bf8b6143cd08",
+    "packages/go/ledger/price_resolver_test.go": "ea826c66bad87495445fb4288a1de71627e5d18d87a3e122c3180550bb43fa4e",
+    "packages/go/ledger/typed_api_test.go": "0b9e135bdcf00e7a350d2a9b1f30c01d68d648c39722bf434234c4241c993476",
+    "packages/go/ledger/tzdata.go": "d0e3ba7c6f1de01c7d7fc33839a7af199762e58604dc69aaccd1dda595dc70b9",
+    "packages/javascript/core/browser.js": "64344c016e3c45a5eb0830051e475801aed709023166cb3876788af4b58a5f86",
+    "packages/javascript/core/cli.js": "03cb66f007f4367a7719c398c11754baff5ba50c5af9caf68d733f0ad5fa860d",
+    "packages/javascript/core/contracts.js": "2637b8c130c987b202f37f80d484857394da1954b80ccb070e05aa915979c00f",
+    "packages/javascript/core/generated/taxonomy.d.ts": "0e482b3f665333b3380eba9fcb651cf37d6c4c382bc0058033a9622c72abaf45",
+    "packages/javascript/core/index.d.ts": "650411c53b0e1eb4ae8eaff917e4e984119d42fab1a6741366827318ac8dd0df",
+    "packages/javascript/core/index.js": "02bca89ebf200a2037d11cd4d878b828ce1de73d56b8107c87ba87e8f031e27e",
+    "packages/javascript/core/money.js": "836bb4b7ddf755c741754a3077348c2555835261784cc4db3b6b7ebf53da9ffa",
+    "packages/javascript/core/package.json": "02a76afd5006598b745181b5d35634bcc1a355d1ce78aaec5848d79071a59098",
+    "packages/python/runcost/__init__.py": "f45b30313991ed5e91f1e1f720e11b14fe27d9cd66202592cb67b68c827cf003",
+    "packages/python/runcost/cli.py": "55552dbb0c585a8d2d6535b6a5fbfe5b72c70fbe20339d2809ec82cd65664c9d",
+    "packages/python/runcost/core.py": "b67d788356fe5b6d4a1696f7bf5e28a3abdbc648196126759945c4b8a5ef8fc8",
+    "packages/python/runcost/expansion.py": "703c18f857ba106a210f657995f7af7834959987220a8e1c04d919c371b0a58c",
+    "packages/python/runcost/generated/__init__.py": "3b69d3a3fbb5b2a4a8c0317f8841a9f005ed26e0d4fd1684ebede01e506eefe2",
+    "packages/python/runcost/generated/taxonomy.py": "863b207af52af0104f1567032ca5a04bd748af4d53108932d0c8bfec3d21c731",
+    "packages/python/runcost/money.py": "09f4d6f038fabfd4e3a4a9518d63688db81715a3eb9820294a3158b42c442233",
+    "packages/python/runcost/price_resolver.py": "0053e431431c25db56b437e8d2312ada8044a3faa4405b2e9cafaa55a3474d6c",
+    "packages/python/runcost/py.typed": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "packages/python/runcost/types.py": "ba6e6d3e3d64ecdec61ee42adcc7d8088247521d82ae0e05c74e0b28c1ff8e0a",
+    "playground/package-lock.json": "734ead907588f5a525d9f553b5a2514ece5de2e2b3754642a544889b7d17b150",
+    "pyproject.toml": "0f4c600c7111465ab844e60785adfd3c23d21caf896a783db7006c7f30b462da",
+    "scripts/check_catalog_performance.py": "564c4c230a95c43d0b76d5f8e4dc40436a5baa5f7442fc77276ae6d88ebb8aa9",
+    "scripts/check_cli_streaming.py": "dca81defa56053d249eafd1ef62b52f86be7d535f595d1f840fe6fa27171e818",
+    "scripts/check_fixtures.py": "d12d7434c13c453d7de7b5b384fa604416e99385105c98ba59a2ca0184f524eb",
+    "scripts/check_live_source_contract.py": "c7cba3d1c50fdc11aa05c3306cb10607421e58dd61a008c7a8522d0c7cfb6897",
+    "scripts/check_package_installs.py": "6af034b0e528df7d1da1519672d37d8d9b12ff7e8f2b4b33cb85d6bf264b3247",
+    "scripts/check_package_regressions.mjs": "ae3faf8c64e91474b04f1c5bf8b6fe9f8c2e4d7dc36675db5c9d6407b37f64f0",
+    "scripts/check_package_regressions.py": "c11bc4ad0e99a330bf07b28d6a203717a57a6c23ff196b87d4491a485df7d83d",
+    "scripts/measure_resolver_performance.py": "f604f7fa7b605da50d41ca383001a398dbb781f9e8be5a730065928685ff910d",
+    "scripts/run_local_integration.py": "053143e108bf7752712349cfffeb42ce4ec0c6e843247f2816af0418393c5655"
+  },
+  "checks": {
+    "clean_installed_consumers": "passed",
+    "diff_whitespace": "passed",
+    "go_race": "passed",
+    "hygiene": "passed",
+    "installed_offline_recipe": "passed_synthetic",
+    "mypy_positive_and_negative": "passed",
+    "node20_full_suite": "passed",
+    "npm11_and_npm12_performance_pack_parsing": "passed",
+    "npm12_reproducibility": "passed",
+    "python_npm_reproducibility": "passed",
+    "release_readiness": "passed",
+    "rendered_desktop_mobile": "passed",
+    "typescript_nodenext_and_bundler": "passed"
+  },
+  "conformance": {
+    "expansion_cases": 45,
+    "inventory_cases": 249,
+    "shared_core_fixtures": 204
+  },
+  "date": "2026-10-04",
+  "dependency_audits": {
+    "playground": {
+      "critical": 0,
+      "high": 0,
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "total": 0
+    },
+    "root": {
+      "critical": 0,
+      "high": 0,
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "total": 0
+    }
+  },
+  "host": {
+    "arch": "arm64",
+    "go": "1.26.3",
+    "node_host": "26.2.0",
+    "node_minimum_major_checked": "20.20.2",
+    "npm_packaging": "12.0.2",
+    "npm_verification": "11.13.0",
+    "os": "macOS",
+    "python": "3.14.7"
+  },
+  "live_source_contract": {
+    "catalog_generated_at": null,
+    "catalog_revision": "sha256:616bd37dcbd402d1174783c5838aee225cbe42b6e64d73907d5a881e8b376280",
+    "contract": "genai-prices/v2",
+    "models": 1574,
+    "price_fields": {
+      "audio_hours": 10,
+      "cache_audio_read_mtok": 11,
+      "cache_image_read_mtok": 9,
+      "cache_read_mtok": 583,
+      "cache_write_1h_mtok": 60,
+      "cache_write_mtok": 201,
+      "input_annotated_document_kpages": 7,
+      "input_audio_hours": 5,
+      "input_audio_mtok": 21,
+      "input_document_kpages": 9,
+      "input_image_mtok": 12,
+      "input_mtok": 1596,
+      "input_text_messages_kcount": 4,
+      "input_video_mtok": 3,
+      "output_audio_mtok": 12,
+      "output_citation_mtok": 1,
+      "output_image_mtok": 7,
+      "output_mtok": 1548,
+      "output_reasoning_mtok": 2,
+      "output_video_mtok": 1,
+      "requests_kcount": 4,
+      "storage_searches_kcount": 33,
+      "web_searches_kcount": 82
+    },
+    "providers": 43,
+    "schema_url": "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/new_data/v2/data_slim.schema.json",
+    "source_url": "https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/new_data/v2/data_slim.json",
+    "supported_cards": 1596,
+    "unsupported_fields": [
+      "audio_hours",
+      "input_annotated_document_kpages",
+      "input_audio_hours",
+      "input_document_kpages",
+      "input_text_messages_kcount",
+      "output_citation_mtok",
+      "storage_searches_kcount"
+    ]
+  },
+  "open_gates": [
+    "remote compatibility and pinned release CI",
+    "fresh reviewed commit/version/tag and coordinated publication",
+    "independent candidate integration with matching provider billing evidence"
+  ],
+  "package_metadata_version": "0.2.1",
+  "publication_performed": false,
+  "resolver_controlled_measurement": {
+    "after": {
+      "cards": 1000,
+      "cold_compiles": 1,
+      "cold_ms": 22.385,
+      "fetches": 2,
+      "http_304_compiles": 0,
+      "http_304_ms": 3.892,
+      "warm_100_ms": 18.741,
+      "warm_compiles": 0,
+      "warm_quotes": 100
+    },
+    "before": {
+      "cards": 1000,
+      "cold_compiles": 1,
+      "cold_ms": 14.04,
+      "fetches": 2,
+      "http_304_compiles": 1,
+      "http_304_ms": 5.002,
+      "warm_100_ms": 84.004,
+      "warm_compiles": 100,
+      "warm_quotes": 100
+    }
+  },
+  "reviewed_upstream_commit": "bc99b18bbd4d9eae73f58ba7cd28ecc4877355c3",
+  "schema_version": "0.1",
+  "status": "locally_validated_unreleased",
+  "verified_publication_state": {
+    "github_release": {
+      "published_at": "2026-07-31T01:41:09Z",
+      "tag": "v0.2.1",
+      "target": "main",
+      "url": "https://github.com/adamallcock/runcost/releases/tag/v0.2.1"
+    },
+    "go": {
+      "Origin": {
+        "Hash": "381646f4d44664eef427139127871ff34179f86e",
+        "Ref": "refs/tags/v0.2.2",
+        "URL": "https://github.com/adamallcock/runcost",
+        "VCS": "git"
+      },
+      "Time": "2026-08-23T16:30:00Z",
+      "Version": "v0.2.2"
+    },
+    "npm": "0.2.1",
+    "pypi": "0.2.1"
+  }
+}

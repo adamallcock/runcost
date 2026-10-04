@@ -14,6 +14,50 @@ limitations.
 
 ## Unreleased
 
+## 0.2.4 (2026-10-04)
+
+This coordinated release consolidates the source improvements since the last
+complete npm/PyPI/GitHub release (0.2.1), including weekly timezone schedules
+and the reviewed DeepSeek V4.1 Flash source updates described below.
+
+Compatibility changes: strict auto helpers now fail on final resolver warnings;
+unsupported official DeepSeek holiday rules require a caller-confirmed pricing
+period; budget/reconciliation decisions use canonical 18-place amounts.
+
+- Use the maintained GenAI Prices v2 source, map verified extended units, retain
+  unsupported price fields, and distinguish retrieval from rate freshness.
+- Require a caller-confirmed DeepSeek billing period while Chinese public
+  holidays cannot be inferred, preserving reviewed historical rates and aliases.
+- Enforce final strict warnings across all auto APIs, preserve complete source
+  identities, validate discount contracts, and evaluate all batch models before
+  selecting one source catalog.
+- Isolate helper arithmetic from ambient Decimal settings, own immutable
+  compiled catalogs, and ship validated NodeNext/bundler and Python type surfaces.
+- Stream independent JSONL quotes with bounded work, source-fetch coalescing,
+  canonical valid JSON, and atomic file output; reuse warm resolver indexes.
+- Add allowlisted sharing exports, additive error-returning Go calculation APIs,
+  generated warning references, standards-complete development schema checks,
+  platform conformance CI, and an installed offline/reconciliation recipe.
+- Refresh root and playground dependency locks, audit both trees, and monitor
+  the live upstream source contract without publishing price changes.
+
+- Add Vercel AI SDK `experimental_streamTranscribe` final-result handling for
+  duration-priced OpenAI transcription, including `gpt-realtime-whisper`
+  fixture coverage across Python, JavaScript/TypeScript, and Go.
+- Make the ledger contract explicitly USD-only, rejecting non-USD price cards
+  and non-USD or mixed-currency aggregation across Python, JavaScript, and Go.
+- Add fail-closed `invalid_usage` and `usage_inconsistent` handling for negative,
+  malformed, or contradictory usage; distinguish malformed supported payloads
+  from unknown surfaces; and make Go public options nil-safe and caller-owned.
+- Standardize money output at no more than 18 fractional places using
+  round-half-even without changing Python's process-wide decimal context.
+- Refocus the README, package-listing source, landing page, and playground on a
+  self-contained response-to-ledger quickstart with visible components, sources,
+  warnings, and estimate caveats.
+- Include the MIT license in the npm archive, broaden dependency and schema
+  validation, and require byte-reproducible, checksum-locked Python/npm release
+  artifacts that can be safely retried and attached to the GitHub Release.
+
 ## 0.2.3 (2026-09-10)
 
 - Add the reviewed official DeepSeek V4.1 Flash snapshot to direct-DeepSeek

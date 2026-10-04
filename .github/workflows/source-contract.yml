@@ -1,0 +1,21 @@
+name: upstream price source contract
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 13 * * 1'
+permissions:
+  contents: read
+jobs:
+  source-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python scripts/check_live_source_contract.py --output source-contract.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: upstream-source-contract
+          path: source-contract.json

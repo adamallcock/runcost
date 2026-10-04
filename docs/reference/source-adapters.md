@@ -135,3 +135,13 @@ Recommended pipeline:
 - Local JSON and strict YAML file loading are supported. YAML anchors, tags, multi-document streams, block scalars, and other advanced YAML features are intentionally out of scope for the core package.
 - The refresh command supports JSON snapshots only.
 - The current adapters are prototypes; source coverage must be expanded fixture by fixture.
+
+## GenAI Prices v2 Contract
+
+Default external resolution uses the maintained [v2 slim data](https://github.com/pydantic/genai-prices/blob/main/prices/new_data/v2/data_slim.json). Upstream documents the legacy v1 feeds as [frozen](https://github.com/pydantic/genai-prices#download-data). The adapter remains compatible with legacy caller-owned JSON and records `genai-prices/v2-compatible` in card metadata.
+
+The adapter additionally maps one-hour cache writes, web-search counts, image/video token prices, and reasoning token prices to existing canonical units. Fields with unverified units remain in `metadata.genai_prices.unsupported_prices` and `adapter_warnings`. Unsupported constraints are excluded from billable cards. No ambiguous page, hour, citation, or storage unit is guessed.
+
+Resolver source records distinguish `retrieved_at` and `validated_at` from `catalog_generated_at`. A missing generation time is reported as unknown, and `catalog_revision` is the fetched representation checksum. `catalog_schema_version` identifies the reviewed v2 URL; `catalog_frozen` identifies a known legacy feed. Retrieval alone cannot prove a provider rate is current. `npm run check:source-contract` checks the live official schema, reviewed unit inventory, and generated canonical cards. The read-only scheduled CI workflow reports changes without publishing new price data.
+
+[DeepSeek's primary pricing page](https://api-docs.deepseek.com/quick_start/pricing) excludes Chinese public holidays from weekday peak pricing. The reviewed snapshot and official-source resolver mark that calendar constraint as unsupported. Automatic period inference fails with `billing_schedule_unsupported`; a caller who has independently confirmed the applicable period can supply `pricing_period`. Historical rates and effective bounds remain in the snapshot.

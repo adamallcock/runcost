@@ -1,0 +1,5 @@
+# Development checks only; none of these are RunCost runtime dependencies.
+jsonschema[format]==4.26.0; python_version >= "3.10"
+jsonschema[format]==4.23.0; python_version < "3.10"
+mypy==2.4.0; python_version >= "3.10"
+mypy==1.15.0; python_version < "3.10"

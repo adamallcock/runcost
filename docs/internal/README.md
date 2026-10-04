@@ -21,6 +21,10 @@ without putting it in the end-user README path.
 - [Results matrix](results-matrix.md)
 - [Product expansion implementation plan](reports/2026-07-15-product-expansion-implementation-plan.md)
 - [Product-market and distribution assessment](reports/2026-07-15-product-market-and-distribution-assessment.md)
+- [Trust, quickstart, and adoption plan](reports/2026-08-08-trust-quickstart-and-adoption-plan.md)
+- [Package improvement review](reports/2026-10-04-package-improvement-review.md)
+- [Package improvement implementation plan](plans/2026-10-04-package-improvements.md)
+- [Package improvement local qualification](reports/2026-10-04-package-improvements-implementation.md)
 
 ## Maintainer Areas
 

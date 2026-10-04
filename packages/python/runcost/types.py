@@ -14,6 +14,7 @@ SchemaVersion = Literal["0.1"]
 DecimalString = str
 MoneyString = str
 CalculationMode = Literal["compatibility", "strict"]
+Currency = Literal["USD"]
 DayOfWeek = Literal[
     "monday",
     "tuesday",
@@ -88,7 +89,7 @@ class EffectiveDateRange(TypedDict, total=False):
 
 class Price(TypedDict):
     amount: MoneyString
-    currency: str
+    currency: Currency
     per: DecimalString
 
 
@@ -368,7 +369,7 @@ class CostLedger(TypedDict, total=False):
     provider: str
     surface: str
     model: CostModel
-    currency: str
+    currency: Currency
     components: List[CostComponent]
     total: MoneyString
     price_sources: List[SourceInfo]
@@ -403,12 +404,26 @@ class BatchSummary(TypedDict):
     total_cost: MoneyString
 
 
+class CostLedgerExport(TypedDict, total=False):
+    """Sharing document; warning detail and identifying metadata are redacted."""
+    schema_version: SchemaVersion
+    provider: str
+    surface: str
+    model: CostModel
+    currency: Currency
+    components: List[CostComponent]
+    total: MoneyString
+    price_sources: List[SourceInfo]
+    applied_discounts: List[AppliedDiscount]
+    warnings: List[Dict[str, Any]]
+
+
 class BatchCostLedger(TypedDict, total=False):
     schema_version: SchemaVersion
     provider: str
     surface: str
     batch_id: str
-    currency: str
+    currency: Currency
     items: List[BatchItem]
     summary: BatchSummary
     aggregate: CostLedger
@@ -424,7 +439,7 @@ class BudgetEvaluation(TypedDict, total=False):
     budget: MoneyString
     remaining: MoneyString
     warning_threshold: DecimalString
-    currency: str
+    currency: Currency
     ledger: CostLedger
 
 
@@ -436,7 +451,7 @@ class CostReconciliation(TypedDict):
     signed_residual: MoneyString
     absolute_residual: MoneyString
     tolerance: MoneyString
-    currency: str
+    currency: Currency
 
 
 class CatalogArtifact(TypedDict, total=False):
@@ -469,6 +484,10 @@ class CatalogVerification(TypedDict):
 
 
 class PriceResolutionSource(TypedDict, total=False):
+    catalog_generated_at: Optional[str]
+    catalog_revision: str
+    catalog_schema_version: Optional[str]
+    catalog_frozen: bool
     name: str
     type: Literal["external", "user", "contract"]
     url: str

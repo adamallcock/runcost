@@ -17,6 +17,8 @@ EXPECTED_API = ROOT / "docs" / "generated" / "public-api-registry.md"
 
 
 def main() -> int:
+    from generate_contract_docs import generate_warning_reference
+    assert (ROOT / "docs/reference/warnings-and-limitations.md").read_text(encoding="utf-8") == generate_warning_reference(), "warning reference is stale"
     assert GENERATOR.exists(), "missing generated contract-doc generator"
     assert EXPECTED.exists(), "missing generated contract taxonomy docs"
     assert EXPECTED_SCHEMA.exists(), "missing generated schema-field docs"

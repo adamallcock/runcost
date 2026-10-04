@@ -24,7 +24,7 @@ Strict mode:
 
 ## Warning Codes
 
-Current warning codes:
+This list and metadata table are generated from `schemas/taxonomy.json`.
 
 - `unknown_provider`
 - `unknown_surface`
@@ -32,9 +32,11 @@ Current warning codes:
 - `alias_inferred`
 - `price_not_found`
 - `price_stale`
-- `price_source_disagreement`
 - `price_source_unavailable`
 - `price_source_refresh_failed`
+- `price_source_disagreement`
+- `invalid_usage`
+- `usage_inconsistent`
 - `usage_field_ignored`
 - `usage_missing`
 - `inclusive_usage_ambiguous`
@@ -48,32 +50,28 @@ Current warning codes:
 - `batch_items_pending`
 - `historical_price_missing`
 - `tool_component_unpriced`
+- `pricing_period_required`
+- `pricing_period_unsupported`
+- `billing_schedule_unsupported`
 - `provider_reported_cost_used`
 - `provider_reported_cost_mismatch`
 
-Warnings include a stable code, a message, and typed metadata. They may include
-a `path` when a warning points to a specific provider or ledger field.
-
-Warning metadata is intentionally required so downstream billing, reconciliation,
-and alerting code can group warnings without parsing human-readable messages.
-The current metadata contract is locked in `schemas/taxonomy.json` under
-`warning_metadata_required_keys` and enforced by the shared fixture runner.
-For fixture-backed warning coverage and V1 warning-code support status, see
-[Generated Warning Coverage](../generated/warning-coverage.md).
-For the current public-beta and V1 caveat register, see
-[Generated Beta And V1 Caveats](../generated/beta-v1-caveats.md).
+Warnings contain stable codes and typed metadata; optional paths identify source fields.
+See [warning coverage](../generated/warning-coverage.md) for fixture evidence and [beta/V1 caveats](../generated/beta-v1-caveats.md) for qualification limits.
 
 | Warning code | Required metadata keys |
-|---|---|
+| --- | --- |
 | `unknown_provider` | `provider`, `surface`, `model` |
 | `unknown_surface` | `provider`, `surface`, `model` |
 | `unknown_model` | `provider`, `surface`, `model` |
 | `alias_inferred` | `requested_model`, `billed_model` |
 | `price_not_found` | `provider`, `surface`, `model` |
 | `price_stale` | `source`, `age_days`, `threshold_days`, `retrieved_at` |
-| `price_source_disagreement` | `component`, `selected_price_card_id`, `candidate_price_card_ids` |
 | `price_source_unavailable` | `source`, `status` |
 | `price_source_refresh_failed` | `source`, `status` |
+| `price_source_disagreement` | `component`, `selected_price_card_id`, `candidate_price_card_ids` |
+| `invalid_usage` | `reason` |
+| `usage_inconsistent` | `invariant`, `total_path`, `total`, `component_paths`, `component_total` |
 | `usage_field_ignored` | `field` |
 | `usage_missing` | `field` |
 | `inclusive_usage_ambiguous` | `field` |
@@ -87,6 +85,9 @@ For the current public-beta and V1 caveat register, see
 | `batch_items_pending` | `pending`, `total` |
 | `historical_price_missing` | `model`, `priced_at` |
 | `tool_component_unpriced` | `component`, `unit`, `model` |
+| `pricing_period_required` | `provider`, `surface`, `model`, `pricing_periods` |
+| `pricing_period_unsupported` | `provider`, `surface`, `model`, `pricing_period` |
+| `billing_schedule_unsupported` | `provider`, `surface`, `model`, `timezone` |
 | `provider_reported_cost_used` | `provider_reported_cost`, `calculated_total` |
 | `provider_reported_cost_mismatch` | `provider_reported_cost`, `calculated_total` |
 

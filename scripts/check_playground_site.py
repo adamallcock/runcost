@@ -69,6 +69,8 @@ def main() -> int:
             raise AssertionError(f"sitemap missing {canonical}")
 
     source = "\n".join(path.read_text(encoding="utf-8") for path in sorted((PLAYGROUND / "src").glob("**/*")) if path.is_file())
+    components_source = (PLAYGROUND / "src" / "components.jsx").read_text(encoding="utf-8")
+    pages_source = (PLAYGROUND / "src" / "pages.jsx").read_text(encoding="utf-8")
     for forbidden in ["fetch(", "XMLHttpRequest", "WebSocket("]:
         if forbidden in source:
             raise AssertionError(f"playground must not send pasted responses over the network: found {forbidden}")
@@ -84,6 +86,27 @@ def main() -> int:
     for forbidden in ["core/data/providers", "Bundled source catalog", "useDefaultCatalog"]:
         if forbidden in source:
             raise AssertionError(f"playground still depends on removed bundled pricing behavior: {forbidden}")
+
+    # The landing-page response must be the same object passed to the calculator.
+    # A separately maintained JSON literal previously drifted from the priced
+    # OpenAI response while still being labelled as the provider response.
+    for required in [
+        "export function ResponsePreview({ ledger, response })",
+        "JSON.stringify(response, null, 2)",
+    ]:
+        if required not in components_source:
+            raise AssertionError(f"response preview is not data-driven: missing {required!r}")
+    for required in [
+        "priceWithExternalSources(providerId, provider.model, provider.response",
+        "<ResponsePreview ledger={ledger} response={provider.response} />",
+    ]:
+        if required not in pages_source:
+            raise AssertionError(f"landing preview and priced response can diverge: missing {required!r}")
+    if '"cached_tokens": 1024' in components_source:
+        raise AssertionError("response preview must not contain a separately maintained provider-response literal")
+    for overclaim in ["exact cost", "Exact total", "every LLM response"]:
+        if overclaim.lower() in source.lower():
+            raise AssertionError(f"playground contains unsupported cost claim: {overclaim!r}")
 
     javascript_bytes = sum(path.stat().st_size for path in (DIST / "assets").glob("*.js"))
     css_bytes = sum(path.stat().st_size for path in (DIST / "assets").glob("*.css"))

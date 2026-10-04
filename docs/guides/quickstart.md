@@ -7,15 +7,23 @@ status: active
 
 # RunCost Quickstart
 
-RunCost answers one narrow question:
+RunCost has one job:
 
 > What did this LLM or agent API call cost, and why?
 
-The package accepts normalized usage, raw provider responses, or selected framework objects. It returns a componentized cost ledger with line items, totals, price sources, applied discounts, and warnings.
+Give it the provider response you already receive. It returns an itemized USD
+estimate with billing components, rates, price sources, assumptions, and
+warnings. Calculation runs locally; no proxy, hosted account, or usage database
+is required. RunCost may download public pricing data, but it does not send the
+response to a pricing source.
 
-## Install
+Arithmetic is deterministic. The estimate still depends on the completeness of
+the response and the selected rates, so reconcile important results against
+provider-reported costs or billing exports.
 
-Python:
+## Choose An Install
+
+Python distribution (`runcost-ai`), import package, and CLI (`runcost`):
 
 ```bash
 pip install runcost-ai
@@ -44,7 +52,7 @@ go get github.com/adamallcock/runcost/packages/go/ledger
 RunCost `0.2.x` is public beta. Registry packages are the normal install path;
 repository and tarball paths are for development and release verification.
 
-## Price A Real Response
+## First Success: Price A Real Response
 
 Python:
 
@@ -54,7 +62,7 @@ from runcost import from_response_auto
 response = {
     "id": "resp_example",
     "object": "response",
-    "model": "gpt-4.1-mini-2025-04-14",
+    "model": "gpt-4.1-mini",
     "usage": {
         "input_tokens": 36,
         "input_tokens_details": {"cached_tokens": 6},
@@ -64,9 +72,11 @@ response = {
 }
 
 ledger = from_response_auto(response, provider="openai")
-print(ledger["total"])
-print(ledger["components"])
-print(ledger["warnings"])
+for component in ledger["components"]:
+    print(component["name"], component["quantity"], component["cost"])
+print("total", ledger["total"], ledger["currency"])
+print("source", ledger["price_sources"][0]["name"])
+print("warnings", ledger["warnings"])
 ```
 
 JavaScript/TypeScript:
@@ -77,7 +87,7 @@ import { fromResponseAuto } from "runcost";
 const response = {
   id: "resp_example",
   object: "response",
-  model: "gpt-4.1-mini-2025-04-14",
+  model: "gpt-4.1-mini",
   usage: {
     input_tokens: 36,
     input_tokens_details: { cached_tokens: 6 },
@@ -87,8 +97,15 @@ const response = {
 };
 
 const ledger = await fromResponseAuto(response, { provider: "openai" });
-console.log(ledger.total, ledger.components, ledger.warnings);
+console.log(ledger.total, ledger.currency);
+console.table(ledger.components);
+console.log(ledger.price_sources, ledger.warnings);
 ```
+
+Success means you receive a USD total, one line per priced usage component, the
+selected source, and an explicit warnings array. For the example above, the
+current public rates produce separate uncached input, cached input, text output,
+and reasoning output lines.
 
 The convenience APIs select one named external source—normally
 `genai-prices`, models.dev, or LiteLLM—and expose its provenance and cache state
@@ -98,70 +115,13 @@ test; an explicitly empty list disables network resolution. Open the
 [browser playground](https://adamallcock.github.io/runcost/playground/) to see
 the same ledger without installing the package.
 
-## Python With Explicit Prices
+## Deterministic Custom Prices
 
-```python
-from runcost import from_response
-
-response = {
-    "model": "gpt-5.4-2026-05-01",
-    "usage": {
-        "input_tokens": 36,
-        "input_tokens_details": {"cached_tokens": 0},
-        "output_tokens": 87,
-        "output_tokens_details": {"reasoning_tokens": 0},
-    },
-}
-
-price_cards = [{
-    "schema_version": "0.1",
-    "id": "openai:gpt-5.4:example",
-    "provider": "openai",
-    "surface": "openai.responses",
-    "model": "gpt-5.4",
-    "aliases": ["gpt-5.4-2026-05-01"],
-    "components": [
-        {
-            "usage_component": "input_uncached_tokens",
-            "unit": "token",
-            "price": {"amount": "1.25", "currency": "USD", "per": "1000000"},
-        },
-        {
-            "usage_component": "output_text_tokens",
-            "unit": "token",
-            "price": {"amount": "10", "currency": "USD", "per": "1000000"},
-        },
-    ],
-    "source": {"name": "user"},
-}]
-
-ledger = from_response(
-    response,
-    provider="openai",
-    surface="openai.responses",
-    model="gpt-5.4",
-    price_cards=price_cards,
-)
-
-print(ledger["total"])
-print(ledger["components"])
-```
-
-## JavaScript With Explicit Prices
-
-```js
-import { fromResponse } from "runcost";
-
-const ledger = fromResponse(response, {
-  provider: "openai",
-  surface: "openai.responses",
-  model: "gpt-5.4",
-  priceCards
-});
-
-console.log(ledger.total);
-console.log(ledger.components);
-```
+Pass `price_cards` in Python or `priceCards` in JavaScript when you have
+negotiated rates, need a reviewed historical snapshot, or want a network-free
+test. RunCost records the caller-owned source in the same ledger shape. See
+[Custom Pricing And Discounts](../reference/custom-pricing-and-discounts.md) for
+complete examples instead of copying a large price card into the first-run path.
 
 ## Go
 
@@ -169,66 +129,39 @@ console.log(ledger.components);
 package main
 
 import (
+    "context"
     "fmt"
+    "log"
 
     ledger "github.com/adamallcock/runcost/packages/go/ledger"
 )
 
 func main() {
-    priceCards := []any{
+    result, err := ledger.FromResponseAuto(
+        context.Background(),
         ledger.Object{
-            "schema_version": "0.1",
-            "id":             "openai:gpt-5.4:example",
-            "provider":       "openai",
-            "surface":        "openai.responses",
-            "model":          "gpt-5.4",
-            "aliases":        []any{"gpt-5.4-2026-05-01"},
-            "components": []any{
-                ledger.Object{
-                    "usage_component": "input_uncached_tokens",
-                    "unit":            "token",
-                    "price": ledger.Object{
-                        "amount": "1.25",
-                        "currency": "USD",
-                        "per": "1000000",
-                    },
-                },
-                ledger.Object{
-                    "usage_component": "output_text_tokens",
-                    "unit":            "token",
-                    "price": ledger.Object{
-                        "amount": "10",
-                        "currency": "USD",
-                        "per": "1000000",
-                    },
-                },
-            },
-            "source": ledger.Object{"name": "user"},
-        },
-    }
-
-    cost := ledger.FromResponse(
-        ledger.Object{
-            "model": "gpt-5.4-2026-05-01",
-            "usage": ledger.Object{
-                "input_tokens":  36,
-                "output_tokens": 87,
-            },
+            "model": "gpt-4.1-mini",
+            "usage": ledger.Object{"input_tokens": 36, "output_tokens": 87},
         },
         ledger.Object{
             "provider": "openai",
             "surface":  "openai.responses",
-            "model":    "gpt-5.4",
+            "model":    "gpt-4.1-mini",
         },
-        priceCards,
+        nil,
         nil,
     )
-
-    fmt.Println(cost["total"])
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println(result["total"], result["currency"])
 }
 ```
 
 ## Choosing The Entry Point
+
+Use `from_response_auto` / `fromResponseAuto` / `FromResponseAuto` for the
+shortest path from a provider response to a sourced estimate.
 
 Use `calculate_cost` / `calculateCost` / `CalculateCost` when you already have canonical usage and price cards. This is the most deterministic path.
 
@@ -255,6 +188,7 @@ the full multi-language conformance suite.
 ## Read Next
 
 - [Package Installation](package-installation.md)
+- [Supported provider and framework surfaces](../reference/supported-surfaces.md)
 - [Batch, OTel, budgets, and direct providers](2026-07-18-product-expansion-quickstart.md)
 - [Migration From Hand-Written Formulas](2026-05-26-migration-from-hand-written-formulas.md)
 - [API Reference](../reference/api-reference.md)

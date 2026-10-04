@@ -1,0 +1,23 @@
+{
+  "name": "strict-anthropic-messages-malformed-usage",
+  "description": "Strict mode fails closed with invalid_usage for a malformed numeric Anthropic usage value.",
+  "metadata": {
+    "requirement_ids": ["RC-FIXTURE-CONFORMANCE", "RC-STRICT-MODE"],
+    "provider": "anthropic",
+    "surface": "anthropic.messages",
+    "scenario": "strict_error",
+    "tags": ["strict_error", "usage_validation", "warning:invalid_usage"],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "mode": "strict",
+    "raw_response": {
+      "type": "message",
+      "model": "claude-test",
+      "usage": {"input_tokens": "oops", "output_tokens": 0}
+    },
+    "extract": {"provider": "anthropic", "surface": "anthropic.messages"},
+    "price_cards": []
+  },
+  "expected": {"error": {"code": "invalid_usage"}}
+}

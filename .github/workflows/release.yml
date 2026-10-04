@@ -79,6 +79,9 @@ jobs:
           npm install --global "npm@${NPM_VERIFY_CLI_VERSION}"
           npm --version
 
+      - name: Install development validators
+        run: python3 -m pip install -r requirements-dev.txt
+
       - name: Install root and playground dependencies
         run: |
           npm ci

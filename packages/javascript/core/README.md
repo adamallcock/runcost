@@ -1,34 +1,30 @@
 # RunCost
 
-RunCost Ledger is an auditable LLM API cost calculator for answering:
+**Provider response in. Itemized USD cost ledger out.**
+
+RunCost turns the LLM or agent response you already receive into a local,
+auditable cost estimate with separate billing components, rates, sources,
+assumptions, and warnings. No proxy, hosted account, or usage database is
+required.
 
 > What did this LLM or agent API call cost, and why?
 
-This npm package exposes the JavaScript/TypeScript implementation. It is
-validated against the same shared fixtures as the Python and Go packages.
+This is the JavaScript/TypeScript package. Python and Go implement the same
+ledger contract and run the same shared conformance fixtures.
 
-## Install
+## First Success
 
 ```bash
 npm install runcost
 ```
 
-For local checkout development, pack and install the checkout tarball:
-
-```bash
-PKG_TGZ=$(npm pack ./packages/javascript/core --silent)
-npm install "./$PKG_TGZ"
-```
-
-## 60-Second Usage
-
-```ts
+```js
 import { fromResponseAuto } from "runcost";
 
 const response = {
   id: "resp_example",
   object: "response",
-  model: "gpt-4.1-mini-2025-04-14",
+  model: "gpt-4.1-mini",
   usage: {
     input_tokens: 36,
     input_tokens_details: { cached_tokens: 6 },
@@ -37,60 +33,81 @@ const response = {
   }
 };
 
-const ledger = await fromResponseAuto(response, {
-  provider: "openai"
-});
+const ledger = await fromResponseAuto(response, { provider: "openai" });
 
-console.log(ledger.total);
-console.log(ledger.components);
-console.log(ledger.warnings);
+console.log(ledger.total, ledger.currency);
+console.table(ledger.components);
+console.log(ledger.price_sources, ledger.warnings);
 ```
 
-The auto helper selects one current external source (`genai-prices`,
-`models.dev`, then LiteLLM for most providers). Direct DeepSeek usage tries a
-reviewed, provider-cited DeepSeek snapshot first so aliases and weekday peak
-pricing do not fall through to stale general catalogs. It records provenance and
-caches the selected source for 24 hours. It never sends your response or usage
-data to those sources. Published RunCost packages contain no provider pricing
-database. For a zero-code demo or browser/edge proof, open the
-[RunCost playground](https://adamallcock.github.io/runcost/playground/).
+Illustrative output using rates selected on 2026-08-08 (auto-selected public
+rates can change):
 
-Quote JSON or JSONL from the command line:
+```text
+input_uncached_tokens    30   0.000012
+input_cache_read_tokens   6   0.0000006
+output_text_tokens       75   0.00012
+output_reasoning_tokens  12   0.0000192
+total 0.0001518 USD
+```
+
+The auto helper selects one current external pricing source, caches it, and
+records its provenance. It never sends your response or usage data to that
+source. Published RunCost packages contain no provider price database.
+
+Try the same flow without installing anything in the
+[browser playground](https://adamallcock.github.io/runcost/playground/).
+
+## CLI
 
 ```bash
 npx runcost quote response.json --provider openai
 cat responses.jsonl | npx runcost quote - --jsonl --provider openai
 ```
 
+## When To Use RunCost
+
+Use RunCost when cached input, reasoning output, tools, media, tiers, batches,
+discounts, rate provenance, or reconciliation matter. A simpler input/output
+calculator may be enough when you only need a rough total.
+
+RunCost calculates USD ledgers. Arithmetic is deterministic, but an independent
+estimate is only as accurate as the response fields and selected rates. Reconcile
+against provider-reported cost or an export before treating it as invoice-exact.
+
 ## Main APIs
 
 | Job | API |
 |---|---|
-| Price normalized usage | `calculateCost(options)` |
 | Price a provider response | `fromResponse(response, options)` |
+| Resolve prices and price a response | `fromResponseAuto(response, options)` |
+| Price normalized usage | `calculateCost(options)` |
 | Normalize provider batch results | `fromBatchResults(items, options)` |
-| Adapt OpenTelemetry GenAI spans | `fromOTelGenAISpan(span, options)` |
-| Adapt Pydantic `genai-prices` | `priceCardsFromGenAIPrices(data)` |
-| Estimate and evaluate a budget | `estimateCost(options)`, `evaluateBudget(total, options)` |
-| Reconcile a provider total | `reconcileCost(ledger, reportedTotal)` |
-| Resolve external prices | `resolvePriceCatalog(options)` |
-| Price with external resolution | `fromResponseAuto(response, options)` |
 | Aggregate call ledgers | `aggregateCostLedgers(options)` |
-| Use framework outputs | `fromVercelAISDKStreamFinish(...)`, `fromLangSmithRun(...)`, `createRunCostVercelOnFinish(...)`, and more |
-| Load price sources | `priceCardsFromJSONFile(...)`, `priceCardsFromOpenRouterModels(...)`, and more |
+| Reconcile a provider total | `reconcileCost(ledger, reportedTotal)` |
+| Adapt OpenTelemetry GenAI spans | `fromOTelGenAISpan(span, options)` |
+| Estimate and check a budget | `estimateCost(options)`, `evaluateBudget(total, options)` |
 | Use a browser/edge-safe core | `import { fromResponse } from "runcost/browser"` |
-| Add custom prices | Pass `priceCards` |
-| Apply discounts | Pass `discountPolicies` |
-| Audit decisions | `debugTrace: true` |
-| Fail on ambiguity | `mode: "strict"` |
 
-Full documentation, Python and Go examples, supported surfaces, and caveats:
+Pass `priceCards` for negotiated rates or self-contained tests,
+`discountPolicies` for visible adjustments, `debugTrace: true` to inspect
+decisions, and `mode: "strict"` to fail on ambiguity.
 
-<https://github.com/adamallcock/runcost>
+Full documentation, supported inputs, Python and Go examples, and caveats:
+
+- [Quickstart](https://github.com/adamallcock/runcost/blob/main/docs/guides/quickstart.md)
+- [API reference](https://github.com/adamallcock/runcost/blob/main/docs/reference/api-reference.md)
+- [Supported surfaces](https://github.com/adamallcock/runcost/blob/main/docs/reference/supported-surfaces.md)
+- [Warnings and limitations](https://github.com/adamallcock/runcost/blob/main/docs/reference/warnings-and-limitations.md)
+- [RunCost repository](https://github.com/adamallcock/runcost)
 
 ## Status
 
-RunCost `0.2.x` is public beta. Use provider-reported costs or a matching export
-before treating an independent ledger as invoice-exact. If you have a sanitized
-billing case that ordinary calculators mishandle, add it to the
+RunCost `0.2.x` is public beta. If you have a sanitized billing case that
+ordinary calculators mishandle, add it to the
 [public fixture call](https://github.com/adamallcock/runcost/issues/57).
+
+
+Compiled catalogs own recursively read-only snapshots. Default GenAI Prices resolution uses the maintained v2 feed, and retrieval time is separate from rate freshness. Direct DeepSeek official pricing requires an independently confirmed `pricing_period` because Chinese public holidays are not inferred. See the repository's [source adapter contract](../../../docs/reference/source-adapters.md#genai-prices-v2-contract).
+
+For independent JSONL quotes, `runcost quote - --jsonl` processes rows incrementally and preserves canonical JSON-array output. Add `--output-jsonl` for one ledger per line. `exportCostLedger` creates an allowlisted sharing document; review retained model/rate identifiers and amounts before sharing it.

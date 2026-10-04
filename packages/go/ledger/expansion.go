@@ -265,15 +265,15 @@ func FromBatchResults(items []any, options Object) Object {
 	}
 	attribution := NormalizeAttribution(asObject(options["attribution"]))
 	var priceCards []any
-	var compiledCatalog *CompiledPriceCatalog
+	compiledCatalog, _ := options["_compiled_catalog"].(*CompiledPriceCatalog)
 	if rawCards, exists := options["price_cards"]; exists {
 		priceCards = asSlice(rawCards)
-		compiledCatalog = CompilePriceCatalog(priceCards)
 	} else if rawCards, exists := options["priceCards"]; exists {
 		priceCards = asSlice(rawCards)
-		compiledCatalog = CompilePriceCatalog(priceCards)
 	} else {
 		priceCards = []any{}
+	}
+	if compiledCatalog == nil {
 		compiledCatalog = CompilePriceCatalog(priceCards)
 	}
 	discountPolicies := asSlice(firstNonNil(options["discount_policies"], options["discountPolicies"]))
@@ -330,6 +330,9 @@ func FromBatchResults(items []any, options Object) Object {
 			}
 			itemOptions["context"] = context
 			itemOptions["attribution"] = attribution
+			if prepared, ok := options["_prepared_usage"].(map[int]Object); ok {
+				itemOptions["_usage_ledger"] = prepared[index]
+			}
 			ledger := fromResponseWithCatalog(unwrapped.response, itemOptions, priceCards, discountPolicies, compiledCatalog)
 			output["ledger"] = ledger
 			if strings.ReplaceAll(strings.ToLower(asString(options["provider"])), "_", "-") == "anthropic" {
@@ -466,6 +469,14 @@ func genAITierValues(value any) []tierValue {
 }
 
 var genAIPriceComponents = map[string][3]string{
+	"cache_write_1h_mtok":   {"input_cache_write_1h_tokens", "token", "1000000"},
+	"web_searches_kcount":   {"web_search_units", "search", "1000"},
+	"output_image_mtok":     {"output_image_tokens", "token", "1000000"},
+	"input_image_mtok":      {"input_image_tokens", "token", "1000000"},
+	"input_video_mtok":      {"input_video_tokens", "token", "1000000"},
+	"output_video_mtok":     {"output_video_tokens", "token", "1000000"},
+	"cache_image_read_mtok": {"input_cache_read_tokens", "token", "1000000"},
+	"output_reasoning_mtok": {"output_reasoning_tokens", "token", "1000000"},
 	"input_mtok":            {"input_uncached_tokens", "token", "1000000"},
 	"cache_write_mtok":      {"input_cache_write_tokens", "token", "1000000"},
 	"cache_read_mtok":       {"input_cache_read_tokens", "token", "1000000"},
@@ -785,6 +796,7 @@ func PriceCardsFromGenAIPrices(data any, optionValues ...Object) []any {
 						"provider_name": providerData["name"], "provider_match": providerData["provider_match"],
 						"model_match": modelData["match"], "api_pattern": providerData["api_pattern"],
 						"context_window": modelData["context_window"], "constraint": rawConstraint,
+						"adapter_contract": "genai-prices/v2-compatible", "unsupported_prices": unsupportedGenAIPrices(asObject(entry["prices"])),
 					}},
 				}
 				suffix := "current"
@@ -1064,6 +1076,9 @@ func EvaluateBudget(ledgerOrTotal any, options Object) Object {
 			currency = asString(ledger["currency"])
 		}
 	}
+	if currency != "USD" {
+		panic(fmt.Sprintf("unsupported currency %q; RunCost supports USD only", currency))
+	}
 	budget := rat(options["budget"])
 	thresholdValue := firstNonNil(options["warning_threshold"], options["warningThreshold"], "0.8")
 	threshold := rat(thresholdValue)
@@ -1073,8 +1088,10 @@ func EvaluateBudget(ledgerOrTotal any, options Object) Object {
 	if threshold.Sign() < 0 || threshold.Cmp(big.NewRat(1, 1)) > 0 {
 		panic("warning_threshold must be between 0 and 1")
 	}
-	totalRat := rat(total)
-	warningAmount := new(big.Rat).Mul(budget, threshold)
+	budget = rat(decimal(budget))
+	threshold = rat(decimal(threshold))
+	totalRat := rat(decimal(rat(total)))
+	warningAmount := rat(multiplyDivide(decimal(budget), decimal(threshold), "1"))
 	status := "within_budget"
 	if totalRat.Cmp(budget) > 0 {
 		status = "exceeded"
@@ -1105,12 +1122,16 @@ func ReconcileCost(ledgerOrTotal, reportedTotal any, options Object) Object {
 			currency = asString(ledger["currency"])
 		}
 	}
-	calculated := rat(calculatedValue)
-	reported := rat(reportedTotal)
+	if currency != "USD" {
+		panic(fmt.Sprintf("unsupported currency %q; RunCost supports USD only", currency))
+	}
+	calculated := rat(decimal(rat(calculatedValue)))
+	reported := rat(decimal(rat(reportedTotal)))
 	tolerance := rat(firstNonNil(options["tolerance"], "0"))
 	if tolerance.Sign() < 0 {
 		panic("tolerance must be non-negative")
 	}
+	tolerance = rat(decimal(tolerance))
 	residual := new(big.Rat).Sub(reported, calculated)
 	absolute := new(big.Rat).Abs(residual)
 	status := "mismatch"
@@ -1169,4 +1190,47 @@ func VerifyCatalogManifest(manifest Object, root string) Object {
 		checked = append(checked, Object{"path": relative, "exists": exists, "sha256": digest, "matches": matches})
 	}
 	return Object{"schema_version": "0.1", "valid": valid, "algorithm": "sha256", "artifacts": checked}
+}
+
+func unsupportedGenAIPrices(prices Object) Object {
+	result := Object{}
+	for key, value := range prices {
+		if _, supported := genAIPriceComponents[key]; !supported {
+			result[key] = value
+		}
+	}
+	return result
+}
+
+// ExportCostLedger returns an allowlisted sharing copy without raw usage or identifiers.
+func ExportCostLedger(ledger Object) Object {
+	pick := func(value Object, keys []string) Object {
+		result := Object{}
+		for _, key := range keys {
+			if child, exists := value[key]; exists {
+				result[key] = deepCloneJSON(child)
+			}
+		}
+		return result
+	}
+	result := pick(ledger, []string{"schema_version", "provider", "surface", "currency", "total"})
+	result["model"] = pick(asObject(ledger["model"]), []string{"requested", "returned", "billed"})
+	for field, keys := range map[string][]string{
+		"components":        {"name", "quantity", "unit", "unit_price", "cost", "price_card_id", "discount_eligible"},
+		"price_sources":     {"name", "retrieved_at", "version", "license"},
+		"applied_discounts": {"policy_id", "component", "amount"},
+	} {
+		values := []any{}
+		for _, raw := range asSlice(ledger[field]) {
+			values = append(values, pick(asObject(raw), keys))
+		}
+		result[field] = values
+	}
+	warnings := []any{}
+	for _, raw := range asSlice(ledger["warnings"]) {
+		warning := asObject(raw)
+		warnings = append(warnings, Object{"code": warning["code"], "message": warning["code"], "metadata": Object{}})
+	}
+	result["warnings"] = warnings
+	return result
 }

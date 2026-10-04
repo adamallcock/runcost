@@ -62,25 +62,26 @@ Run one at a time for at least two weeks unless evidence is decisive:
 - a conformance fixture call for broken cost cases;
 - registry description/keyword refresh.
 
-Define the expected primary outcome before publishing. Stop an experiment that
-only moves downloads or clone noise without producing qualified activation.
+Define the expected primary outcome before publishing. Change an experiment
+that only moves downloads or clone noise without producing qualified activation.
 
-## Current experiment
+## Current adoption program
 
 - Start: 2026-07-18.
-- Decision date: 2026-10-16.
-- Intervention: public-beta release, real normalized reconciliation artifact,
-  billing-edge-case fixture call, and one relevant ecosystem design comment.
-- Primary outcome: an independently verified integration, external fixture, or
-  externally maintained ecosystem link. Stars, installs, and clone spikes do
-  not satisfy the outcome on their own.
+- Current work: strengthen the public quickstart, publish real normalized
+  reconciliation examples, invite billing-edge-case fixtures, and contribute
+  useful ecosystem recipes.
+- Desired evidence: independently verified integrations, external fixtures,
+  reconciliations, repeat human use, and externally maintained ecosystem links.
+  Stars, installs, and clone spikes remain context rather than adoption proof.
 - Public entry points:
   [billing fixture call](https://github.com/adamallcock/runcost/issues/57),
-  [90-day adoption gate](https://github.com/adamallcock/runcost/issues/58), and
   [OpenAI tier interoperability note](https://github.com/pydantic/genai-prices/issues/115#issuecomment-5013803342).
-- Review mechanism: the one-time local Codex automation
-  `Review RunCost 90-day adoption gate` will run against the evidence issue on
-  2026-10-16.
+- Operating plan:
+  [trust, quickstart, and adoption plan](../reports/2026-08-08-trust-quickstart-and-adoption-plan.md).
+- Historical note: issue 58 recorded the original 90-day experiment. It no
+  longer controls whether RunCost continues; its evidence questions can still
+  inform monthly reviews.
 
 ## Reporting template
 
@@ -90,5 +91,5 @@ only moves downloads or clone noise without producing qualified activation.
 - Human discovery/activation signals:
 - Registry/clone context:
 - Uncertainty and exclusions:
-- Experiment verdict: stop / continue / change
+- Learning and next action:
 - Next action and owner:

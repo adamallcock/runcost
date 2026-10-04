@@ -96,7 +96,7 @@ def check_api_exports(registry: dict[str, Any]) -> None:
         "runtime": text(TYPESCRIPT_RUNTIME),
     }
     go_sources = {
-        "source": text(GO_SOURCE) + "\n" + text(GO_EXPANSION_SOURCE) + "\n" + text(GO_PRICE_RESOLVER_SOURCE)
+        "source": text(GO_SOURCE) + "\n" + text(GO_EXPANSION_SOURCE) + "\n" + text(GO_PRICE_RESOLVER_SOURCE) + "\n" + text(ROOT / "packages/go/ledger/errors.go")
     }
     parity_matrix = text(PARITY_MATRIX)
     generated_api_docs = text(GENERATED_API_DOCS)

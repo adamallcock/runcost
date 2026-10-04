@@ -7,6 +7,12 @@ status: final
 
 # RunCost Product-Market and Distribution Assessment
 
+> **Status update, 2026-08-08:** The calendar-based continuation and stop gates
+> in this dated assessment are superseded. RunCost continues as a narrow ledger
+> kernel, with adoption evidence used to prioritize integrations rather than to
+> decide whether the project continues. See the
+> [current trust, quickstart, and adoption plan](2026-08-08-trust-quickstart-and-adoption-plan.md).
+
 ## Executive conclusion
 
 RunCost should continue, but it should stop presenting itself primarily as a

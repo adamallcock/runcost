@@ -4,7 +4,7 @@ import type {
   UsageComponentName,
   UsageUnit,
   WarningCode
-} from "./generated/taxonomy";
+} from "./generated/taxonomy.js";
 
 export type {
   AliasResolution,
@@ -12,12 +12,13 @@ export type {
   UsageComponentName,
   UsageUnit,
   WarningCode
-} from "./generated/taxonomy";
+} from "./generated/taxonomy.js";
 
 export type MoneyString = string;
 export type DecimalString = string;
 export type SchemaVersion = "0.1";
 export type CalculationMode = "compatibility" | "strict";
+export type Currency = "USD";
 
 export type BillingDayOfWeek =
   | "monday"
@@ -91,9 +92,11 @@ export interface EffectiveDateRange {
   to?: string | null;
 }
 
+
+
 export interface Price {
   amount: MoneyString;
-  currency: string;
+  currency: Currency;
   per: DecimalString;
 }
 
@@ -150,11 +153,13 @@ export interface PriceCard {
   metadata?: Record<string, unknown>;
 }
 
+type DeepReadonly<T> = T extends object ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> } : T;
+
 export interface CompiledPriceCatalog {
   readonly __runcostCompiledCatalog: true;
-  readonly priceCards: PriceCard[];
-  readonly byProviderModel: ReadonlyMap<string, PriceCard[]>;
-  readonly byModel: ReadonlyMap<string, PriceCard[]>;
+  readonly priceCards: ReadonlyArray<DeepReadonly<PriceCard>>;
+  readonly byProviderModel: ReadonlyMap<string, ReadonlyArray<DeepReadonly<PriceCard>>>;
+  readonly byModel: ReadonlyMap<string, ReadonlyArray<DeepReadonly<PriceCard>>>;
 }
 
 export interface DiscountPolicyMatch {
@@ -407,7 +412,7 @@ export interface CostLedger {
   provider: string;
   surface: string;
   model: CostModel;
-  currency: string;
+  currency: Currency;
   components: CostComponent[];
   total: MoneyString;
   price_sources?: SourceInfo[];
@@ -435,7 +440,7 @@ export interface BatchCostLedger {
   provider: string;
   surface: string;
   batch_id?: string;
-  currency: string;
+  currency: Currency;
   items: BatchItem[];
   summary: { total: number; succeeded: number; failed: number; pending: number; total_cost: MoneyString };
   aggregate: CostLedger;
@@ -583,7 +588,7 @@ export interface BudgetEvaluation {
   budget: MoneyString;
   remaining: MoneyString;
   warning_threshold: DecimalString;
-  currency: string;
+  currency: Currency;
   ledger?: CostLedger;
 }
 
@@ -595,7 +600,7 @@ export interface CostReconciliation {
   signed_residual: MoneyString;
   absolute_residual: MoneyString;
   tolerance: MoneyString;
-  currency: string;
+  currency: Currency;
 }
 
 export interface CatalogArtifact {
@@ -628,6 +633,10 @@ export interface CatalogVerification {
 }
 
 export interface PriceResolutionSource {
+  catalog_generated_at?: string | null;
+  catalog_revision?: string;
+  catalog_schema_version?: string | null;
+  catalog_frozen?: boolean;
   name: string;
   type: "external" | "user" | "contract";
   url?: string;
@@ -654,13 +663,13 @@ export interface PriceResolution {
 }
 
 export interface PriceResolverOptions {
-  contractPriceCards?: PriceCard[];
-  contract_price_cards?: PriceCard[];
-  sources?: Array<"genai-prices" | "models.dev" | "litellm" | "openrouter">;
-  priceSources?: Array<"genai-prices" | "models.dev" | "litellm" | "openrouter">;
-  price_sources?: Array<"genai-prices" | "models.dev" | "litellm" | "openrouter">;
-  sourceUrls?: Partial<Record<"genai-prices" | "models.dev" | "litellm" | "openrouter", string>>;
-  source_urls?: Partial<Record<"genai-prices" | "models.dev" | "litellm" | "openrouter", string>>;
+  contractPriceCards?: PriceCard[] | CompiledPriceCatalog;
+  contract_price_cards?: PriceCard[] | CompiledPriceCatalog;
+  sources?: Array<"deepseek-official" | "genai-prices" | "models.dev" | "litellm" | "openrouter">;
+  priceSources?: Array<"deepseek-official" | "genai-prices" | "models.dev" | "litellm" | "openrouter">;
+  price_sources?: Array<"deepseek-official" | "genai-prices" | "models.dev" | "litellm" | "openrouter">;
+  sourceUrls?: Partial<Record<"deepseek-official" | "genai-prices" | "models.dev" | "litellm" | "openrouter", string>>;
+  source_urls?: Partial<Record<"deepseek-official" | "genai-prices" | "models.dev" | "litellm" | "openrouter", string>>;
   cacheDir?: string;
   cache_dir?: string;
   offline?: boolean;
@@ -745,7 +754,7 @@ export function priceCardsFromUserPricing(data: Record<string, unknown> | PriceC
 export function priceCardsFromHelicone(data: Record<string, unknown>, options?: SourceAdapterOptions): PriceCard[];
 export function priceCardsFromGenAIPrices(data: Record<string, unknown> | Record<string, unknown>[], options?: SourceAdapterOptions): PriceCard[];
 export function fromResponse(response: Record<string, unknown>, options?: FromResponseOptions): CostLedger;
-export function resolvePriceCatalog(options?: PriceResolverOptions & { provider?: string; usageLedger?: UsageLedger; usage_ledger?: UsageLedger; priceCards?: PriceCard[]; price_cards?: PriceCard[] }): Promise<PriceResolution>;
+export function resolvePriceCatalog(options?: PriceResolverOptions & { provider?: string; usageLedger?: UsageLedger; usage_ledger?: UsageLedger; priceCards?: PriceCard[] | CompiledPriceCatalog; price_cards?: PriceCard[] | CompiledPriceCatalog }): Promise<PriceResolution>;
 export function attachPriceResolution(result: CostLedger, resolution: PriceResolution): CostLedger;
 export function defaultPriceCacheDir(): string;
 export function priceCacheStatus(options?: Pick<PriceResolverOptions, "cacheDir" | "cache_dir" | "now">): Promise<{ schema_version: SchemaVersion; cache_dir: string; checked_at: string; entries: PriceCacheEntry[] }>;
@@ -776,7 +785,11 @@ export function otelCostAttributes(costLedger: CostLedger, options?: { prefix?: 
 export function estimateCost(options: FromResponseOptions & { provider: string; surface: string; model: string; components: Record<string, string | number> | UsageComponent[] }): CostLedger;
 export function estimateCostAuto(options: FromResponseOptions & PriceResolverOptions & { provider: string; surface: string; model: string; components: Record<string, string | number> | UsageComponent[] }): Promise<CostLedger>;
 export function evaluateBudget(ledgerOrTotal: CostLedger | MoneyString | number, options: { budget: MoneyString | number; warningThreshold?: DecimalString | number; warning_threshold?: DecimalString | number }): BudgetEvaluation;
-export function reconcileCost(costLedgerOrTotal: CostLedger | MoneyString | number, reportedTotal: MoneyString | number, options?: { tolerance?: MoneyString | number; currency?: string }): CostReconciliation;
+export function reconcileCost(costLedgerOrTotal: CostLedger | MoneyString | number, reportedTotal: MoneyString | number, options?: { tolerance?: MoneyString | number; currency?: Currency }): CostReconciliation;
 export function canonicalJSONString(value: unknown): string;
 export function sha256Bytes(value: string | Uint8Array): Promise<string>;
 export function verifyCatalogManifest(manifest: CatalogManifest, artifacts?: Record<string, string | Uint8Array>): Promise<CatalogVerification>;
+
+/** Allowlisted sharing copy; warning detail, raw usage, attribution and source URLs are omitted. */
+export type CostLedgerExport = Omit<CostLedger, "attribution" | "metadata" | "debug_trace" | "warnings"> & { warnings: Array<{code: WarningCode; message: string; metadata: Record<string, never>}> };
+export function exportCostLedger(ledger: CostLedger): CostLedgerExport;

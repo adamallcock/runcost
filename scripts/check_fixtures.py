@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.util
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -75,119 +76,52 @@ def expected_languages(fixture):
     return fixture.get("metadata", {}).get("expected_languages", ["python", "javascript", "go"])
 
 
-def _type_matches(value, expected_type):
-    if expected_type == "object":
-        return isinstance(value, dict)
-    if expected_type == "array":
-        return isinstance(value, list)
-    if expected_type == "string":
-        return isinstance(value, str)
-    if expected_type == "integer":
-        return isinstance(value, int) and not isinstance(value, bool)
-    if expected_type == "boolean":
-        return isinstance(value, bool)
-    if expected_type == "null":
-        return value is None
-    return True
-
-
-def _resolve_ref(schema, root):
-    ref = schema.get("$ref")
-    if not ref:
-        return schema
-    if not ref.startswith("#/"):
-        raise AssertionError(f"Unsupported schema ref: {ref}")
-    current = root
-    for part in ref[2:].split("/"):
-        current = current[part]
-    return current
-
-
-def _validate_format(value, format_name, path):
-    if format_name == "date":
-        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
-            raise AssertionError(f"{path}: expected RFC 3339 full-date")
-        try:
-            date.fromisoformat(value)
-        except ValueError as exc:
-            raise AssertionError(f"{path}: invalid RFC 3339 full-date {value!r}") from exc
-        return
-
-    if format_name == "date-time":
-        if not DATE_TIME_PATTERN.fullmatch(value):
-            raise AssertionError(f"{path}: expected RFC 3339 date-time with a timezone")
-        normalized = value.replace("t", "T").replace("z", "Z")
-        if normalized.endswith("Z"):
-            normalized = normalized[:-1] + "+00:00"
-        try:
-            datetime.fromisoformat(normalized)
-        except ValueError as exc:
-            raise AssertionError(f"{path}: invalid RFC 3339 date-time {value!r}") from exc
-
-
 def validate_schema(value, schema, root=None, path="$"):
-    root = root or schema
-    schema = _resolve_ref(schema, root)
+    """Validate Draft 2020-12, retaining root-local reference resolution."""
+    from jsonschema import Draft202012Validator, FormatChecker
+    root = root if root is not None else schema
+    validator = Draft202012Validator(root, format_checker=Draft202012Validator.FORMAT_CHECKER).evolve(schema=schema)
+    error = next(validator.iter_errors(value), None)
+    if error is not None:
+        location = path + "".join(f"[{part}]" if isinstance(part, int) else f".{part}" for part in error.absolute_path)
+        raise AssertionError(f"{location}: {error.message}")
 
-    if "oneOf" in schema:
-        matches = 0
-        branch_errors = []
-        for index, branch in enumerate(schema["oneOf"]):
-            try:
-                validate_schema(value, branch, root, path)
-            except AssertionError as exc:
-                branch_errors.append(f"branch {index}: {exc}")
-            else:
-                matches += 1
-        if matches != 1:
-            detail = "; ".join(branch_errors) if matches == 0 else f"{matches} branches matched"
-            raise AssertionError(f"{path}: expected exactly one oneOf branch to match ({detail})")
 
-    if "const" in schema and value != schema["const"]:
-        raise AssertionError(f"{path}: expected const {schema['const']!r}, got {value!r}")
-    if "enum" in schema and value not in schema["enum"]:
-        raise AssertionError(f"{path}: expected one of {schema['enum']!r}, got {value!r}")
+def check_schema_validator_contract():
+    priced_at_schema = SCHEMAS["usage_ledger"]["properties"]["context"]["properties"]["priced_at"]
+    for valid in ("2026-08-08", "2026-08-08T12:34:56Z", "2026-08-08t12:34:56.123+05:30"):
+        validate_schema(valid, priced_at_schema, SCHEMAS["usage_ledger"], "validator.valid")
 
-    expected_type = schema.get("type")
-    if isinstance(expected_type, list):
-        if not any(_type_matches(value, candidate) for candidate in expected_type):
-            raise AssertionError(f"{path}: expected type {expected_type!r}, got {type(value).__name__}")
-    elif expected_type and not _type_matches(value, expected_type):
-        raise AssertionError(f"{path}: expected type {expected_type!r}, got {type(value).__name__}")
+    invalid_values = (
+        "2026-02-30",
+        "2026-08-08T12:34:56",
+        "2026-08-08T25:00:00Z",
+        "not-a-date",
+    )
+    for invalid in invalid_values:
+        try:
+            validate_schema(invalid, priced_at_schema, SCHEMAS["usage_ledger"], "validator.invalid")
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError(f"validator.invalid: accepted invalid date/date-time {invalid!r}")
 
-    if isinstance(value, str):
-        if "minLength" in schema and len(value) < schema["minLength"]:
-            raise AssertionError(f"{path}: shorter than minLength {schema['minLength']}")
-        if "maxLength" in schema and len(value) > schema["maxLength"]:
-            raise AssertionError(f"{path}: longer than maxLength {schema['maxLength']}")
-        if "pattern" in schema:
-            if not re.match(schema["pattern"], value):
-                raise AssertionError(f"{path}: does not match pattern {schema['pattern']!r}")
-        if "format" in schema:
-            _validate_format(value, schema["format"], path)
+    ambiguous_schema = {"oneOf": [{"type": "string"}, {"type": "string", "minLength": 1}]}
+    try:
+        validate_schema("ambiguous", ambiguous_schema, path="validator.ambiguous")
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("validator.ambiguous: oneOf accepted more than one matching branch")
 
-    if isinstance(value, int) and "minimum" in schema and value < schema["minimum"]:
-        raise AssertionError(f"{path}: below minimum {schema['minimum']}")
-
-    if isinstance(value, list):
-        if "minItems" in schema and len(value) < schema["minItems"]:
-            raise AssertionError(f"{path}: fewer than minItems {schema['minItems']}")
-        if "items" in schema:
-            for index, item in enumerate(value):
-                validate_schema(item, schema["items"], root, f"{path}[{index}]")
-
-    if isinstance(value, dict):
-        for required in schema.get("required", []):
-            if required not in value:
-                raise AssertionError(f"{path}.{required}: missing required property")
-        properties = schema.get("properties", {})
-        if schema.get("additionalProperties") is False:
-            extra = sorted(set(value) - set(properties))
-            if extra:
-                raise AssertionError(f"{path}: unexpected properties {extra!r}")
-        for key, child in value.items():
-            if key in properties:
-                validate_schema(child, properties[key], root, f"{path}.{key}")
+    tags_schema = SCHEMAS["discount_policy"]["properties"]["match"]["properties"]["tags"]
+    validate_schema({"team": "platform"}, tags_schema, SCHEMAS["discount_policy"], "validator.tags.valid")
+    try:
+        validate_schema({"team": 42}, tags_schema, SCHEMAS["discount_policy"], "validator.tags.invalid")
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("validator.tags.invalid: accepted a non-string additional property")
 
 
 def validate_price_cards(price_cards, path):
@@ -347,7 +281,16 @@ def run_python_fixture(fixture):
     validate_discount_policies(input_data.get("discount_policies", []), f"{fixture['name']}.discount_policies")
     if "raw_response" in input_data:
         helper = input_data.get("helper")
-        if helper != "langchain_callback" and (
+        expected_warning_codes = {
+            warning.get("code")
+            for warning in fixture.get("expected", {}).get("cost_ledger", {}).get("warnings", [])
+        }
+        expected_error_code = fixture.get("expected", {}).get("error", {}).get("code")
+        if (
+            "invalid_usage" not in expected_warning_codes
+            and expected_error_code != "invalid_usage"
+            and helper != "langchain_callback"
+            and (
             input_data["extract"].get("adapter") in {
                 "langchain.chat_message",
                 "vercel_ai_sdk.generate_text",
@@ -394,7 +337,7 @@ def run_python_fixture(fixture):
                 "cohere.chat",
                 "cohere.rerank",
             }
-        ):
+        )):
             usage_ledger = extract_usage_ledger(input_data["raw_response"], **input_data["extract"])
             validate_schema(usage_ledger, SCHEMAS["usage_ledger"], path=f"{fixture['name']}.extracted_usage_ledger")
         helper_options = {
@@ -608,6 +551,187 @@ def check_fixture_paths(paths: list[Path]) -> None:
             assert_subset(javascript_result, expected, f"{path.name}:javascript")
 
 
+def check_runtime_boundary_contracts() -> None:
+    context_probe = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from decimal import getcontext; "
+                "getcontext().prec = 17; before = (getcontext().prec, getcontext().rounding); "
+                "import runcost; "
+                "assert (getcontext().prec, getcontext().rounding) == before"
+            ),
+        ],
+        cwd=ROOT,
+        env={**os.environ, "PYTHONPATH": str(PYTHON_PACKAGE)},
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if context_probe.stderr:
+        raise AssertionError(f"Python decimal-context probe wrote stderr: {context_probe.stderr}")
+
+    usage = {
+        "schema_version": "0.1",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": {"requested": "m", "returned": "m", "billed": "m", "alias_resolution": "none"},
+        "components": [{"name": "input_uncached_tokens", "quantity": "1", "unit": "token"}],
+    }
+    eur_card = {
+        "schema_version": "0.1",
+        "id": "eur-card",
+        "provider": "openai",
+        "surface": "openai.responses",
+        "model": "m",
+        "components": [{
+            "usage_component": "input_uncached_tokens",
+            "unit": "token",
+            "price": {"amount": "1", "currency": "EUR", "per": "1"},
+        }],
+        "source": {"name": "test"},
+    }
+    try:
+        calculate_cost(usage_ledger=usage, price_cards=[eur_card])
+    except ValueError as error:
+        if "RunCost supports USD only" not in str(error):
+            raise
+    else:
+        raise AssertionError("Python calculator accepted a non-USD price card")
+    try:
+        aggregate_cost_ledgers([{"currency": "EUR", "total": "1"}])
+    except ValueError as error:
+        if "aggregation supports USD only" not in str(error):
+            raise
+    else:
+        raise AssertionError("Python aggregation accepted a non-USD ledger")
+
+    malformed_usage_cases = [
+        (
+            "openai",
+            "openai.responses",
+            {"object": "response", "model": "probe", "usage": {"input_tokens_details": {"cached_tokens": "oops"}}},
+            "$.usage.input_tokens_details.cached_tokens",
+        ),
+        (
+            "openai",
+            "openai.chat_completions",
+            {"model": "probe", "usage": {"completion_tokens_details": {"reasoning_tokens": "oops"}}},
+            "$.usage.completion_tokens_details.reasoning_tokens",
+        ),
+        (
+            "anthropic",
+            "anthropic.messages",
+            {"type": "message", "model": "claude-test", "usage": {"input_tokens": "oops", "output_tokens": 0}},
+            "$.usage.input_tokens",
+        ),
+        (
+            "google",
+            "google.gemini.generate_content",
+            {
+                "modelVersion": "gemini-test",
+                "usageMetadata": {"promptTokenCount": 1, "candidatesTokenCount": "oops"},
+            },
+            "$.usageMetadata.candidatesTokenCount",
+        ),
+        (
+            "bedrock",
+            "aws.bedrock.converse",
+            {"modelId": "bedrock-test", "usage": {"inputTokens": "oops", "outputTokens": 0}},
+            "$.usage.inputTokens",
+        ),
+    ]
+    for provider, surface, response, path in malformed_usage_cases:
+        result = from_response(response, provider=provider, surface=surface, price_cards=[])
+        warnings = result.get("warnings", [])
+        if result.get("total") != "0" or result.get("components") != [] or len(warnings) != 1:
+            raise AssertionError(f"Python malformed supported usage did not fail closed: {result!r}")
+        warning = warnings[0]
+        if (
+            warning.get("code") != "invalid_usage"
+            or warning.get("path") != path
+            or warning.get("metadata", {}).get("reason") != "malformed_decimal"
+        ):
+            raise AssertionError(f"Python malformed supported usage was misclassified: {warning!r}")
+        try:
+            from_response(response, provider=provider, surface=surface, price_cards=[], mode="strict")
+        except ValueError as error:
+            if "invalid_usage" not in str(error):
+                raise
+        else:
+            raise AssertionError("Python strict mode accepted malformed supported usage")
+
+    javascript_probe = f"""
+      import {{ aggregateCostLedgers, calculateCost, fromResponse }} from {json.dumps(JAVASCRIPT_CORE.as_uri())};
+      const usageLedger = {json.dumps(usage)};
+      const priceCards = [{json.dumps(eur_card)}];
+      let cardRejected = false;
+      try {{ calculateCost({{ usageLedger, priceCards }}); }}
+      catch (error) {{ cardRejected = error.message.includes("RunCost supports USD only"); }}
+      if (!cardRejected) throw new Error("JavaScript calculator accepted a non-USD price card");
+      let ledgerRejected = false;
+      try {{ aggregateCostLedgers({{ costLedgers: [{{ currency: "EUR", total: "1" }}] }}); }}
+      catch (error) {{ ledgerRejected = error.message.includes("aggregation supports USD only"); }}
+      if (!ledgerRejected) throw new Error("JavaScript aggregation accepted a non-USD ledger");
+      const malformedUsageCases = [
+        [
+          "openai",
+          "openai.responses",
+          {{ object: "response", model: "probe", usage: {{ input_tokens_details: {{ cached_tokens: "oops" }} }} }},
+          "$.usage.input_tokens_details.cached_tokens"
+        ],
+        [
+          "openai",
+          "openai.chat_completions",
+          {{ model: "probe", usage: {{ completion_tokens_details: {{ reasoning_tokens: "oops" }} }} }},
+          "$.usage.completion_tokens_details.reasoning_tokens"
+        ],
+        [
+          "anthropic",
+          "anthropic.messages",
+          {{ type: "message", model: "claude-test", usage: {{ input_tokens: "oops", output_tokens: 0 }} }},
+          "$.usage.input_tokens"
+        ],
+        [
+          "google",
+          "google.gemini.generate_content",
+          {{ modelVersion: "gemini-test", usageMetadata: {{ promptTokenCount: 1, candidatesTokenCount: "oops" }} }},
+          "$.usageMetadata.candidatesTokenCount"
+        ],
+        [
+          "bedrock",
+          "aws.bedrock.converse",
+          {{ modelId: "bedrock-test", usage: {{ inputTokens: "oops", outputTokens: 0 }} }},
+          "$.usage.inputTokens"
+        ]
+      ];
+      for (const [provider, surface, response, path] of malformedUsageCases) {{
+        const result = fromResponse(response, {{ provider, surface, priceCards: [] }});
+        const warning = result.warnings?.[0];
+        if (result.total !== "0" || result.components?.length !== 0 || result.warnings?.length !== 1) {{
+          throw new Error(`JavaScript malformed supported usage did not fail closed: ${{JSON.stringify(result)}}`);
+        }}
+        if (warning.code !== "invalid_usage" || warning.path !== path || warning.metadata?.reason !== "malformed_decimal") {{
+          throw new Error(`JavaScript malformed supported usage was misclassified: ${{JSON.stringify(warning)}}`);
+        }}
+        let strictRejected = false;
+        try {{ fromResponse(response, {{ provider, surface, priceCards: [], mode: "strict" }}); }}
+        catch (error) {{ strictRejected = error.message.includes("invalid_usage"); }}
+        if (!strictRejected) throw new Error("JavaScript strict mode accepted malformed supported usage");
+      }}
+    """
+    subprocess.run(
+        ["node", "--input-type=module", "-e", javascript_probe],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run shared RunCost fixture conformance checks.")
     parser.add_argument(
@@ -622,6 +746,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     paths = [Path(value) for value in args.fixture] if args.fixture else DEFAULT_FIXTURES
+    check_schema_validator_contract()
+    check_runtime_boundary_contracts()
     check_fixture_paths(paths)
     print(f"Checked {len(paths)} fixtures against Python and JavaScript cores.")
     return 0

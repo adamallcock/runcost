@@ -10,7 +10,7 @@
     "provider": { "type": "string", "minLength": 1 },
     "surface": { "type": "string", "minLength": 1 },
     "batch_id": { "type": "string" },
-    "currency": { "type": "string", "minLength": 3, "maxLength": 3 },
+    "currency": { "type": "string", "const": "USD" },
     "items": {
       "type": "array",
       "items": { "$ref": "#/$defs/batch_item" }

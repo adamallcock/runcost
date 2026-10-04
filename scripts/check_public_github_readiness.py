@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -90,8 +91,30 @@ def check_readmes() -> None:
     for forbidden in FORBIDDEN_PUBLIC_README_PHRASES:
         assert_true(forbidden not in root_readme, f"root README exposes internal path or planning doc: {forbidden}")
 
-    for phrase in ["npm install runcost", "fromResponse", "calculateCost", "github.com/adamallcock/runcost"]:
+    for phrase in [
+        "npm install runcost",
+        "fromResponse",
+        "calculateCost",
+        "total 0.0001518 USD",
+        "github.com/adamallcock/runcost",
+    ]:
         assert_true(phrase in npm_readme, f"npm README missing package readiness phrase: {phrase}")
+
+    root_first_success = root_readme.split("## First Success: Python", 1)[1].split("## JavaScript And TypeScript", 1)[0]
+    root_javascript_success = root_readme.split("## JavaScript And TypeScript", 1)[1].split("## CLI And Go", 1)[0]
+    npm_first_success = npm_readme.split("## First Success", 1)[1].split("## CLI", 1)[0]
+    assert_true(
+        '"object": "response"' in root_first_success,
+        "root/PyPI first-success response must include the OpenAI Responses discriminator",
+    )
+    assert_true(
+        'const response = {' in root_javascript_success and 'object: "response"' in root_javascript_success,
+        "root/PyPI JavaScript first-success example must define its OpenAI response",
+    )
+    assert_true(
+        'object: "response"' in npm_first_success,
+        "npm first-success response must include the OpenAI Responses discriminator",
+    )
 
     assert_true("reference/price-data-strategy.md" in docs_index, "docs index must link price data strategy")
     for phrase in ["Source Adapters Convert Catalogs", "External Resolution And The Offline Boundary", "contain no provider price catalog"]:
@@ -107,9 +130,104 @@ def check_package_metadata() -> None:
     assert_true(js_package.get("name") == "runcost", "npm package name must be runcost")
     assert_true(js_package.get("description") == PUBLIC_PACKAGE_DESCRIPTION, "npm description must be public-ready")
     assert_true("README.md" in js_package.get("files", []), "npm package must include README")
+    assert_true("LICENSE" in js_package.get("files", []), "npm package must include LICENSE")
     assert_true(pyproject["project"].get("name") == "runcost-ai", "Python distribution must be runcost-ai")
     assert_true(pyproject["project"].get("description") == PUBLIC_PACKAGE_DESCRIPTION, "Python description must be public-ready")
     assert_true("Development Status :: 4 - Beta" in pyproject["project"].get("classifiers", []), "Python classifier must be beta")
+
+
+def check_publish_quickstart_contract() -> None:
+    """Exercise the response shape shown on both package listing READMEs."""
+    response = {
+        "id": "resp_example",
+        "object": "response",
+        "model": "gpt-4.1-mini",
+        "usage": {
+            "input_tokens": 36,
+            "input_tokens_details": {"cached_tokens": 6},
+            "output_tokens": 87,
+            "output_tokens_details": {"reasoning_tokens": 12},
+        },
+    }
+    price_cards = [
+        {
+            "schema_version": "0.1",
+            "id": "openai:gpt-4.1-mini:quickstart-contract",
+            "provider": "openai",
+            "surface": "openai.responses",
+            "model": "gpt-4.1-mini",
+            "components": [
+                {
+                    "usage_component": "input_uncached_tokens",
+                    "unit": "token",
+                    "price": {"amount": "0.4", "currency": "USD", "per": "1000000"},
+                },
+                {
+                    "usage_component": "input_cache_read_tokens",
+                    "unit": "token",
+                    "price": {"amount": "0.1", "currency": "USD", "per": "1000000"},
+                },
+                {
+                    "usage_component": "output_text_tokens",
+                    "unit": "token",
+                    "price": {"amount": "1.6", "currency": "USD", "per": "1000000"},
+                },
+                {
+                    "usage_component": "output_reasoning_tokens",
+                    "unit": "token",
+                    "price": {"amount": "1.6", "currency": "USD", "per": "1000000"},
+                },
+            ],
+            "source": {"name": "quickstart-contract"},
+        }
+    ]
+    expected_components = [
+        "input_uncached_tokens",
+        "input_cache_read_tokens",
+        "output_text_tokens",
+        "output_reasoning_tokens",
+    ]
+
+    sys.path.insert(0, str(ROOT / "packages" / "python"))
+    try:
+        from runcost import from_response_auto  # type: ignore
+
+        python_ledger = from_response_auto(response, provider="openai", price_cards=price_cards)
+    finally:
+        sys.path.pop(0)
+    assert_true(python_ledger["total"] == "0.0001518", "root/PyPI quickstart shape produced the wrong total")
+    assert_true(python_ledger["currency"] == "USD", "root/PyPI quickstart shape did not produce USD")
+    assert_true(
+        [component["name"] for component in python_ledger["components"]] == expected_components,
+        "root/PyPI quickstart shape did not produce the four documented components",
+    )
+    assert_true(
+        "unknown_surface" not in {warning["code"] for warning in python_ledger["warnings"]},
+        "root/PyPI quickstart shape was treated as an unknown surface",
+    )
+
+    javascript = f"""
+import {{ fromResponseAuto }} from {json.dumps((ROOT / "packages/javascript/core/index.js").as_uri())};
+const response = {json.dumps(response)};
+const priceCards = {json.dumps(price_cards)};
+const ledger = await fromResponseAuto(response, {{ provider: "openai", priceCards }});
+const componentNames = ledger.components.map((component) => component.name);
+const warningCodes = ledger.warnings.map((warning) => warning.code);
+if (ledger.total !== "0.0001518" || ledger.currency !== "USD") process.exit(2);
+if (JSON.stringify(componentNames) !== JSON.stringify({json.dumps(expected_components)})) process.exit(3);
+if (warningCodes.includes("unknown_surface")) process.exit(4);
+"""
+    completed = subprocess.run(
+        ["node", "--input-type=module", "--eval", javascript],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert_true(
+        completed.returncode == 0,
+        f"npm quickstart contract failed with exit {completed.returncode}: {completed.stderr.strip()}",
+    )
 
 
 def check_github_templates() -> None:
@@ -161,6 +279,7 @@ def main() -> int:
     check_required_files()
     check_readmes()
     check_package_metadata()
+    check_publish_quickstart_contract()
     check_github_templates()
     check_public_markdown_links()
     print("Public GitHub readiness checks passed.")

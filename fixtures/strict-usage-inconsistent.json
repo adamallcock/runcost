@@ -1,0 +1,28 @@
+{
+  "name": "strict-usage-inconsistent",
+  "description": "Strict mode fails closed when cached input exceeds the provider-declared input total.",
+  "metadata": {
+    "requirement_ids": ["RC-FIXTURE-CONFORMANCE", "RC-STRICT-MODE"],
+    "provider": "openai",
+    "surface": "openai.responses",
+    "scenario": "strict_error",
+    "tags": ["strict_error", "usage_validation", "warning:usage_inconsistent"],
+    "expected_languages": ["python", "javascript", "go"]
+  },
+  "input": {
+    "mode": "strict",
+    "raw_response": {
+      "id": "resp_inconsistent_strict",
+      "object": "response",
+      "model": "gpt-usage-validation",
+      "usage": {
+        "input_tokens": 10,
+        "input_tokens_details": {"cached_tokens": 20},
+        "output_tokens": 0
+      }
+    },
+    "extract": {"provider": "openai", "surface": "openai.responses"},
+    "price_cards": []
+  },
+  "expected": {"error": {"code": "usage_inconsistent"}}
+}

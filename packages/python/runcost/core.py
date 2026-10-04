@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+from .types import CostLedger, UsageLedger
+
+import copy
 import json
 from datetime import date, datetime, timedelta, timezone
-from decimal import Decimal, getcontext
+from decimal import Decimal, DecimalException, localcontext
+from .money import _decimal, _format_decimal, _operation_context, _add, _subtract, _multiply_divide
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
-getcontext().prec = 50
 
 _WEEKDAYS = (
     "monday",
@@ -78,31 +80,56 @@ _TOOL_OR_FEATURE_COMPONENTS = {
 }
 
 
+class UnsupportedSurfaceError(ValueError):
+    """Raised only when no extractor is registered for a requested surface."""
+
+
 class CompiledPriceCatalog:
     """Read-only price-card collection indexed by provider and model aliases."""
 
     def __init__(self, price_cards: Iterable[Dict[str, Any]]) -> None:
-        self.price_cards = list(price_cards)
-        self.by_provider_model: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
-        self.by_model: Dict[str, List[Dict[str, Any]]] = {}
-        for card in self.price_cards:
+        self._price_cards = copy.deepcopy(list(price_cards))
+        for card in self._price_cards:
+            _validate_price_card_currency(card)
+        self._by_provider_model: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+        self._by_model: Dict[str, List[Dict[str, Any]]] = {}
+        for card in self._price_cards:
             provider = str(card.get("provider") or "")
             names = [str(card.get("model") or ""), *(str(alias) for alias in card.get("aliases", []))]
             for name in dict.fromkeys(name for name in names if name):
-                self.by_provider_model.setdefault((provider, name), []).append(card)
-                self.by_model.setdefault(name, []).append(card)
+                self._by_provider_model.setdefault((provider, name), []).append(card)
+                self._by_model.setdefault(name, []).append(card)
 
     def __iter__(self) -> Iterator[Dict[str, Any]]:
-        return iter(self.price_cards)
+        return iter(copy.deepcopy(self._price_cards))
 
     def __len__(self) -> int:
-        return len(self.price_cards)
+        return len(self._price_cards)
+
+    def _identity_candidates(self, usage_ledger: Dict[str, Any]) -> List[Dict[str, Any]]:
+        return self._by_provider_model.get((str(usage_ledger.get("provider") or ""), _billed_model(usage_ledger)), [])
+
+    def _model_candidates(self, usage_ledger: Dict[str, Any]) -> List[Dict[str, Any]]:
+        return self._by_model.get(_billed_model(usage_ledger), [])
+
 
     def identity_candidates(self, usage_ledger: Dict[str, Any]) -> List[Dict[str, Any]]:
-        return self.by_provider_model.get((str(usage_ledger.get("provider") or ""), _billed_model(usage_ledger)), [])
+        return copy.deepcopy(self._identity_candidates(usage_ledger))
 
     def model_candidates(self, usage_ledger: Dict[str, Any]) -> List[Dict[str, Any]]:
-        return self.by_model.get(_billed_model(usage_ledger), [])
+        return copy.deepcopy(self._model_candidates(usage_ledger))
+
+    @property
+    def price_cards(self) -> List[Dict[str, Any]]:
+        return copy.deepcopy(self._price_cards)
+
+    @property
+    def by_provider_model(self) -> Dict[Tuple[str, str], List[Dict[str, Any]]]:
+        return copy.deepcopy(self._by_provider_model)
+
+    @property
+    def by_model(self) -> Dict[str, List[Dict[str, Any]]]:
+        return copy.deepcopy(self._by_model)
 
 
 def compile_price_catalog(price_cards: Iterable[Dict[str, Any]]) -> CompiledPriceCatalog:
@@ -140,17 +167,6 @@ def _response_mapping(value: Any) -> Dict[str, Any]:
     return payload
 
 
-def _decimal(value: Any) -> Decimal:
-    return Decimal(str(value))
-
-
-def _format_decimal(value: Decimal) -> str:
-    normalized = value.normalize()
-    if normalized == normalized.to_integral():
-        return str(normalized.quantize(Decimal("1")))
-    return format(normalized, "f").rstrip("0").rstrip(".")
-
-
 def _attribution_string(value: Any) -> Optional[str]:
     if isinstance(value, str):
         return value
@@ -184,19 +200,16 @@ def _normalize_attribution(value: Any) -> Dict[str, Any]:
     return result
 
 
-def _add(left: str, right: str) -> str:
-    return _format_decimal(_decimal(left) + _decimal(right))
-
-
-def _subtract(left: str, right: str) -> str:
-    return _format_decimal(_decimal(left) - _decimal(right))
-
-
-def _multiply_divide(quantity: Any, amount: Any, per: Any) -> str:
-    per_decimal = _decimal(per)
-    if per_decimal == 0:
-        raise ValueError("price.per must not be zero")
-    return _format_decimal((_decimal(quantity) * _decimal(amount)) / per_decimal)
+def _validate_price_card_currency(card: Dict[str, Any]) -> None:
+    card_id = str(card.get("id") or "<unknown>")
+    for index, component in enumerate(card.get("components") or []):
+        price = component.get("price") if isinstance(component, dict) else None
+        currency = price.get("currency") if isinstance(price, dict) else None
+        if currency != "USD":
+            raise ValueError(
+                f"unsupported currency for price card {card_id} component {index}: "
+                f"{currency!r}; RunCost supports USD only"
+            )
 
 
 def _billed_model(usage_ledger: Dict[str, Any]) -> str:
@@ -355,6 +368,7 @@ def _pricing_period_from_schedule(schedule: Dict[str, Any], priced_at: datetime)
     windows = schedule.get("windows")
     if not isinstance(windows, list):
         return {"unsupported_schedule": "windows"}
+
     validated_windows: List[Tuple[Dict[str, Any], int, int, Optional[set[str]]]] = []
     for window in windows:
         if not isinstance(window, dict):
@@ -401,6 +415,9 @@ def _pricing_period_selection(usage_ledger: Dict[str, Any], card: Dict[str, Any]
     explicit = context.get("pricing_period") or context.get("pricingPeriod")
     if explicit:
         return {"pricing_period": str(explicit), "period_selection": "explicit_context"}
+    unsupported = (card.get("metadata") or {}).get("unsupported_billing_constraints")
+    if unsupported:
+        return {"unsupported_schedule": ", ".join(unsupported)}
     schedule = _card_billing_schedule(card)
     if not schedule:
         return {}
@@ -1187,6 +1204,456 @@ def _usage_metadata_field_warnings(
     return warnings
 
 
+def _invalid_usage_warning(*, path: str, reason: str, value: Any = None, component: Optional[str] = None) -> Dict[str, Any]:
+    metadata: Dict[str, Any] = {"reason": reason}
+    if value is not None:
+        metadata["value"] = str(value)
+    if component:
+        metadata["component"] = component
+    return {
+        "code": "invalid_usage",
+        "message": f"Usage value at {path} is invalid: {reason.replace('_', ' ')}.",
+        "path": path,
+        "metadata": metadata,
+    }
+
+
+def _usage_inconsistent_warning(
+    *,
+    path: str,
+    invariant: str,
+    total_path: str,
+    total: Decimal,
+    component_paths: List[str],
+    component_total: Decimal,
+) -> Dict[str, Any]:
+    return {
+        "code": "usage_inconsistent",
+        "message": f"Usage subtotal at {path} exceeds its declared total at {total_path}.",
+        "path": path,
+        "metadata": {
+            "invariant": invariant,
+            "total_path": total_path,
+            "total": _format_decimal(total),
+            "component_paths": component_paths,
+            "component_total": _format_decimal(component_total),
+        },
+    }
+
+
+def _validated_usage_decimal(value: Any, path: str, warnings: List[Dict[str, Any]]) -> Optional[Decimal]:
+    try:
+        parsed = _decimal(value)
+    except Exception:
+        warnings.append(_invalid_usage_warning(path=path, reason="malformed_decimal", value=value))
+        return None
+    if not parsed.is_finite():
+        warnings.append(_invalid_usage_warning(path=path, reason="non_finite_quantity", value=value))
+        return None
+    if parsed < 0:
+        warnings.append(_invalid_usage_warning(path=path, reason="negative_quantity", value=value))
+        return None
+    return parsed
+
+
+def _validate_usage_field_if_present(
+    value: Dict[str, Any], key: str, path: str, warnings: List[Dict[str, Any]]
+) -> None:
+    if key not in value:
+        return
+    _validated_usage_decimal(value[key], path, warnings)
+
+
+def _check_usage_subtotal(
+    warnings: List[Dict[str, Any]],
+    *,
+    total_value: Any,
+    total_path: str,
+    components: List[Tuple[Any, str]],
+    invariant: str,
+) -> None:
+    total = _validated_usage_decimal(total_value, total_path, warnings)
+    component_values: List[Decimal] = []
+    component_paths: List[str] = []
+    for value, path in components:
+        parsed = _validated_usage_decimal(value, path, warnings)
+        if parsed is not None:
+            component_values.append(parsed)
+            component_paths.append(path)
+    if total is None or len(component_values) != len(components):
+        return
+    with localcontext(_operation_context(total, *component_values)):
+        component_total = sum(component_values, Decimal("0"))
+    if component_total > total:
+        warnings.append(
+            _usage_inconsistent_warning(
+                path=component_paths[0],
+                invariant=invariant,
+                total_path=total_path,
+                total=total,
+                component_paths=component_paths,
+                component_total=component_total,
+            )
+        )
+
+
+def _raw_usage_root_path(raw_usage: Dict[str, Any], surface: str) -> str:
+    if surface in {
+        "google.gemini.generate_content",
+        "vertex.gemini.generate_content",
+        "google.gemini.live",
+    }:
+        return "$.usageMetadata"
+    if any(str(key).startswith("gen_ai.usage.") for key in raw_usage):
+        return "$.attributes"
+    return "$.usage"
+
+
+def _append_negative_raw_usage_warnings(
+    value: Any,
+    path: str,
+    warnings: List[Dict[str, Any]],
+) -> None:
+    if isinstance(value, dict):
+        for key in sorted(value, key=str):
+            _append_negative_raw_usage_warnings(value[key], f"{path}.{key}", warnings)
+        return
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            _append_negative_raw_usage_warnings(item, f"{path}[{index}]", warnings)
+        return
+    if value is None or isinstance(value, bool):
+        return
+    try:
+        parsed = _decimal(value)
+    except Exception:
+        return
+    if not parsed.is_finite() or parsed >= 0:
+        return
+    if any(
+        warning.get("code") == "invalid_usage"
+        and warning.get("path") == path
+        and (warning.get("metadata") or {}).get("reason") == "negative_quantity"
+        for warning in warnings
+    ):
+        return
+    warnings.append(_invalid_usage_warning(path=path, reason="negative_quantity", value=value))
+
+
+def _raw_usage_field_is_numeric(field_name: str) -> bool:
+    lowered = str(field_name).lower()
+    if "token" in lowered and lowered.endswith(("token", "tokens", "count")):
+        return True
+    return lowered.endswith(
+        (
+            "_units",
+            "units",
+            "_seconds",
+            "seconds",
+            "_characters",
+            "characters",
+            "_images",
+            "images",
+            "_requests",
+            "requests",
+            "_sessions",
+            "sessions",
+            "_count",
+        )
+    )
+
+
+def _append_malformed_raw_usage_warnings(
+    value: Any,
+    path: str,
+    warnings: List[Dict[str, Any]],
+    field_name: str = "",
+) -> None:
+    if isinstance(value, dict):
+        for key in sorted(value, key=str):
+            _append_malformed_raw_usage_warnings(value[key], f"{path}.{key}", warnings, str(key))
+        return
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            _append_malformed_raw_usage_warnings(item, f"{path}[{index}]", warnings, field_name)
+        return
+    if value is None or not _raw_usage_field_is_numeric(field_name):
+        return
+    candidate_warnings: List[Dict[str, Any]] = []
+    _validated_usage_decimal(value, path, candidate_warnings)
+    for candidate in candidate_warnings:
+        reason = (candidate.get("metadata") or {}).get("reason")
+        if any(
+            warning.get("code") == candidate.get("code")
+            and warning.get("path") == candidate.get("path")
+            and (warning.get("metadata") or {}).get("reason") == reason
+            for warning in warnings
+        ):
+            continue
+        warnings.append(candidate)
+
+
+def _raw_usage_consistency_warnings(raw_usage: Dict[str, Any], surface: str) -> List[Dict[str, Any]]:
+    warnings: List[Dict[str, Any]] = []
+    if not isinstance(raw_usage, dict):
+        return warnings
+
+    if any(str(key).startswith("gen_ai.usage.") for key in raw_usage):
+        if "gen_ai.usage.input_tokens" in raw_usage:
+            _check_usage_subtotal(
+                warnings,
+                total_value=raw_usage["gen_ai.usage.input_tokens"],
+                total_path="$.attributes.gen_ai.usage.input_tokens",
+                components=[
+                    (
+                        raw_usage.get("gen_ai.usage.cache_read.input_tokens", 0),
+                        "$.attributes.gen_ai.usage.cache_read.input_tokens",
+                    ),
+                    (
+                        raw_usage.get("gen_ai.usage.cache_creation.input_tokens", 0),
+                        "$.attributes.gen_ai.usage.cache_creation.input_tokens",
+                    ),
+                ],
+                invariant="otel_input_cache_subtotals_lte_input_tokens",
+            )
+        else:
+            _validate_usage_field_if_present(
+                raw_usage,
+                "gen_ai.usage.cache_read.input_tokens",
+                "$.attributes.gen_ai.usage.cache_read.input_tokens",
+                warnings,
+            )
+            _validate_usage_field_if_present(
+                raw_usage,
+                "gen_ai.usage.cache_creation.input_tokens",
+                "$.attributes.gen_ai.usage.cache_creation.input_tokens",
+                warnings,
+            )
+        if "gen_ai.usage.output_tokens" in raw_usage:
+            _check_usage_subtotal(
+                warnings,
+                total_value=raw_usage["gen_ai.usage.output_tokens"],
+                total_path="$.attributes.gen_ai.usage.output_tokens",
+                components=[
+                    (
+                        raw_usage.get("gen_ai.usage.reasoning.output_tokens", 0),
+                        "$.attributes.gen_ai.usage.reasoning.output_tokens",
+                    )
+                ],
+                invariant="otel_reasoning_tokens_lte_output_tokens",
+            )
+        else:
+            _validate_usage_field_if_present(
+                raw_usage,
+                "gen_ai.usage.reasoning.output_tokens",
+                "$.attributes.gen_ai.usage.reasoning.output_tokens",
+                warnings,
+            )
+
+    if surface in {"openai.responses", "xai.responses", "meta.responses"}:
+        input_details = raw_usage.get("input_tokens_details") if isinstance(raw_usage.get("input_tokens_details"), dict) else {}
+        output_details = raw_usage.get("output_tokens_details") if isinstance(raw_usage.get("output_tokens_details"), dict) else {}
+        if "input_tokens" in raw_usage:
+            _check_usage_subtotal(
+                warnings,
+                total_value=raw_usage["input_tokens"],
+                total_path="$.usage.input_tokens",
+                components=[
+                    (input_details.get("cached_tokens", 0), "$.usage.input_tokens_details.cached_tokens"),
+                    (input_details.get("cache_write_tokens", 0), "$.usage.input_tokens_details.cache_write_tokens"),
+                ],
+                invariant="input_cache_subtotals_lte_input_tokens",
+            )
+        else:
+            _validate_usage_field_if_present(
+                input_details, "cached_tokens", "$.usage.input_tokens_details.cached_tokens", warnings
+            )
+            _validate_usage_field_if_present(
+                input_details, "cache_write_tokens", "$.usage.input_tokens_details.cache_write_tokens", warnings
+            )
+        if "orchestration_input_tokens" in input_details or "orchestration_input_cached_tokens" in input_details:
+            _check_usage_subtotal(
+                warnings,
+                total_value=input_details.get("orchestration_input_tokens", 0),
+                total_path="$.usage.input_tokens_details.orchestration_input_tokens",
+                components=[
+                    (
+                        input_details.get("orchestration_input_cached_tokens", 0),
+                        "$.usage.input_tokens_details.orchestration_input_cached_tokens",
+                    )
+                ],
+                invariant="orchestration_cached_tokens_lte_orchestration_input_tokens",
+            )
+        if "output_tokens" in raw_usage:
+            _check_usage_subtotal(
+                warnings,
+                total_value=raw_usage["output_tokens"],
+                total_path="$.usage.output_tokens",
+                components=[
+                    (output_details.get("reasoning_tokens", 0), "$.usage.output_tokens_details.reasoning_tokens")
+                ],
+                invariant="reasoning_tokens_lte_output_tokens",
+            )
+        else:
+            _validate_usage_field_if_present(
+                output_details, "reasoning_tokens", "$.usage.output_tokens_details.reasoning_tokens", warnings
+            )
+            _validate_usage_field_if_present(
+                output_details,
+                "orchestration_output_tokens",
+                "$.usage.output_tokens_details.orchestration_output_tokens",
+                warnings,
+            )
+    elif surface.endswith("chat_completions") or ".chat_completions" in surface:
+        prompt_details = raw_usage.get("prompt_tokens_details") if isinstance(raw_usage.get("prompt_tokens_details"), dict) else {}
+        completion_details = raw_usage.get("completion_tokens_details") if isinstance(raw_usage.get("completion_tokens_details"), dict) else {}
+        if "prompt_tokens" in raw_usage:
+            _check_usage_subtotal(
+                warnings,
+                total_value=raw_usage["prompt_tokens"],
+                total_path="$.usage.prompt_tokens",
+                components=[
+                    (prompt_details.get("cached_tokens", 0), "$.usage.prompt_tokens_details.cached_tokens"),
+                    (prompt_details.get("cache_write_tokens", 0), "$.usage.prompt_tokens_details.cache_write_tokens"),
+                ],
+                invariant="prompt_cache_subtotals_lte_prompt_tokens",
+            )
+        else:
+            _validate_usage_field_if_present(
+                prompt_details, "cached_tokens", "$.usage.prompt_tokens_details.cached_tokens", warnings
+            )
+            _validate_usage_field_if_present(
+                prompt_details, "cache_write_tokens", "$.usage.prompt_tokens_details.cache_write_tokens", warnings
+            )
+        if "completion_tokens" in raw_usage:
+            _check_usage_subtotal(
+                warnings,
+                total_value=raw_usage["completion_tokens"],
+                total_path="$.usage.completion_tokens",
+                components=[
+                    (
+                        completion_details.get("reasoning_tokens", 0),
+                        "$.usage.completion_tokens_details.reasoning_tokens",
+                    )
+                ],
+                invariant="reasoning_tokens_lte_completion_tokens",
+            )
+        else:
+            _validate_usage_field_if_present(
+                completion_details,
+                "reasoning_tokens",
+                "$.usage.completion_tokens_details.reasoning_tokens",
+                warnings,
+            )
+    elif surface in {"google.gemini.generate_content", "vertex.gemini.generate_content"}:
+        if "promptTokenCount" in raw_usage:
+            _check_usage_subtotal(
+                warnings,
+                total_value=raw_usage["promptTokenCount"],
+                total_path="$.usageMetadata.promptTokenCount",
+                components=[
+                    (
+                        raw_usage.get("cachedContentTokenCount", 0),
+                        "$.usageMetadata.cachedContentTokenCount",
+                    )
+                ],
+                invariant="cached_content_tokens_lte_prompt_tokens",
+            )
+        else:
+            _validate_usage_field_if_present(
+                raw_usage,
+                "cachedContentTokenCount",
+                "$.usageMetadata.cachedContentTokenCount",
+                warnings,
+            )
+    _append_negative_raw_usage_warnings(
+        raw_usage,
+        _raw_usage_root_path(raw_usage, surface),
+        warnings,
+    )
+    _append_malformed_raw_usage_warnings(
+        raw_usage,
+        _raw_usage_root_path(raw_usage, surface),
+        warnings,
+    )
+    return warnings
+
+
+def _usage_consistency_warnings(usage_ledger: Dict[str, Any]) -> List[Dict[str, Any]]:
+    warnings = _raw_usage_consistency_warnings(
+        usage_ledger.get("raw_usage") if isinstance(usage_ledger.get("raw_usage"), dict) else {},
+        str(usage_ledger.get("surface") or ""),
+    )
+    for index, component in enumerate(usage_ledger.get("components") or []):
+        if not isinstance(component, dict):
+            warnings.append(
+                _invalid_usage_warning(path=f"$.components[{index}]", reason="component_not_object")
+            )
+            continue
+        path = str(component.get("source_path") or f"$.components[{index}].quantity")
+        component_warnings: List[Dict[str, Any]] = []
+        _validated_usage_decimal(component.get("quantity"), path, component_warnings)
+        for warning in component_warnings:
+            warning["metadata"]["component"] = str(component.get("name") or "unknown")
+            represented = False
+            for existing in warnings:
+                existing_metadata = existing.get("metadata") or {}
+                warning_metadata = warning.get("metadata") or {}
+                if (
+                    existing.get("code") == warning.get("code")
+                    and existing.get("path") == warning.get("path")
+                    and existing_metadata.get("reason") == warning_metadata.get("reason")
+                ):
+                    represented = True
+                    break
+                if (
+                    warning.get("code") == "invalid_usage"
+                    and warning_metadata.get("reason") == "negative_quantity"
+                    and existing.get("code") == "usage_inconsistent"
+                ):
+                    total_path = str(existing_metadata.get("total_path") or "")
+                    component_paths = [str(value) for value in existing_metadata.get("component_paths") or []]
+                    if (total_path and total_path in path) or path in component_paths:
+                        represented = True
+                        break
+            if not represented:
+                warnings.append(warning)
+    return warnings
+
+
+def _empty_cost_ledger_for_invalid_usage(
+    usage_ledger: Dict[str, Any], warnings: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    model = usage_ledger.get("model") if isinstance(usage_ledger.get("model"), dict) else {}
+    requested = str(model.get("requested") or model.get("returned") or model.get("billed") or "unknown")
+    returned = str(model.get("returned") or "")
+    billed = str(model.get("billed") or returned or requested)
+    result: Dict[str, Any] = {
+        "schema_version": "0.1",
+        "provider": str(usage_ledger.get("provider") or "unknown"),
+        "surface": str(usage_ledger.get("surface") or "unknown"),
+        "model": {
+            "requested": requested,
+            "returned": returned,
+            "billed": billed,
+            "alias_resolution": str(model.get("alias_resolution") or "none"),
+        },
+        "currency": "USD",
+        "components": [],
+        "total": "0",
+        "price_sources": [],
+        "applied_discounts": [],
+        "warnings": _ordered_warnings(warnings),
+    }
+    metadata = usage_ledger.get("metadata") if isinstance(usage_ledger.get("metadata"), dict) else {}
+    if metadata:
+        result["metadata"] = dict(metadata)
+    attribution = _normalize_attribution(usage_ledger.get("attribution"))
+    if attribution:
+        result["attribution"] = attribution
+    return result
+
+
 def _policy_matches(
     policy: Dict[str, Any],
     usage_ledger: Dict[str, Any],
@@ -1217,6 +1684,22 @@ def _policy_matches(
         if any(actual_tags.get(str(key)) != str(value) for key, value in requested_tags.items()):
             return False
     return True
+
+
+def _validate_discount_policy(policy: Dict[str, Any]) -> None:
+    if not isinstance(policy, dict) or not isinstance(policy.get("id"), str) or not policy["id"]:
+        raise ValueError("discount policy requires a non-empty id")
+    adjustment = policy.get("adjustment")
+    if not isinstance(adjustment, dict) or adjustment.get("type") not in {
+        "multiplier", "percentage_discount", "percentage_markup"
+    }:
+        raise ValueError("unsupported discount adjustment type")
+    try:
+        number = _decimal(adjustment["value"])
+    except (KeyError, ValueError, DecimalException) as error:
+        raise ValueError("discount adjustment value must be a finite decimal") from error
+    if not number.is_finite():
+        raise ValueError("discount adjustment value must be a finite decimal")
 
 
 def _apply_discounts(
@@ -1458,10 +1941,20 @@ def calculate_cost(
     provider_reported_cost_mode: str = "compare",
     price_source_priority: Optional[Iterable[str]] = None,
     debug_trace: bool = False,
-) -> Dict[str, Any]:
+) -> CostLedger:
     policies = list(discount_policies or [])
+    for policy in policies:
+        _validate_discount_policy(policy)
     compiled_catalog = compile_price_catalog(price_cards)
-    price_cards_list = compiled_catalog.price_cards
+    price_cards_list = compiled_catalog._price_cards
+    consistency_warnings = _usage_consistency_warnings(usage_ledger)
+    if consistency_warnings:
+        if mode == "strict":
+            raise ValueError(f"strict mode cost calculation failed: {consistency_warnings[0]['code']}")
+        return _empty_cost_ledger_for_invalid_usage(
+            usage_ledger,
+            [*_usage_metadata_field_warnings(usage_ledger), *consistency_warnings],
+        )
     source_priority = list(price_source_priority or [])
     components = []
     warnings = _usage_metadata_field_warnings(usage_ledger)
@@ -1490,8 +1983,8 @@ def calculate_cost(
         lookup_key = _price_lookup_cache_key(component_usage_ledger, source_priority)
         lookup = price_lookup_cache.get(lookup_key)
         if lookup is None:
-            identity_candidates = compiled_catalog.identity_candidates(component_usage_ledger)
-            model_candidates = compiled_catalog.model_candidates(component_usage_ledger)
+            identity_candidates = compiled_catalog._identity_candidates(component_usage_ledger)
+            model_candidates = compiled_catalog._model_candidates(component_usage_ledger)
             lookup = {
                 "has_model_card": _has_price_card_for_usage(component_usage_ledger, identity_candidates),
                 "matching_cards": _matching_cards(component_usage_ledger, identity_candidates, source_priority),
@@ -1631,7 +2124,7 @@ def calculate_cost(
                     }
                 )
         total = _add(total, discounted["cost"])
-        sources_by_name[card["source"]["name"]] = card["source"]
+        sources_by_name[_source_key(card["source"])] = card["source"]
         if card["id"] not in warned_stale_cards:
             stale_warning = _stale_price_warning(component_usage_ledger, card, stale_after_days)
             if stale_warning:
@@ -1640,7 +2133,7 @@ def calculate_cost(
 
         cost_component = {
             "name": component["name"],
-            "quantity": component["quantity"],
+            "quantity": _format_decimal(_decimal(component["quantity"])),
             "unit": component["unit"],
             "unit_price": _multiply_divide(price["amount"], "1", price["per"]),
             "cost": discounted["cost"],
@@ -1728,14 +2221,8 @@ def calculate_cost(
 
 
 def _source_key(source: Dict[str, Any]) -> str:
-    return "|".join(
-        [
-            str(source.get("name", "")),
-            str(source.get("url", "")),
-            str(source.get("retrieved_at", "")),
-            str(source.get("version", "")),
-        ]
-    )
+    return json.dumps([str(source.get(key) or "") for key in
+                       ("name", "url", "retrieved_at", "version")], separators=(",", ":"))
 
 
 def _component_sort_key(component: Dict[str, Any]) -> tuple:
@@ -1819,7 +2306,7 @@ def aggregate_cost_ledgers(
     stream_final_usage_expected: bool = False,
     stream_final_usage_present: bool = True,
     attribution: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+) -> CostLedger:
     ledgers = list(cost_ledgers)
     components_by_key: Dict[str, Dict[str, Any]] = {}
     price_sources_by_key: Dict[str, Dict[str, Any]] = {}
@@ -1828,6 +2315,12 @@ def aggregate_cost_ledgers(
     total = "0"
 
     for ledger_index, ledger in enumerate(ledgers):
+        currency = ledger.get("currency")
+        if currency != "USD":
+            raise ValueError(
+                f"unsupported currency for cost ledger {ledger_index}: {currency!r}; "
+                "RunCost aggregation supports USD only"
+            )
         total = _add(total, ledger.get("total", "0"))
         for component in ledger.get("components", []):
             key = _component_key(component)
@@ -1899,11 +2392,11 @@ def _number_string(value: Any) -> str:
 
 
 def _positive_component(name: str, quantity: Any, unit: str, source_path: str) -> Optional[Dict[str, Any]]:
-    if _decimal(quantity) <= 0:
+    if _decimal(quantity) == 0:
         return None
     return {
         "name": name,
-        "quantity": _number_string(quantity),
+        "quantity": _format_decimal(_decimal(quantity)),
         "unit": unit,
         "source_path": source_path,
     }
@@ -4130,7 +4623,7 @@ def extract_openrouter_sdk_response_usage(response: Dict[str, Any], **options: A
     return extract_openai_compatible_chat_completions_usage(payload, **merged_options)
 
 
-def extract_usage_ledger(response: Any, **options: Any) -> Dict[str, Any]:
+def extract_usage_ledger(response: Any, **options: Any) -> UsageLedger:
     response = _response_mapping(response)
     adapter = options.get("adapter") or options.get("framework")
     if adapter == "langchain.chat_message":
@@ -4203,7 +4696,7 @@ def extract_usage_ledger(response: Any, **options: Any) -> Dict[str, Any]:
         return extract_cohere_chat_usage(response, **options)
     if surface == "cohere.rerank":
         return extract_cohere_rerank_usage(response, **options)
-    raise ValueError(f"Unsupported surface: {surface}")
+    raise UnsupportedSurfaceError(f"Unsupported surface: {surface}")
 
 
 def infer_surface(response: Any, *, provider: Optional[str] = None) -> Optional[str]:
@@ -5014,6 +5507,7 @@ def price_cards_from_official_snapshot(data: Any, **options: Any) -> List[Dict[s
         if isinstance(row.get("effective"), dict):
             card["effective"] = row["effective"]
         metadata = {
+            "unsupported_billing_constraints": row.get("unsupported_billing_constraints") or data.get("unsupported_billing_constraints") or [],
             "official_snapshot": {
                 "source_label": row.get("source_label") or row.get("sourceLabel"),
                 "notes": row.get("notes"),
@@ -5213,6 +5707,49 @@ def price_cards_from_helicone(data: Dict[str, Any], **options: Any) -> List[Dict
     return cards
 
 
+def _response_preflight_payload_and_raw_usage(
+    response: Dict[str, Any], surface: str
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    payload = _openai_responses_payload(response)
+    if surface in {"anthropic.messages", "minimax.messages"}:
+        payload = _anthropic_messages_payload(response)
+    elif surface in {
+        "google.gemini.generate_content",
+        "vertex.gemini.generate_content",
+        "google.gemini.live",
+    }:
+        payload = _gemini_generate_content_payload(response)
+    elif surface.endswith("chat_completions") or ".chat_completions" in surface:
+        payload = _openai_compatible_chat_payload(response)
+    if surface in {
+        "google.gemini.generate_content",
+        "vertex.gemini.generate_content",
+        "google.gemini.live",
+    }:
+        raw_usage = payload.get("usageMetadata")
+        if not isinstance(raw_usage, dict):
+            raw_usage = payload.get("usage_metadata")
+    else:
+        raw_usage = payload.get("usage")
+    return payload, raw_usage if isinstance(raw_usage, dict) else {}
+
+
+def _invalid_usage_response_identity(
+    payload: Dict[str, Any], options: Dict[str, Any], surface: str
+) -> Tuple[str, str, Optional[Any]]:
+    provider_name = str(options.get("provider") or surface.split(".")[0] or "unknown")
+    if surface.startswith("aws.bedrock.") and not options.get("provider"):
+        provider_name = "bedrock"
+    returned_model = (
+        payload.get("model")
+        or payload.get("modelVersion")
+        or payload.get("modelId")
+        or payload.get("model_id")
+    )
+    model_name = str(options.get("model") or returned_model or "unknown")
+    return provider_name, model_name, returned_model
+
+
 def from_response(
     response: Any,
     *,
@@ -5240,7 +5777,8 @@ def from_response(
     provider_reported_cost_mode: str = "compare",
     price_source_priority: Optional[Iterable[str]] = None,
     debug_trace: bool = False,
-) -> Dict[str, Any]:
+    _usage_ledger: Optional[Dict[str, Any]] = None,
+) -> CostLedger:
     response = _response_mapping(response)
     resolved_surface = surface or infer_surface(response, provider=provider)
     options: Dict[str, Any] = {"surface": resolved_surface or "unknown"}
@@ -5272,12 +5810,68 @@ def from_response(
         options["fallback_credit"] = fallback_credit
     if fallbackCredit is not None:
         options["fallbackCredit"] = fallbackCredit
+    if not adapter and not framework:
+        payload, raw_usage = _response_preflight_payload_and_raw_usage(
+            response, str(resolved_surface or "unknown")
+        )
+        preflight_warnings = _raw_usage_consistency_warnings(raw_usage, str(resolved_surface or "unknown"))
+        if preflight_warnings:
+            if mode == "strict":
+                raise ValueError(f"strict mode cost calculation failed: {preflight_warnings[0]['code']}")
+            provider_name, model_name, returned_model = _invalid_usage_response_identity(
+                payload, options, str(resolved_surface or "unknown")
+            )
+            return _empty_cost_ledger_for_invalid_usage(
+                _base_usage_ledger(
+                    provider=provider_name,
+                    surface=str(resolved_surface or "unknown"),
+                    requested_model=model_name,
+                    returned_model=returned_model,
+                    components=[],
+                    raw_usage=raw_usage,
+                ),
+                preflight_warnings,
+            )
     try:
-        usage_ledger = extract_usage_ledger(response, **options)
-    except ValueError:
+        prepared_usage = _usage_ledger
+        usage_ledger = copy.deepcopy(prepared_usage) if prepared_usage is not None else extract_usage_ledger(response, **options)
+        if prepared_usage is not None and context:
+            usage_ledger["context"] = {**usage_ledger.get("context", {}), **context}
+    except UnsupportedSurfaceError:
         if mode == "strict":
             raise
         return _unsupported_surface_ledger(response, **options)
+    except (DecimalException, ArithmeticError, ValueError) as error:
+        if mode == "strict":
+            raise ValueError("strict mode cost calculation failed: invalid_usage") from error
+        payload, raw_usage = _response_preflight_payload_and_raw_usage(
+            response, str(resolved_surface or "unknown")
+        )
+        provider_name, model_name, returned_model = _invalid_usage_response_identity(
+            payload, options, str(resolved_surface or "unknown")
+        )
+        invalid_ledger = _base_usage_ledger(
+            provider=provider_name,
+            surface=str(options.get("surface") or "unknown"),
+            requested_model=model_name,
+            returned_model=returned_model,
+            components=[],
+            raw_usage=raw_usage,
+        )
+        return _empty_cost_ledger_for_invalid_usage(
+            invalid_ledger,
+            [
+                {
+                    "code": "invalid_usage",
+                    "message": "Supported provider usage contains a malformed numeric value.",
+                    "path": "$.usage",
+                    "metadata": {
+                        "reason": "malformed_decimal",
+                        "error": str(error),
+                    },
+                }
+            ],
+        )
     if context:
         merged_context = {**(usage_ledger.get("context") or {}), **context}
         if usage_ledger.get("provider") == "openai":
