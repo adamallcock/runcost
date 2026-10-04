@@ -37,7 +37,7 @@ runcost = "runcost.cli:main"
 [project.optional-dependencies]
 smoke = [
   "langchain-core",
-  "langchain-openai>=1.6.0"
+  "langchain-openai>=1.6.7"
 ]
 
 [tool.setuptools.packages.find]
