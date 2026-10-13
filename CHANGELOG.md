@@ -14,6 +14,11 @@ limitations.
 
 ## Unreleased
 
+- Recognize GenAI Prices `input_mchars` as reviewed but unsupported in the live
+  source contract. Preserve character/token separation, omitted character-only
+  rows, and mixed-row metadata warnings with shared adapter regression fixtures;
+  genuinely unknown upstream price fields still fail the monitor.
+
 - Release maintenance: allow up to five minutes for npm processing before the
   live artifact-parity gate expires, preserving exact checksums and immutable
   publication. Record verified 0.2.4 registry, Go, and public-site evidence.

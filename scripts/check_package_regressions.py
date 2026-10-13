@@ -2,6 +2,7 @@
 """Regression gates for precision, provenance, ownership and resolver semantics."""
 from __future__ import annotations
 import copy
+import io
 import json
 import subprocess
 import sys
@@ -9,8 +10,10 @@ import tempfile
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import redirect_stdout
 from decimal import Inexact, ROUND_UP, localcontext
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'packages/python'))
@@ -18,6 +21,7 @@ sys.path.insert(0, str(ROOT))
 import runcost as r
 import runcost.price_resolver as resolver
 from scripts.check_fixtures import validate_schema
+from scripts import check_live_source_contract as source_contract
 
 
 def card(name='input', component='input_uncached_tokens', url='https://example.com/a'):
@@ -93,6 +97,52 @@ def basic_results():
     return results
 
 
+def source_contract_checks():
+    fixture = json.loads((ROOT/'fixtures/expansion/cases.json').read_text())
+    cases = [case for case in fixture['cases'] if case['id'] in {
+        'genai-v2-character-only-prices-omitted',
+        'genai-v2-mixed-character-prices-unsupported',
+        'genai-v2-conditional-character-prices-unsupported',
+    }]
+    assert len(cases) == 3
+    data = [provider for case in cases for provider in case['input']['data']]
+
+    def run_contract(payload):
+        # A permissive upstream schema lets the independent reviewed-field gate
+        # prove it still rejects new keys, even when upstream accepts them.
+        bodies = [json.dumps(payload).encode(), b'{"type":"array"}']
+        output = io.StringIO()
+        with patch.object(source_contract, 'read', side_effect=bodies), \
+                patch.object(sys, 'argv', ['check_live_source_contract.py']), \
+                redirect_stdout(output):
+            assert source_contract.main() == 0
+        return json.loads(output.getvalue())
+
+    report = run_contract(data)
+    assert report['price_fields'] == {'input_mchars': 4, 'input_mtok': 1, 'output_mtok': 2}
+    assert report['unsupported_fields'] == ['input_mchars']
+    assert report['supported_cards'] == 2
+    # Both raw price maps and conditional rows must reject genuinely new fields,
+    # including rows the adapter would otherwise omit for unsupported constraints.
+    for prices in (
+        {'input_mchars': 22, 'future_unreviewed_price': 1},
+        [{'constraint': {'region': 'unrepresentable'}, 'prices': {'future_unreviewed_price': 1}}],
+    ):
+        unreviewed = {'id': 'unknown-fixture', 'models': [{'id': 'unknown', 'prices': prices}]}
+        try:
+            run_contract(data + [unreviewed])
+        except AssertionError as exc:
+            assert str(exc) == "unreviewed upstream price fields: ['future_unreviewed_price']", str(exc)
+        else:
+            raise AssertionError('unreviewed upstream field passed the contract')
+    try:
+        run_contract(cases[0]['input']['data'])
+    except AssertionError as exc:
+        assert str(exc) == 'v2 source produced no supported cards', str(exc)
+    else:
+        raise AssertionError('character-only source produced supported cards')
+
+
 def schema_negatives():
     from scripts.check_product_expansion import run_python_case
     fixture=json.loads((ROOT/'fixtures/expansion/cases.json').read_text())
@@ -166,6 +216,7 @@ def resolver_checks(directory):
 
 def main():
     expected=basic_results()
+    source_contract_checks()
     schema_negatives()
     with tempfile.TemporaryDirectory(prefix='runcost-regressions-') as temporary:
         directory=Path(temporary)

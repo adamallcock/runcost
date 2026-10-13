@@ -17,6 +17,10 @@ from runcost import price_cards_from_genai_prices
 BASE = 'https://raw.githubusercontent.com/pydantic/genai-prices/main/prices/new_data/v2/'
 # Recognized but deliberately unsupported unit semantics; new keys require review.
 UNSUPPORTED = {'audio_hours', 'input_audio_hours', 'input_document_kpages', 'input_annotated_document_kpages', 'storage_searches_kcount', 'output_citation_mtok', 'input_text_messages_kcount'}
+# Upstream prices/units.yml defines input_mchars per 1,000,000 input characters.
+# No generic input-character component exists; audio_generation_characters is
+# audio-specific. Never interpret this rate as input_mtok (tokens).
+UNSUPPORTED.add('input_mchars')
 
 def read(url: str) -> bytes:
     request = urllib.request.Request(url, headers={'User-Agent': 'RunCost-source-contract-check', 'Accept': 'application/json'})

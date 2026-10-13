@@ -3627,9 +3627,51 @@
       "scenario": "reconcile_cost",
       "surface": "reconcile_cost",
       "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "genai-v2-character-only-prices-omitted",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "price_cards_from_genai_prices",
+      "surface": "price_cards_from_genai_prices",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "genai-v2-mixed-character-prices-unsupported",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "price_cards_from_genai_prices",
+      "surface": "price_cards_from_genai_prices",
+      "warning_codes": []
+    },
+    {
+      "fixture": "fixtures/expansion/cases.json",
+      "id": "genai-v2-conditional-character-prices-unsupported",
+      "languages": {
+        "go": "preserved",
+        "javascript": "preserved",
+        "python": "preserved"
+      },
+      "outcome": "preserved",
+      "provider": "cross-provider",
+      "scenario": "price_cards_from_genai_prices",
+      "surface": "price_cards_from_genai_prices",
+      "warning_codes": []
     }
   ],
-  "generated_on": "2026-10-04",
+  "generated_on": "2026-10-13",
   "methodology": {
     "not_tested": "The case does not request that language implementation.",
     "preserved": "The expected billing semantics are asserted without warning.",
@@ -3639,29 +3681,29 @@
   },
   "schema_version": "0.1",
   "summary": {
-    "case_count": 249,
+    "case_count": 252,
     "languages": {
       "go": {
         "not_tested": 2,
-        "preserved": 179,
+        "preserved": 182,
         "unsupported": 7,
         "warned": 61
       },
       "javascript": {
         "not_tested": 1,
-        "preserved": 179,
+        "preserved": 182,
         "unsupported": 7,
         "warned": 62
       },
       "python": {
         "not_tested": 1,
-        "preserved": 179,
+        "preserved": 182,
         "unsupported": 7,
         "warned": 62
       }
     },
     "outcomes": {
-      "preserved": 179,
+      "preserved": 182,
       "unsupported": 7,
       "warned": 63
     }

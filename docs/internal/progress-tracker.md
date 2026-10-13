@@ -7,7 +7,7 @@ status: draft
 
 # RunCost Progress Tracker
 
-Last updated: 2026-10-04
+Last updated: 2026-10-13
 
 Purpose: keep the implementation state explicit across context compaction and long-running work. This file is the handoff ledger for what is done, what is in progress, what is blocked, and what evidence proves it.
 
@@ -35,6 +35,25 @@ billing dimensions. That evidence prioritizes V1 work; it does not determine
 whether RunCost continues.
 
 Doc rename coordination: another agent may rename Markdown files to match repository naming rules. Until that lands, avoid broad documentation churn and re-inspect paths before changing cross-document links.
+
+## October 13 Upstream Contract Correction
+
+The October 12 scheduled source check on `e79c1963` failed because upstream
+Groq Orpheus rows introduced `input_mchars`. Review of the pinned upstream unit
+registry confirms prices per million input characters, without a safe generic
+RunCost component mapping. The contract now explicitly recognizes this field as
+unsupported; no adapter converts it to tokens or guesses an audio-only meaning.
+See the [source adapter contract](../reference/source-adapters.md#genai-prices-v2-contract)
+for omitted-row and metadata-warning behavior.
+
+Shared Python/JavaScript/Go fixtures cover character-only, mixed-unit, and
+conditional rows. Offline monitor regressions cover the unsupported-field report,
+rejection of new fields in both price-map shapes, and the no-supported-cards guard.
+The live check passed locally on October 13 with 46 providers, 1,644 models,
+1,665 supported cards, and two `input_mchars` entries. Catalog revision:
+`sha256:42c8370e6cdb1502c36006c23fdce3673020fb227810787236d044224c5473ee`.
+This is an unreleased correction; a successful scheduled run after merge is
+separate from the local live-check evidence.
 
 ## October 4 Package Release
 
