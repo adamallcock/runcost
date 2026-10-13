@@ -2861,6 +2861,175 @@
         "signed_residual": "0",
         "absolute_residual": "0"
       }
+    },
+    {
+      "id": "genai-v2-character-only-prices-omitted",
+      "operation": "price_cards_from_genai_prices",
+      "expected_languages": [
+        "python",
+        "javascript",
+        "go"
+      ],
+      "input": {
+        "data": [
+          {
+            "id": "groq",
+            "models": [
+              {
+                "id": "canopylabs/orpheus-arabic-saudi",
+                "prices": {
+                  "input_mchars": 40
+                }
+              },
+              {
+                "id": "canopylabs/orpheus-v1-english",
+                "prices": {
+                  "input_mchars": 22
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": []
+    },
+    {
+      "id": "genai-v2-mixed-character-prices-unsupported",
+      "operation": "price_cards_from_genai_prices",
+      "expected_languages": [
+        "python",
+        "javascript",
+        "go"
+      ],
+      "input": {
+        "data": [
+          {
+            "id": "genai-character-fixture",
+            "models": [
+              {
+                "id": "mixed-units",
+                "prices": {
+                  "input_mchars": "22",
+                  "input_mtok": "1",
+                  "output_mtok": "2"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": [
+        {
+          "model": "mixed-units",
+          "components": [
+            {
+              "usage_component": "input_uncached_tokens",
+              "unit": "token",
+              "price": {
+                "amount": "1",
+                "currency": "USD",
+                "per": "1000000"
+              }
+            },
+            {
+              "usage_component": "output_text_tokens",
+              "unit": "token",
+              "price": {
+                "amount": "2",
+                "currency": "USD",
+                "per": "1000000"
+              }
+            }
+          ],
+          "metadata": {
+            "genai_prices": {
+              "unsupported_prices": {
+                "input_mchars": "22"
+              }
+            },
+            "adapter_warnings": [
+              "unsupported price field retained in metadata: input_mchars"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "genai-v2-conditional-character-prices-unsupported",
+      "operation": "price_cards_from_genai_prices",
+      "expected_languages": [
+        "python",
+        "javascript",
+        "go"
+      ],
+      "input": {
+        "data": [
+          {
+            "id": "genai-character-fixture",
+            "models": [
+              {
+                "id": "conditional-units",
+                "prices": [
+                  {
+                    "constraint": {
+                      "start_date": "2026-10-10"
+                    },
+                    "prices": {
+                      "input_mchars": {
+                        "base": "22",
+                        "tiers": [
+                          {
+                            "start": 1000,
+                            "price": "40"
+                          }
+                        ]
+                      },
+                      "output_mtok": "2"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expected": [
+        {
+          "model": "conditional-units",
+          "components": [
+            {
+              "usage_component": "output_text_tokens",
+              "unit": "token",
+              "price": {
+                "amount": "2",
+                "currency": "USD",
+                "per": "1000000"
+              }
+            }
+          ],
+          "metadata": {
+            "genai_prices": {
+              "unsupported_prices": {
+                "input_mchars": {
+                  "base": "22",
+                  "tiers": [
+                    {
+                      "start": 1000,
+                      "price": "40"
+                    }
+                  ]
+                }
+              }
+            },
+            "adapter_warnings": [
+              "unsupported price field retained in metadata: input_mchars"
+            ]
+          },
+          "effective": {
+            "from": "2026-10-10"
+          }
+        }
+      ]
     }
   ]
 }

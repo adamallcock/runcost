@@ -1,6 +1,6 @@
 ---
 title: RunCost Conformance Report
-date: 2026-10-04
+date: 2026-10-13
 type: report
 status: generated
 ---
@@ -18,11 +18,11 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 
 ## Summary
 
-249 cases are inventoried.
+252 cases are inventoried.
 
 | Outcome | Cases |
 | --- | ---: |
-| Preserved | 179 |
+| Preserved | 182 |
 | Warned | 63 |
 | Unsupported | 7 |
 | Not Tested | 0 |
@@ -280,5 +280,8 @@ This report describes RunCost's own fixture-backed behavior. It does not score o
 | `budget-subquantum-total` | cross-provider | `evaluate_budget` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `budget-half-even-warning-boundary` | cross-provider | `evaluate_budget` | preserved | python: preserved, javascript: preserved, go: preserved |
 | `reconciliation-subquantum-residual` | cross-provider | `reconcile_cost` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `genai-v2-character-only-prices-omitted` | cross-provider | `price_cards_from_genai_prices` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `genai-v2-mixed-character-prices-unsupported` | cross-provider | `price_cards_from_genai_prices` | preserved | python: preserved, javascript: preserved, go: preserved |
+| `genai-v2-conditional-character-prices-unsupported` | cross-provider | `price_cards_from_genai_prices` | preserved | python: preserved, javascript: preserved, go: preserved |
 
 The canonical machine-readable form is [`conformance-report.json`](./conformance-report.json).
